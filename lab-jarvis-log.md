@@ -1,0 +1,207 @@
+# Lab JARVIS — Running Log
+
+A living record of decisions, facts, open questions and ideas for the AI-lab "JARVIS" project. Newest entries go at the top of each section. Companion docs: **current-focus.md** (what to work on now), **project-scaffold.md** (what the repo should contain), **dev-setup.md**, **network-setup-checklist.md**.
+
+**Current focus:** see **current-focus.md**.
+
+---
+
+## The goal (one paragraph)
+Build a "JARVIS" for the university AI lab. **Primary user: the builder himself.** First priority: **connect most lab devices so Claude Code / AI agents can reach them for faster development.** On top of that: one AI brain that can see, control and eventually program the lab's robots through voice, typing and a screen GUI, with an optional Quest 3 experience (monitor only, monitor + Quest, or Quest only). Visitors are a secondary audience (a quick ~30-second headset demo with one command). **Modularity is a core requirement:** everything plugs in and out without rewriting the core. **Mobility is a goal too** (the system should travel to wherever visitors are, plus remote access from home and eventually robots across campus). Target: **~90% reliable**. Solo, unofficial project, 3–7 hours/week, no deadline. Success for the MVP = **it connects, and it inspires the builder to keep going.**
+
+---
+
+## Project hygiene (2026-10-23) — details in project-scaffold.md
+Day one: README, CLAUDE.md (points to current focus + log; rules), docs/, SAFETY.md, .gitignore, .env.example (secrets never committed), config/ (personas, model router, devices, venue profiles), calibration/<robot>/, dependency lock, install script, tests with fake robots, formatter/linter, LICENSE (**ask the professor first; repo private until then**). Soon: GOTCHAS.md, DEMO.md runbook, decision records, CI on GitHub, **tagged known-good demo versions (always demo from a tag)**, CHANGELOG, task board. Later: CONTRIBUTING.md, HANDOFF.md, ARCHITECTURE.md, demo video.
+
+---
+
+## Arm roles (2026-10-23)
+| Arm | Name | Role |
+|---|---|---|
+| SO-101 set (leader + follower), green | `so101-green` | **In use for another training project — not part of this project; don't touch/recalibrate.** |
+| SO-101 set (leader + follower), white | `so101-white` (follower), `so101-white-leader` | **Polished teleop demo + second act.** Parts printed; camera mounts printing; to be built. May also join the training project — teleop then doubles as its data-collection tool. |
+| xArm 1S #1 (built, works) | `xarm1` | **Teleop prototype now** + **the JARVIS-track robot** + fallback teleop arm. |
+| xArm 1S #2 (unbuilt) | `xarm2` | Spare / later. |
+
+SO-101 over xArm for polished teleop: smoother motors/bus, LeRobot support, URDF exists. xArm: works today, keeps `so101-white` free. xArm roles: teleop prototype, JARVIS-track robot (separate hardware per track), modularity proof, glove input, visitor-safe commands.
+
+---
+
+## Quest teleop input & display (2026-10-23) — details in current-focus.md
+Inputs: **controllers first** (grip = clutch, analog trigger = gripper, button = stop), **then hand tracking** (wow); keep both. Display: passthrough + minimal overlay (status, stop, workspace box, visitor hint); later ghost arm + camera feed; cast to a monitor.
+
+---
+
+## Hiwonder glove findings (2026-10-23)
+Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: paired with `xarm1`; little lag; tilt-for-rotation good. Problems: extreme gestures needed; **snapping** (absolute tilt → angle) when switching motors; clumsy finger-count motor selection. Lessons → teleop requirements: per-user calibration + hysteresis, relative/clutch control, gentle ramps, whole-arm IK, keep tilt-for-rotation. Glove fix optional.
+
+---
+
+## Teleoperation module: "your hand becomes the robot's hand" (2026-10-23)
+**Origin:** first-principles "what would impress most?" check, inspired by Tesla's Oct 15, 2026 Roadster demo (staged at a private site; double-take reactions; skepticism about unproven claims). **Lessons:** break an expectation; seconds to understand; narrow, controlled demo; filmable; never overclaim; fewest moving parts.
+**The module:** Quest input → arm copies it live. Practical and true (teleop is how robots get taught). Needs only Quest + computer + arm (USB). Fast-tracked; rest of the plan stays.
+
+## Second act & generalization (2026-10-23)
+**Concern (user):** a trained arm that can't generalize (new places, lighting, objects) doesn't feel magical.
+**Findings:** generalist robot models and APIs do exist, with limits:
+- **Gemini Robotics-ER 2** (Google) — robotics reasoning model available as a **preview via the Gemini API** (spatial reasoning, function calling, etc.). Use it to **look and point**: camera photo + "where is X?" → location → our inverse kinematics grabs it. **Generalizes to new objects/places with no training.** Needs camera-to-arm calibration. User already has Gemini keys.
+- **SmolVLA** (Hugging Face, LeRobot) — open pretrained robot model with a documented SO-101 fine-tuning route (~50 varied demonstrations to start). Better than training from scratch; language instructions. Training may fit the RTX 5070 (12 GB) — verify.
+- **NVIDIA GR00T N1.6, Physical Intelligence π0/π0.5** — bigger open models; training needs ~22–70 GB GPU memory (rented cloud GPU); GR00T has an SO-101 route.
+- **Gemini Robotics** (full action model) — partner-only; not available.
+- **ACT from scratch** — weakest generalization; fine as a learning exercise.
+**Plan:** (A) "look, then reach" with Gemini Robotics-ER 2 first (most magic per hour: "put anything on the table and ask it to grab it"); (B) then SmolVLA fine-tuned on our own teleop recordings with varied conditions. Recording tip: vary positions, lighting, backgrounds, distractors; record in the demo venue too.
+
+---
+
+## Mobility, portability & remote access (2026-10-23)
+**Principle: the brain is software, not a place.** Lab desktop by default; laptop/Jetson ("field brain") when traveling. Robots find the brain **by name**. **The travel router travels** → robots reconnect anywhere with no reconfiguration.
+
+| Part | On the road? | Notes |
+|---|---|---|
+| Brain | ✅ laptop/Jetson | One install script. |
+| Network | ✅ travel router | Venue Ethernet, venue Wi-Fi (repeater), or phone hotspot for internet. |
+| Cloud AI | ✅ with internet | Otherwise **offline lite mode**. |
+| GUI | ✅ any browser / Quest-only | |
+| Voice | ⚠️ noisy places | Push-to-talk / Quest mic / phone mic. |
+| Teleop demo | ✅ fully | USB. |
+| Robots | ✅ those you bring | Arms/Jetsons/Pis need outlets. |
+| Multi-screen presence, lab PCs/displays, local GPU models | ❌ lab only | |
+| Trained policies | ⚠️ | New lighting/backgrounds; "look, then reach" (ER) generalizes better. |
+
+**Rules:** venue profiles; no hardcoded lab addresses/machines; offline lite mode; ≤10-minute setup checklist; optional "live link to the lab" later.
+**Remote levels:** (1) Claude Code via **Remote Control** — confirmed working; (2) GUI from home via a private overlay network (ask IT first); (3) lab in a bag; (4) cellular robots (much later). **Safety:** remote mode = no motion by default; dead-man stop.
+
+---
+
+## Network plan (2026-10-22)
+- Campus IT must register MAC addresses (lab Wi-Fi); self-registration unlikely.
+- Lab wall Ethernet port works (which network unknown); classmate in IT says IT doesn't watch for devices — still get the professor's OK.
+- **Direction:** lab's own travel router uplinked by Ethernet to the wall port; brain on the router's side. Fallback: isolated router.
+- **Router shortlist:** GL.iNet Opal ($39.99) vs Beryl AX ($98.99); pending (portability slightly favors Beryl AX).
+- **Setup checklist:** passwords, remote admin off, DHCP reservations, auto-updates off, passwords stored safely, label, cable away from walkways.
+
+---
+
+## Robots without a Raspberry Pi (2026-10-22)
+"Bridge" pattern (USB/Bluetooth/radio to a Pi 5, Jetson or the brain): TonyBot v1 (Arduino; USB serial or Bluetooth), xArm 1S (USB, Python `xarm`), Air:bit 2 ×3 (micro:bit radio; no spares; much later). Drones out of AI/voice/visitor control for now.
+
+---
+
+## Grill session answers (2026-10-20)
+1. One thing this semester: most lab devices connected, AI agents able to access them. 2. For: primarily the builder. 3. MVP done: it connects and inspires continuing. 4. 3–7 h/week. 5. After May 2027: handoff docs; builder lives ~5 min from campus. 6. Professor: "connect devices for faster development." 7. Willing to learn Unity if needed. 8. Visitors: ~30 s in the headset. 9. Camera privacy deferred. 10. Worst failures → offline lite mode. 11. Auto-restart + AI diagnosis. 12. AI budget ≤ $20/month. 13. Modularity via AI; hardcode when needed. 14. Safety in the harness.
+- **2026-10-23:** also **impress** → teleop fast track; visitor routes may not pass the lab → **must travel**; trained arm should **generalize** → "look, then reach" + pretrained models.
+
+### The walk-in moment (2026-10-20)
+Open the door → one trigger → screens on → greeting → use. Animation ≤ several seconds.
+
+---
+
+## Milestones (2026-10-23)
+-1. **Repo scaffold** (project-scaffold.md "Day one").
+0. **Fast track — teleop demo:** prototype on `xarm1`, polish on `so101-white`; portable from day one; then second act (ER "look, then reach" → SmolVLA).
+1. **Milestone 1 — "Connected lab":** lab router, SSH keys + nicknames, device census, standards, one small visible win.
+2. **Milestone 2 — Wake + roll call** (`xarm1`, then Raspbot); venue profiles.
+3. **Milestone 3 — Voice + dev assistant.**
+4. **Later:** Quest client/Quest-only/vision; more robots; offline lite mode; full lab in a bag; GUI from home; live link; cellular robots; bigger VLA models.
+
+---
+
+## Dev setup — details in dev-setup.md
+Robots stay thin · Linux lab desktop with VS Code + Claude Code extension · Remote Control from home (confirmed) · cloud sessions only for pure-software work · ssh + rsync deploys · auto-restarting services · permission rules (ask before sudo, deletes, reboots, robot motion) · git as undo · fake robots at home, real hardware in the lab · private GitHub repo · one install script for desktop *and* laptop · CLAUDE.md points to current-focus.md and this log.
+
+---
+
+## Standards (to define on the ground)
+Device names, accounts, folders on robots, repo layout, logs, secrets, principles, venue profiles. **Names so far:** `so101-green` (not ours), `so101-white` / `so101-white-leader`, `xarm1`, `xarm2`; starter names: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot with bridge noted. Calibration files travel with each arm. Hacks: `# HACK:` + entry in current-focus.md. Demos run from tagged known-good versions.
+
+---
+
+## The biggest risk: on-the-ground surprises
+Past examples: a VLA not using its cameras; low success rates; too little RAM; no Wi-Fi card; Wi-Fi country codes, hotspot mode, MAC registration; a humanoid's voice silently broken; VS Code Remote-SSH unstable on the Raspbot; glove needing extreme gestures and snapping.
+Handling: census first · thin robots · capability checks · prove inputs · log everything · spikes · gotchas file · expect 2–3× longer · updates off, versions pinned.
+
+---
+
+## Is it actually useful? (still partly open)
+Primary: faster development via a connected lab. Others: teleoperation for teaching robots (possibly data collection for the lab's training project); **"put anything on the table and ask it to grab it"** (ER look-then-reach); lab health dashboard; testing harness (*not tied to the research paper for now*); shared lab memory; teaching; Quest "what am I looking at?"; two-robot handoff; recruiting demo (portable); remote check-ins. Unofficial; no outreach. ROS 2 optional.
+
+---
+
+## The full vision (2026-10-19/20)
+Walk in → ignition (card, "hey Jarvis," button, keyboard, Quest) → screens on + short animation + greeting → optional Quest launch → ambient standby → commands by voice/push-to-talk/typing (fast path or agent harness). Works without the Quest, with the Quest alone, and away from the lab.
+Optional modules: teleoperation; look-then-reach; Quest vision; face recognition (opt-in); student ID sign-in; multi-screen presence; screen-to-screen sending; phones/laptops as mics/remotes; ROS 2 bridge; offline lite mode; remote access; portable kit; live link to the lab; cellular robots.
+
+---
+
+## Architecture sketch (2026-10-23)
+- **Brain** = portable software. Robots find it by name.
+- One standard message protocol for all clients.
+- Modular core with slots: ignition · sign-in · inputs/mics (Quest controllers, hand tracking, leader arm, glove) · outputs/clients · cameras/vision · AI models (router; incl. robotics models like Gemini Robotics-ER and VLAs) · robots (incl. ROS 2, bridged, fake) · tools · personas · network/connection.
+- **Venue profiles** decide which plug-ins are present/active.
+- Modules connect slots (teleop = input → arm; look-then-reach = camera + robotics model → IK → arm), sharing control logic (calibration, clutch, smoothing, ramps, safety).
+- Model router with fallbacks; two speeds (fast path vs. agent harness).
+- Reliability: auto-restart; start on boot; offline lite mode.
+- Safety: speed/workspace limits, always-working stop, approved visitor commands, remote mode = no motion by default, dead-man stop; drones excluded for now.
+
+---
+
+## Decisions
+| Date | Decision | Why |
+|---|---|---|
+| 2026-10-23 | **Second act = "look, then reach" with Gemini Robotics-ER 2 (API preview) first, then SmolVLA fine-tuned on our teleop data; bigger VLAs (GR00T, π0.5) only via rented GPU later; ACT only as a learning exercise.** | User wants generalization; ER generalizes without training; SmolVLA is the best-documented SO-101 route. |
+| 2026-10-23 | **Repo scaffold per project-scaffold.md before feature work** (short, solo-sized); LICENSE after asking the professor (private until then); always demo from tagged known-good versions. | User wants Claude Code to include what a good project needs. |
+| 2026-10-23 | **The full system must be portable** (laptop brain, travel router, venue profiles, no lab-only assumptions, offline lite mode, ≤10-minute setup). | Visitor routes may not pass the lab. |
+| 2026-10-23 | **Quest teleop inputs: controllers first, then hand tracking; keep both.** Display = passthrough + minimal overlay. | Steadiness + clutch vs. wow. |
+| 2026-10-23 | **Prototype teleop on `xarm1`; polish + second act on `so101-white`; teleop doubles as data collection for the training project.** | Smoother/LeRobot-native vs. available today. |
+| 2026-10-23 | **Teleop requirements from the glove test; glove fix optional.** | Glove findings. |
+| 2026-10-23 | **Arm names by color; `xarm1` = JARVIS-track robot + teleop prototype; `xarm2` spare.** | Clarity; separate hardware per track. |
+| 2026-10-23 | **Remote Control from home confirmed; develop at home against fake robots; private GitHub repo.** | User verified; most of the system is software. |
+| 2026-10-23 | **Teleop module added and fast-tracked; priority in current-focus.md; built on the seams with labeled hacks.** | Impress with fewest moving parts. |
+| 2026-10-22 | Brain is portable software; remote access in stages; remote mode = no motion + dead-man stop; professor's OK before leaving a router on the wall port; wired uplink with brain on the router's network; router shortlist (pending); ask professor/IT and plan to pay; lab router replaces per-device registration; non-Pi robots via bridges; drones out of AI control. | 2026-10-22 discussion. |
+| 2026-10-20 | Dev setup; standards on the ground; primary user = builder; Milestone 1 = connected lab; short animation; one client protocol; 30-s visitor demo; offline lite mode; updates off; auto-restart + AI diagnosis; ≤ $20/month; handoff docs; camera privacy deferred; professor handles IT; Quest-only + Quest vision modules. | Grill session and follow-ups. |
+| 2026-10-19 | Census + capability checks; ROS 2 optional; no outreach; paper kept separate; Claude Code only on the brain desktop; SSH + deploy + one repo; phones/laptops as mics; ignition options; Quest optional; typing + push-to-talk; modularity core; model router; trained wake word; agent harness + fast path; face recognition opt-in; ~90% target; Raspbot first; config files; cloud first; keys never in git; thin-client station; reuse old spec principles. | Earlier discussion. |
+| 2026-10-15 | One Linux brain + backup; 32" ViewSonic display; ~~no new router~~ (reversed 2026-10-22); few extra things; drop retro gear/camera-on-arm/live training/escape room. | Earlier discussion. |
+
+---
+
+## Facts about the lab
+- **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
+- **Computers:** 6 RTX 5070 desktops (12 GB GPU memory, to confirm; 2 Ubuntu → brain + backup, 4 Windows 11); 5 Jetson Orin Nano; several Pi 5s. Remote Control from home works.
+- **Network:** lab Wi-Fi with MAC registration via campus IT; wall Ethernet port works.
+- **AI access:** professor credits; user's OpenAI keys; free Gemini keys (Gemini Robotics-ER 2 preview is on the Gemini API).
+- **Mics:** 4 weak USB dongle mics; phones/laptops; old Nokias/Pixel C; Quest mic + speakers.
+- **Robots:** Raspbot v2 ×2; SO-101 green set (in use elsewhere); SO-101 white set (to build — this project); xArm 1S ×2 (`xarm1` works); Hiwonder glove ×2; TonyBot v1; PiCar Pro ×3 (unbuilt); Air:bit 2 ×3; Quest 3 ×3; card reader. No wheels+arm robot.
+- **Builder:** CS student; learns with AI; Python + web; dislikes the CLI, likes VS Code + Claude desktop/web UI; 3–7 h/week; graduating May 2027; lives ~5 min from campus.
+
+---
+
+## Open questions
+- **Second act:** ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
+- **License/ownership:** what does the professor/university allow?
+- **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.
+- **Teleop spikes:** `xarm1` speed/delay; Quest WebXR data, overlays, USB forwarding (Quest developer mode / Meta account access); IK library; `so101-white` calibration; end-to-end delay.
+- **Glove** firmware source; **training project** plans for `so101-white`; **IT/professor** router questions; overlay network; cellular.
+- TonyBot v1 board; wake word from the doorway; waking screens; Quest camera access; Quest-only practicalities; past Quest demo contact; offline lite mode contents; use cases beyond development; HTTPS for browser mic/WebXR; mic test; model router; agent harness; free-tier data terms; persona name; voice pipeline; Raspbot internals; humanoid SDK.
+
+---
+
+## Discussion notes & considerations
+- **Generalization reality:** no robot model is magic yet; "look, then reach" generalizes for simple pick-and-place; learned skills generalize better with varied training data and pretrained models.
+- **Portability rule of thumb:** anything tied to a specific room, computer or address won't travel; anything defined by a name, profile or plug-in will.
+- **Absolute vs. relative control:** teleop should be relative (no snapping).
+- **Impressiveness from first principles:** break an expectation; seconds to understand; narrow, controlled demo; filmable; don't overclaim; fewest moving parts.
+- **Separate hardware per track** avoids blocking.
+- **Remote Control vs. cloud sessions:** Remote Control runs on the lab computer; cloud sessions can't reach lab devices.
+- **Router policy:** a quick professor OK costs little. **One-way walls:** outside devices can't reach in.
+- **Bridged robots** add a failure point. **AI makes modular code cheap to write, not free to design.**
+- **Robot safety:** arms pinch; snapping arms lose balance; robots drive off tables; drones biggest risk; remote/venues add risk.
+- **Cost:** Claude Code dev usage separate from system AI budget; realtime voice, robotics API calls, cloud GPUs and cellular data cost extra.
+- **Silent failures** are the worst papercut. **Mic noise fixes:** close mic → wake word trained with lab noise → noise removal → echo cancellation → push-to-talk/typing → directional mic.
+- **Two-speed design** is the main path to ~90% reliability. **Face recognition** opt-in only; **student ID** stored hashed.
+- **Pitch:** "undergrads built this." 60-second clip; "ways to teach a robot"; "one hand, two robots"; "put anything on the table and ask it to grab it."
+
+---
+
+## Ideas parked for later
+Teleop second act (ER look-then-reach → SmolVLA → bigger VLAs); "ways to teach a robot"; "one hand controls two robots"; two-hand control; fixed glove; teleop as data collection for the training project; full lab in a bag; live link to the lab; remote GUI from home; cellular robots; Quest vision Q&A; Quest-only mode; offline lite mode; robot testing harness; ROS 2 bridge; two-robot handoff; visitors' phones as remotes; card-swipe ignition; Quest launch → HUD; opt-in face recognition; multi-screen presence; screen-to-screen sending; multiple personas; program-by-voice / agent onboarding; light-sensor ignition; Kinect gestures; escape room; local models; Air:bit module (much later).
