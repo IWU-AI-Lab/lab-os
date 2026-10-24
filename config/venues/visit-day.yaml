@@ -1,0 +1,5 @@
+# Venue profile: visitor demo away from the lab (portable kit, USB only, no lab network).
+name: visit-day
+active_devices: [so101-white]
+motion_allowed: true
+max_speed_scale: 0.3   # slower with visitors at the controls

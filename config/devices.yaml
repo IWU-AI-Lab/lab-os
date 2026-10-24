@@ -1,0 +1,38 @@
+# Robot registry. Names follow docs/lab-jarvis-log.md.
+#
+# Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/GOTCHAS.md).
+# off_limits: true  -> lab_os.devices refuses to hand out the port. Never remove this for so101-green.
+
+devices:
+  so101-green:
+    kind: so101
+    off_limits: true
+    notes: Another project's training arm (leader + follower). Never open, never recalibrate.
+    ports:
+      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00
+      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00
+
+  so101-white:
+    kind: so101
+    notes: Follower. Polished teleop demo + second act. Fill in the port once built.
+    ports: []
+
+  so101-white-leader:
+    kind: so101-leader
+    notes: Leader arm for so101-white. Fill in the port once built.
+    ports: []
+
+  xarm1:
+    kind: xarm1s
+    notes: Built, works over USB. Teleop prototype + JARVIS-track robot. Connection details TBD (step 1).
+    ports: []
+
+  xarm2:
+    kind: xarm1s
+    notes: Unbuilt spare.
+    ports: []
+
+  fake-arm:
+    kind: fake
+    notes: Software-only arm for tests and home development.
+    ports: []

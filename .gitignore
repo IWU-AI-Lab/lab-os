@@ -1,0 +1,38 @@
+# Secrets
+.env
+*.pem
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Data, recordings, models
+logs/
+*.log
+recordings/
+datasets/
+data/
+outputs/
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.onnx
+wandb/
+
+# Claude Code (per-machine)
+.claude/settings.local.json
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+.idea/

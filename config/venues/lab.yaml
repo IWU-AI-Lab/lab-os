@@ -1,0 +1,5 @@
+# Venue profile: the AI lab. Decides which plug-ins are active and how cautious to be.
+name: lab
+active_devices: [fake-arm, xarm1, so101-white]
+motion_allowed: true
+max_speed_scale: 0.5   # fraction of each arm's max speed

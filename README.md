@@ -1,0 +1,40 @@
+# lab-os
+
+**Lab JARVIS** for the IWU AI lab: one portable "brain" that connects the lab's robots so AI agents (and people) can see and control them. The first milestone is a Quest 3 teleop demo, where a visitor's bare hand drives a robot arm live and picks up a block within ~30 seconds.
+
+*(Photo / GIF of the demo goes here once it works.)*
+
+## Install
+On a fresh Linux machine (lab desktop or laptop):
+```bash
+git clone https://github.com/IWU-AI-Lab/lab-os.git
+cd lab-os
+./scripts/install.sh
+cp .env.example .env     # then fill in real keys
+```
+This installs [uv](https://docs.astral.sh/uv/) if needed and creates the project's own environment in `.venv/` (Python 3.12). It never touches conda.
+
+## Run
+```bash
+uv run pytest            # checks, no hardware needed (uses the fake arm)
+```
+The demo itself isn't built yet. See `docs/current-focus.md` for where it stands.
+
+## Repository map
+| Path | What |
+|---|---|
+| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm) |
+| `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …) |
+| `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
+| `tests/` | Automatic checks that run without hardware |
+| `scripts/` | `install.sh` and other helpers |
+| `docs/` | Plan, current focus, dev setup, gotchas |
+| `SAFETY.md` | Stop procedures and limits. Read before any motion |
+
+## Docs
+- `docs/current-focus.md`: what's being worked on now
+- `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
+- `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`
+- `docs/GOTCHAS.md`: surprises and their fixes
+
+Private repository; license pending (asking the professor first).
