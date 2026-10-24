@@ -16,7 +16,10 @@
     <h1>lab-os teleop</h1>
     <p class="hint">Grip = clutch (hold to move) · Trigger = gripper · A/X = stop</p>
 
-    <button id="enter" disabled>Checking WebXR…</button>
+    <div class="sources">
+      <button id="enter" disabled>Checking WebXR…</button>
+      <button id="desktop">Desktop control (keyboard + trackpad)</button>
+    </div>
     <p id="xr-msg" class="hint"></p>
 
     <section class="panel">
@@ -26,16 +29,37 @@
       <div><span class="label">Speed</span> <span id="speed">—</span></div>
     </section>
 
+    <section id="arm-panel" class="panel arm3d" data-role="input"></section>
+
+
     <section class="panel">
       <div class="label">Controllers (what this page sends)</div>
       <pre id="readout">no XR session yet</pre>
     </section>
 
-    <section id="arm-panel" class="panel arm3d"></section>
+    <details id="desk-help" class="panel">
+      <summary>Desktop control keys</summary>
+      <table class="keys">
+        <tr><td><kbd>Space</kbd> hold</td><td>clutch (= grip): the arm follows while held</td></tr>
+        <tr><td>Trackpad / mouse</td><td>hand left/right, up/down</td></tr>
+        <tr><td>Two-finger scroll</td><td>hand forward/back</td></tr>
+        <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>R</kbd><kbd>F</kbd></td><td>steady move: forward/left/back/right · up/down</td></tr>
+        <tr><td><kbd>←</kbd><kbd>→</kbd> · <kbd>↑</kbd><kbd>↓</kbd></td><td>wrist roll · wrist tilt</td></tr>
+        <tr><td><kbd>C</kbd></td><td>gripper close / open (toggle; the arm applies it while the clutch is held)</td></tr>
+        <tr><td><kbd>X</kbd> hold</td><td>stop (= A/X): the arm freezes, release and re-grab to continue</td></tr>
+        <tr><td><kbd>H</kbd></td><td>re-center your virtual hand (only while the clutch is released, so the arm stays put)</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes)</td></tr>
+      </table>
+      <div class="desk-settings">
+        <label>Trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
+        <label><input id="desk-invert" type="checkbox"> Invert scroll</label>
+      </div>
+      <p class="hint">Tip: clutch in short strokes. Hold Space, move a bit, release, re-center with H, repeat, like lifting a mouse off the desk.</p>
+    </details>
 
     <p class="hint"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
   </main>
-  <script src="/static/xr.js"></script>
+  <script type="module" src="/static/teleop-page.js"></script>
   <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

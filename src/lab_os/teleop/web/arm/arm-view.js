@@ -18,11 +18,14 @@ export function createArmView(container) {
   scene.add(grid);
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
-  camera.position.set(0.5, 0.36, 0.5);
+  // Operator view: behind and above the arm (robots face +x), so screen left/right = hand left/right.
+  camera.position.set(-0.46, 0.44, 0.32);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.1, 0);
+  controls.target.set(0.1, 0.13, 0);
   controls.enableDamping = true;
   controls.update();
+  let dirty = true; // render only when something changed (saves CPU/GPU, keeps the page responsive)
+  controls.addEventListener("change", () => (dirty = true));
 
   function resize() {
     const w = container.clientWidth;
@@ -30,13 +33,16 @@ export function createArmView(container) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    dirty = true;
   }
   new ResizeObserver(resize).observe(container);
   resize();
 
   let current = null;
   renderer.setAnimationLoop(() => {
-    controls.update();
+    controls.update(); // fires "change" while damping settles
+    if (!dirty) return;
+    dirty = false;
     renderer.render(scene, camera);
   });
 
@@ -46,6 +52,11 @@ export function createArmView(container) {
       if (current) scene.remove(current.object);
       current = model;
       if (model) scene.add(model.object);
+      dirty = true;
+    },
+    /** Call after changing the model (joints, tint, opacity). */
+    requestRender() {
+      dirty = true;
     },
   };
 }

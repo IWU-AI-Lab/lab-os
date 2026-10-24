@@ -5,12 +5,13 @@
 // driver clamped (command ≠ driver state) and commands outside the 3D model's limits.
 import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
+import { getLink } from "../link.js";
 
 const $ = (id) => document.getElementById(id);
-const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=monitor`;
 const FROZEN_TINT = 0x7a1d00;
 
-// Pages include <section id="arm-panel" class="panel arm3d"></section>; the markup lives here only.
+// Pages include <section id="arm-panel" class="panel arm3d" data-role="monitor|input"></section>;
+// the markup lives here only. data-role picks which shared connection to listen on.
 $("arm-panel").innerHTML = `
   <div class="arm3d-head">
     <span class="label">3D view</span>
@@ -59,6 +60,7 @@ async function useModel(choice) {
 function render() {
   if (!model) return;
   const { unknown, outOfRange } = model.setJoints(shownJoints);
+  view.requestRender();
   // Clamping is judged from the driver state reported with the same command (never a later one).
   const after = lastCommand?.driver_joints || {};
   const rows = Object.entries(shownJoints).map(([name, cmd]) => {
@@ -106,12 +108,8 @@ function onMessage(msg) {
 function setFrozen(value) {
   frozen = value;
   if (model) model.setTint(frozen ? FROZEN_TINT : null);
+  view.requestRender();
 }
 
-function connect() {
-  const ws = new WebSocket(WS_URL);
-  ws.onmessage = (e) => onMessage(JSON.parse(e.data));
-  ws.onclose = () => setTimeout(connect, 1000);
-}
-
-connect();
+const link = getLink($("arm-panel").dataset.role || "monitor");
+for (const type of ["status", "arm_command", "arm_stop", "arm_resume"]) link.on(type, onMessage);

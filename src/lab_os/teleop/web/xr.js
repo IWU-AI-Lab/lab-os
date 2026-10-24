@@ -1,51 +1,6 @@
-// WebXR input page: reads Quest controllers every XR frame and sends them to the
-// Python server over a WebSocket. Message format: docs/protocol.md.
-"use strict";
+// WebXR input: reads Quest controllers every XR frame and sends them to the brain.
+// Message format: docs/protocol.md.
 
-const $ = (id) => document.getElementById(id);
-const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
-
-// ---- WebSocket (reconnects automatically) ---------------------------------
-let ws = null;
-
-function connect() {
-  ws = new WebSocket(WS_URL);
-  ws.onopen = () => {
-    setPill($("conn"), "connected", "on");
-    send({ type: "hello", agent: navigator.userAgent });
-  };
-  ws.onclose = () => {
-    setPill($("conn"), "disconnected", "off");
-    setTimeout(connect, 1000);
-  };
-  ws.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    if (msg.type === "status") showStatus(msg);
-    else if (msg.type === "error") $("xr-msg").textContent = msg.message;
-  };
-}
-
-function send(obj) {
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
-}
-
-// ---- Status panel -----------------------------------------------------------
-function setPill(el, text, cls) {
-  el.textContent = text;
-  el.className = `pill ${cls}`;
-}
-
-function showStatus(s) {
-  if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
-  else if (s.clutch) setPill($("state"), "following (clutch)", "on");
-  else setPill($("state"), "holding", "off");
-  const g = s.joints.gripper;
-  const [lo, hi] = s.limits.gripper || [0, 1];
-  $("gripper").textContent = g === undefined ? "—" : `${Math.round(((g - lo) / (hi - lo)) * 100)}% open`;
-  $("speed").textContent = `${Math.round(s.speed_scale * 100)}%`;
-}
-
-// ---- Reading the controllers ------------------------------------------------
 const clamp01 = (v) => Math.min(1, Math.max(0, v || 0));
 
 function readController(src, frame, refSpace) {
@@ -65,38 +20,32 @@ function readController(src, frame, refSpace) {
   };
 }
 
-function fmt(c) {
-  if (!c.pos) return "tracking lost";
-  const n = (v) => (v >= 0 ? "+" : "") + v.toFixed(2);
-  const b = Object.entries(c.buttons).filter(([, on]) => on).map(([k]) => k).join(",") || "-";
-  return `pos ${c.pos.map(n).join(" ")}  grip ${c.grip.toFixed(2)}  trig ${c.trigger.toFixed(2)}  btn ${b}`;
-}
-
-// ---- XR session -----------------------------------------------------------------
-let mode = null;
-let lastReadout = 0;
-
-async function init() {
-  const button = $("enter");
+export async function initXR(link, ui) {
+  const button = document.getElementById("enter");
+  const unavailable = (text, hint) => {
+    button.textContent = text;
+    button.dataset.unavailable = "1";
+    button.disabled = true;
+    if (hint) ui.message(hint);
+  };
   if (!navigator.xr) {
-    button.textContent = "WebXR not available";
-    $("xr-msg").textContent =
-      "On the Quest, open this page at http://localhost:8080 (see docs/quest-setup.md). " +
-      "On a desktop, install the Immersive Web Emulator extension and reload.";
-    return;
+    return unavailable(
+      "WebXR not available",
+      "On the Quest, open http://localhost:8080 (docs/quest-setup.md). On a desktop, use Desktop control below, or the Immersive Web Emulator extension.",
+    );
   }
+  let mode = null;
   if (await navigator.xr.isSessionSupported("immersive-ar")) mode = "immersive-ar";
   else if (await navigator.xr.isSessionSupported("immersive-vr")) mode = "immersive-vr";
-  if (!mode) {
-    button.textContent = "No immersive XR on this device";
-    return;
-  }
+  if (!mode) return unavailable("No immersive XR on this device");
+
   button.textContent = mode === "immersive-ar" ? "Enter AR (passthrough)" : "Enter VR";
+  button.dataset.unavailable = "";
   button.disabled = false;
-  button.onclick = start;
+  button.onclick = () => start(mode, link, ui);
 }
 
-async function start() {
+async function start(mode, link, ui) {
   const session = await navigator.xr.requestSession(mode, { optionalFeatures: ["local-floor"] });
   const canvas = document.createElement("canvas");
   const gl = canvas.getContext("webgl2", { xrCompatible: true }) || canvas.getContext("webgl", { xrCompatible: true });
@@ -108,11 +57,11 @@ async function start() {
     refSpace = await session.requestReferenceSpace("local");
   }
 
-  $("enter").disabled = true;
+  ui.setActive("xr");
   session.addEventListener("end", () => {
-    send({ type: "session_end" });
-    $("enter").disabled = false;
-    $("readout").textContent = "XR session ended";
+    link.send({ type: "session_end" });
+    ui.setActive(null);
+    ui.showHands({}, "XR session ended");
   });
 
   const clear = mode === "immersive-ar" ? [0, 0, 0, 0] : [0.1, 0.1, 0.12, 1];
@@ -122,17 +71,12 @@ async function start() {
     const hands = {};
     for (const src of session.inputSources) {
       // Hand-tracking sources (src.hand) come in step 6; controllers only for now.
-      if (src.handedness === "left" || src.handedness === "right") {
-        if (src.gamepad && !src.hand) hands[src.handedness] = readController(src, frame, refSpace);
+      if ((src.handedness === "left" || src.handedness === "right") && src.gamepad && !src.hand) {
+        hands[src.handedness] = readController(src, frame, refSpace);
       }
     }
-    send({ type: "xr_input", t, hands });
-
-    if (t - lastReadout > 100) {
-      lastReadout = t;
-      $("readout").textContent =
-        Object.entries(hands).map(([side, c]) => `${side.padEnd(5)} ${fmt(c)}`).join("\n") || "no controllers";
-    }
+    link.send({ type: "xr_input", t, hands });
+    ui.showHands(hands);
 
     // Nothing to draw yet (overlay = step 5): just clear. Transparent in AR = passthrough.
     gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer);
@@ -140,6 +84,3 @@ async function start() {
     gl.clear(gl.COLOR_BUFFER_BIT);
   });
 }
-
-connect();
-init();

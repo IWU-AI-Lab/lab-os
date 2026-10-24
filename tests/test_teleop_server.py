@@ -29,7 +29,15 @@ async def wait_for(cond, timeout=1.0):
 async def test_pages_served(aiohttp_client):
     app, _ = make_app()
     client = await aiohttp_client(app)
-    for path in ("/", "/monitor", "/static/xr.js", "/static/monitor.js"):
+    for path in (
+        "/",
+        "/monitor",
+        "/static/teleop-page.js",
+        "/static/link.js",
+        "/static/xr.js",
+        "/static/desktop-input.js",
+        "/static/monitor.js",
+    ):
         resp = await client.get(path)
         assert resp.status == 200, path
 

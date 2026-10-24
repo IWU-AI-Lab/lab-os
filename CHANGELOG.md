@@ -3,6 +3,8 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-10-24
+- Desktop control on the teleop page: keyboard + trackpad drive a virtual controller (Space = clutch, C = gripper, X = stop, H = re-center), sending the same messages as the Quest. 3D view renders only on change.
+- Fixed the teleop joint directions for the SO-101 (hand up was lowering the arm): per-joint signs, verified by forward kinematics on the URDF in the tests. Fake arm starts in a working pose; the 3D view starts behind the arm.
 - Soft joint limits in the teleop mapping: commands stay 3° inside each limit and the clutch slips at a limit, so there's no wind-up and no jump when re-grabbing (seen in the WebXR emulator).
 - 3D arm view on the teleop and monitor pages: draws exactly what the arm driver receives (new `arm_command` / `arm_stop` / `arm_resume` messages), flags driver clamping and out-of-limit commands, red tint when frozen. Models: SO-101 from its real URDF (meshes or stick figure), xArm 1S from boxes. three.js 0.186.1 + urdf-loader 0.13.1 vendored for offline use; SO-101 URDF in `models/so101/`. The model code is page-independent, for the Quest ghost arm later.
 - FakeArm now uses the SO-101's real joint limits (from the URDF; a test keeps them in sync) and declares its 3D model.
