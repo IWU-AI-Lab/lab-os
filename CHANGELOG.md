@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-10-24
+- Soft joint limits in the teleop mapping: commands stay 3° inside each limit and the clutch slips at a limit, so there's no wind-up and no jump when re-grabbing (seen in the WebXR emulator).
 - 3D arm view on the teleop and monitor pages: draws exactly what the arm driver receives (new `arm_command` / `arm_stop` / `arm_resume` messages), flags driver clamping and out-of-limit commands, red tint when frozen. Models: SO-101 from its real URDF (meshes or stick figure), xArm 1S from boxes. three.js 0.186.1 + urdf-loader 0.13.1 vendored for offline use; SO-101 URDF in `models/so101/`. The model code is page-independent, for the Quest ghost arm later.
 - FakeArm now uses the SO-101's real joint limits (from the URDF; a test keeps them in sync) and declares its 3D model.
 - Monday lab checklist (raspbots, xarm1 identify/driver/measure, Quest developer mode + real Quest data test) added to `docs/current-focus.md`.

@@ -126,14 +126,20 @@ def test_command_messages_are_exactly_what_the_driver_got():
     assert loop.status()["arm"] == {"name": "fake-arm", "model": "so101"}
 
 
-def test_command_reports_driver_clamping():
+def test_commands_stay_inside_soft_limits():
     loop, arm = make_loop()
     sent = []
     loop.on_command = sent.append
-    loop.mapper.config.deg_per_m = 5000.0  # absurd gain → targets beyond the joint limits
+    loop.mapper.config.deg_per_m = 5000.0  # absurd gain: the hand asks for far beyond the limits
     feed(loop, msg(grip=1.0), now=0.0)
     for i in range(1, 200):
         feed(loop, msg(x=0.5, grip=1.0), now=i * DT)
-    last = loop.last_command
-    assert last["joints"]["shoulder_pan"] < arm.limits["shoulder_pan"].low  # what was commanded
-    assert last["driver_joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].low  # what it did
+    margin = loop.mapper.config.limit_margin_deg
+    for m in sent:
+        if m["type"] != "arm_command":
+            continue
+        for j, v in m["joints"].items():
+            lim = arm.limits[j]
+            assert lim.low + margin - 1e-9 <= v <= lim.high - margin + 1e-9 or j == "gripper"
+        assert m["joints"] == m["driver_joints"]  # the driver never had to clamp
+    assert loop.last_command["joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].low + margin

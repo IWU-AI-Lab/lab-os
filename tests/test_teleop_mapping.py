@@ -2,6 +2,7 @@ import math
 
 import pytest
 
+from lab_os.robots.base import JointLimit
 from lab_os.teleop.mapping import ClutchMapper, MappingConfig
 from lab_os.teleop.messages import ControllerState
 
@@ -106,3 +107,39 @@ def test_after_reset_grip_must_be_released_first():
     assert m.step(ctrl(grip=1.0), JOINTS, DT, 1.0) is None  # still held: ignored
     m.step(ctrl(grip=0.0), JOINTS, DT, 1.0)
     assert m.step(ctrl(grip=1.0), JOINTS, DT, 1.0) == JOINTS
+
+
+LIMITS = {j: JointLimit(-100.0, 100.0) for j in JOINTS}
+
+
+def test_limit_slip_no_windup():
+    """Push far past a limit, then move back a little: the arm follows back immediately."""
+    m = ClutchMapper()
+    start = JOINTS | {"shoulder_pan": 0.0}
+    m.step(ctrl(grip=1.0), start, DT, 1.0, LIMITS)
+    joints = run_l(m, ctrl(pos=(-1.0, 1.0, 0.0), grip=1.0), start, ticks=300)  # 200° asked
+    assert joints["shoulder_pan"] == pytest.approx(97.0)  # held 3° inside the limit
+    joints = run_l(m, ctrl(pos=(-0.95, 1.0, 0.0), grip=1.0), joints, ticks=100)  # back 5 cm
+    assert joints["shoulder_pan"] == pytest.approx(87.0)  # moved back 10° right away
+
+
+def test_regrab_after_limit_does_not_jump():
+    m = ClutchMapper()
+    m.step(ctrl(grip=1.0), JOINTS, DT, 1.0, LIMITS)
+    joints = run_l(m, ctrl(pos=(-1.0, 1.0, 0.0), grip=1.0), JOINTS, ticks=300)
+    m.step(ctrl(pos=(-1.0, 1.0, 0.0), grip=0.0), joints, DT, 1.0, LIMITS)
+    assert m.step(ctrl(pos=(-1.0, 1.0, 0.0), grip=1.0), joints, DT, 1.0, LIMITS) == joints
+
+
+def test_engaging_outside_soft_range_does_not_move():
+    m = ClutchMapper()
+    near_limit = JOINTS | {"shoulder_pan": 99.5}  # inside the hard limit, outside the margin
+    assert m.step(ctrl(grip=1.0), near_limit, DT, 1.0, LIMITS) == near_limit
+
+
+def run_l(mapper, c, joints, ticks):
+    for _ in range(ticks):
+        out = mapper.step(c, joints, DT, 1.0, LIMITS)
+        if out:
+            joints = joints | out
+    return joints

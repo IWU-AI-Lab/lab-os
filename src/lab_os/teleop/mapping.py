@@ -6,13 +6,18 @@
 - Gentle ramps: each joint's commanded position changes by at most `max_deg_per_s * speed_scale`.
 - Tilt-for-rotation (kept from the glove): controller pitch → wrist_flex, roll → wrist_roll.
 - Trigger → gripper (0 = open, fully pressed = closed).
+- Soft limits: targets stay `limit_margin_deg` inside the arm's joint limits, so the driver never
+  has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
+  back moves the arm back immediately (no wind-up, no jump on the next grab).
 
-This is joint-space on purpose: proper inverse kinematics is step 4.
+This is joint-space on purpose: proper inverse kinematics is step 4. Joint limits don't prevent
+every self-collision; that needs the arm's geometry (also step 4).
 """
 
 import math
 from dataclasses import dataclass, field
 
+from lab_os.robots.base import JointLimit
 from lab_os.teleop.messages import ControllerState, Quat, Vec3
 
 
@@ -25,6 +30,11 @@ class MappingConfig:
     max_deg_per_s: float = 90.0  # ramp limit at speed_scale = 1
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
+    limit_margin_deg: float = 3.0  # stay this far inside each joint limit
+
+
+# Joints driven relative to the anchor (the clutch can slip on these); the gripper is absolute.
+RELATIVE_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
 
 
 def _quat_conj(q: Quat) -> Quat:
@@ -63,6 +73,7 @@ class ClutchMapper:
     _anchor_quat: Quat | None = None
     _anchor_joints: dict[str, float] = field(default_factory=dict)
     _commanded: dict[str, float] = field(default_factory=dict)
+    _bounds: dict[str, tuple[float, float]] = field(default_factory=dict)
 
     def reset(self, require_release: bool = True) -> None:
         """Drop the clutch (e.g. on connection loss). Requires a fresh grip press to move again."""
@@ -76,6 +87,7 @@ class ClutchMapper:
         arm_joints: dict[str, float],
         dt: float,
         speed_scale: float,
+        limits: dict[str, JointLimit] | None = None,
     ) -> dict[str, float] | None:
         """Return joint targets for this tick, or None when the arm should hold still."""
         cfg = self.config
@@ -94,18 +106,44 @@ class ClutchMapper:
             self._anchor_quat = controller.quat
             self._anchor_joints = dict(arm_joints)
             self._commanded = dict(arm_joints)
+            self._bounds = self._soft_bounds(limits or {}, arm_joints)
         elif self.engaged and controller.grip < cfg.grip_off:
             self.engaged = False
         if not self.engaged:
             return None
 
         desired = self._desired(controller)
+        for joint, target in desired.items():
+            if joint not in self._bounds:
+                continue
+            lo, hi = self._bounds[joint]
+            clamped = min(max(target, lo), hi)
+            if clamped != target and joint in RELATIVE_JOINTS:
+                self._anchor_joints[joint] += clamped - target  # slip: hand moves, arm stays
+            desired[joint] = clamped
         max_step = cfg.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt
         for joint, target in desired.items():
             current = self._commanded.get(joint, target)
             delta = min(max(target - current, -max_step), max_step)
             self._commanded[joint] = current + delta
         return {j: self._commanded[j] for j in desired}
+
+    def _soft_bounds(
+        self, limits: dict[str, JointLimit], joints: dict[str, float]
+    ) -> dict[str, tuple[float, float]]:
+        """Limits minus the margin, widened to include where the arm already is (so engaging
+        never moves it), but never beyond the hard limits."""
+        m = self.config.limit_margin_deg
+        bounds = {}
+        for joint, lim in limits.items():
+            lo, hi = lim.low + m, lim.high - m
+            if lo > hi:
+                lo = hi = (lim.low + lim.high) / 2
+            now = joints.get(joint)
+            if now is not None:
+                lo, hi = min(lo, now), max(hi, now)
+            bounds[joint] = (max(lo, lim.low), min(hi, lim.high))
+        return bounds
 
     def _desired(self, c: ControllerState) -> dict[str, float]:
         cfg = self.config

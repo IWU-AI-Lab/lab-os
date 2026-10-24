@@ -66,7 +66,9 @@ class TeleopLoop:
             return
 
         controller = frame.hands.get(self.mapper.config.hand) if frame else None
-        targets = self.mapper.step(controller, self.arm.read_joints(), dt, self.speed_scale)
+        targets = self.mapper.step(
+            controller, self.arm.read_joints(), dt, self.speed_scale, self.arm.limits
+        )
         if targets is None:
             return
         if self.frozen:

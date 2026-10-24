@@ -9,7 +9,7 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser ne
 ```
 Then open **http://localhost:8080/monitor** to watch the fake arm. In VS Code, the Run and Debug panel has buttons for each of these (`.vscode/launch.json`).
 
-**3D view** (on both pages): draws exactly the joint angles the arm driver receives, per command, unclamped. Pick the model in its dropdown: SO-101 (real URDF meshes), SO-101 stick figure, or xArm 1S boxes. Drag to orbit, scroll to zoom. The table under it flags joints the driver clamped and commands outside the model's limits; the arm turns dark red while frozen. Works offline (three.js and the model are in the repo). Note: control is relative, so `replay --loop` adds the same motion every loop and eventually runs into the joint limits. That's expected, and a handy way to see the clamp flags.
+**3D view** (on both pages): draws exactly the joint angles the arm driver receives, per command, unclamped. Pick the model in its dropdown: SO-101 (real URDF meshes), SO-101 stick figure, or xArm 1S boxes. Drag to orbit, scroll to zoom. The table under it flags joints the driver clamped and commands outside the model's limits; the arm turns dark red while frozen. Works offline (three.js and the model are in the repo). Note: control is relative, so `replay --loop` adds the same motion every loop until joints reach their soft limits (3° inside the real ones). There the clutch slips: the arm stops, and moving the hand back moves it back right away.
 
 Controls: **grip** held = clutch (arm follows, relative to where it is) · **trigger** = gripper · **A/X** = stop. The arm freezes when the grip is released, tracking is lost, the connection drops, or the session ends. After a freeze, release and re-press the grip.
 
