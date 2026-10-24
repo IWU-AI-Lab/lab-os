@@ -25,6 +25,17 @@ SO101_LIMITS_RAD = {
 }
 
 
+# Where the fake arm starts: upper arm level, elbow bent, so "reach forward" has room to reach.
+SO101_HOME = {
+    "shoulder_pan": 0.0,
+    "shoulder_lift": 0.0,
+    "elbow_flex": 60.0,
+    "wrist_flex": 0.0,
+    "wrist_roll": 0.0,
+    "gripper": 30.0,
+}
+
+
 def so101_limits() -> dict[str, JointLimit]:
     return {
         j: JointLimit(math.degrees(lo), math.degrees(hi))
@@ -40,7 +51,7 @@ class FakeArm:
     limits: dict[str, JointLimit] = field(default_factory=so101_limits)
     connected: bool = False
     stopped: bool = False
-    joints: dict[str, float] = field(default_factory=lambda: dict.fromkeys(SO101_JOINTS, 0.0))
+    joints: dict[str, float] = field(default_factory=lambda: dict(SO101_HOME))
     log: list[tuple[str, dict[str, float], float]] = field(default_factory=list)
 
     def connect(self) -> None:

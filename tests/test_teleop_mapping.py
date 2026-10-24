@@ -52,9 +52,9 @@ def test_relative_motion_maps_to_joints():
     m.step(ctrl(grip=1.0), JOINTS, DT, 1.0)
     moved = ctrl(pos=(0.1, 1.1, -0.1), grip=1.0, roll_deg=30)
     joints = run(m, moved, JOINTS, ticks=200)
-    assert joints["shoulder_pan"] == pytest.approx(10.0 - 20.0)  # right → pan negative
-    assert joints["shoulder_lift"] == pytest.approx(-5.0 + 20.0)  # up
-    assert joints["elbow_flex"] == pytest.approx(20.0 + 20.0)  # forward
+    assert joints["shoulder_pan"] == pytest.approx(10.0 + 20.0)  # right
+    assert joints["shoulder_lift"] == pytest.approx(-5.0 - 20.0)  # up (SO-101: -lift raises)
+    assert joints["elbow_flex"] == pytest.approx(20.0 - 20.0)  # forward (elbow opens)
     assert joints["wrist_roll"] == pytest.approx(30.0, abs=0.01)
 
 
@@ -118,9 +118,9 @@ def test_limit_slip_no_windup():
     start = JOINTS | {"shoulder_pan": 0.0}
     m.step(ctrl(grip=1.0), start, DT, 1.0, LIMITS)
     joints = run_l(m, ctrl(pos=(-1.0, 1.0, 0.0), grip=1.0), start, ticks=300)  # 200° asked
-    assert joints["shoulder_pan"] == pytest.approx(97.0)  # held 3° inside the limit
+    assert joints["shoulder_pan"] == pytest.approx(-97.0)  # held 3° inside the limit
     joints = run_l(m, ctrl(pos=(-0.95, 1.0, 0.0), grip=1.0), joints, ticks=100)  # back 5 cm
-    assert joints["shoulder_pan"] == pytest.approx(87.0)  # moved back 10° right away
+    assert joints["shoulder_pan"] == pytest.approx(-87.0)  # moved back 10° right away
 
 
 def test_regrab_after_limit_does_not_jump():

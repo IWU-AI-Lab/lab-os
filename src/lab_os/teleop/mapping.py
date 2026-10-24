@@ -31,6 +31,19 @@ class MappingConfig:
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
     limit_margin_deg: float = 3.0  # stay this far inside each joint limit
+    # Direction of each joint for the hand motion that drives it (+1 / -1). Defaults are the SO-101
+    # convention (checked with forward kinematics on models/so101): +pan swings the gripper to the
+    # arm's right, +lift and +elbow lower/fold it, +wrist_flex tilts it down. The xArm model in
+    # web/arm/arm-model.js uses the same convention. A new arm that differs overrides these.
+    signs: dict[str, float] = field(
+        default_factory=lambda: {
+            "shoulder_pan": 1.0,  # hand right → gripper right
+            "shoulder_lift": -1.0,  # hand up → arm up
+            "elbow_flex": 1.0,  # hand forward → elbow opens (reach out)
+            "wrist_flex": -1.0,  # tilt controller nose up → gripper tilts up
+            "wrist_roll": 1.0,  # roll the controller → roll the gripper
+        }
+    )
 
 
 # Joints driven relative to the anchor (the clutch can slip on these); the gripper is absolute.
@@ -150,13 +163,15 @@ class ClutchMapper:
         a = self._anchor_joints
         dx, dy, dz = (now - then for now, then in zip(c.pos, self._anchor_pos, strict=True))
         rel = _quat_mul(_quat_conj(self._anchor_quat), c.quat)
-        desired = {
-            # WebXR axes: +x right, +y up, -z forward (away from the user).
-            "shoulder_pan": a.get("shoulder_pan", 0.0) - dx * cfg.deg_per_m,
-            "shoulder_lift": a.get("shoulder_lift", 0.0) + dy * cfg.deg_per_m,
-            "elbow_flex": a.get("elbow_flex", 0.0) - dz * cfg.deg_per_m,
-            "wrist_flex": a.get("wrist_flex", 0.0) + _twist_deg(rel, 0),
-            "wrist_roll": a.get("wrist_roll", 0.0) + _twist_deg(rel, 2),
-            "gripper": cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * c.trigger,
+        # WebXR axes: +x right, +y up, -z forward (away from the user). Twist about the
+        # controller's x = pitch (nose up > 0), about its z = roll.
+        motion = {
+            "shoulder_pan": dx * cfg.deg_per_m,
+            "shoulder_lift": dy * cfg.deg_per_m,
+            "elbow_flex": dz * cfg.deg_per_m,  # dz < 0 = forward
+            "wrist_flex": _twist_deg(rel, 0),
+            "wrist_roll": _twist_deg(rel, 2),
         }
+        desired = {j: a.get(j, 0.0) + cfg.signs.get(j, 1.0) * m for j, m in motion.items()}
+        desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * c.trigger
         return {j: v for j, v in desired.items() if j in a}

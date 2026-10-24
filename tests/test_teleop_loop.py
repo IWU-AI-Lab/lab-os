@@ -41,7 +41,7 @@ def test_follows_while_clutched():
     feed(loop, msg(grip=1.0), now=0.0)
     for i in range(1, 100):
         feed(loop, msg(x=0.1, grip=1.0), now=i * DT)
-    assert arm.read_joints()["shoulder_pan"] < -15
+    assert arm.read_joints()["shoulder_pan"] > 15  # hand right → pan toward the arm's right
 
 
 def test_stale_input_freezes_and_needs_new_press():
@@ -81,10 +81,10 @@ def test_sample_recording_replays_through_the_loop():
             continue
         feed(loop, raw, now=dt)
         pan_at[round(dt, 2)] = arm.read_joints()["shoulder_pan"]
-    assert pan_at[3.5] < -15  # moved right while clutched
+    assert pan_at[3.5] > 15  # moved right while clutched
     assert arm.read_joints()["gripper"] < 5  # trigger closed the gripper
     assert pan_at[5.0] == pan_at[3.9]  # hand moved back while released: arm held still
-    assert pan_at[7.0] > pan_at[5.0] + 15  # second clutch: moved left
+    assert pan_at[7.0] < pan_at[5.0] - 15  # second clutch: moved left
 
 
 def test_recorder_round_trip(tmp_path):
@@ -142,4 +142,4 @@ def test_commands_stay_inside_soft_limits():
             lim = arm.limits[j]
             assert lim.low + margin - 1e-9 <= v <= lim.high - margin + 1e-9 or j == "gripper"
         assert m["joints"] == m["driver_joints"]  # the driver never had to clamp
-    assert loop.last_command["joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].low + margin
+    assert loop.last_command["joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].high - margin
