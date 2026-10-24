@@ -40,7 +40,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 8. **Portable from day one:** nothing that only works on the lab desktop or lab network.
 
 ## Steps (each one is a small, testable win)
--1. **Scaffold the repo** per project-scaffold.md "Day one" (README, CLAUDE.md, docs/, SAFETY.md, .gitignore, .env.example, config/, calibration/, lock file, install script, tests + fake robot, formatter). Keep it quick — an hour, not a week.
+-1. ~~**Scaffold the repo** per project-scaffold.md "Day one" (README, CLAUDE.md, docs/, SAFETY.md, .gitignore, .env.example, config/, calibration/, lock file, install script, tests + fake robot, formatter). Keep it quick — an hour, not a week.~~ **Done 2026-10-24.** Still open from Day one: LICENSE (ask the professor).
 0. **In parallel:** build + calibrate `so101-white`.
 1. **Arm works from a computer.** `xarm1` over USB (Python `xarm`): move each servo, read positions, measure commands/second and delay. Later `so101-white` with LeRobot.
 2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live.
