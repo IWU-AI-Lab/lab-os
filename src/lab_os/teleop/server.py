@@ -2,21 +2,25 @@
 
 GET /            the XR input page (Quest browser or a desktop browser + WebXR emulator)
 GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
+GET /models/...  robot models (URDF + meshes) for the 3D view
 WS  /ws          input page connects here; /ws?role=monitor for watchers
 """
 
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
+from lab_os import REPO_ROOT
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.messages import parse_frame
 from lab_os.teleop.recording import Recorder
 
 WEB_DIR = Path(__file__).parent / "web"
+MODELS_DIR = REPO_ROOT / "models"
 STATUS_HZ = 10
 
 log = logging.getLogger(__name__)
@@ -26,6 +30,7 @@ RECORDER = web.AppKey("recorder", Recorder | None)
 ACCEPT_INPUT = web.AppKey("accept_input", bool)
 CLIENTS = web.AppKey("clients", set)
 INPUTS = web.AppKey("inputs", set)
+OUTBOX = web.AppKey("outbox", asyncio.Queue)
 
 
 async def _page(name: str) -> web.FileResponse:
@@ -91,19 +96,29 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
-async def _broadcast_status(app: web.Application) -> None:
+async def _broadcaster(app: web.Application) -> None:
+    """The only task writing to clients: each driver command as it happens + status at 10 Hz."""
+    period = 1 / STATUS_HZ
+    next_status = time.monotonic()
     while True:
-        await asyncio.sleep(1 / STATUS_HZ)
+        try:
+            msg = await asyncio.wait_for(
+                app[OUTBOX].get(), timeout=max(0.0, next_status - time.monotonic())
+            )
+        except TimeoutError:
+            msg = app[LOOP].status()
+            next_status = time.monotonic() + period
         if not app[CLIENTS]:
             continue
-        text = json.dumps(app[LOOP].status())
+        text = json.dumps(msg)
         for ws in list(app[CLIENTS]):
             if not ws.closed:
                 await ws.send_str(text)
 
 
 async def _background(app: web.Application):
-    tasks = [asyncio.create_task(app[LOOP].run()), asyncio.create_task(_broadcast_status(app))]
+    app[LOOP].on_command = app[OUTBOX].put_nowait
+    tasks = [asyncio.create_task(app[LOOP].run()), asyncio.create_task(_broadcaster(app))]
     yield
     for t in tasks:
         t.cancel()
@@ -120,9 +135,11 @@ def create_app(
     app[ACCEPT_INPUT] = accept_input
     app[CLIENTS] = set()
     app[INPUTS] = set()
+    app[OUTBOX] = asyncio.Queue()
     app.router.add_get("/", index)
     app.router.add_get("/monitor", monitor)
     app.router.add_get("/ws", websocket)
     app.router.add_static("/static", WEB_DIR)
+    app.router.add_static("/models", MODELS_DIR)
     app.cleanup_ctx.append(_background)
     return app

@@ -1,5 +1,6 @@
 """A software-only arm: same interface as a real one; records every command, moves nothing."""
 
+import math
 from dataclasses import dataclass, field
 
 from lab_os.robots.base import JointLimit
@@ -13,14 +14,30 @@ SO101_JOINTS = (
     "gripper",
 )
 
+# Joint limits (radians) from models/so101/so101_new_calib.urdf, so the fake arm behaves like one.
+SO101_LIMITS_RAD = {
+    "shoulder_pan": (-1.91986, 1.91986),
+    "shoulder_lift": (-1.74533, 1.74533),
+    "elbow_flex": (-1.69, 1.69),
+    "wrist_flex": (-1.65806, 1.65806),
+    "wrist_roll": (-2.74385, 2.84121),
+    "gripper": (-0.174533, 1.74533),
+}
+
+
+def so101_limits() -> dict[str, JointLimit]:
+    return {
+        j: JointLimit(math.degrees(lo), math.degrees(hi))
+        for j, (lo, hi) in SO101_LIMITS_RAD.items()
+    }
+
 
 @dataclass
 class FakeArm:
     name: str = "fake-arm"
+    model: str = "so101"  # which 3D model the viewer draws
     joint_names: tuple[str, ...] = SO101_JOINTS
-    limits: dict[str, JointLimit] = field(
-        default_factory=lambda: {j: JointLimit(-90.0, 90.0) for j in SO101_JOINTS}
-    )
+    limits: dict[str, JointLimit] = field(default_factory=so101_limits)
     connected: bool = False
     stopped: bool = False
     joints: dict[str, float] = field(default_factory=lambda: dict.fromkeys(SO101_JOINTS, 0.0))

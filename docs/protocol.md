@@ -60,12 +60,29 @@ Broadcast to all clients at 10 Hz.
   "clutch": true,
   "needs_release": false,
   "speed_scale": 0.5,
+  "arm": {"name": "fake-arm", "model": "so101"},
   "joints": {"shoulder_pan": -12.0, "...": 0.0},
-  "limits": {"shoulder_pan": [-90.0, 90.0], "...": [0, 0]}
+  "limits": {"shoulder_pan": [-110.0, 110.0], "...": [0, 0]},
+  "last_command": { "...": "the latest arm_command, or null" }
 }
 ```
 - `frozen`: dead-man freeze is active (input stale > 250 ms, disconnected, session ended, or A/X pressed).
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
+- `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
+- `joints`: what the driver currently reports (degrees).
+
+### `arm_command`, `arm_stop`, `arm_resume`
+Sent the moment the teleop loop calls the arm driver, one message per call, so viewers (3D view, later the Quest ghost arm) show **exactly what the driver received**.
+```json
+{"type": "arm_command", "seq": 412, "device": "fake-arm",
+ "joints": {"shoulder_pan": -12.3, "...": 0.0}, "speed_scale": 0.5,
+ "driver_joints": {"shoulder_pan": -12.3, "...": 0.0}}
+{"type": "arm_stop", "seq": 413, "device": "fake-arm"}
+{"type": "arm_resume", "seq": 414, "device": "fake-arm"}
+```
+- `joints` / `speed_scale`: the arguments of `Arm.move_joints(...)`, unmodified (degrees, shared joint names).
+- `driver_joints`: what the driver reported right after that call. Differences = the driver clamped the command.
+- `seq` increases by one per message; a gap means a viewer missed something.
 
 ### `error`
 ```json

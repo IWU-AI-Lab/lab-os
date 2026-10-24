@@ -96,3 +96,44 @@ def test_recorder_round_trip(tmp_path):
     entries = read_recording(path)
     assert [m["type"] for _, m in entries] == ["xr_input", "session_end"]
     assert entries[0][0] <= entries[1][0]
+
+
+def test_command_messages_are_exactly_what_the_driver_got():
+    received = []
+
+    class SpyArm(FakeArm):
+        def move_joints(self, targets, speed_scale):
+            received.append((dict(targets), speed_scale))
+            super().move_joints(targets, speed_scale)
+
+    arm = SpyArm()
+    arm.connect()
+    sent = []
+    loop = TeleopLoop(arm=arm, inputs=InputState(), speed_scale=0.4, on_command=sent.append)
+    feed(loop, msg(grip=0.0), now=0.0)
+    for i in range(1, 30):
+        feed(loop, msg(x=0.05, grip=1.0), now=i * DT)
+    loop.inputs.disconnect()
+    loop.step(1.0, DT)  # → arm_stop
+    feed(loop, msg(x=0.05, grip=0.0), now=1.02)
+    feed(loop, msg(x=0.05, grip=1.0), now=1.04)  # fresh press → arm_resume + command
+    commands = [m for m in sent if m["type"] == "arm_command"]
+    assert [(m["joints"], m["speed_scale"]) for m in commands] == received
+    assert [m["seq"] for m in sent] == list(range(1, len(sent) + 1))
+    kinds = [m["type"] for m in sent]
+    assert kinds[-3:] == ["arm_stop", "arm_resume", "arm_command"]
+    assert loop.status()["last_command"] == commands[-1]
+    assert loop.status()["arm"] == {"name": "fake-arm", "model": "so101"}
+
+
+def test_command_reports_driver_clamping():
+    loop, arm = make_loop()
+    sent = []
+    loop.on_command = sent.append
+    loop.mapper.config.deg_per_m = 5000.0  # absurd gain → targets beyond the joint limits
+    feed(loop, msg(grip=1.0), now=0.0)
+    for i in range(1, 200):
+        feed(loop, msg(x=0.5, grip=1.0), now=i * DT)
+    last = loop.last_command
+    assert last["joints"]["shoulder_pan"] < arm.limits["shoulder_pan"].low  # what was commanded
+    assert last["driver_joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].low  # what it did

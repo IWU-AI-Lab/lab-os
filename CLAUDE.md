@@ -30,6 +30,8 @@ A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules
 - **Hacks are labeled**: `# HACK: …` + a line in `docs/current-focus.md` → "Hacks to clean up".
 - **Every surprise** goes in `docs/GOTCHAS.md`.
 - **Secrets never in git**: real values in `.env` (gitignored); `.env.example` lists names with fake values.
+- **Works offline**: no CDN or internet-loaded code in the web pages. Browser libraries are vendored in `src/lab_os/teleop/web/vendor/` (versions + licenses in its README); robot models in `models/`.
+- **Shared joint names** for all arms (`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`, degrees); each driver maps them to its own servos.
 - **Small commits, branch per feature**; `main` always runs. Demo only from a tagged version.
 - Update the docs when decisions change — part of "done".
 

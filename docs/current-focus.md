@@ -56,7 +56,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live. *Software done 2026-10-24 and tested with replay + emulator (`lab-os-teleop`, docs/quest-setup.md); real-Quest test pending (Monday checklist).*
 3. **Cheap first mapping with clutch control.** First visible win. *Done on the fake arm 2026-10-24 (joint-space, `teleop/mapping.py`); real arm pending step 1.*
 4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
-5. **Quest display basics.** Passthrough + status panel + stop + workspace box.
+5. **Quest display basics.** Passthrough + status panel + stop + workspace box. *Prep done 2026-10-24: `web/arm/arm-model.js` is page-independent (`model.object` + `setJoints` + `setOpacity` for a ghost look), ready to add to the XR scene as the ghost arm.*
 6. **Hand-tracking input.** Same pipeline; per-user calibration.
 7. **Make it feel good.** Smoothing, latency, limits, dead-man freeze.
 8. **Visitor polish + portability test.** Script, hint, casting, run once from the laptop away from the lab; tag a known-good version; 60-second clip.

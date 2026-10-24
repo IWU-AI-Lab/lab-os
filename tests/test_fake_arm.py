@@ -13,8 +13,26 @@ def arm():
 def test_move_clamps_to_limits(arm):
     arm.move_joints({"elbow_flex": 500.0, "gripper": -500.0}, speed_scale=0.5)
     joints = arm.read_joints()
-    assert joints["elbow_flex"] == 90.0
-    assert joints["gripper"] == -90.0
+    assert joints["elbow_flex"] == arm.limits["elbow_flex"].high
+    assert joints["gripper"] == arm.limits["gripper"].low
+
+
+def test_limits_match_so101_urdf():
+    """FakeArm limits must stay in sync with the URDF the 3D view draws."""
+    import math
+    import xml.etree.ElementTree as ET
+
+    from lab_os import REPO_ROOT
+
+    urdf = ET.parse(REPO_ROOT / "models/so101/so101_new_calib.urdf").getroot()
+    limits = FakeArm().limits
+    for joint in urdf.findall("joint"):
+        if joint.get("type") != "revolute":
+            continue
+        lim = joint.find("limit")
+        name = joint.get("name")
+        assert limits[name].low == pytest.approx(math.degrees(float(lim.get("lower"))), abs=0.01)
+        assert limits[name].high == pytest.approx(math.degrees(float(lim.get("upper"))), abs=0.01)
 
 
 def test_speed_scale_clamped(arm):

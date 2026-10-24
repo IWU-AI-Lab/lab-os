@@ -6,6 +6,10 @@
   <title>lab-os teleop</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
+  <script type="importmap">
+    { "imports": { "three": "/static/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/static/vendor/three/examples/jsm/" } }
+  </script>
 </head>
 <body>
   <main>
@@ -27,8 +31,11 @@
       <pre id="readout">no XR session yet</pre>
     </section>
 
-    <p class="hint"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab to watch the fake arm.</p>
+    <section id="arm-panel" class="panel arm3d"></section>
+
+    <p class="hint"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
   </main>
   <script src="/static/xr.js"></script>
+  <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

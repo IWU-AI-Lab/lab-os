@@ -6,6 +6,10 @@
   <title>Arm monitor</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
+  <script type="importmap">
+    { "imports": { "three": "/static/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/static/vendor/three/examples/jsm/" } }
+  </script>
 </head>
 <body>
   <main>
@@ -15,8 +19,10 @@
       <div><span class="label">Input</span> <span id="input" class="pill off">—</span></div>
       <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
     </section>
-    <section class="panel" id="joints"></section>
+    <section id="arm-panel" class="panel arm3d"></section>
+    <section class="panel" id="joints"><div class="label">Driver state (what the arm reports)</div></section>
   </main>
   <script src="/static/monitor.js"></script>
+  <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

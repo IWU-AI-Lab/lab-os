@@ -37,11 +37,24 @@ class TeleopLoop:
     stale_after: float = 0.25  # seconds without input → freeze (dead-man)
     frozen: bool = False
     on_tick: Callable[["TeleopLoop"], None] | None = None
+    # Called with every arm_command / arm_stop / arm_resume message: exactly what the driver got.
+    on_command: Callable[[dict], None] | None = None
+    command_seq: int = 0
+    last_command: dict | None = None
+
+    def _emit(self, msg: dict) -> None:
+        self.command_seq += 1
+        msg = {"seq": self.command_seq, "device": self.arm.name} | msg
+        if msg["type"] == "arm_command":
+            self.last_command = msg
+        if self.on_command:
+            self.on_command(msg)
 
     def _freeze(self) -> None:
         if not self.frozen:
             self.arm.stop()
             self.frozen = True
+            self._emit({"type": "arm_stop"})
         self.mapper.reset(require_release=True)
 
     def step(self, now: float, dt: float) -> None:
@@ -59,7 +72,17 @@ class TeleopLoop:
         if self.frozen:
             self.arm.resume()
             self.frozen = False
+            self._emit({"type": "arm_resume"})
         self.arm.move_joints(targets, self.speed_scale)
+        self._emit(
+            {
+                "type": "arm_command",
+                "joints": dict(targets),
+                "speed_scale": self.speed_scale,
+                # What the driver reports right after, so viewers can spot clamping exactly.
+                "driver_joints": self.arm.read_joints(),
+            }
+        )
 
     def status(self) -> dict:
         """What the overlay / monitor shows (sent as a `status` message)."""
@@ -71,7 +94,9 @@ class TeleopLoop:
             "clutch": self.mapper.engaged,
             "needs_release": self.mapper.needs_release,
             "speed_scale": self.speed_scale,
+            "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
             "joints": joints,
+            "last_command": self.last_command,
             "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
         }
 

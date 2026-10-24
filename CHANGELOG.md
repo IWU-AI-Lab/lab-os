@@ -3,6 +3,8 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-10-24
+- 3D arm view on the teleop and monitor pages: draws exactly what the arm driver receives (new `arm_command` / `arm_stop` / `arm_resume` messages), flags driver clamping and out-of-limit commands, red tint when frozen. Models: SO-101 from its real URDF (meshes or stick figure), xArm 1S from boxes. three.js 0.186.1 + urdf-loader 0.13.1 vendored for offline use; SO-101 URDF in `models/so101/`. The model code is page-independent, for the Quest ghost arm later.
+- FakeArm now uses the SO-101's real joint limits (from the URDF; a test keeps them in sync) and declares its 3D model.
 - Monday lab checklist (raspbots, xarm1 identify/driver/measure, Quest developer mode + real Quest data test) added to `docs/current-focus.md`.
 - Teleop step 2 groundwork: `lab-os-teleop` serves a plain-JS WebXR page that sends Quest controller data (pose, grip, trigger, buttons) over a WebSocket; live terminal readout and an arm monitor page. Message format in `docs/protocol.md`.
 - Testing without a headset: record (`serve --record`) and replay (`replay`) controller sessions; synthetic sample in `tests/fixtures/`; browser-emulator and Quest-over-USB guide in `docs/quest-setup.md`.

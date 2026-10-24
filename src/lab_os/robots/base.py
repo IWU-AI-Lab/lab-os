@@ -14,7 +14,11 @@ class JointLimit:
 
 
 class Arm(Protocol):
+    """Joints use shared names across arms (shoulder_pan, shoulder_lift, elbow_flex, wrist_flex,
+    wrist_roll, gripper), in degrees; each driver maps them to its own servos/units."""
+
     name: str
+    model: str  # 3D model for the viewer: "so101", "xarm1s", ... (web/arm/arm-model.js)
     joint_names: tuple[str, ...]
     limits: dict[str, JointLimit]
 

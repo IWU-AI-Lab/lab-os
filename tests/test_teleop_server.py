@@ -73,3 +73,30 @@ async def test_replay_mode_rejects_live_input(aiohttp_client):
     ws = await client.ws_connect("/ws")
     msg = await ws.receive_json(timeout=1)
     assert msg["type"] == "error"
+
+
+async def test_model_files_served(aiohttp_client):
+    app, _ = make_app()
+    client = await aiohttp_client(app)
+    for path in (
+        "/models/so101/so101_new_calib.urdf",
+        "/models/so101/assets/base_so101_v2.stl",
+        "/static/vendor/three/three.module.js",
+        "/static/vendor/urdf-loader/URDFLoader.js",
+        "/static/arm/arm-panel.js",
+    ):
+        resp = await client.get(path)
+        assert resp.status == 200, path
+
+
+async def test_commands_broadcast_to_monitors(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws?role=monitor")
+    loop._emit({"type": "arm_command", "joints": {"gripper": 12.5}, "speed_scale": 0.5})
+    for _ in range(20):
+        m = await ws.receive_json(timeout=1)
+        if m["type"] == "arm_command":
+            assert m["joints"] == {"gripper": 12.5} and m["device"] == "fake-arm"
+            return
+    raise AssertionError("no arm_command received")
