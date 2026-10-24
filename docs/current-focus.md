@@ -9,6 +9,16 @@ A visitor puts on a Quest 3, and a robot arm copies their **bare hand** live (ha
 
 **Second act (after the first works):** the arm does tasks on its own — ideally ones that **generalize** (new objects, new spots), not just one memorized task. See "Second act options" below. The teleop setup is also the **data-collection tool** for training (incl. the lab's training project if `so101-white` joins it).
 
+## Monday lab checklist (2026-10-26)
+In-lab tasks only; everything else can be done from home. Tick them off here and note surprises in `docs/GOTCHAS.md`. `so101-green` may be plugged in: leave it alone.
+
+- [ ] **Raspbots:** read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
+- [ ] **xarm1, identify:** plug it into the lab desktop; Claude identifies it from `lsusb` / `/dev/serial/by-id/` (or its HID device) **without opening anything else**, and adds it to `config/devices.yaml`.
+- [ ] **xarm1, driver:** an `Arm` plug-in (same interface as `FakeArm`), read-only first: read servo positions, measure reads/second.
+- [ ] **xarm1, motion test (ask first):** only after the builder's OK, with the arm clamped, the area clear and the power plug in reach (`SAFETY.md`). Small, slow single-servo moves; measure commands/second and command→motion delay. Record the numbers in `docs/GOTCHAS.md` (or a decision note) and step 1 below.
+- [ ] **Quest access:** check whether developer mode is on (or can be turned on) for the lab's Quest 3s, and find out **who controls the lab's Meta account** (developer mode needs that account in a developer organization).
+- [ ] **If developer mode works:** run the real Quest data test from `docs/quest-setup.md` section 3 (`adb reverse` + `http://localhost:8080`), drive the fake arm, and save a recording (`serve --record recordings/quest-2026-10-26.jsonl`). Commit a short clip as a test fixture.
+
 ## Which arm
 - **`so101-green`** — built SO-101 set, **in use for another training project. Don't touch/recalibrate.**
 - **`so101-white`** — second SO-101 set (leader + follower); parts printed except camera mounts. **Polished demo + second act.** Smoother motors, LeRobot support, existing URDF.
