@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Teleop: serve (fake arm)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "lab_os.teleop.cli",
+      "args": ["serve"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Teleop: serve + record",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "lab_os.teleop.cli",
+      "args": ["serve", "--record", "recordings/session.jsonl"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Teleop: replay sample (loop)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "lab_os.teleop.cli",
+      "args": ["replay", "tests/fixtures/sample_clutch.jsonl", "--loop"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

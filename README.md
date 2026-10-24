@@ -16,14 +16,16 @@ This installs [uv](https://docs.astral.sh/uv/) if needed and creates the project
 
 ## Run
 ```bash
-uv run pytest            # checks, no hardware needed (uses the fake arm)
+uv run pytest                                            # checks, no hardware needed
+uv run lab-os-teleop serve                               # XR page + fake arm, live
+uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # no browser/headset
 ```
-The demo itself isn't built yet. See `docs/current-focus.md` for where it stands.
+Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/quest-setup.md`. Where the demo stands: `docs/current-focus.md`.
 
 ## Repository map
 | Path | What |
 |---|---|
-| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm) |
+| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay), `venues.py` |
 | `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …) |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
 | `tests/` | Automatic checks that run without hardware |

@@ -43,8 +43,8 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 -1. ~~**Scaffold the repo** per project-scaffold.md "Day one" (README, CLAUDE.md, docs/, SAFETY.md, .gitignore, .env.example, config/, calibration/, lock file, install script, tests + fake robot, formatter). Keep it quick — an hour, not a week.~~ **Done 2026-10-24.** Still open from Day one: LICENSE (ask the professor).
 0. **In parallel:** build + calibrate `so101-white`.
 1. **Arm works from a computer.** `xarm1` over USB (Python `xarm`): move each servo, read positions, measure commands/second and delay. Later `so101-white` with LeRobot.
-2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live.
-3. **Cheap first mapping with clutch control.** First visible win.
+2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live. *Software done 2026-10-24 and tested with replay + emulator (`lab-os-teleop`, docs/quest-setup.md); real-Quest test pending (Monday checklist).*
+3. **Cheap first mapping with clutch control.** First visible win. *Done on the fake arm 2026-10-24 (joint-space, `teleop/mapping.py`); real arm pending step 1.*
 4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
 5. **Quest display basics.** Passthrough + status panel + stop + workspace box.
 6. **Hand-tracking input.** Same pipeline; per-user calibration.

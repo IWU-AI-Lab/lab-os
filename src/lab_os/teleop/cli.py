@@ -1,0 +1,139 @@
+"""`uv run lab-os-teleop serve|replay` — the teleop program (fake arm only for now)."""
+
+import argparse
+import asyncio
+import contextlib
+import logging
+import sys
+import time
+from pathlib import Path
+
+from aiohttp import web
+
+from lab_os.robots.fake import FakeArm
+from lab_os.teleop.loop import InputState, TeleopLoop
+from lab_os.teleop.messages import parse_frame
+from lab_os.teleop.recording import Recorder, replay
+from lab_os.teleop.server import create_app
+from lab_os.venues import load_venue
+
+PRINT_HZ = 10
+
+
+def _fmt_hand(c) -> str:
+    if c is None:
+        return "no controller"
+    if not c.tracked:
+        return "tracking lost"
+    x, y, z = c.pos
+    btns = "".join(name[0].upper() if on else "·" for name, on in c.buttons.items())
+    return f"pos {x:+.2f} {y:+.2f} {z:+.2f}  grip {c.grip:.2f}  trig {c.trigger:.2f}  [{btns}]"
+
+
+def _fmt_status(loop: TeleopLoop) -> str:
+    frame = loop.inputs.latest
+    hand = frame.hands.get(loop.mapper.config.hand) if frame else None
+    state = (
+        "FROZEN"
+        if loop.frozen
+        else "CLUTCH"
+        if loop.mapper.engaged
+        else "released"
+        if loop.inputs.connected
+        else "waiting"
+    )
+    joints = " ".join(f"{v:+6.1f}" for v in loop.arm.read_joints().values())
+    return f"{loop.mapper.config.hand}: {_fmt_hand(hand)} | {state:8} | arm {joints}"
+
+
+def _make_printer():
+    last = 0.0
+
+    def on_tick(loop: TeleopLoop) -> None:
+        nonlocal last
+        now = time.monotonic()
+        if now - last >= 1 / PRINT_HZ:
+            last = now
+            sys.stdout.write("\r\033[K" + _fmt_status(loop))
+            sys.stdout.flush()
+
+    return on_tick
+
+
+def _make_loop(args) -> TeleopLoop:
+    venue = load_venue(args.venue)
+    arm = FakeArm()
+    arm.connect()
+    print(
+        f"venue {venue.name}: speed scale {venue.max_speed_scale}, arm: fake "
+        f"(joints: {', '.join(arm.joint_names)})"
+    )
+    return TeleopLoop(
+        arm=arm,
+        inputs=InputState(),
+        speed_scale=venue.max_speed_scale,
+        on_tick=None if args.quiet else _make_printer(),
+    )
+
+
+async def _serve(app: web.Application, port: int, extra=None) -> None:
+    runner = web.AppRunner(app, access_log=None)
+    await runner.setup()
+    # localhost only: secure context for WebXR, and nothing else on the network can connect.
+    await web.TCPSite(runner, "127.0.0.1", port).start()
+    print(f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor")
+    try:
+        if extra:
+            await extra
+        else:
+            await asyncio.Event().wait()
+    finally:
+        await runner.cleanup()
+
+
+async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool) -> None:
+    async for msg in replay(path, speed=speed, loop=repeat):
+        if msg.get("type") == "xr_input":
+            loop.inputs.update(parse_frame(msg))
+        elif msg.get("type") == "session_end":
+            loop.inputs.disconnect()
+    loop.inputs.disconnect()
+    await asyncio.sleep(0.5)  # let the loop register the end (freeze) before exiting
+    print("\nreplay finished")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="lab-os-teleop", description=__doc__)
+    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument("--venue", help="venue profile (default: $LAB_OS_VENUE or 'lab')")
+    parser.add_argument("--quiet", action="store_true", help="don't print the live status line")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    serve = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
+    serve.add_argument("--record", type=Path, help="save incoming input to this .jsonl file")
+
+    rep = sub.add_parser("replay", help="drive the fake arm from a recording")
+    rep.add_argument("file", type=Path)
+    rep.add_argument("--speed", type=float, default=1.0)
+    rep.add_argument("--loop", action="store_true", help="repeat forever")
+
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
+    loop = _make_loop(args)
+
+    if args.command == "serve":
+        recorder = Recorder(args.record) if args.record else None
+        if recorder:
+            print(f"recording to {args.record}")
+        coro = _serve(create_app(loop, recorder), args.port)
+    else:
+        app = create_app(loop, accept_input=False)
+        coro = _serve(app, args.port, _feed_replay(loop, args.file, args.speed, args.loop))
+
+    with contextlib.suppress(KeyboardInterrupt):
+        asyncio.run(coro)
+    print()
+
+
+if __name__ == "__main__":
+    main()

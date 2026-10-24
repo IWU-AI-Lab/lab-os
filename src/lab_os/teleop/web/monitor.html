@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arm monitor</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main>
+    <h1>Arm monitor</h1>
+    <section class="panel">
+      <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
+      <div><span class="label">Input</span> <span id="input" class="pill off">—</span></div>
+      <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
+    </section>
+    <section class="panel" id="joints"></section>
+  </main>
+  <script src="/static/monitor.js"></script>
+</body>
+</html>

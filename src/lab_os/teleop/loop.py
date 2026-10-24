@@ -1,0 +1,87 @@
+"""The fixed-rate teleop loop: latest input → mapper → arm, plus the dead-man rule."""
+
+import asyncio
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+
+from lab_os.robots.base import Arm
+from lab_os.teleop.mapping import ClutchMapper
+from lab_os.teleop.messages import XRFrame
+
+
+@dataclass
+class InputState:
+    """Written by the WebSocket handler (or a replay), read by the loop."""
+
+    latest: XRFrame | None = None
+    received_at: float = 0.0  # monotonic seconds
+    connected: bool = False
+
+    def update(self, frame: XRFrame, now: float | None = None) -> None:
+        self.latest = frame
+        self.received_at = time.monotonic() if now is None else now
+        self.connected = True
+
+    def disconnect(self) -> None:
+        self.connected = False
+
+
+@dataclass
+class TeleopLoop:
+    arm: Arm
+    inputs: InputState
+    mapper: ClutchMapper = field(default_factory=ClutchMapper)
+    speed_scale: float = 0.5
+    rate_hz: float = 50.0
+    stale_after: float = 0.25  # seconds without input → freeze (dead-man)
+    frozen: bool = False
+    on_tick: Callable[["TeleopLoop"], None] | None = None
+
+    def _freeze(self) -> None:
+        if not self.frozen:
+            self.arm.stop()
+            self.frozen = True
+        self.mapper.reset(require_release=True)
+
+    def step(self, now: float, dt: float) -> None:
+        live = self.inputs.connected and now - self.inputs.received_at <= self.stale_after
+        frame = self.inputs.latest
+        stop_pressed = frame is not None and any(c.buttons.get("a") for c in frame.hands.values())
+        if not live or stop_pressed:
+            self._freeze()
+            return
+
+        controller = frame.hands.get(self.mapper.config.hand) if frame else None
+        targets = self.mapper.step(controller, self.arm.read_joints(), dt, self.speed_scale)
+        if targets is None:
+            return
+        if self.frozen:
+            self.arm.resume()
+            self.frozen = False
+        self.arm.move_joints(targets, self.speed_scale)
+
+    def status(self) -> dict:
+        """What the overlay / monitor shows (sent as a `status` message)."""
+        joints = self.arm.read_joints()
+        return {
+            "type": "status",
+            "connected": self.inputs.connected,
+            "frozen": self.frozen,
+            "clutch": self.mapper.engaged,
+            "needs_release": self.mapper.needs_release,
+            "speed_scale": self.speed_scale,
+            "joints": joints,
+            "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
+        }
+
+    async def run(self) -> None:
+        period = 1.0 / self.rate_hz
+        last = time.monotonic()
+        while True:
+            await asyncio.sleep(period)
+            now = time.monotonic()
+            self.step(now, now - last)
+            last = now
+            if self.on_tick:
+                self.on_tick(self)

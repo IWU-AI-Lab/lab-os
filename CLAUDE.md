@@ -39,7 +39,9 @@ uv sync                      # install / update the environment
 uv run pytest                # tests (no hardware needed)
 uv run ruff check --fix .    # lint
 uv run ruff format .         # format
+uv run lab-os-teleop serve   # teleop: XR page + fake arm (docs/quest-setup.md)
 ```
+Message format between clients and the brain: `docs/protocol.md`. Keep it updated when adding message types. The JARVIS core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
 
 ## Style
 Python 3.12, ruff-formatted (line length 100), type hints on public functions, short docstrings. Keep things small and readable — this is a solo project that a future student will inherit.

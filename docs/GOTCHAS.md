@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-10-24 — `astral-sh/setup-uv` has no `@v10`-style tag
+**What:** CI failed with "unable to find version `v10`". That action doesn't publish moving major-version tags.
+**Fix:** Pin exact versions in `.github/workflows/ci.yml` (e.g. `@v10.3.2`). Same for `actions/checkout` for consistency.
+
+### 2026-10-24 — WebXR needs a secure context: use `localhost`, not an IP
+**What:** Browsers only allow WebXR on `https://` or `http://localhost`. Opening the page via the desktop's IP address shows "WebXR not available".
+**Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/quest-setup.md). Re-run `adb reverse` after every re-plug.
+
 ### 2026-10-24 — Never open so101-green's serial ports
 **What:** The lab desktop has so101-green's leader + follower plugged in. Both show up as CH343 adapters (`1a86:55d3`, "USB Single Serial"), exactly what so101-white will look like.
 **Why it matters:** so101-green is another project's training arm. Opening its port (even to read) can disturb their session.
