@@ -7,7 +7,9 @@ devices:
   so101-green:
     kind: so101
     off_limits: true
-    notes: Another project's training arm (leader + follower). Never open, never recalibrate.
+    notes: >-
+      Another project's training arm (leader + follower). Never open, never recalibrate.
+      Ports confirmed as so101-green by the owner on 2026-10-24.
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00
