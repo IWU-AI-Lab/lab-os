@@ -2,6 +2,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+const DEG = Math.PI / 180;
+
 export function createArmView(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -46,12 +48,29 @@ export function createArmView(container) {
     renderer.render(scene, camera);
   });
 
+  /** Keep the viewing direction, but frame the model's reach (a sphere around its base). */
+  function frame(model) {
+    const box = new THREE.Box3().setFromObject(model.object);
+    const size = box.getSize(new THREE.Vector3());
+    const reach = Math.max(size.x, size.y, size.z, 0.25);
+    const target = new THREE.Vector3(0.08, Math.min(size.y, reach) * 0.4, 0);
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    const dist = (reach * 0.75) / Math.sin((camera.fov * DEG) / 2);
+    controls.target.copy(target);
+    camera.position.copy(target).addScaledVector(dir, dist);
+    controls.update();
+  }
+
   return {
     scene,
     setModel(model) {
+      const first = !current || current.kind !== model?.kind;
       if (current) scene.remove(current.object);
       current = model;
-      if (model) scene.add(model.object);
+      if (model) {
+        scene.add(model.object);
+        if (first) frame(model); // only when the arm type changes, so user orbiting is kept
+      }
       dirty = true;
     },
     /** Call after changing the model (joints, tint, opacity). */

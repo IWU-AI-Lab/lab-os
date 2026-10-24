@@ -143,49 +143,142 @@ function addSkeleton(robot) {
 }
 
 // ---- xArm 1S from primitives --------------------------------------------------------------
-// Approximate dimensions (m), Z-up. Limits are placeholders until the xarm1 driver is measured.
-const XARM1S = [
-  { joint: "shoulder_pan", axis: [0, 0, 1], offset: [0, 0, 0.06], link: [0, 0, 0.035], size: [0.06, 0.05, 0.035], limits: [-120, 120] },
-  { joint: "shoulder_lift", axis: [0, 1, 0], offset: [0, 0, 0.035], link: [0, 0, 0.1], size: [0.04, 0.03, 0.1], limits: [-120, 120] },
-  { joint: "elbow_flex", axis: [0, 1, 0], offset: [0, 0, 0.1], link: [0, 0, 0.095], size: [0.035, 0.03, 0.095], limits: [-120, 120] },
-  { joint: "wrist_flex", axis: [0, 1, 0], offset: [0, 0, 0.095], link: [0, 0, 0.04], size: [0.035, 0.03, 0.04], limits: [-120, 120] },
-  { joint: "wrist_roll", axis: [0, 0, 1], offset: [0, 0, 0.04], link: [0, 0, 0.03], size: [0.05, 0.02, 0.03], limits: [-120, 120] },
-  { joint: "gripper", axis: [1, 0, 0], offset: [0, 0.012, 0.03], link: [0, 0, 0.06], size: [0.012, 0.008, 0.06], limits: [0, 90] },
-];
+// Dimensions from Hiwonder's xArm 1S drawing (mm): shoulder axis 65 above the table, shoulder→elbow
+// 101, elbow→wrist 95, wrist→fingertips 168 (364 − 101 − 95), base plate 154 × 140, gripper 96 wide
+// when open, both fingers move. Z-up, arm faces +x, upright at all-zero (like the drawing).
+// Same joint conventions as the SO-101 (so the teleop signs carry over): +pan swings the arm to its
+// right, +lift / +elbow / +wrist_flex tilt forward-down. Limits are placeholders (servos ±120°)
+// until the xarm1 driver is measured; gripper 0 = closed, 90 = open.
+const XARM_COLORS = { metal: 0xb4b8bf, servo: 0x2b2b2b, plate: 0x3a3a3a, cup: 0x9a9a9a, board: 0x1f5a35 };
+const XARM = {
+  pan: { z: 0.039, limits: [-120, 120] },
+  lift: { z: 0.065, limits: [-120, 120] }, // absolute height of the shoulder axis
+  upper: 0.101,
+  fore: 0.095,
+  wristToRoll: 0.045,
+  rollToPivot: 0.05,
+  finger: 0.07,
+  pivotY: 0.012,
+  maxOpenDeg: 35, // each finger's swing at gripper = 90
+};
 
-function buildXarm(style) {
-  const root = new THREE.Group();
-  root.add(style === "stick" ? stick([0, 0, 0], [0, 0, 0.06], 0.006, COLORS.stick) : boxAlong([0, 0, 0.06], [0.11, 0.09, 0.06]));
-  const joints = {};
-  let parent = root;
-  for (const seg of XARM1S) {
-    const frame = new THREE.Group();
-    frame.position.set(...seg.offset);
-    parent.add(frame);
-    const axis = new THREE.Vector3(...seg.axis);
-    joints[seg.joint] = {
-      set: (deg) => frame.quaternion.setFromAxisAngle(axis, deg * DEG),
-      lower: seg.limits[0],
-      upper: seg.limits[1],
-    };
-    const color = seg.joint === "gripper" ? COLORS.jaw : COLORS.body;
-    frame.add(style === "stick" ? stick([0, 0, 0], seg.link, 0.006, seg.joint === "gripper" ? COLORS.jaw : COLORS.stick) : boxAlong(seg.link, seg.size, color));
-    frame.add(ball(style === "stick" ? 0.011 : 0.014, COLORS.joint));
-    if (seg.joint === "gripper") {
-      // fixed finger, mirrored on the other side of the palm
-      const fixed = style === "stick" ? stick([0, 0, 0], seg.link, 0.005, COLORS.stick) : boxAlong(seg.link, seg.size, COLORS.body);
-      fixed.position.y -= 2 * seg.offset[1];
-      parent.add(fixed.translateZ(seg.offset[2]));
-    }
-    parent = frame;
-  }
-  return new ArmModel("xarm1s", style, zUp(root), joints);
+/** A box from point a to point b (like stick(), but square-ish in section). */
+function beam(a, b, w, d, color) {
+  const from = new THREE.Vector3(...a);
+  const to = new THREE.Vector3(...b);
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, from.distanceTo(to), d), material(color));
+  mesh.position.copy(from).add(to).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+  return mesh;
 }
 
-function boxAlong(end, size, color = COLORS.body) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material(color));
-  mesh.position.set(end[0] / 2, end[1] / 2, end[2] / 2);
-  return mesh;
+function box(size, color, pos) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(...size), material(color));
+  m.position.set(...pos);
+  return m;
+}
+
+function zCylinder(r, h, color, pos) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28), material(color));
+  m.rotation.x = Math.PI / 2;
+  m.position.set(...pos);
+  return m;
+}
+
+function buildXarm(style) {
+  const C = XARM_COLORS;
+  const stickMode = style === "stick";
+  const root = new THREE.Group();
+  const frame = (parent, pos, axis) => {
+    const g = new THREE.Group();
+    g.position.set(...pos);
+    g.userData.axis = new THREE.Vector3(...axis);
+    parent.add(g);
+    return g;
+  };
+  const pan = frame(root, [0, 0, XARM.pan.z], [0, 0, -1]);
+  const lift = frame(pan, [0, 0, XARM.lift.z - XARM.pan.z], [0, 1, 0]);
+  const elbow = frame(lift, [0, 0, XARM.upper], [0, 1, 0]);
+  const wrist = frame(elbow, [0, 0, XARM.fore], [0, 1, 0]);
+  const roll = frame(wrist, [0, 0, XARM.wristToRoll], [0, 0, 1]);
+  const fingers = [1, -1].map((side) => frame(roll, [0, side * XARM.pivotY, XARM.rollToPivot], [1, 0, 0]));
+
+  // Finger outline (in its own frame): out-and-up, then the tip curls back in, like the claw.
+  const fingerPts = (side) => [
+    [0, 0, 0],
+    [0, side * 0.014, 0.045],
+    [0, side * -0.01, XARM.finger], // tips meet near the middle when closed
+  ];
+
+  if (stickMode) {
+    const r = 0.006;
+    root.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.01, 32), material(COLORS.stick)).rotateX(Math.PI / 2));
+    root.add(stick([0, 0, 0], [0, 0, XARM.pan.z], r, COLORS.stick));
+    pan.add(stick([0, 0, 0], lift.position.toArray(), r, COLORS.stick));
+    lift.add(stick([0, 0, 0], elbow.position.toArray(), r, COLORS.stick));
+    elbow.add(stick([0, 0, 0], wrist.position.toArray(), r, COLORS.stick));
+    wrist.add(stick([0, 0, 0], roll.position.toArray(), r, COLORS.stick));
+    roll.add(stick([0, -XARM.pivotY, XARM.rollToPivot], [0, XARM.pivotY, XARM.rollToPivot], 0.004, COLORS.stick));
+    roll.add(stick([0, 0, 0], [0, 0, XARM.rollToPivot], r, COLORS.stick));
+    for (const [i, side] of [1, -1].entries()) {
+      const [a, b, c] = fingerPts(side);
+      fingers[i].add(stick(a, b, 0.004, COLORS.jaw), stick(b, c, 0.004, COLORS.jaw));
+    }
+    for (const f of [pan, lift, elbow, wrist, roll]) f.add(ball(0.011, COLORS.joint));
+  } else {
+    // Base: suction cups, two acrylic plates with standoffs, controller board, pan servo.
+    for (const [x, y] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      root.add(zCylinder(0.013, 0.012, C.cup, [x * 0.0715, y * 0.0635, 0.006]));
+      root.add(zCylinder(0.003, 0.014, C.metal, [x * 0.06, y * 0.055, 0.029]));
+    }
+    root.add(box([0.154, 0.14, 0.003], C.plate, [0, 0, 0.0215]));
+    root.add(box([0.154, 0.14, 0.003], C.plate, [0, 0, 0.0365]));
+    root.add(box([0.05, 0.045, 0.004], C.board, [0.045, 0, 0.026]));
+    root.add(box([0.04, 0.02, 0.012], C.servo, [0, 0, 0.029]));
+    // Turntable + U-bracket up to the shoulder servo.
+    pan.add(zCylinder(0.032, 0.006, C.servo, [0, 0, 0.003]));
+    for (const y of [0.025, -0.025]) pan.add(box([0.03, 0.003, 0.03], C.metal, [0, y, 0.02]));
+    pan.add(box([0.022, 0.042, 0.04], C.servo, [0, 0, XARM.lift.z - XARM.pan.z]));
+    // Upper arm and forearm: paired side brackets, servo at the far end.
+    for (const [link, len] of [[lift, XARM.upper], [elbow, XARM.fore]]) {
+      for (const y of [0.025, -0.025]) link.add(box([0.026, 0.003, len], C.metal, [0, y, len / 2]));
+      link.add(box([0.022, 0.042, 0.04], C.servo, [0, 0, len]));
+    }
+    // Wrist: short bracket + roll servo (shaft along the arm).
+    for (const y of [0.022, -0.022]) wrist.add(box([0.026, 0.003, 0.03], C.metal, [0, y, 0.015]));
+    wrist.add(box([0.04, 0.02, 0.03], C.servo, [0, 0, 0.028]));
+    // Gripper base: palm, gear plate, gripper servo sticking out the back.
+    roll.add(box([0.022, 0.056, 0.012], C.metal, [0, 0, 0.012]));
+    roll.add(box([0.006, 0.044, 0.04], C.metal, [0.01, 0, 0.034]));
+    roll.add(box([0.03, 0.02, 0.04], C.servo, [-0.022, 0, 0.032]));
+    for (const [i, side] of [1, -1].entries()) {
+      const [a, b, c] = fingerPts(side);
+      fingers[i].add(beam(a, b, 0.008, 0.004, C.metal), beam(b, c, 0.008, 0.004, C.metal));
+      fingers[i].add(zCylinder(0.006, 0.004, C.servo, [0, 0, 0]).rotateY(Math.PI / 2));
+    }
+  }
+
+  const rotate = (g, deg) => g.quaternion.setFromAxisAngle(g.userData.axis, deg * DEG);
+  const revolute = (g, limits) => ({ set: (deg) => rotate(g, deg), lower: limits[0], upper: limits[1] });
+  const servo = [-120, 120];
+  const joints = {
+    shoulder_pan: revolute(pan, XARM.pan.limits),
+    shoulder_lift: revolute(lift, XARM.lift.limits),
+    elbow_flex: revolute(elbow, servo),
+    wrist_flex: revolute(wrist, servo),
+    wrist_roll: revolute(roll, servo),
+    gripper: {
+      // both fingers swing out symmetrically: 0 = closed, 90 = fully open
+      set: (deg) => {
+        const a = (deg / 90) * XARM.maxOpenDeg;
+        rotate(fingers[0], -a); // +y finger opens toward +y
+        rotate(fingers[1], a);
+      },
+      lower: 0,
+      upper: 90,
+    },
+  };
+  return new ArmModel("xarm1s", style, zUp(root), joints);
 }
 
 // ---- Entry point ----------------------------------------------------------------------------

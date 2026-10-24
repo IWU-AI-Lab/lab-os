@@ -25,7 +25,8 @@ SO101_LIMITS_RAD = {
 }
 
 
-# Where the fake arm starts: upper arm level, elbow bent, so "reach forward" has room to reach.
+# Where the fake arm starts: upper arm up (SO-101 zero), elbow bent 60° so the forearm angles down
+# toward the table and "reach forward" has room to reach.
 SO101_HOME = {
     "shoulder_pan": 0.0,
     "shoulder_lift": 0.0,

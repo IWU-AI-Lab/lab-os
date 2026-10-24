@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-10-24
+- xArm 1S 3D model rebuilt from Hiwonder's dimension drawing (65 / 101 / 95 / 168 mm, 154 × 140 base, suction cups, both gripper fingers move), same joint conventions as the SO-101. The 3D view frames each arm type when it loads.
 - Desktop control on the teleop page: keyboard + trackpad drive a virtual controller (Space = clutch, C = gripper, X = stop, H = re-center), sending the same messages as the Quest. 3D view renders only on change.
 - Fixed the teleop joint directions for the SO-101 (hand up was lowering the arm): per-joint signs, verified by forward kinematics on the URDF in the tests. Fake arm starts in a working pose; the 3D view starts behind the arm.
 - Soft joint limits in the teleop mapping: commands stay 3° inside each limit and the clutch slips at a limit, so there's no wind-up and no jump when re-grabbing (seen in the WebXR emulator).
