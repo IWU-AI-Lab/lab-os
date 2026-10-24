@@ -1,5 +1,9 @@
-// WebXR input: reads Quest controllers every XR frame and sends them to the brain.
+// WebXR input: reads Quest controllers every XR frame and sends them to the brain, and renders the
+// session's scene (ghost arm, hand markers, status panel: xr-scene.js) with three.js.
 // Message format: docs/protocol.md.
+import * as THREE from "three";
+import { XRScene } from "./xr-scene.js";
+import { getArmFeed } from "./arm/arm-feed.js";
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v || 0));
 
@@ -45,29 +49,44 @@ export async function initXR(link, ui) {
   button.onclick = () => start(mode, link, ui);
 }
 
+let renderer = null; // one WebGL renderer for every session on this page
+
 async function start(mode, link, ui) {
+  const ar = mode === "immersive-ar";
   const session = await navigator.xr.requestSession(mode, { optionalFeatures: ["local-floor"] });
-  const canvas = document.createElement("canvas");
-  const gl = canvas.getContext("webgl2", { xrCompatible: true }) || canvas.getContext("webgl", { xrCompatible: true });
-  await session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
-  let refSpace;
+  // Floor-level space if the device has one; otherwise "local" (origin at the head) and shift the
+  // scene down so the table is still at table height.
+  let refType = "local-floor";
   try {
-    refSpace = await session.requestReferenceSpace("local-floor");
+    await session.requestReferenceSpace("local-floor");
   } catch {
-    refSpace = await session.requestReferenceSpace("local");
+    refType = "local";
   }
+
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.xr.enabled = true;
+  }
+  renderer.setClearColor(0x000000, ar ? 0 : 1); // transparent in AR = passthrough
+  renderer.xr.setReferenceSpaceType(refType);
+  // ?xrarm=stick on the page URL = light arm model in the headset (testing, or if frames drop)
+  const style = new URLSearchParams(location.search).get("xrarm") || undefined;
+  const xrScene = new XRScene(getArmFeed(link), { ar, style });
+  if (refType === "local") xrScene.setFloorOffset(-1.4);
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.01, 50); // replaced by the headset's cameras
+  await renderer.xr.setSession(session);
 
   ui.setActive("xr");
   session.addEventListener("end", () => {
+    renderer.setAnimationLoop(null);
     link.send({ type: "session_end" });
     ui.setActive(null);
     ui.showHands({}, "XR session ended");
   });
 
-  const clear = mode === "immersive-ar" ? [0, 0, 0, 0] : [0.1, 0.1, 0.12, 1];
-
-  session.requestAnimationFrame(function onFrame(t, frame) {
-    session.requestAnimationFrame(onFrame);
+  renderer.setAnimationLoop((t, frame) => {
+    if (!frame) return;
+    const refSpace = renderer.xr.getReferenceSpace();
     const hands = {};
     for (const src of session.inputSources) {
       // Hand-tracking sources (src.hand) come in step 6; controllers only for now.
@@ -77,10 +96,7 @@ async function start(mode, link, ui) {
     }
     link.send({ type: "xr_input", t, hands });
     ui.showHands(hands);
-
-    // Nothing to draw yet (overlay = step 5): just clear. Transparent in AR = passthrough.
-    gl.bindFramebuffer(gl.FRAMEBUFFER, session.renderState.baseLayer.framebuffer);
-    gl.clearColor(...clear);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    xrScene.updateHands(hands);
+    renderer.render(xrScene.scene, camera);
   });
 }

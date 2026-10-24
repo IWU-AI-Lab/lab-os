@@ -6,6 +6,7 @@
 import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
+import { getArmFeed } from "./arm-feed.js";
 
 const $ = (id) => document.getElementById(id);
 const FROZEN_TINT = 0x7a1d00;
@@ -24,12 +25,10 @@ $("arm-panel").innerHTML = `
 
 const view = createArmView($("arm-view"));
 const select = $("arm-model");
+const feed = getArmFeed(getLink($("arm-panel").dataset.role || "monitor"));
 let model = null;
 let loading = null;
 let userPicked = false;
-let shownJoints = {};
-let lastCommand = null;
-let frozen = false;
 
 for (const [i, c] of MODEL_CHOICES.entries()) select.add(new Option(c.label, String(i)));
 select.onchange = () => {
@@ -47,7 +46,6 @@ async function useModel(choice) {
     if (loading !== key) return; // another choice won meanwhile
     model = next;
     view.setModel(model);
-    model.setTint(frozen ? FROZEN_TINT : null);
     $("arm-error").textContent = "";
     render();
   } catch (e) {
@@ -58,12 +56,17 @@ async function useModel(choice) {
 }
 
 function render() {
+  const { joints, lastCommand, frozen } = feed;
+  $("arm-source").textContent = lastCommand
+    ? `Showing driver command #${lastCommand.seq} → ${lastCommand.device} (speed ${Math.round(lastCommand.speed_scale * 100)}%)${frozen ? " · FROZEN (stop sent)" : ""}`
+    : `No commands yet: showing the driver's reported joints${frozen ? " · FROZEN" : ""}`;
   if (!model) return;
-  const { unknown, outOfRange } = model.setJoints(shownJoints);
+  model.setTint(frozen ? FROZEN_TINT : null);
+  const { unknown, outOfRange } = model.setJoints(joints);
   view.requestRender();
   // Clamping is judged from the driver state reported with the same command (never a later one).
   const after = lastCommand?.driver_joints || {};
-  const rows = Object.entries(shownJoints).map(([name, cmd]) => {
+  const rows = Object.entries(joints).map(([name, cmd]) => {
     const drv = after[name];
     const flags = [];
     if (drv !== undefined && Math.abs(drv - cmd) > 0.05) flags.push(`clamped by driver → ${drv.toFixed(1)}°`);
@@ -74,42 +77,10 @@ function render() {
   $("arm-joints").innerHTML = rows.join("");
 }
 
-function setSource() {
-  $("arm-source").textContent = lastCommand
-    ? `Showing driver command #${lastCommand.seq} → ${lastCommand.device} (speed ${Math.round(lastCommand.speed_scale * 100)}%)${frozen ? " · FROZEN (stop sent)" : ""}`
-    : `No commands yet: showing the driver's reported joints${frozen ? " · FROZEN" : ""}`;
-}
-
-function onMessage(msg) {
-  if (msg.type === "status") {
-    if (!userPicked && !loading) {
-      const choice = MODEL_CHOICES.find((c) => c.kind === msg.arm?.model);
-      if (choice && (!model || model.kind !== choice.kind)) useModel(choice);
-    }
-    if (!lastCommand) {
-      lastCommand = msg.last_command;
-      shownJoints = lastCommand ? lastCommand.joints : msg.joints;
-    }
-    setFrozen(msg.frozen);
-  } else if (msg.type === "arm_command") {
-    lastCommand = msg;
-    shownJoints = msg.joints;
-  } else if (msg.type === "arm_stop") {
-    setFrozen(true);
-  } else if (msg.type === "arm_resume") {
-    setFrozen(false);
-  } else {
-    return;
+feed.onChange((f, why) => {
+  if (why === "status" && !userPicked && !loading) {
+    const choice = MODEL_CHOICES.find((c) => c.kind === f.modelKind);
+    if (choice && (!model || model.kind !== choice.kind)) useModel(choice);
   }
-  setSource();
   render();
-}
-
-function setFrozen(value) {
-  frozen = value;
-  if (model) model.setTint(frozen ? FROZEN_TINT : null);
-  view.requestRender();
-}
-
-const link = getLink($("arm-panel").dataset.role || "monitor");
-for (const type of ["status", "arm_command", "arm_stop", "arm_resume"]) link.on(type, onMessage);
+});

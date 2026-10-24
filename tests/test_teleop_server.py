@@ -36,6 +36,8 @@ async def test_pages_served(aiohttp_client):
         "/static/link.js",
         "/static/xr.js",
         "/static/desktop-input.js",
+        "/static/xr-scene.js",
+        "/static/arm/arm-feed.js",
         "/static/monitor.js",
     ):
         resp = await client.get(path)
