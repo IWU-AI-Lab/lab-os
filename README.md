@@ -36,5 +36,8 @@ The demo itself isn't built yet. See `docs/current-focus.md` for where it stands
 - `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
 - `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`
 - `docs/GOTCHAS.md`: surprises and their fixes
+- `CHANGELOG.md`: what changed, by date
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs the linter and tests on every push and pull request.
 
 Private repository; license pending (asking the professor first).
