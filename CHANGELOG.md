@@ -3,6 +3,8 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-10-24
+- Theme file seed: `config/theme.yaml` (design tokens), served as `/theme.json`; the 3D arm views (desktop + headset arm, markers, frozen tint, status-panel font) read their colors from it. Pages' CSS and the VR room are not themed yet (design phase).
+- Docs: `docs/ideas.md` is now the single source of truth for ideas (earlier lists moved in); architecture shapes to design toward + decisions in the log; "Up next" = troubleshooting suite; mood-board folder `docs/design/references/`.
 - XR session scene (`xr-scene.js`, three.js WebXR): arm on a table in front of you (see-through ghost in AR), controller markers + clutch line, floating status panel; VR gets a dim room. Shared `ArmFeed` keeps the desktop panel and the headset arm in sync. Tested in headless Brave with Meta's iwer Quest 3 emulation.
 - xArm 1S 3D model rebuilt from Hiwonder's dimension drawing (65 / 101 / 95 / 168 mm, 154 × 140 base, suction cups, both gripper fingers move), same joint conventions as the SO-101. The 3D view frames each arm type when it loads.
 - Desktop control on the teleop page: keyboard + trackpad drive a virtual controller (Space = clutch, C = gripper, X = stop, H = re-center), sending the same messages as the Quest. 3D view renders only on change.

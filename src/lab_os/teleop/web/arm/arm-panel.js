@@ -7,9 +7,10 @@ import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
 import { getArmFeed } from "./arm-feed.js";
+import { color } from "../theme.js";
 
 const $ = (id) => document.getElementById(id);
-const FROZEN_TINT = 0x7a1d00;
+const FROZEN_TINT = color("colors.frozen");
 
 // Pages include <section id="arm-panel" class="panel arm3d" data-role="monitor|input"></section>;
 // the markup lives here only. data-role picks which shared connection to listen on.

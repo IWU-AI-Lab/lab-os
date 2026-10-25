@@ -7,12 +7,15 @@
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
 import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
+import { color, theme } from "./theme.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
-const FROZEN_TINT = 0x7a1d00;
-const CLUTCH_COLOR = 0x2fbf71;
-const IDLE_COLOR = 0xb8b8b2;
+// Arm/marker colors from config/theme.yaml. (The VR room below is not themed yet: design phase.)
+const FROZEN_TINT = color("colors.frozen");
+const CLUTCH_COLOR = color("colors.ok");
+const IDLE_COLOR = color("arm3d.idle_marker");
+const FONT = theme.font?.family || "system-ui, sans-serif";
 
 export class XRScene {
   /**
@@ -150,7 +153,7 @@ export class XRScene {
     axes.material.depthTest = false;
     g.add(axes);
     // a short pointer showing where the controller faces
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0x5d8fe8 }));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.035, 12), new THREE.MeshStandardMaterial({ color: color("colors.primary") }));
     tip.rotation.x = -Math.PI / 2;
     tip.position.z = -0.04;
     g.add(tip);
@@ -219,7 +222,7 @@ class StatusPanel {
 function fitText(g, text, x, y, maxWidth, weight, size, color) {
   let px = size;
   do {
-    g.font = `${weight} ${px}px system-ui, sans-serif`;
+    g.font = `${weight} ${px}px ${FONT}`;
     px -= 2;
   } while (g.measureText(text).width > maxWidth && px > 12);
   g.fillStyle = color;

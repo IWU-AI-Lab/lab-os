@@ -3,6 +3,7 @@
 GET /            the XR input page (Quest browser or a desktop browser + WebXR emulator)
 GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
 GET /models/...  robot models (URDF + meshes) for the 3D view
+GET /theme.json  design tokens from config/theme.yaml
 WS  /ws          input page connects here; /ws?role=monitor for watchers
 """
 
@@ -18,6 +19,7 @@ from lab_os import REPO_ROOT
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.messages import parse_frame
 from lab_os.teleop.recording import Recorder
+from lab_os.theme import load_theme
 
 WEB_DIR = Path(__file__).parent / "web"
 MODELS_DIR = REPO_ROOT / "models"
@@ -43,6 +45,11 @@ async def index(_request: web.Request) -> web.FileResponse:
 
 async def monitor(_request: web.Request) -> web.FileResponse:
     return await _page("monitor.html")
+
+
+async def theme(_request: web.Request) -> web.Response:
+    """config/theme.yaml as JSON, re-read on every request (edit the file, reload the page)."""
+    return web.json_response(load_theme(), headers={"Cache-Control": "no-store"})
 
 
 def handle_message(app: web.Application, raw: dict) -> None:
@@ -138,6 +145,7 @@ def create_app(
     app[OUTBOX] = asyncio.Queue()
     app.router.add_get("/", index)
     app.router.add_get("/monitor", monitor)
+    app.router.add_get("/theme.json", theme)
     app.router.add_get("/ws", websocket)
     app.router.add_static("/static", WEB_DIR)
     app.router.add_static("/models", MODELS_DIR)

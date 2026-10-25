@@ -26,7 +26,7 @@ Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a
 | Path | What |
 |---|---|
 | `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`, vendored three.js in `web/vendor/`), `venues.py` |
-| `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …) |
+| `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …), `theme.yaml` (design tokens: colors, font) |
 | `models/` | Robot models (SO-101 URDF + meshes) for the 3D view and, later, inverse kinematics |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
 | `tests/` | Automatic checks that run without hardware |

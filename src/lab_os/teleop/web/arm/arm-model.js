@@ -9,10 +9,17 @@
 // Models never clamp: a command outside the model's limits is drawn as-is and reported.
 import * as THREE from "three";
 import URDFLoader from "/static/vendor/urdf-loader/URDFLoader.js";
+import { color } from "../theme.js";
 
 const DEG = Math.PI / 180;
 const SO101_URDF = "/models/so101/so101_new_calib.urdf";
-const COLORS = { body: 0xd2cfc5, joint: 0x2f6fde, stick: 0x3b3b38, jaw: 0xe0782f };
+// All colors come from config/theme.yaml (design tokens).
+const COLORS = {
+  body: color("arm3d.body"),
+  joint: color("colors.primary"),
+  stick: color("arm3d.stick"),
+  jaw: color("colors.accent"),
+};
 
 export class ArmModel {
   /** @param {THREE.Object3D} object  @param {Record<string, {set(deg:number):void, lower:number, upper:number}>} joints */
@@ -149,7 +156,9 @@ function addSkeleton(robot) {
 // Same joint conventions as the SO-101 (so the teleop signs carry over): +pan swings the arm to its
 // right, +lift / +elbow / +wrist_flex tilt forward-down. Limits are placeholders (servos ±120°)
 // until the xarm1 driver is measured; gripper 0 = closed, 90 = open.
-const XARM_COLORS = { metal: 0xb4b8bf, servo: 0x2b2b2b, plate: 0x3a3a3a, cup: 0x9a9a9a, board: 0x1f5a35 };
+const XARM_COLORS = Object.fromEntries(
+  ["metal", "servo", "plate", "cup", "board"].map((part) => [part, color(`arm3d.xarm.${part}`)]),
+);
 const XARM = {
   pan: { z: 0.039, limits: [-120, 120] },
   lift: { z: 0.065, limits: [-120, 120] }, // absolute height of the shoulder axis

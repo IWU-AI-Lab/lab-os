@@ -1,6 +1,7 @@
 // Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel at a time.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { color } from "../theme.js";
 
 const DEG = Math.PI / 180;
 
@@ -14,7 +15,7 @@ export function createArmView(container) {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(0.6, 1.2, 0.8);
   scene.add(sun);
-  const grid = new THREE.GridHelper(0.6, 12, 0x8a8a84, 0xb8b8b2);
+  const grid = new THREE.GridHelper(0.6, 12, color("arm3d.grid_center"), color("arm3d.grid"));
   grid.material.transparent = true;
   grid.material.opacity = 0.6;
   scene.add(grid);

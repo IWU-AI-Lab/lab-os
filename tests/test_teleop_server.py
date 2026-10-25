@@ -110,3 +110,12 @@ async def test_commands_broadcast_to_monitors(aiohttp_client):
             assert m["joints"] == {"gripper": 12.5} and m["device"] == "fake-arm"
             return
     raise AssertionError("no arm_command received")
+
+
+async def test_theme_served_fresh(aiohttp_client):
+    app, _ = make_app()
+    client = await aiohttp_client(app)
+    resp = await client.get("/theme.json")
+    assert resp.status == 200
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert (await resp.json())["colors"]["frozen"].startswith("#")
