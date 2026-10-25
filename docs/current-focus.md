@@ -84,8 +84,20 @@ A small model trained from scratch on one task (e.g. ACT) tends to break with ne
 - End-to-end delay.
 - (Second act) Gemini Robotics-ER 2 pointing accuracy on our camera + camera-to-arm calibration; SmolVLA training on 12 GB.
 
-## Side task (optional, low priority): fix the glove
-Options: (A) re-flash if Hiwonder's glove firmware source exists; (B) glove → computer → arm with the teleop module's logic. Only if fun or useful.
-
 ## Hacks to clean up
 *(empty — add entries as they happen)*
+
+## Up next (after the teleop demo works)
+**Troubleshooting suite.** *Why:* the health checks / roll call will discover problems, and then I, a future maintainer, or an AI agent need an easy way to diagnose them. It's also the most concretely useful feature so far, and it targets the on-the-ground papercuts I keep hitting.
+
+Checks:
+- **Microphone:** level meter, background-noise measurement, record and play back.
+- **Cameras:** live view; "is it actually sending images?"
+- **Robots:** live joint readings; a small test wiggle (**only with my OK**).
+- **Network:** can each device be reached, and how much delay.
+- **Accounts:** are API keys present and working; credits available.
+- **Quest:** connected or not.
+
+Each check writes a **report file** that humans and agents can read.
+
+(Ideas that aren't the current focus or this next step live in `docs/ideas.md`.)

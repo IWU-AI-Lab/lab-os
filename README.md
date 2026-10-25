@@ -39,6 +39,7 @@ Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a
 - `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
 - `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`
 - `docs/GOTCHAS.md`: surprises and their fixes
+- `docs/ideas.md`: the ideas backlog (single source of truth for ideas)
 - `CHANGELOG.md`: what changed, by date
 
 CI (GitHub Actions, `.github/workflows/ci.yml`) runs the linter and tests on every push and pull request.
