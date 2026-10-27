@@ -12,7 +12,7 @@ A visitor puts on a Quest 3, and a robot arm copies their **bare hand** live (ha
 ## Monday lab checklist (2026-10-26)
 In-lab tasks only; everything else can be done from home. Tick them off here and note surprises in `docs/GOTCHAS.md`. `so101-green` may be plugged in: leave it alone.
 
-- [ ] **Raspbots:** read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
+- [x] **Raspbots** *(done 2026-10-27; MAC still to copy into the table)*: read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
 - [ ] **xarm1, identify:** plug it into the lab desktop; Claude identifies it from `lsusb` / `/dev/serial/by-id/` (or its HID device) **without opening anything else**, and adds it to `config/devices.yaml`.
 - [ ] **xarm1, driver:** an `Arm` plug-in (same interface as `FakeArm`), read-only first: read servo positions, measure reads/second.
 - [ ] **xarm1, motion test (ask first):** only after the builder's OK, with the arm clamped, the area clear and the power plug in reach (`SAFETY.md`). Small, slow single-servo moves; measure commands/second and command→motion delay. Record the numbers in `docs/GOTCHAS.md` (or a decision note) and step 1 below.

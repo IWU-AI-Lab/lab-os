@@ -200,6 +200,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ---
 
 ## Open questions
+- **Windows as a brain OS (2026-10-27):** both Ubuntu desktops are busy with other projects; can lab-os run on the 4 Windows 11 desktops (or a Windows field laptop)? Proposed: Linux stays primary, Windows supported for the teleop demo; identify USB devices by USB serial number (works on every OS) instead of only `/dev/serial/by-id/`. Awaiting the builder's OK.
 - **Second act:** ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
 - **License/ownership:** what does the professor/university allow?
 - **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.

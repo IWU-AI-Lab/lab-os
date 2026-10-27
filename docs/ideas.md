@@ -8,6 +8,38 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 
 ---
 
+## Recent ideas (2026-10-27)
+
+### Touchscreens as clients (small Pi screens + the big Newline)
+- **What:** the lab's 3 small Raspberry Pi touchscreens (~7–9") and the ~75" Newline touchscreen on wheels become lab-os clients. Each shows a page from the brain that is tailored to its size: control, status, or new kinds of interaction (e.g. 3D arm models you can spin with your fingers).
+- **Why:** more ways to use the system without a headset; the big screen suits visitors and groups.
+- **Plugs into:** outputs/clients slot (same message protocol as the Quest page). The Pis just run a browser in kiosk mode (full-screen, no address bar), so they stay thin. Related: "Multi-screen presence", "Lab health dashboard" (below).
+- **Possible roles (to discuss):** a small screen next to each robot as its "face" + status + STOP; the Newline as a group/visitor screen (3D arm view, cast of the Quest view, dashboard).
+- **Rules that still apply:** any robot motion from a touch goes through the same safety layer (limits, dead-man); every screen that can move a robot shows a STOP.
+- **Open questions:** what does "hologram" mean here (a 3D view on the screen, or a physical illusion like a Pepper's-ghost pyramid)? Does the Newline have its own built-in computer/browser, or does it need a PC over HDMI + USB? Which Pi models are behind the small screens? Needs the lab network (router) for the Pis.
+
+### Voice: build our own, use an existing realtime service, or both?
+- **What:** choose between (a) an existing **speech-to-speech realtime service** (OpenAI's realtime voice models, Google's Gemini Live API), which already handles interruptions, turn-taking and tool calls in the background, and (b) our own **pipeline**: local wake word → speech-to-text → language model → text-to-speech.
+- **Recommendation (not decided yet):** both, as plug-ins. The wake word / push-to-talk part is always ours and runs locally, so we don't stream the room to the cloud all day (cost + privacy). The conversation itself uses a realtime service first (best feel for the least work). Our own pipeline is the fallback for offline lite mode.
+- **Fits:** Conversation manager (it gets thinner: the service does barge-in, while we keep queueing, tool routing and safety) · model router · two speeds (realtime = fast path; it can hand big jobs to the agent harness in the background). Tool calls from the voice model go through our tools + safety layer like everything else.
+- **Watch out:** realtime audio is priced per minute, so check it against the ≤ $20/month budget (look up current prices, don't guess). It needs internet. Fan noise can cause false "interruptions" (push-to-talk helps).
+- **Open questions:** which service ("GPT-Live" = OpenAI's realtime voice?); free-tier/data terms; how much talking per week do we expect?
+
+### Google Glass (Explorer Edition) as a display + camera
+- **What:** custom app on the lab's Google Glass Explorer Edition: a tiny heads-up status display, and maybe its camera as a first-person view.
+- **Why:** a "JARVIS glasses" moment; a hands-free status display while working at a robot.
+- **Plugs into:** outputs/clients (display) + cameras/vision (first-person camera, like "Quest vision Q&A").
+- **Honest caveats:** 2013 hardware, long discontinued, runs a very old Android (4.4). Apps are built with old tools, and the battery is likely worn. Camera privacy is still deferred (log). Much later.
+- **First check (cheap, when curious):** does it boot and charge, which firmware is it on, and can a computer install apps on it over USB?
+
+### Teleop from a phone
+- **What:** a phone as a teleop input. Either (a) a touch page with sliders/joystick + STOP, or (b) the phone itself as a 3D "controller" (Android Chrome supports WebXR AR, which tracks the phone's position and tilt in space; iPhones' browser doesn't).
+- **Why:** anyone can try it without a headset; a fallback if the Quest is unavailable; another entry for "Ways to teach a robot".
+- **Plugs into:** inputs slot (a new input plug-in, same pipeline + clutch + dead-man). Merges with "Visitors' phones as remotes" (below).
+- **Watch out:** WebXR needs `localhost` or HTTPS. Over USB that's easy with an Android phone (`adb reverse`, as with the Quest). Over Wi-Fi it needs a certificate. Phone tracking is less steady than Quest controllers.
+
+---
+
 ## Recent ideas (2026-10-24)
 
 ### Clap to activate / deactivate
