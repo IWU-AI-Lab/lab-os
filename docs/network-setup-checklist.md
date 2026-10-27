@@ -25,8 +25,8 @@ ping -c 4 <first desktop's address>
 ## Step 1 — List every device
 | Name (unique, lowercase) | Device | Wi-Fi MAC address | How I got into it | Notes |
 |---|---|---|---|---|
-| raspbot1 | Yahboom Raspbot v2 | | | |
-| raspbot2 | Yahboom Raspbot v2 | | | |
+| raspbot1 | Yahboom Raspbot v2 | 88:a2:9e:5b:01:c8 | own hotspot + SSH | Order of the two MACs as given 2026-10-27; check `ip link` on raspbot1 if unsure. |
+| raspbot2 | Yahboom Raspbot v2 | 88:a2:9e:5b:01:3f | own hotspot + SSH | |
 | pi5-1 … | Raspberry Pi 5 (bridges for arms, spares) | | | |
 | jetson1 … jetson5 | Jetson Orin Nano | | | |
 | quest1 … quest3 | Meta Quest 3 | | | |

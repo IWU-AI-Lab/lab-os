@@ -12,8 +12,8 @@ A visitor puts on a Quest 3, and a robot arm copies their **bare hand** live (ha
 ## Monday lab checklist (2026-10-26)
 In-lab tasks only; everything else can be done from home. Tick them off here and note surprises in `docs/GOTCHAS.md`. `so101-green` may be plugged in: leave it alone.
 
-- [x] **Raspbots** *(done 2026-10-27; MAC still to copy into the table)*: read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
-- [ ] **xarm1, identify:** plug it into the lab desktop; Claude identifies it from `lsusb` / `/dev/serial/by-id/` (or its HID device) **without opening anything else**, and adds it to `config/devices.yaml`.
+- [x] **Raspbots** *(done 2026-10-27; MACs in the table)*: read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
+- [x] **xarm1, identify** *(2026-10-27)*: it's a **HID device, not serial**: USB ID `0483:5750`, manufacturer "Hiwonder", product "xArm", USB serial `720710C0D60063300023D4D4` (showed up as `/dev/hidraw4`, root-only). Still to do in a coding session: add it to `config/devices.yaml` by that USB ID + serial. Before the driver works the builder runs (once, normal terminal): hidapi install + a udev access rule (see `GOTCHAS.md`).
 - [ ] **xarm1, driver:** an `Arm` plug-in (same interface as `FakeArm`), read-only first: read servo positions, measure reads/second.
 - [ ] **xarm1, motion test (ask first):** only after the builder's OK, with the arm clamped, the area clear and the power plug in reach (`SAFETY.md`). Small, slow single-servo moves; measure commands/second and command→motion delay. Record the numbers in `docs/GOTCHAS.md` (or a decision note) and step 1 below.
 - [ ] **Quest access:** check whether developer mode is on (or can be turned on) for the lab's Quest 3s, and find out **who controls the lab's Meta account** (developer mode needs that account in a developer organization).
@@ -47,7 +47,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 5. **Safety from the first motion:** speed limits, limited workspace, **dead-man rule** (clutch released / tracking lost / headset off / connection drops → arm freezes).
 6. **Only claim what's real.**
 7. **Fake arm first**, then the real arm.
-8. **Portable from day one:** nothing that only works on the lab desktop or lab network.
+8. **Portable from day one:** nothing that only works on the lab desktop or lab network. **The brain runs on Linux, Windows and macOS** (decision 2026-10-27): identify USB devices by USB ID + serial number, not OS paths. Do this as part of the xArm driver work, since the xArm has no `/dev/serial/by-id/` name anyway.
 
 ## Steps (each one is a small, testable win)
 -1. ~~**Scaffold the repo** per project-scaffold.md "Day one" (README, CLAUDE.md, docs/, SAFETY.md, .gitignore, .env.example, config/, calibration/, lock file, install script, tests + fake robot, formatter). Keep it quick — an hour, not a week.~~ **Done 2026-10-24.** Still open from Day one: LICENSE (ask the professor).

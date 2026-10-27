@@ -16,26 +16,32 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 - **Plugs into:** outputs/clients slot (same message protocol as the Quest page). The Pis just run a browser in kiosk mode (full-screen, no address bar), so they stay thin. Related: "Multi-screen presence", "Lab health dashboard" (below).
 - **Possible roles (to discuss):** a small screen next to each robot as its "face" + status + STOP; the Newline as a group/visitor screen (3D arm view, cast of the Quest view, dashboard).
 - **Rules that still apply:** any robot motion from a touch goes through the same safety layer (limits, dead-man); every screen that can move a robot shows a STOP.
-- **Open questions:** what does "hologram" mean here (a 3D view on the screen, or a physical illusion like a Pepper's-ghost pyramid)? Does the Newline have its own built-in computer/browser, or does it need a PC over HDMI + USB? Which Pi models are behind the small screens? Needs the lab network (router) for the Pis.
+- **Answers (2026-10-27):** "hologram" = a 3D arm model you spin with touch (the existing three.js arm view already does this with a mouse; touch is a small step). The Newline is a standalone Android computer, so its own browser opens the brain's page (check that browser supports WebGL + WebSockets). Uses: data display, or robot control with sliders.
+- **Note:** slider control is the same page as phone teleop's touch mode (below). Build **one touch-control page** that adapts to phone, small screen and the 75" screen.
+- **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
 
 ### Voice: build our own, use an existing realtime service, or both?
 - **What:** choose between (a) an existing **speech-to-speech realtime service** (OpenAI's realtime voice models, Google's Gemini Live API), which already handles interruptions, turn-taking and tool calls in the background, and (b) our own **pipeline**: local wake word → speech-to-text → language model → text-to-speech.
 - **Recommendation (not decided yet):** both, as plug-ins. The wake word / push-to-talk part is always ours and runs locally, so we don't stream the room to the cloud all day (cost + privacy). The conversation itself uses a realtime service first (best feel for the least work). Our own pipeline is the fallback for offline lite mode.
 - **Fits:** Conversation manager (it gets thinner: the service does barge-in, while we keep queueing, tool routing and safety) · model router · two speeds (realtime = fast path; it can hand big jobs to the agent harness in the background). Tool calls from the voice model go through our tools + safety layer like everything else.
 - **Watch out:** realtime audio is priced per minute, so check it against the ≤ $20/month budget (look up current prices, don't guess). It needs internet. Fan noise can cause false "interruptions" (push-to-talk helps).
-- **Open questions:** which service ("GPT-Live" = OpenAI's realtime voice?); free-tier/data terms; how much talking per week do we expect?
+- **Answer (2026-10-27):** used mostly for testing and **for the show** (visitors), not daily, so per-minute cost is probably fine. That favors the realtime service first; our own pipeline only when offline mode needs it.
+- **Open questions:** which service ("GPT-Live" = OpenAI's realtime voice?); free-tier/data terms; venues need internet for it.
 
 ### Google Glass (Explorer Edition) as a display + camera
 - **What:** custom app on the lab's Google Glass Explorer Edition: a tiny heads-up status display, and maybe its camera as a first-person view.
 - **Why:** a "JARVIS glasses" moment; a hands-free status display while working at a robot.
 - **Plugs into:** outputs/clients (display) + cameras/vision (first-person camera, like "Quest vision Q&A").
 - **Honest caveats:** 2013 hardware, long discontinued, runs a very old Android (4.4). Apps are built with old tools, and the battery is likely worn. Camera privacy is still deferred (log). Much later.
-- **First check (cheap, when curious):** does it boot and charge, which firmware is it on, and can a computer install apps on it over USB?
+- **Status (2026-10-27):** it boots; built-in voice commands (e.g. take a picture) work. No use picked yet ("I just want to use it for something").
+- **Candidate uses (pick one later):** (1) teleop status HUD (FOLLOWING / FROZEN / gripper %) while driving the arm with a phone or leader arm; (2) "what am I looking at?": a photo from the Glass → JARVIS answers on its display; (3) alerts from the troubleshooting suite.
+- **Next check (cheap, when curious):** which firmware is it on, and can a computer install apps on it over USB?
 
 ### Teleop from a phone
 - **What:** a phone as a teleop input. Either (a) a touch page with sliders/joystick + STOP, or (b) the phone itself as a 3D "controller" (Android Chrome supports WebXR AR, which tracks the phone's position and tilt in space; iPhones' browser doesn't).
 - **Why:** anyone can try it without a headset; a fallback if the Quest is unavailable; another entry for "Ways to teach a robot".
 - **Plugs into:** inputs slot (a new input plug-in, same pipeline + clutch + dead-man). Merges with "Visitors' phones as remotes" (below).
+- **For whom (2026-10-27):** everyone: the builder, lab members and visitors.
 - **Watch out:** WebXR needs `localhost` or HTTPS. Over USB that's easy with an Android phone (`adb reverse`, as with the Quest). Over Wi-Fi it needs a certificate. Phone tracking is less steady than Quest controllers.
 
 ---
