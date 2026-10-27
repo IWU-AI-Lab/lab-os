@@ -11,7 +11,12 @@ decide() {
 
 # so101-green serial ports (by-id serial numbers).
 if grep -qE '5B41531599|5B41533501' <<<"$cmd"; then
-  decide deny "That is so101-green's serial port. Never open it (CLAUDE.md)."
+  # Anything that could open a port or run a driver: deny. Otherwise it's probably just text
+  # (editing config/tests/docs that list the serials): ask, so the builder confirms with one click.
+  if grep -qE '\b(screen|minicom|picocom|stty|socat|dd|lerobot|serial|uv run|python3?)\b|/dev/(tty|serial)[^ ]* *(<|>)|(<|>) */dev/|cat +/dev' <<<"$cmd"; then
+    decide deny "That is so101-green's serial port. Never open it (CLAUDE.md)."
+  fi
+  decide ask "Command mentions so101-green's serial number. Confirm it only edits text and opens no port."
 fi
 
 # Green calibration files.

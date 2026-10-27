@@ -132,7 +132,14 @@ class XArm:
         travel = max(
             (abs(self.limits[j].clamp(v) - current[j]) for j, v in targets.items()), default=0
         )
-        duration_ms = max(int(travel / (120 * speed_scale) * 1000), 50)
+        self.send_move(targets, max(int(travel / (120 * speed_scale) * 1000), 50))
+
+    def send_move(self, targets: dict[str, float], duration_ms: int) -> None:
+        """One move command, no reply wait. Clamps to limits; needs allow_motion."""
+        if not self.allow_motion:
+            raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
+        if self.stopped:
+            return
         data = bytearray([len(targets), duration_ms & 0xFF, duration_ms >> 8])
         for joint, degrees in targets.items():
             position = degrees_to_position(joint, self.limits[joint].clamp(degrees))
