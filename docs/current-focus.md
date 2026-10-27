@@ -13,8 +13,8 @@ A visitor puts on a Quest 3, and a robot arm copies their **bare hand** live (ha
 In-lab tasks only; everything else can be done from home. Tick them off here and note surprises in `docs/GOTCHAS.md`. `so101-green` may be plugged in: leave it alone.
 
 - [x] **Raspbots** *(done 2026-10-27; MACs in the table)*: read raspbot #2's Wi-Fi MAC (`ip link` → the `wlan0` entry's `link/ether`), add it to the device table in `network-setup-checklist.md` step 1. Rename both: `sudo hostnamectl set-hostname raspbot1` / `raspbot2` (step 4; change the default passwords while you're in there).
-- [x] **xarm1, identify** *(2026-10-27)*: it's a **HID device, not serial**: USB ID `0483:5750`, manufacturer "Hiwonder", product "xArm", USB serial `720710C0D60063300023D4D4` (showed up as `/dev/hidraw4`, root-only). Still to do in a coding session: add it to `config/devices.yaml` by that USB ID + serial. Before the driver works the builder runs (once, normal terminal): hidapi install + a udev access rule (see `GOTCHAS.md`).
-- [ ] **xarm1, driver:** an `Arm` plug-in (same interface as `FakeArm`), read-only first: read servo positions, measure reads/second.
+- [x] **xarm1, identify** *(2026-10-27)*: it's a **HID device, not serial**: USB ID `0483:5750`, manufacturer "Hiwonder", product "xArm", USB serial `720710C0D60063300023D4D4` (showed up as `/dev/hidraw4`, root-only). Still to do in a coding session: add it to `config/devices.yaml` by that USB ID + serial. Before the driver works the builder runs (once, normal terminal): hidapi install + a udev access rule (see `GOTCHAS.md`). **Config part done 2026-10-27:** `config/devices.yaml` has `xarm1` by USB ID + product + serial; `lab_os.devices.find_usb_device()` resolves it on any OS.
+- [x] **xarm1, driver** *(read-only part done 2026-10-27)*: `lab_os.robots.xarm.XArm` (same interface as `FakeArm`; library `hid`, see GOTCHAS). Reads all 6 servos + battery (8.07 V); **~29 reads/s** (median 30 ms/read, ~8 timeouts per 5 s). Motion is blocked in code (`allow_motion=False`) until the motion test. Check yourself: `uv run python -m lab_os.robots.xarm`.
 - [ ] **xarm1, motion test (ask first):** only after the builder's OK, with the arm clamped, the area clear and the power plug in reach (`SAFETY.md`). Small, slow single-servo moves; measure commands/second and command→motion delay. Record the numbers in `docs/GOTCHAS.md` (or a decision note) and step 1 below.
 - [ ] **Quest access:** check whether developer mode is on (or can be turned on) for the lab's Quest 3s, and find out **who controls the lab's Meta account** (developer mode needs that account in a developer organization).
 - [ ] **If developer mode works:** run the real Quest data test from `docs/quest-setup.md` section 3 (`adb reverse` + `http://localhost:8080`), drive the fake arm, and save a recording (`serve --record recordings/quest-2026-10-26.jsonl`). Commit a short clip as a test fixture.
@@ -52,7 +52,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 ## Steps (each one is a small, testable win)
 -1. ~~**Scaffold the repo** per project-scaffold.md "Day one" (README, CLAUDE.md, docs/, SAFETY.md, .gitignore, .env.example, config/, calibration/, lock file, install script, tests + fake robot, formatter). Keep it quick — an hour, not a week.~~ **Done 2026-10-24.** Still open from Day one: LICENSE (ask the professor).
 0. **In parallel:** build + calibrate `so101-white`.
-1. **Arm works from a computer.** `xarm1` over USB (Python `xarm`): move each servo, read positions, measure commands/second and delay. Later `so101-white` with LeRobot.
+1. **Arm works from a computer.** `xarm1` over USB HID (`lab_os.robots.xarm`): move each servo, read positions, measure commands/second and delay. Later `so101-white` with LeRobot.
 2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live. *Software done 2026-10-24 and tested with replay + emulator (`lab-os-teleop`, docs/quest-setup.md); real-Quest test pending (Monday checklist).*
 3. **Cheap first mapping with clutch control.** First visible win. *Done on the fake arm 2026-10-24 (joint-space, `teleop/mapping.py`); real arm pending step 1.*
 4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
@@ -85,7 +85,7 @@ A small model trained from scratch on one task (e.g. ACT) tends to break with ne
 - (Second act) Gemini Robotics-ER 2 pointing accuracy on our camera + camera-to-arm calibration; SmolVLA training on 12 GB.
 
 ## Hacks to clean up
-*(empty — add entries as they happen)*
+- `robots/xarm.py`: joint scale/zero (500 = 0°, 240°/1000 units) are datasheet values and **all signs are +1, unchecked** — needs the motion test + forward-kinematics direction check (like `tests/test_so101_directions.py`). Gripper "degrees" is a linear stand-in. Move duration is a flat 120°/s guess.
 
 ## Up next (after the teleop demo works)
 **Troubleshooting suite.** *Why:* the health checks / roll call will discover problems, and then I, a future maintainer, or an AI agent need an easy way to diagnose them. It's also the most concretely useful feature so far, and it targets the on-the-ground papercuts I keep hitting.
