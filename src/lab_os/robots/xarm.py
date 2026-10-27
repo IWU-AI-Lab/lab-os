@@ -6,6 +6,9 @@ Servo positions are 0..1000 (500 = middle) and span about 240 degrees.
 
 READ-ONLY by default: until `allow_motion=True`, only the whitelisted read commands can be sent,
 so nothing here can move a servo. Turn motion on only after the builder's OK (SAFETY.md).
+
+Measured 2026-10-27 (docs/GOTCHAS.md): position reads closer than ~0.1 s apart make the board
+silently drop move commands, so with motion on, reads are paced (`min_read_interval_s`).
 """
 
 import time
@@ -81,8 +84,11 @@ class XArm:
     device_name: str = "xarm1"  # key in config/devices.yaml
     allow_motion: bool = False
     read_timeout_s: float = 0.1
+    # HACK: 0.25 s worked in every test, ~0.09 s blocked all moves; the real limit is unknown.
+    min_read_interval_s: float = 0.25  # only applies while allow_motion is on
     stopped: bool = False
     _dev: object = field(default=None, repr=False)
+    _last_read: tuple[float, dict[int, int]] | None = field(default=None, repr=False)
 
     def connect(self) -> None:
         import hid  # late import: tests and non-xArm work don't need the native hidapi library
@@ -91,8 +97,18 @@ class XArm:
         self._dev = hid.Device(path=info["path"])
 
     def read_raw(self) -> dict[int, int]:
-        """Servo id -> raw position (0..1000), one request for all six servos."""
+        """Servo id -> raw position (0..1000), one request for all six servos.
+
+        With motion on, a call sooner than `min_read_interval_s` after the last bus read returns
+        that reading again instead of asking the board (fast reads starve moves)."""
         dev = self._require_connected()
+        now = time.monotonic()
+        if (
+            self.allow_motion
+            and self._last_read
+            and now - self._last_read[0] < self.min_read_interval_s
+        ):
+            return dict(self._last_read[1])
         while dev.read(REPORT_SIZE, 0):  # drop stale reports
             pass
         self._send(CMD_GET_SERVO_POSITION, bytes([len(SERVO_IDS), *SERVO_IDS.values()]))
@@ -100,7 +116,11 @@ class XArm:
         while time.monotonic() < deadline:
             report = dev.read(REPORT_SIZE, max(1, int((deadline - time.monotonic()) * 1000)))
             if report and report[3] == CMD_GET_SERVO_POSITION:
-                return parse_positions(bytes(report))
+                positions = parse_positions(bytes(report))
+                if set(positions) != set(SERVO_IDS.values()):  # happens while servos move
+                    raise TimeoutError(f"{self.name}: incomplete reply {positions}")
+                self._last_read = (now, positions)
+                return dict(positions)
         raise TimeoutError(f"{self.name}: no position reply within {self.read_timeout_s} s")
 
     def read_joints(self) -> dict[str, float]:
@@ -148,7 +168,8 @@ class XArm:
 
     def stop(self) -> None:
         """Ignore further moves. Sends nothing: the xArm's only stop command cuts servo torque,
-        which would drop the arm; "hold position" needs deciding at the motion test."""
+        which would drop the arm. A move already sent still finishes (≤ its duration), so keep
+        streamed moves short (~100 ms). Hold-position on stop is still open."""
         self.stopped = True
 
     def resume(self) -> None:

@@ -132,6 +132,29 @@ def test_read_times_out_without_reply():
         arm.read_raw()
 
 
+def test_reads_are_paced_while_motion_is_on():
+    arm, fake = connected_arm(allow_motion=True)
+    arm.read_raw()
+    arm.read_raw()  # too soon: served from the last reading
+    assert len(fake.written) == 1
+    arm._last_read = (arm._last_read[0] - 1.0, arm._last_read[1])
+    arm.read_raw()
+    assert len(fake.written) == 2
+
+
+def test_read_only_reads_are_not_paced():
+    arm, fake = connected_arm()
+    arm.read_raw()
+    arm.read_raw()
+    assert len(fake.written) == 2
+
+
+def test_incomplete_reply_counts_as_timeout():
+    arm, fake = connected_arm({6: 500, 5: 500}, read_timeout_s=0.01)
+    with pytest.raises(TimeoutError):
+        arm.read_raw()
+
+
 def test_read_only_driver_cannot_move():
     arm, fake = connected_arm()
     with pytest.raises(MotionDisabled):
