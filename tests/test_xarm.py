@@ -109,20 +109,28 @@ def test_parse_positions():
 
 
 def test_read_joints_maps_servos_to_shared_names():
-    positions = dict.fromkeys(xarm.SERVO_IDS.values(), 500) | {6: 750, 1: 0}
+    positions = dict.fromkeys(xarm.SERVO_IDS.values(), 500) | {6: 750, 4: 750, 5: 750, 1: 302}
     arm, fake = connected_arm(positions)
     joints = arm.read_joints()
     assert set(joints) == set(arm.joint_names)
-    assert joints["shoulder_pan"] == pytest.approx(60.0)
-    assert joints["elbow_flex"] == 0.0
-    assert joints["gripper"] == pytest.approx(-120.0)
+    assert joints["shoulder_pan"] == pytest.approx(-60.0)  # +units = counter-clockwise
+    assert joints["shoulder_lift"] == pytest.approx(60.0)
+    assert joints["elbow_flex"] == pytest.approx(-60.0)
+    assert joints["wrist_flex"] == 0.0
+    assert joints["gripper"] == pytest.approx(90.0)  # 302 = open
     assert [w[5] for w in fake.written] == [6]  # one request for all six servos
 
 
-def test_position_degrees_roundtrip():
-    for pos in (0, 250, 500, 999, 1000):
-        deg = xarm.position_to_degrees("wrist_flex", pos)
-        assert xarm.degrees_to_position("wrist_flex", deg) == pos
+@pytest.mark.parametrize("joint", list(xarm.SERVO_IDS))
+def test_position_degrees_roundtrip(joint):
+    for pos in (0, 250, 302, 500, 750, 999, 1000):
+        deg = xarm.position_to_degrees(joint, pos)
+        assert xarm.degrees_to_position(joint, deg) == pos
+
+
+def test_gripper_open_closed():
+    assert xarm.degrees_to_position("gripper", 0.0) == xarm.GRIPPER_CLOSED
+    assert xarm.degrees_to_position("gripper", 90.0) == xarm.GRIPPER_OPEN
 
 
 def test_read_times_out_without_reply():
@@ -172,10 +180,10 @@ def test_stop_sends_nothing():
 
 def test_move_encoding_when_motion_is_allowed():
     arm, fake = connected_arm(allow_motion=True)
-    arm.move_joints({"gripper": 500.0}, 0.5)  # clamped to the +120 deg limit
+    arm.move_joints({"gripper": 500.0}, 0.5)  # clamped to 90 deg = fully open
     move = [w for w in fake.written if w[4] == xarm.CMD_SERVO_MOVE][0]
     assert move[5] == 1  # one servo
-    assert (move[8], move[9] | move[10] << 8) == (1, 1000)  # gripper servo id, clamped position
+    assert (move[8], move[9] | move[10] << 8) == (1, xarm.GRIPPER_OPEN)
 
 
 def test_stopped_arm_ignores_moves():

@@ -33,14 +33,26 @@ SERVO_IDS = {
     "wrist_roll": 2,
     "gripper": 1,
 }
-# HACK: scale and zero are the datasheet's (500 = 0 deg, 240 deg / 1000 units) and every sign is
-# +1; none of it is checked against the real arm yet (needs the motion test + the forward-
-# kinematics direction check, docs/GOTCHAS.md). The gripper's "degrees" are just a linear
-# stand-in for its 0..1000 travel.
+# Shared conventions (same as the SO-101 and web/arm/arm-model.js): 0 = arm upright, +pan swings to
+# the arm's right (clockwise from above), +lift/+elbow/+wrist_flex tilt forward, +wrist_roll is
+# counter-clockwise from above. "Forward" = the side with the controller board. Signs observed by
+# the builder on 2026-10-27 (docs/GOTCHAS.md).
+SIGNS = {
+    "shoulder_pan": -1,  # +units = counter-clockwise from above
+    "shoulder_lift": 1,  # +units = toward the board
+    "elbow_flex": -1,  # +units = away from the board
+    "wrist_flex": 1,  # +units = toward the board
+    "wrist_roll": 1,  # +units = counter-clockwise from above
+}
+# HACK: 500 = upright matches the board's "Run" pose; 240 deg / 1000 units is the datasheet value,
+# not measured.
 DEGREES_PER_UNIT = 240 / 1000
 CENTER = 500
-SIGNS = dict.fromkeys(SERVO_IDS, 1)
 JOINT_LIMIT = JointLimit(-120.0, 120.0)
+# Gripper: 0 deg = closed, 90 = open (like the 3D model). Raw open/closed values from the builder's
+# own grab script; +units closes.
+GRIPPER_OPEN, GRIPPER_CLOSED = 302, 750
+GRIPPER_LIMIT = JointLimit(0.0, 90.0)
 
 
 class MotionDisabled(RuntimeError):
@@ -48,11 +60,17 @@ class MotionDisabled(RuntimeError):
 
 
 def position_to_degrees(joint: str, position: int) -> float:
+    if joint == "gripper":
+        return (GRIPPER_CLOSED - position) * 90 / (GRIPPER_CLOSED - GRIPPER_OPEN)
     return SIGNS[joint] * (position - CENTER) * DEGREES_PER_UNIT
 
 
 def degrees_to_position(joint: str, degrees: float) -> int:
-    return min(max(round(CENTER + SIGNS[joint] * degrees / DEGREES_PER_UNIT), 0), 1000)
+    if joint == "gripper":
+        position = GRIPPER_CLOSED - degrees * (GRIPPER_CLOSED - GRIPPER_OPEN) / 90
+    else:
+        position = CENTER + SIGNS[joint] * degrees / DEGREES_PER_UNIT
+    return min(max(round(position), 0), 1000)
 
 
 def build_report(cmd: int, data: bytes = b"") -> bytes:
@@ -79,7 +97,7 @@ class XArm:
     model: str = "xarm1s"
     joint_names: tuple[str, ...] = tuple(SERVO_IDS)
     limits: dict[str, JointLimit] = field(
-        default_factory=lambda: dict.fromkeys(SERVO_IDS, JOINT_LIMIT)
+        default_factory=lambda: dict.fromkeys(SERVO_IDS, JOINT_LIMIT) | {"gripper": GRIPPER_LIMIT}
     )
     device_name: str = "xarm1"  # key in config/devices.yaml
     allow_motion: bool = False
