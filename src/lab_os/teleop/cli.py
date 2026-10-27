@@ -1,4 +1,4 @@
-"""`uv run lab-os-teleop serve|replay` — the teleop program (fake arm only for now)."""
+"""`uv run lab-os-teleop serve|replay` — the teleop program (fake arm, or `--arm xarm1`)."""
 
 import argparse
 import asyncio
@@ -10,6 +10,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.messages import parse_frame
@@ -60,18 +61,35 @@ def _make_printer():
     return on_tick
 
 
+def _make_arm(name: str, venue) -> Arm:
+    if name == "fake":
+        return FakeArm()
+    if name not in venue.active_devices:
+        raise SystemExit(f"{name} is not active in venue {venue.name!r} (config/venues/)")
+    if not venue.motion_allowed:
+        raise SystemExit(f"venue {venue.name!r} doesn't allow motion")
+    from lab_os.robots.xarm import XArm
+
+    # HACK: the xArm driver does blocking HID I/O inside the asyncio loop (~10-30 ms per paced
+    # read, 4x/s). Fine for a desk test; move it to a thread before relying on it.
+    return XArm(name=name, device_name=name, allow_motion=True)
+
+
 def _make_loop(args) -> TeleopLoop:
     venue = load_venue(args.venue)
-    arm = FakeArm()
+    speed = min(args.speed, venue.max_speed_scale) if args.speed else venue.max_speed_scale
+    arm = _make_arm(args.arm, venue)
     arm.connect()
     print(
-        f"venue {venue.name}: speed scale {venue.max_speed_scale}, arm: fake "
+        f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
         f"(joints: {', '.join(arm.joint_names)})"
     )
+    if args.arm != "fake":
+        print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
     return TeleopLoop(
         arm=arm,
         inputs=InputState(),
-        speed_scale=venue.max_speed_scale,
+        speed_scale=speed,
         on_tick=None if args.quiet else _make_printer(),
     )
 
@@ -107,6 +125,15 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--venue", help="venue profile (default: $LAB_OS_VENUE or 'lab')")
     parser.add_argument("--quiet", action="store_true", help="don't print the live status line")
+    parser.add_argument(
+        "--arm",
+        default="fake",
+        choices=["fake", "xarm1"],
+        help="which arm to drive (default: fake)",
+    )
+    parser.add_argument(
+        "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     serve = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
@@ -130,8 +157,12 @@ def main(argv: list[str] | None = None) -> None:
         app = create_app(loop, accept_input=False)
         coro = _serve(app, args.port, _feed_replay(loop, args.file, args.speed, args.loop))
 
-    with contextlib.suppress(KeyboardInterrupt):
-        asyncio.run(coro)
+    try:
+        with contextlib.suppress(KeyboardInterrupt):
+            asyncio.run(coro)
+    finally:
+        loop.arm.stop()
+        loop.arm.close()
     print()
 
 

@@ -104,9 +104,12 @@ class XArm:
     read_timeout_s: float = 0.1
     # HACK: 0.25 s worked in every test, ~0.09 s blocked all moves; the real limit is unknown.
     min_read_interval_s: float = 0.25  # only applies while allow_motion is on
+    stale_ok_s: float = 1.0  # with motion on, a failed read returns a reading up to this old
     stopped: bool = False
     _dev: object = field(default=None, repr=False)
     _last_read: tuple[float, dict[int, int]] | None = field(default=None, repr=False)
+    _last_attempt: float = field(default=-1e9, repr=False)
+    _last_sent: dict[str, float] = field(default_factory=dict, repr=False)
 
     def connect(self) -> None:
         import hid  # late import: tests and non-xArm work don't need the native hidapi library
@@ -118,15 +121,24 @@ class XArm:
         """Servo id -> raw position (0..1000), one request for all six servos.
 
         With motion on, a call sooner than `min_read_interval_s` after the last bus read returns
-        that reading again instead of asking the board (fast reads starve moves)."""
+        the last reading instead of asking the board (fast reads starve moves), and a failed read
+        (common while servos move) returns the last reading if it's under `stale_ok_s` old."""
         dev = self._require_connected()
         now = time.monotonic()
-        if (
-            self.allow_motion
-            and self._last_read
-            and now - self._last_read[0] < self.min_read_interval_s
-        ):
-            return dict(self._last_read[1])
+        if self.allow_motion and self._last_read:
+            if now - self._last_attempt < self.min_read_interval_s:
+                return dict(self._last_read[1])
+            self._last_attempt = now
+            try:
+                return self._read_bus(dev, now)
+            except TimeoutError:
+                if now - self._last_read[0] < self.stale_ok_s:
+                    return dict(self._last_read[1])
+                raise
+        self._last_attempt = now
+        return self._read_bus(dev, now)
+
+    def _read_bus(self, dev, now: float) -> dict[int, int]:
         while dev.read(REPORT_SIZE, 0):  # drop stale reports
             pass
         self._send(CMD_GET_SERVO_POSITION, bytes([len(SERVO_IDS), *SERVO_IDS.values()]))
@@ -165,12 +177,18 @@ class XArm:
         speed_scale = min(max(speed_scale, 0.0), 1.0)
         if speed_scale == 0.0:
             return
+        targets = {j: self.limits[j].clamp(v) for j, v in targets.items()}
+        # Teleop streams ~50 targets/s: skip joints that haven't changed by about a servo unit.
+        changed = {j: v for j, v in targets.items() if abs(v - self._last_sent.get(j, 1e9)) >= 0.25}
+        if not changed:
+            return
+        start = {j: self._last_sent[j] for j in changed if j in self._last_sent}
+        if len(start) < len(changed):
+            start = self.read_joints() | start
+        travel = max(abs(v - start[j]) for j, v in changed.items())
         # HACK: duration from a flat 120 deg/s * speed_scale guess; replace with measured values.
-        current = self.read_joints()
-        travel = max(
-            (abs(self.limits[j].clamp(v) - current[j]) for j, v in targets.items()), default=0
-        )
-        self.send_move(targets, max(int(travel / (120 * speed_scale) * 1000), 50))
+        # Never under 100 ms (what was tested streaming at 50/s).
+        self.send_move(changed, max(int(travel / (120 * speed_scale) * 1000), 100))
 
     def send_move(self, targets: dict[str, float], duration_ms: int) -> None:
         """One move command, no reply wait. Clamps to limits; needs allow_motion."""
@@ -183,6 +201,7 @@ class XArm:
             position = degrees_to_position(joint, self.limits[joint].clamp(degrees))
             data += bytes([SERVO_IDS[joint], position & 0xFF, position >> 8])
         self._send(CMD_SERVO_MOVE, bytes(data))
+        self._last_sent.update(targets)
 
     def stop(self) -> None:
         """Ignore further moves. Sends nothing: the xArm's only stop command cuts servo torque,

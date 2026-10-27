@@ -145,9 +145,32 @@ def test_reads_are_paced_while_motion_is_on():
     arm.read_raw()
     arm.read_raw()  # too soon: served from the last reading
     assert len(fake.written) == 1
-    arm._last_read = (arm._last_read[0] - 1.0, arm._last_read[1])
+    arm._last_attempt -= 1.0
     arm.read_raw()
     assert len(fake.written) == 2
+
+
+def test_failed_read_returns_recent_reading_while_moving():
+    arm, fake = connected_arm(allow_motion=True, read_timeout_s=0.01)
+    first = arm.read_raw()
+    fake.write = lambda data: len(data)  # board stops answering
+    arm._last_attempt -= 1.0
+    assert arm.read_raw() == first
+    arm._last_attempt -= 1.0
+    arm._last_read = (arm._last_read[0] - 5.0, arm._last_read[1])  # too old now
+    with pytest.raises(TimeoutError):
+        arm.read_raw()
+
+
+def test_unchanged_targets_are_not_resent():
+    arm, fake = connected_arm(allow_motion=True)
+    arm.move_joints({"wrist_roll": 5.0, "gripper": 30.0}, 0.5)
+    arm.move_joints({"wrist_roll": 5.1, "gripper": 30.0}, 0.5)  # below a servo unit
+    arm.move_joints({"wrist_roll": 6.0, "gripper": 30.0}, 0.5)
+    moves = [w for w in fake.written if w[4] == xarm.CMD_SERVO_MOVE]
+    assert [m[5] for m in moves] == [2, 1]  # second real move carries only wrist_roll
+    duration = moves[1][6] | moves[1][7] << 8
+    assert duration == 100  # short streamed moves
 
 
 def test_read_only_reads_are_not_paced():
