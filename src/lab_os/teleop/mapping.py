@@ -1,4 +1,11 @@
-"""Cheap first mapping with clutch control (current-focus.md step 3).
+"""Clutch-controlled mapping from a hand controller to arm joints (current-focus.md steps 3-4).
+
+Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
+- **IK (hand space), step 4:** the gripper moves the way your hand moves: hand forward/left/up in
+  the room → gripper forward/left/up, scaled by `tip_m_per_hand_m`. Controller pitch tilts the
+  gripper (nose up = gripper tilts up); roll drives wrist_roll directly. Several joints move at
+  once; that's intended. Unreachable targets slip like a joint limit (no wind-up).
+- **Joint space, step 3 (fallback):** hand x/y/z → pan/lift/elbow, pitch/roll → wrist joints.
 
 - Grip held = clutch engaged = the arm follows the controller. Released = the arm freezes.
 - Relative: on engage, remember the controller pose and the arm's *current* joints; afterwards the
@@ -13,13 +20,14 @@
   has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
   back moves the arm back immediately (no wind-up, no jump on the next grab).
 
-This is joint-space on purpose: proper inverse kinematics is step 4. Joint limits don't prevent
-every self-collision; that needs the arm's geometry (also step 4).
+Joint limits don't prevent every self-collision (e.g. the gripper hitting the base or table);
+that needs a collision model.
 """
 
 import math
 from dataclasses import dataclass, field
 
+from lab_os.kinematics import IK_JOINTS, Kinematics, solve_ik
 from lab_os.robots.base import JointLimit
 from lab_os.teleop.messages import ControllerState, Quat, Vec3
 
@@ -29,7 +37,9 @@ class MappingConfig:
     hand: str = "right"
     grip_on: float = 0.6  # hysteresis: engage above this...
     grip_off: float = 0.4  # ...release below this
-    deg_per_m: float = 200.0  # 10 cm of hand motion → 20° of joint motion
+    deg_per_m: float = 200.0  # joint space: 10 cm of hand motion → 20° of joint motion
+    tip_m_per_hand_m: float = 0.5  # IK: 10 cm of hand motion → 5 cm of gripper motion
+    slip_m: float = 0.002  # IK: a target further than this from what the arm reached slips
     max_deg_per_s: float = 90.0  # ramp limit at speed_scale = 1
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
@@ -82,6 +92,7 @@ def _twist_deg(q: Quat, axis: int) -> float:
 @dataclass
 class ClutchMapper:
     config: MappingConfig = field(default_factory=MappingConfig)
+    kinematics: Kinematics | None = None  # None = joint-space mapping
     engaged: bool = False
     # After a freeze (connection loss), grip must be released and pressed again before moving.
     needs_release: bool = False
@@ -91,6 +102,9 @@ class ClutchMapper:
     _anchor_joints: dict[str, float] = field(default_factory=dict)
     _commanded: dict[str, float] = field(default_factory=dict)
     _bounds: dict[str, tuple[float, float]] = field(default_factory=dict)
+    _anchor_tip: Vec3 = (0.0, 0.0, 0.0)  # IK: gripper point / tool angle the hand motion adds to
+    _anchor_angle: float = 0.0
+    _ik_seed: dict[str, float] = field(default_factory=dict)
 
     def reset(self, require_release: bool = True) -> None:
         """Drop the clutch (e.g. on connection loss). Requires a fresh grip press to move again."""
@@ -125,6 +139,9 @@ class ClutchMapper:
             self._anchor_joints = dict(arm_joints)
             self._commanded = dict(arm_joints)
             self._bounds = self._soft_bounds(limits or {}, arm_joints)
+            if self.kinematics:
+                self._anchor_tip, self._anchor_angle = self.kinematics.fk(arm_joints)
+                self._ik_seed = dict(arm_joints)
         elif self.engaged and controller.grip < cfg.grip_off:
             self.engaged = False
         if not self.engaged:
@@ -170,6 +187,29 @@ class ClutchMapper:
         self._twist[axis] = prev + step
         return self._twist[axis]
 
+    def _desired_ik(self, dpos: Vec3, pitch: float) -> dict[str, float]:
+        """IK joints for the anchor gripper pose moved by the hand. WebXR → arm axes: hand forward
+        (−z) = arm +x, hand left (−x) = arm +y, up (+y) = +z."""
+        cfg, kin = self.config, self.kinematics
+        dx, dy, dz = dpos
+        s = cfg.tip_m_per_hand_m
+        target = tuple(
+            a + d for a, d in zip(self._anchor_tip, (-dz * s, -dx * s, dy * s), strict=True)
+        )
+        angle = self._anchor_angle - pitch  # nose up → the gripper tilts back/up
+        bounds = {j: JointLimit(*self._bounds[j]) for j in IK_JOINTS if j in self._bounds}
+        q = solve_ik(kin, self._ik_seed, target, angle, bounds)
+        self._ik_seed = q
+        reached, reached_angle = kin.fk(q)
+        # Slip: an unreachable target moves the anchor instead, so moving the hand back moves the
+        # arm back straight away.
+        miss = [r - t for r, t in zip(reached, target, strict=True)]
+        if math.sqrt(sum(m * m for m in miss)) > cfg.slip_m:
+            self._anchor_tip = tuple(a + m for a, m in zip(self._anchor_tip, miss, strict=True))
+        if abs(reached_angle - angle) > 1.0:
+            self._anchor_angle += reached_angle - angle
+        return {j: q[j] for j in IK_JOINTS}
+
     def _desired(self, c: ControllerState) -> dict[str, float]:
         cfg = self.config
         a = self._anchor_joints
@@ -178,6 +218,15 @@ class ClutchMapper:
         rel = _quat_mul(c.quat, _quat_conj(self._anchor_quat))
         # WebXR axes: +x right, +y up, -z forward (away from the user). Twist about the
         # controller's x = pitch (nose up > 0), about its z = roll.
+        if self.kinematics and all(j in a for j in IK_JOINTS):
+            desired = self._desired_ik((dx, dy, dz), self._unwrapped(rel, 0))
+            desired["wrist_roll"] = a.get("wrist_roll", 0.0) + cfg.signs.get(
+                "wrist_roll", 1.0
+            ) * self._unwrapped(rel, 2)
+            desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * (
+                c.trigger
+            )
+            return {j: v for j, v in desired.items() if j in a}
         motion = {
             "shoulder_pan": dx * cfg.deg_per_m,
             "shoulder_lift": dy * cfg.deg_per_m,

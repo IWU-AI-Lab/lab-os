@@ -10,9 +10,11 @@ from pathlib import Path
 
 from aiohttp import web
 
+from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
+from lab_os.teleop.mapping import ClutchMapper
 from lab_os.teleop.messages import parse_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
@@ -64,6 +66,14 @@ def _make_printer():
 def _make_arm(name: str, venue) -> Arm:
     if name == "fake":
         return FakeArm()
+    if name == "fake-xarm1":  # software xArm: same model, limits and IK as the real one
+        from lab_os.robots.xarm import XArm
+
+        x = XArm()
+        home = dict.fromkeys(x.joint_names, 0.0) | {"elbow_flex": 70.0, "wrist_flex": 30.0}
+        return FakeArm(
+            name="fake-xarm1", model=x.model, limits=x.limits, joints=home | {"gripper": 30.0}
+        )
     if name not in venue.active_devices:
         raise SystemExit(f"{name} is not active in venue {venue.name!r} (config/venues/)")
     if not venue.motion_allowed:
@@ -84,11 +94,14 @@ def _make_loop(args) -> TeleopLoop:
         f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
         f"(joints: {', '.join(arm.joint_names)})"
     )
-    if args.arm != "fake":
+    if not args.arm.startswith("fake"):
         print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
+    kin = kinematics_for(arm.model)
+    print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
     return TeleopLoop(
         arm=arm,
         inputs=InputState(),
+        mapper=ClutchMapper(kinematics=kin),
         speed_scale=speed,
         on_tick=None if args.quiet else _make_printer(),
     )
@@ -128,8 +141,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--arm",
         default="fake",
-        choices=["fake", "xarm1"],
-        help="which arm to drive (default: fake)",
+        choices=["fake", "fake-xarm1", "xarm1"],
+        help="which arm to drive: fake (SO-101), fake-xarm1 (software xArm), xarm1 (real)",
     )
     parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
