@@ -50,7 +50,8 @@ def test_negative_rate_moves_the_other_way_and_stops_at_the_soft_limit():
     loop = xarm_loop()
     t = run(loop, jog_msg(), 2)
     run(loop, jog_msg(shoulder_pan=-1.0), 500, t)  # long enough to hit the limit
-    assert loop.arm.read_joints()["shoulder_pan"] == pytest.approx(-117.0)
+    low = loop.arm.limits["shoulder_pan"].low
+    assert loop.arm.read_joints()["shoulder_pan"] == pytest.approx(low + 3.0)  # 3° margin
 
 
 def test_release_holds_and_unknown_joints_are_ignored():

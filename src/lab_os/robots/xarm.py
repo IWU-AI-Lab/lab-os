@@ -7,15 +7,35 @@ Servo positions are 0..1000 (500 = middle) and span about 240 degrees.
 READ-ONLY by default: until `allow_motion=True`, only the whitelisted read commands can be sent,
 so nothing here can move a servo. Turn motion on only after the builder's OK (SAFETY.md).
 
-Measured 2026-10-27 (docs/GOTCHAS.md): position reads closer than ~0.1 s apart make the board
-silently drop move commands, so with motion on, reads are paced (`min_read_interval_s`).
+With motion on, a worker thread owns the USB device (docs/GOTCHAS.md 2026-10-27/29):
+- Never blocks the caller: `move_joints` only stores the goal, `read_joints` returns the driver's
+  estimate (where each servo was told to be, following the board's linear interpolation).
+- No reads while moving: reads closer than ~0.1 s apart make the board drop moves, and a read
+  blocks for 10-100 ms. The worker reads only when the arm has been idle for a while.
+- "Lead" targets: while a joint is moving, it aims `lead_s` ahead along its current speed, with a
+  move duration of `lead_s`. The servo then runs smoothly instead of stopping in its deadband
+  (it ignores errors of a few units). When the goal stops changing, the aim is the goal itself,
+  and `stop()` sends "hold where you are" at once, so nothing coasts on.
+- Limits come from `calibration/<name>/limits.yaml` (measured by hand: `python -m
+  lab_os.robots.xarm calibrate`), otherwise from conservative defaults. Driving a servo into a hard
+  stop makes it switch itself off (goes limp).
 """
 
+import logging
+import sys
+import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
+import yaml
+
+from lab_os import REPO_ROOT
 from lab_os.devices import find_usb_device
 from lab_os.robots.base import JointLimit
+
+log = logging.getLogger(__name__)
+CALIBRATION_DIR = REPO_ROOT / "calibration"
 
 SIGNATURE = 0x55
 CMD_SERVO_MOVE = 0x03
@@ -48,7 +68,16 @@ SIGNS = {
 # not measured.
 DEGREES_PER_UNIT = 240 / 1000
 CENTER = 500
-JOINT_LIMIT = JointLimit(-120.0, 120.0)
+JOINT_LIMIT = JointLimit(-120.0, 120.0)  # what the servo itself allows (0..1000 units)
+# Used until calibration/<name>/limits.yaml exists: the raw ranges of the builder's own grab script
+# (known safe on this arm), converted with SIGNS; wrist_roll is a guess. Calibrate to widen them.
+DEFAULT_LIMITS = {
+    "shoulder_pan": JointLimit(-72.0, 72.0),  # raw 800..200
+    "shoulder_lift": JointLimit(-24.0, 96.0),  # raw 400..900
+    "elbow_flex": JointLimit(-6.0, 108.0),  # raw 525..50 (upright "Run" pose reads about -5.5)
+    "wrist_flex": JointLimit(-24.0, 84.0),  # raw 400..850
+    "wrist_roll": JointLimit(-90.0, 90.0),
+}
 # Gripper: 0 deg = closed, 90 = open (like the 3D model). Raw open/closed values from the builder's
 # own grab script; +units closes.
 GRIPPER_OPEN, GRIPPER_CLOSED = 302, 750
@@ -91,136 +120,291 @@ def parse_positions(report: bytes) -> dict[int, int]:
     return {report[5 + 3 * i]: report[6 + 3 * i] | (report[7 + 3 * i] << 8) for i in range(count)}
 
 
+def load_limits(name: str, directory: Path = CALIBRATION_DIR) -> dict[str, JointLimit]:
+    """Measured limits from calibration/<name>/limits.yaml, else the defaults. Never wider than
+    the servo range."""
+    limits = dict(DEFAULT_LIMITS) | {"gripper": GRIPPER_LIMIT}
+    path = directory / name / "limits.yaml"
+    if path.exists():
+        raw = yaml.safe_load(path.read_text()) or {}
+        for joint, (lo, hi) in (raw.get("limits_deg") or {}).items():
+            if joint in limits:
+                hard = GRIPPER_LIMIT if joint == "gripper" else JOINT_LIMIT
+                limits[joint] = JointLimit(max(min(lo, hi), hard.low), min(max(lo, hi), hard.high))
+    return limits
+
+
+@dataclass
+class _Segment:
+    """One commanded servo move: linear from `start` to `aim` over `duration` (the board's own
+    interpolation), so the driver knows where the servo should be without asking."""
+
+    start: float
+    aim: float
+    t0: float
+    duration: float
+
+    def at(self, t: float) -> float:
+        k = 1.0 if self.duration <= 0 else min(max((t - self.t0) / self.duration, 0.0), 1.0)
+        return self.start + (self.aim - self.start) * k
+
+
 @dataclass
 class XArm:
     name: str = "xarm1"
     model: str = "xarm1s"
     joint_names: tuple[str, ...] = tuple(SERVO_IDS)
-    limits: dict[str, JointLimit] = field(
-        default_factory=lambda: dict.fromkeys(SERVO_IDS, JOINT_LIMIT) | {"gripper": GRIPPER_LIMIT}
-    )
+    limits: dict[str, JointLimit] | None = None  # None = load_limits(name)
     device_name: str = "xarm1"  # key in config/devices.yaml
     allow_motion: bool = False
     read_timeout_s: float = 0.1
-    # HACK: 0.25 s worked in every test, ~0.09 s blocked all moves; the real limit is unknown.
-    min_read_interval_s: float = 0.25  # only applies while allow_motion is on
-    stale_ok_s: float = 1.0  # with motion on, a failed read returns a reading up to this old
+    # Motion tuning (worker thread). lead_s: how far ahead a moving joint aims, also the move
+    # duration. HACK: values from the first tests, not optimized.
+    lead_s: float = 0.3
+    period_s: float = 0.02
+    max_deg_per_s: float = 120.0  # at speed_scale 1; big jumps are spread out at this speed
+    idle_read_after_s: float = 0.6  # read the board only after this long without a move
+    min_read_interval_s: float = 0.25  # reads closer than ~0.1 s made the board drop moves
+    off_by_warn_deg: float = 10.0  # idle reading this far from the estimate: limp or blocked
     stopped: bool = False
     _dev: object = field(default=None, repr=False)
-    _last_read: tuple[float, dict[int, int]] | None = field(default=None, repr=False)
-    _last_attempt: float = field(default=-1e9, repr=False)
-    _last_sent: dict[str, float] = field(default_factory=dict, repr=False)
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)  # driver state
+    _io: threading.RLock = field(default_factory=threading.RLock, repr=False)  # the USB device
+    _thread: threading.Thread | None = field(default=None, repr=False)
+    _quit: threading.Event = field(default_factory=threading.Event, repr=False)
+    _goal: dict[str, float] = field(default_factory=dict, repr=False)  # from move_joints
+    _goal_seq: int = field(default=0, repr=False)
+    _speed: float = field(default=1.0, repr=False)
+    _hold: bool = field(default=False, repr=False)
+    _seg: dict[str, _Segment] = field(default_factory=dict, repr=False)
+    _prev_goal: dict[str, float] = field(default_factory=dict, repr=False)
+    _prev_goal_t: float = field(default=0.0, repr=False)
+    _seen_seq: int = field(default=0, repr=False)
+    _vel: dict[str, float] = field(default_factory=dict, repr=False)
+    _last_change_t: float = field(default=-1e9, repr=False)
+    _last_send_t: float = field(default=-1e9, repr=False)
+    _last_read_t: float = field(default=-1e9, repr=False)
+    measured: dict[str, float] = field(default_factory=dict)  # latest real reading (degrees)
 
+    def __post_init__(self) -> None:
+        if self.limits is None:
+            self.limits = load_limits(self.name)
+
+    # ---- connection ---------------------------------------------------------------------------
     def connect(self) -> None:
         import hid  # late import: tests and non-xArm work don't need the native hidapi library
 
         info = find_usb_device(self.device_name)  # refuses off-limits devices
         self._dev = hid.Device(path=info["path"])
-
-    def read_raw(self) -> dict[int, int]:
-        """Servo id -> raw position (0..1000), one request for all six servos.
-
-        With motion on, a call sooner than `min_read_interval_s` after the last bus read returns
-        the last reading instead of asking the board (fast reads starve moves), and a failed read
-        (common while servos move) returns the last reading if it's under `stale_ok_s` old."""
-        dev = self._require_connected()
-        now = time.monotonic()
-        if self.allow_motion and self._last_read:
-            if now - self._last_attempt < self.min_read_interval_s:
-                return dict(self._last_read[1])
-            self._last_attempt = now
-            try:
-                return self._read_bus(dev, now)
-            except TimeoutError:
-                if now - self._last_read[0] < self.stale_ok_s:
-                    return dict(self._last_read[1])
-                raise
-        self._last_attempt = now
-        return self._read_bus(dev, now)
-
-    def _read_bus(self, dev, now: float) -> dict[int, int]:
-        while dev.read(REPORT_SIZE, 0):  # drop stale reports
-            pass
-        self._send(CMD_GET_SERVO_POSITION, bytes([len(SERVO_IDS), *SERVO_IDS.values()]))
-        deadline = time.monotonic() + self.read_timeout_s
-        while time.monotonic() < deadline:
-            report = dev.read(REPORT_SIZE, max(1, int((deadline - time.monotonic()) * 1000)))
-            if report and report[3] == CMD_GET_SERVO_POSITION:
-                positions = parse_positions(bytes(report))
-                if set(positions) != set(SERVO_IDS.values()):  # happens while servos move
-                    raise TimeoutError(f"{self.name}: incomplete reply {positions}")
-                self._last_read = (now, positions)
-                return dict(positions)
-        raise TimeoutError(f"{self.name}: no position reply within {self.read_timeout_s} s")
-
-    def read_joints(self) -> dict[str, float]:
-        raw = self.read_raw()
-        return {j: position_to_degrees(j, raw[sid]) for j, sid in SERVO_IDS.items()}
-
-    def read_battery_v(self) -> float:
-        dev = self._require_connected()
-        self._send(CMD_GET_BATTERY_VOLTAGE)
-        report = dev.read(REPORT_SIZE, int(self.read_timeout_s * 1000))
-        if not report or report[3] != CMD_GET_BATTERY_VOLTAGE:
-            raise TimeoutError(f"{self.name}: no battery reply")
-        return (report[5] << 8 | report[4]) / 1000
-
-    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
-        if not self.allow_motion:
-            raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
-        self._require_connected()
-        if self.stopped:
-            return
-        unknown = set(targets) - set(self.joint_names)
-        if unknown:
-            raise KeyError(f"unknown joints: {sorted(unknown)}")
-        speed_scale = min(max(speed_scale, 0.0), 1.0)
-        if speed_scale == 0.0:
-            return
-        targets = {j: self.limits[j].clamp(v) for j, v in targets.items()}
-        # Teleop streams ~50 targets/s: skip joints that haven't changed by about a servo unit.
-        changed = {j: v for j, v in targets.items() if abs(v - self._last_sent.get(j, 1e9)) >= 0.25}
-        if not changed:
-            return
-        start = {j: self._last_sent[j] for j in changed if j in self._last_sent}
-        if len(start) < len(changed):
-            start = self.read_joints() | start
-        travel = max(abs(v - start[j]) for j, v in changed.items())
-        # HACK: duration from a flat 120 deg/s * speed_scale guess; replace with measured values.
-        # Never under 100 ms (what was tested streaming at 50/s).
-        self.send_move(changed, max(int(travel / (120 * speed_scale) * 1000), 100))
-
-    def send_move(self, targets: dict[str, float], duration_ms: int) -> None:
-        """One move command, no reply wait. Clamps to limits; needs allow_motion."""
-        if not self.allow_motion:
-            raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
-        if self.stopped:
-            return
-        data = bytearray([len(targets), duration_ms & 0xFF, duration_ms >> 8])
-        for joint, degrees in targets.items():
-            position = degrees_to_position(joint, self.limits[joint].clamp(degrees))
-            data += bytes([SERVO_IDS[joint], position & 0xFF, position >> 8])
-        self._send(CMD_SERVO_MOVE, bytes(data))
-        self._last_sent.update(targets)
-
-    def stop(self) -> None:
-        """Ignore further moves. Sends nothing: the xArm's only stop command cuts servo torque,
-        which would drop the arm. A move already sent still finishes (≤ its duration), so keep
-        streamed moves short (~100 ms). Hold-position on stop is still open."""
-        self.stopped = True
-
-    def resume(self) -> None:
-        self.stopped = False
+        if self.allow_motion:
+            self._init_estimate()
+            self._quit.clear()
+            self._thread = threading.Thread(target=self._run, name=f"{self.name}-io", daemon=True)
+            self._thread.start()
 
     def close(self) -> None:
+        if self._thread:
+            self.stop()
+            time.sleep(2 * self.period_s)  # let the worker send the hold
+            self._quit.set()
+            self._thread.join(timeout=1.0)
+            self._thread = None
         if self._dev is not None:
             self._dev.close()
             self._dev = None
 
+    # ---- reading ------------------------------------------------------------------------------
+    def read_raw(self) -> dict[int, int]:
+        """Servo id -> raw position (0..1000), straight from the board (blocks 10-100 ms). For
+        read-only use; while a motion worker runs, use read_joints()."""
+        dev = self._require_connected()
+        with self._io:  # request + reply as one unit, whichever thread asks
+            while dev.read(REPORT_SIZE, 0):  # drop stale reports
+                pass
+            self._send(CMD_GET_SERVO_POSITION, bytes([len(SERVO_IDS), *SERVO_IDS.values()]))
+            deadline = time.monotonic() + self.read_timeout_s
+            while time.monotonic() < deadline:
+                report = dev.read(REPORT_SIZE, max(1, int((deadline - time.monotonic()) * 1000)))
+                if report and report[3] == CMD_GET_SERVO_POSITION:
+                    positions = parse_positions(bytes(report))
+                    if set(positions) != set(SERVO_IDS.values()):  # happens while servos move
+                        raise TimeoutError(f"{self.name}: incomplete reply {positions}")
+                    return positions
+        raise TimeoutError(f"{self.name}: no position reply within {self.read_timeout_s} s")
+
+    def read_measured(self) -> dict[str, float]:
+        raw = self.read_raw()
+        return {j: position_to_degrees(j, raw[sid]) for j, sid in SERVO_IDS.items()}
+
+    def read_joints(self) -> dict[str, float]:
+        """Read-only: a real reading. With motion on: the driver's estimate (never blocks)."""
+        if not self.allow_motion:
+            return self.read_measured()
+        with self._lock:
+            if not self._seg:
+                self._init_estimate()
+            return self._estimate()
+
+    def read_battery_v(self) -> float:
+        dev = self._require_connected()
+        with self._io:
+            self._send(CMD_GET_BATTERY_VOLTAGE)
+            report = dev.read(REPORT_SIZE, int(self.read_timeout_s * 1000))
+        if not report or report[3] != CMD_GET_BATTERY_VOLTAGE:
+            raise TimeoutError(f"{self.name}: no battery reply")
+        return (report[5] << 8 | report[4]) / 1000
+
+    # ---- moving -------------------------------------------------------------------------------
+    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
+        """Store a new goal; the worker moves there (smoothly, at most max_deg_per_s * speed)."""
+        if not self.allow_motion:
+            raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
+        self._require_connected()
+        unknown = set(targets) - set(self.joint_names)
+        if unknown:
+            raise KeyError(f"unknown joints: {sorted(unknown)}")
+        with self._lock:
+            if self.stopped:
+                return
+            self._goal.update({j: self.limits[j].clamp(v) for j, v in targets.items()})
+            self._goal_seq += 1
+            self._speed = min(max(speed_scale, 0.0), 1.0)
+
+    def commanded_joints(self) -> dict[str, float]:
+        """The goal as accepted (after clamping), for viewers; read_joints() is the estimate."""
+        with self._lock:
+            return self._estimate() | dict(self._goal)
+
+    def _estimate(self) -> dict[str, float]:
+        """Where each servo should be now (caller holds _lock)."""
+        now = time.monotonic()
+        return {j: seg.at(now) for j, seg in self._seg.items()}
+
+    def send_move(self, targets: dict[str, float], duration_ms: int) -> None:
+        """One raw move command, bypassing the worker (motion tests). Clamps to limits."""
+        if not self.allow_motion:
+            raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
+        if self.stopped:
+            return
+        self._write_move({j: self.limits[j].clamp(v) for j, v in targets.items()}, duration_ms)
+
+    def stop(self) -> None:
+        """Freeze: further moves are ignored and the worker sends "hold where you are now"
+        (not the servo's stop command: that cuts torque and drops the arm)."""
+        with self._lock:
+            self.stopped = True
+            self._hold = True
+
+    def resume(self) -> None:
+        with self._lock:
+            self.stopped = False
+
+    # ---- worker -------------------------------------------------------------------------------
+    def _run(self) -> None:
+        while not self._quit.is_set():
+            t = time.monotonic()
+            try:
+                self._tick(t)
+            except Exception:  # never let the I/O thread die silently
+                log.exception("%s: worker tick failed", self.name)
+            self._quit.wait(max(0.0, self.period_s - (time.monotonic() - t)))
+
+    def _tick(self, now: float) -> None:
+        """One worker step: hold / follow the goal / read when idle."""
+        with self._lock:
+            hold, self._hold = self._hold, False
+            goal, seq, speed = dict(self._goal), self._goal_seq, self._speed
+            est = {j: seg.at(now) for j, seg in self._seg.items()}
+            if hold:
+                self._goal = {}
+        if hold:
+            self._command({j: v for j, v in est.items()}, now, 0.1, est)
+            return
+        if goal:
+            self._follow(goal, seq, speed, est, now)
+        if (
+            now - self._last_send_t > self.idle_read_after_s
+            and now - self._last_read_t > self.min_read_interval_s
+        ):
+            self._idle_read(est, now)
+
+    def _follow(self, goal: dict[str, float], seq: int, speed: float, est, now: float) -> None:
+        if seq != self._seen_seq:  # a new goal: estimate each joint's speed from the last one
+            dt = now - self._prev_goal_t
+            if self._prev_goal and 0 < dt < 0.2:
+                self._vel = {j: (v - self._prev_goal.get(j, v)) / dt for j, v in goal.items()}
+            else:
+                self._vel = {}
+            self._prev_goal, self._prev_goal_t, self._seen_seq = goal, now, seq
+            if any(abs(v) > 0.5 for v in self._vel.values()):
+                self._last_change_t = now
+        elif now - self._prev_goal_t > 2.5 * self.period_s:
+            self._vel = {}  # the goal stopped changing (key released, hand still): no lead
+        cap = self.max_deg_per_s * max(speed, 0.05) * self.lead_s  # most a joint may travel
+        aim = {}
+        for j, g in goal.items():
+            lead = self._vel.get(j, 0.0) * self.lead_s
+            a = self.limits[j].clamp(g + lead)
+            now_j = est.get(j, g)
+            aim[j] = now_j + min(max(a - now_j, -cap), cap)
+        moving = any(abs(aim[j] - est.get(j, aim[j])) > 0.2 for j in aim)
+        changed = any(abs(aim[j] - self._seg[j].aim) > 0.2 if j in self._seg else True for j in aim)
+        if changed or (moving and now - self._last_send_t > 0.1):
+            self._command(aim, now, self.lead_s, est)
+
+    def _command(self, aim: dict[str, float], now: float, duration: float, est) -> None:
+        self._write_move(aim, int(duration * 1000))
+        with self._lock:
+            for j, a in aim.items():
+                self._seg[j] = _Segment(est.get(j, a), a, now, duration)
+        self._last_send_t = now
+
+    def _idle_read(self, est: dict[str, float], now: float) -> None:
+        self._last_read_t = now
+        try:
+            measured = self.read_measured()
+        except TimeoutError:
+            return
+        self.measured = measured
+        for j, m in measured.items():
+            if j in est and abs(m - est[j]) > self.off_by_warn_deg:
+                log.warning(
+                    "%s: %s is at %.1f°, told %.1f° (limp, blocked, or moved by hand?)",
+                    self.name,
+                    j,
+                    m,
+                    est[j],
+                )
+        with self._lock:  # the reading is the truth now
+            self._seg = {j: _Segment(m, m, now, 0.0) for j, m in measured.items()}
+            self._goal = {j: v for j, v in self._goal.items() if abs(v - measured[j]) > 0.5}
+
+    def _init_estimate(self) -> None:
+        for attempt in range(5):
+            try:
+                measured = self.read_measured()
+                break
+            except TimeoutError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.3)
+        self.measured = measured
+        now = time.monotonic()
+        self._seg = {j: _Segment(m, m, now, 0.0) for j, m in measured.items()}
+
+    # ---- low level ----------------------------------------------------------------------------
+    def _write_move(self, targets: dict[str, float], duration_ms: int) -> None:
+        data = bytearray([len(targets), duration_ms & 0xFF, duration_ms >> 8])
+        for joint, degrees in targets.items():
+            position = degrees_to_position(joint, degrees)
+            data += bytes([SERVO_IDS[joint], position & 0xFF, position >> 8])
+        self._send(CMD_SERVO_MOVE, bytes(data))
+
     def _send(self, cmd: int, data: bytes = b"") -> None:
         if cmd not in READ_COMMANDS and not self.allow_motion:
             raise MotionDisabled(f"command 0x{cmd:02x} is blocked while read-only")
-        self._require_connected().write(build_report(cmd, data))
+        with self._io:
+            self._require_connected().write(build_report(cmd, data))
 
     def _require_connected(self):
         if self._dev is None:
@@ -228,13 +412,57 @@ class XArm:
         return self._dev
 
 
+def calibrate(name: str = "xarm1", seconds: float = 60.0) -> None:
+    """Measure joint limits BY HAND, read-only (no motion command is ever sent).
+
+    Switch the arm on but don't press "Run": the servos are limp. Gently move each joint to the
+    furthest safe point in both directions (stop before anything touches the table, the base or
+    another part). Press Ctrl+C when done; the ranges are written to calibration/<name>/limits.yaml.
+    """
+    arm = XArm(name=name, device_name=name)
+    arm.connect()
+    lo: dict[str, float] = {}
+    hi: dict[str, float] = {}
+    print(calibrate.__doc__)
+    t0 = time.monotonic()
+    try:
+        while time.monotonic() - t0 < seconds:
+            try:
+                now = arm.read_measured()
+            except TimeoutError:
+                continue
+            for j, v in now.items():
+                lo[j], hi[j] = min(lo.get(j, v), v), max(hi.get(j, v), v)
+            line = "  ".join(f"{j[:8]} {lo[j]:+6.1f}..{hi[j]:+6.1f}" for j in now)
+            sys.stdout.write("\r" + line)
+            sys.stdout.flush()
+            time.sleep(0.25)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        arm.close()
+    path = CALIBRATION_DIR / name / "limits.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {
+        "note": "Measured by hand with the servos limp (python -m lab_os.robots.xarm calibrate).",
+        "measured": time.strftime("%Y-%m-%d"),
+        "limits_deg": {j: [round(lo[j], 1), round(hi[j], 1)] for j in lo},
+    }
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    print(f"\nwrote {path}")
+
+
 def main() -> None:
-    """Read-only check: python -m lab_os.robots.xarm  (positions + reads/second)."""
+    """Read-only check: python -m lab_os.robots.xarm  (positions + reads/second).
+    `python -m lab_os.robots.xarm calibrate` measures joint limits by hand."""
+    if sys.argv[1:2] == ["calibrate"]:
+        calibrate()
+        return
     arm = XArm()
     arm.connect()
     try:
         print("raw positions:", arm.read_raw())
-        print("joints (deg):", {j: round(v, 1) for j, v in arm.read_joints().items()})
+        print("joints (deg):", {j: round(v, 1) for j, v in arm.read_measured().items()})
         print("battery V:", arm.read_battery_v())
         n, t0 = 0, time.perf_counter()
         durations, timeouts = [], 0

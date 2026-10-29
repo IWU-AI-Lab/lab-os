@@ -109,8 +109,9 @@ class TeleopLoop:
                 "type": "arm_command",
                 "joints": dict(targets),
                 "speed_scale": self.speed_scale,
-                # What the driver reports right after, so viewers can spot clamping exactly.
-                "driver_joints": self.arm.read_joints(),
+                # What the driver accepted (or reports) right after, so viewers can spot clamping.
+                # Drivers that lag (xArm) say what they accepted; others report their state.
+                "driver_joints": getattr(self.arm, "commanded_joints", self.arm.read_joints)(),
             }
         )
 
