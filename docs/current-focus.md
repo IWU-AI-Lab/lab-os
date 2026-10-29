@@ -88,6 +88,8 @@ Seen while testing desktop control on the real xArm and the browser XR emulator.
 - ~~**Rotation too sensitive** in desktop control.~~ *Arrow keys 90 → 30 °/s.*
 - ~~**The monitor page shows the SO-101 while the xArm is driven.**~~ *Already picked from `status.arm.model`; most likely a stale cached script (checked: a fresh browser picks "xArm 1S"). Fixed by `Cache-Control: no-cache` (GOTCHAS 2026-10-29).* The page should pick the 3D model from the connected arm (`Arm` already declares `model`).
 
+**Desktop control rethought (builder, 2026-10-29):** the virtual hand stays unintuitive, so desktop control now has three swappable modes: **Keys** (key pair per motor), **Mouse** (hold a motor key + move the mouse, buttons = gripper) and the **virtual hand** (prototype, kept). Keys/Mouse send `joint_input` and never use IK; **IK is only for pose devices** (Quest, glove; the virtual hand counts as one). *Done 2026-10-29; Keys tested in headless Brave on the software xArm; Mouse not yet tried in a browser.*
+
 **Fix with IK (step 4), not by patching the joint-space mapping** (it gets replaced): *IK is in for the xArm (2026-10-29); re-check both items with `--arm fake-xarm1` / the real arm.*
 - In the XR emulator, only up/down really controls the arm; nothing else does.
 - Desktop control moves single joints (WASD/RF/arrows). With IK, the same keys move the **hand** in space (forward/left/up…) and the arm works out its joints. That's the right desktop mode. Note: with IK, moving your hand *will* move several joints at once; that's intended.

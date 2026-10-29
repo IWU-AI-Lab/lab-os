@@ -44,6 +44,15 @@ Sent every XR frame (72–120 Hz on a Quest).
 - `buttons.a` is the lower face button on **either** controller (A on the right, X on the left); `buttons.b` is the upper one (B / Y).
 - A missing hand key means that controller isn't present.
 
+### `joint_input`
+Joint jogging from a keyboard/mouse page: how fast to turn each motor, sent every ~16 ms while active (also when nothing is pressed, as a heartbeat for the dead-man rule). Never goes through IK.
+```json
+{"type": "joint_input", "t": 123456.7, "source": "desktop-keys", "rates": {"shoulder_pan": 1.0, "gripper": -0.3}}
+```
+- `rates`: shared joint names → −1..1, a fraction of the jog speed (60 °/s × the venue speed scale). Missing joints hold still; joints the arm doesn't have are ignored (pages can stay generic across arms).
+- After any freeze, all rates must return to 0 before anything moves again (like releasing the grip).
+- Same control rules as `xr_input`. Switching between `xr_input` and `joint_input` freezes once and starts clean.
+
 ### `session_end`
 The XR session ended (user exited, headset removed, Esc in desktop control). From the driving page: the server freezes the arm and frees control. From any other page: ignored.
 ```json
@@ -78,6 +87,8 @@ Broadcast to all clients at 10 Hz.
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
 - `joints`: what the driver currently reports (degrees).
+- `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
+- `clutch`: pose input: grip held; joint input: something is being jogged.
 - `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
 
 ### `arm_command`, `arm_stop`, `arm_resume`
