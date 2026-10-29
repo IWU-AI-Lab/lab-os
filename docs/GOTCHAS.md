@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-10-29 — LeRobot's motor setup and calibrate do more than they say
+**What (read in LeRobot 0.6.1's source, not seen on hardware):** (1) `setup_motor` looks for "the" motor with a broadcast ping and silently takes the *first* answer, so with two motors plugged in it can renumber the wrong one. (2) `lerobot-calibrate` first calls `connect()`, which writes PID/torque settings and **switches torque on** (motors hold, or jump to a stale goal) before `calibrate()` switches it off again. (3) `wrist_roll` isn't range-measured: it gets the full 0..4095 (±180°).
+**Fix:** `lab_os.robots.so101_setup` scans all baud rates first and refuses unless exactly one STS3215 answers; it then verifies the new ID. Its `calibrate` only opens the bus and calls `calibrate()` (torque never on), and closes with torque off. Wrist roll limits come from the SO-101 driver's soft limits, not the calibration.
+
 ### 2026-10-29 — LeRobot is ~5 GB, and a plain `uv sync` uninstalls it
 **What:** `lerobot[feetech]` 0.6.1 pulls in 61 packages, mostly PyTorch 2.11 with CUDA 13: `.venv` went from 51 MB to 4.9 GB (NVIDIA libraries 2.7 GB, torch 1.1 GB, triton 0.6 GB; LeRobot itself 7 MB). Importing LeRobot's SO-101 classes takes ~3 s and loads torch. It's the optional extra `so101`, so CI and other machines skip it. But `uv sync` makes the environment match *exactly* what was asked, so a plain `uv sync` on the lab desktop **removes** LeRobot and torch again (`uv run` doesn't remove anything).
 **Fix:** on machines that drive an SO-101: `uv sync --extra so101` (or `./scripts/install.sh --so101`). Commands that need it say so: `uv run --extra so101 …`.
