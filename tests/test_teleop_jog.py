@@ -4,7 +4,7 @@ import pytest
 
 from lab_os.kinematics import XArmKinematics
 from lab_os.robots.fake import FakeArm
-from lab_os.robots.xarm import XArm
+from lab_os.robots.xarm import XArm, load_limits
 from lab_os.teleop.jog import JogMapper
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import ClutchMapper
@@ -18,7 +18,7 @@ def jog_msg(**rates):
 
 
 def xarm_loop():
-    x = XArm()
+    x = XArm(limits=load_limits("not-calibrated"))  # defaults, not calibration/ on disk
     arm = FakeArm(
         name="fake-xarm1", model=x.model, limits=x.limits, joints={j: 0.0 for j in x.joint_names}
     )
@@ -141,5 +141,7 @@ def test_engaging_a_pose_input_outside_the_limits_does_not_move():
         "gripper": 30.0,
     }
     c = ControllerState((0.0, 1.0, 0.0), (0.0, 0.0, 0.0, 1.0), 0.0, 1.0, {}, (0.0, 0.0))
-    out = ClutchMapper(config=ClutchMapper().config).step(c, arm_joints, DT, 1.0, XArm().limits)
+    out = ClutchMapper(config=ClutchMapper().config).step(
+        c, arm_joints, DT, 1.0, load_limits("not-calibrated")
+    )
     assert out["shoulder_pan"] == 116.6 and out["wrist_roll"] == -116.4

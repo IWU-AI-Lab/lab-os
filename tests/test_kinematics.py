@@ -6,12 +6,12 @@ import pytest
 
 from lab_os.kinematics import IK_JOINTS, XArmKinematics, kinematics_for, solve_ik
 from lab_os.robots.base import JointLimit
-from lab_os.robots.xarm import XArm
+from lab_os.robots.xarm import XArm, load_limits
 from lab_os.teleop.mapping import ClutchMapper
 from lab_os.teleop.messages import ControllerState
 
 KIN = XArmKinematics()
-LIMITS = XArm().limits
+LIMITS = XArm(limits=load_limits("not-calibrated")).limits  # defaults, not the file on disk
 REACHING = {  # elbow bent, gripper tilted slightly down: a working pose with room to move
     "shoulder_pan": 0.0,
     "shoulder_lift": 0.0,

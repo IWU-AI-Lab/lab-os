@@ -81,6 +81,13 @@ export class XRScene {
 
   /** Called every XR frame with the controller states this page just sent. */
   updateHands(hands) {
+    // No right controller (asleep, off, or the headset switched to hand tracking): say so, and how
+    // to leave, instead of looking broken (2026-10-29: the builder got stuck in the page).
+    const missing = !hands.right?.pos;
+    if (missing !== this.panel.noController) {
+      this.panel.noController = missing;
+      this.panel.update(this.feed);
+    }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
@@ -189,7 +196,8 @@ class StatusPanel {
 
   update(feed) {
     const s = feed?.status;
-    const state = !s ? ["CONNECTING…", "#8a8a84"]
+    const state = this.noController ? ["NO CONTROLLER", "#e0662e"]
+      : !s ? ["CONNECTING…", "#8a8a84"]
       : feed.frozen ? [s.needs_release ? "FROZEN · release grip" : "FROZEN", "#e0662e"]
       : s.clutch ? ["FOLLOWING", "#2fbf71"]
       : ["HOLDING", "#b8b8b2"];
@@ -199,7 +207,7 @@ class StatusPanel {
       gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
     }
     const speed = s ? `${Math.round(s.speed_scale * 100)}%` : "—";
-    const key = `${state[0]}|${gripper}|${speed}`;
+    const key = `${state[0]}|${gripper}|${speed}|${this.noController}`;
     if (key === this.key) return;
     this.key = key;
 
@@ -213,7 +221,10 @@ class StatusPanel {
     g.stroke();
     fitText(g, state[0], 36, 92, 568, "bold", 58, state[1]);
     fitText(g, `Gripper ${gripper}   ·   Speed ${speed}`, 36, 168, 568, "", 40, "#ececea");
-    fitText(g, "Hold grip = move · Trigger = gripper · A/X = stop", 36, 246, 568, "", 32, "#9a9a94");
+    const hint = this.noController
+      ? "Pick up the controllers · Leave: palm up + pinch"
+      : "Hold grip = move · Trigger = gripper · A/X = stop";
+    fitText(g, hint, 36, 246, 568, "", 32, "#9a9a94");
     this.texture.needsUpdate = true;
   }
 }
