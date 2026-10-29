@@ -70,7 +70,15 @@ class FakeArm:
         if unknown:
             raise KeyError(f"unknown joints: {sorted(unknown)}")
         speed_scale = min(max(speed_scale, 0.0), 1.0)
-        clamped = {j: self.limits[j].clamp(v) for j, v in targets.items()}
+        # Like a real driver: clamp to the limits, but a joint already outside them (moved by
+        # hand, older limits) may stay where it is or move back, never jump into range.
+        clamped = {
+            j: min(
+                max(v, min(self.limits[j].low, self.joints[j])),
+                max(self.limits[j].high, self.joints[j]),
+            )
+            for j, v in targets.items()
+        }
         self.joints.update(clamped)  # the fake arm arrives instantly
         self.log.append(("move", clamped, speed_scale))
 

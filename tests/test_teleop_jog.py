@@ -114,3 +114,32 @@ def test_terminal_status_line_handles_joint_input():
     loop = xarm_loop()
     run(loop, jog_msg(gripper=0.5), 1)
     assert "gripper +0.50" in _fmt_status(loop)
+
+
+def test_jogging_from_outside_the_limits_never_jumps():
+    """Real-arm bug 2026-10-29: base at +116° with a 72° limit jumped to 72° on the first key."""
+    loop = xarm_loop()
+    loop.arm.joints["shoulder_pan"] = 116.6  # outside the (default) limit
+    t = run(loop, jog_msg(), 2)
+    run(loop, jog_msg(shoulder_pan=-1.0), 1, t)  # one tick toward the middle
+    after = loop.arm.read_joints()["shoulder_pan"]
+    assert 115.0 < after < 116.6  # moved a fraction of a degree, no jump
+    run(loop, jog_msg(shoulder_pan=1.0), 50, t + 0.1)  # outward: never past where it was
+    assert loop.arm.read_joints()["shoulder_pan"] <= 116.6
+
+
+def test_engaging_a_pose_input_outside_the_limits_does_not_move():
+    from lab_os.teleop.mapping import ClutchMapper
+    from lab_os.teleop.messages import ControllerState
+
+    arm_joints = {
+        "shoulder_pan": 116.6,
+        "shoulder_lift": 0.0,
+        "elbow_flex": 0.0,
+        "wrist_flex": 0.0,
+        "wrist_roll": -116.4,
+        "gripper": 30.0,
+    }
+    c = ControllerState((0.0, 1.0, 0.0), (0.0, 0.0, 0.0, 1.0), 0.0, 1.0, {}, (0.0, 0.0))
+    out = ClutchMapper(config=ClutchMapper().config).step(c, arm_joints, DT, 1.0, XArm().limits)
+    assert out["shoulder_pan"] == 116.6 and out["wrist_roll"] == -116.4

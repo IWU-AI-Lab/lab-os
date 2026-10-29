@@ -66,8 +66,9 @@ RELATIVE_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", 
 def soft_bounds(
     limits: dict[str, JointLimit], joints: dict[str, float], margin: float
 ) -> dict[str, tuple[float, float]]:
-    """Limits minus `margin`, widened to include where the arm already is (so engaging never
-    moves it), but never beyond the hard limits."""
+    """Limits minus `margin`, widened to include where the arm already is, even if that is outside
+    the limits (moved by hand, older wider limits): starting a move must never make it jump
+    into range. It can move back toward the range, never further out."""
     bounds = {}
     for joint, lim in limits.items():
         lo, hi = lim.low + margin, lim.high - margin
@@ -76,7 +77,7 @@ def soft_bounds(
         now = joints.get(joint)
         if now is not None:
             lo, hi = min(lo, now), max(hi, now)
-        bounds[joint] = (max(lo, lim.low), min(hi, lim.high))
+        bounds[joint] = (lo, hi)
     return bounds
 
 
