@@ -5,6 +5,9 @@
   arm moves by how far the controller has moved since then. No snapping, ever.
 - Gentle ramps: each joint's commanded position changes by at most `max_deg_per_s * speed_scale`.
 - Tilt-for-rotation (kept from the glove): controller pitch → wrist_flex, roll → wrist_roll.
+  Measured in the room's axes (left-right = pitch, forward = roll), so pitching a tilted
+  controller doesn't leak into roll. Angles are unwrapped frame to frame: rolling past 180° keeps
+  counting (then the soft limit holds the joint) instead of jumping to the other end.
 - Trigger → gripper (0 = open, fully pressed = closed).
 - Soft limits: targets stay `limit_margin_deg` inside the arm's joint limits, so the driver never
   has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
@@ -84,6 +87,7 @@ class ClutchMapper:
     needs_release: bool = False
     _anchor_pos: Vec3 | None = None
     _anchor_quat: Quat | None = None
+    _twist: dict[int, float] = field(default_factory=dict)  # unwrapped twist per axis, degrees
     _anchor_joints: dict[str, float] = field(default_factory=dict)
     _commanded: dict[str, float] = field(default_factory=dict)
     _bounds: dict[str, tuple[float, float]] = field(default_factory=dict)
@@ -117,6 +121,7 @@ class ClutchMapper:
             self.engaged = True
             self._anchor_pos = controller.pos
             self._anchor_quat = controller.quat
+            self._twist = {0: 0.0, 2: 0.0}
             self._anchor_joints = dict(arm_joints)
             self._commanded = dict(arm_joints)
             self._bounds = self._soft_bounds(limits or {}, arm_joints)
@@ -158,19 +163,27 @@ class ClutchMapper:
             bounds[joint] = (max(lo, lim.low), min(hi, lim.high))
         return bounds
 
+    def _unwrapped(self, rel: Quat, axis: int) -> float:
+        """Twist about `axis` since the anchor, continuous across ±180° (no sudden full turn)."""
+        prev = self._twist.get(axis, 0.0)
+        step = (_twist_deg(rel, axis) - prev + 180.0) % 360.0 - 180.0
+        self._twist[axis] = prev + step
+        return self._twist[axis]
+
     def _desired(self, c: ControllerState) -> dict[str, float]:
         cfg = self.config
         a = self._anchor_joints
         dx, dy, dz = (now - then for now, then in zip(c.pos, self._anchor_pos, strict=True))
-        rel = _quat_mul(_quat_conj(self._anchor_quat), c.quat)
+        # Rotation since the anchor, in room axes (current · anchor⁻¹).
+        rel = _quat_mul(c.quat, _quat_conj(self._anchor_quat))
         # WebXR axes: +x right, +y up, -z forward (away from the user). Twist about the
         # controller's x = pitch (nose up > 0), about its z = roll.
         motion = {
             "shoulder_pan": dx * cfg.deg_per_m,
             "shoulder_lift": dy * cfg.deg_per_m,
             "elbow_flex": dz * cfg.deg_per_m,  # dz < 0 = forward
-            "wrist_flex": _twist_deg(rel, 0),
-            "wrist_roll": _twist_deg(rel, 2),
+            "wrist_flex": self._unwrapped(rel, 0),
+            "wrist_roll": self._unwrapped(rel, 2),
         }
         desired = {j: a.get(j, 0.0) + cfg.signs.get(j, 1.0) * m for j, m in motion.items()}
         desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * c.trigger
