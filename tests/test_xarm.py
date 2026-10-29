@@ -275,7 +275,7 @@ def test_idle_reading_far_from_the_estimate_is_reported(caplog):
 def test_limits_from_calibration_file(tmp_path):
     (tmp_path / "xarm9").mkdir()
     (tmp_path / "xarm9" / "limits.yaml").write_text(
-        "limits_deg:\n  shoulder_pan: [50, -60]\n  elbow_flex: [-500, 30]\n"
+        "limits_deg:\n  shoulder_pan: [50, -60]\n  elbow_flex: [-125, 30]\n"
     )
     limits = xarm.load_limits("xarm9", tmp_path)
     assert (limits["shoulder_pan"].low, limits["shoulder_pan"].high) == (-60, 50)
@@ -308,3 +308,25 @@ def test_starting_outside_the_limits_does_not_snap_back():
     arm.move_joints({"shoulder_pan": start + 5.0}, 1.0)  # but never further out than it is
     arm._tick(T(0.02))
     assert xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6]) <= start + 0.3
+
+
+def test_positions_past_zero_are_negative_not_huge():
+    report = reply({6: 500}).replace(
+        bytes([6, 500 & 0xFF, 500 >> 8]), bytes([6, 0xDC, 0xFF])
+    )  # -36
+    assert xarm.parse_positions(report)[6] == -36
+
+
+def test_a_garbled_calibration_side_falls_back_to_the_default(tmp_path):
+    # The real file from 2026-10-29: two sides came from the unsigned-parsing bug.
+    (tmp_path / "xarm1").mkdir()
+    (tmp_path / "xarm1" / "limits.yaml").write_text(
+        "limits_deg:\n  shoulder_pan: [-15600.0, 103.2]\n  elbow_flex: [-15603.4, 110.2]\n"
+        "  wrist_flex: [-108.5, 129.4]\n  gripper: [12.7, 126.0]\n"
+    )
+    limits = xarm.load_limits("xarm1", tmp_path)
+    assert limits["shoulder_pan"].low == xarm.DEFAULT_LIMITS["shoulder_pan"].low  # not -120
+    assert limits["shoulder_pan"].high == 103.2
+    assert limits["elbow_flex"].low == xarm.DEFAULT_LIMITS["elbow_flex"].low
+    assert limits["wrist_flex"].high == 120.0  # a bit past the servo range: clamped
+    assert (limits["gripper"].low, limits["gripper"].high) == (12.7, 90.0)

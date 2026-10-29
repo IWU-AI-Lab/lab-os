@@ -117,20 +117,40 @@ def parse_positions(report: bytes) -> dict[int, int]:
     count = report[4]
     if 5 + 3 * count > len(report):
         raise ValueError("position report is too short")
-    return {report[5 + 3 * i]: report[6 + 3 * i] | (report[7 + 3 * i] << 8) for i in range(count)}
+    # Signed 16-bit: a servo pushed past its 0 end by hand reports e.g. -36, not 65500
+    # (2026-10-29: that made a calibration say -15600°).
+    out = {}
+    for i in range(count):
+        v = report[6 + 3 * i] | (report[7 + 3 * i] << 8)
+        out[report[5 + 3 * i]] = v - 0x10000 if v >= 0x8000 else v
+    return out
+
+
+PLAUSIBLE_DEG = 30.0  # readings a little past the servo's 0..1000 happen when pushed by hand
 
 
 def load_limits(name: str, directory: Path = CALIBRATION_DIR) -> dict[str, JointLimit]:
     """Measured limits from calibration/<name>/limits.yaml, else the defaults. Never wider than
     the servo range."""
-    limits = dict(DEFAULT_LIMITS) | {"gripper": GRIPPER_LIMIT}
+    defaults = dict(DEFAULT_LIMITS) | {"gripper": GRIPPER_LIMIT}
+    limits = dict(defaults)
     path = directory / name / "limits.yaml"
     if path.exists():
         raw = yaml.safe_load(path.read_text()) or {}
         for joint, (lo, hi) in (raw.get("limits_deg") or {}).items():
-            if joint in limits:
-                hard = GRIPPER_LIMIT if joint == "gripper" else JOINT_LIMIT
-                limits[joint] = JointLimit(max(min(lo, hi), hard.low), min(max(lo, hi), hard.high))
+            if joint not in limits:
+                continue
+            lo, hi = min(lo, hi), max(lo, hi)
+            hard = GRIPPER_LIMIT if joint == "gripper" else JOINT_LIMIT
+            # A side far outside what the servo can report is a bad reading, not a limit: keep
+            # the safe default for that side.
+            if lo < hard.low - PLAUSIBLE_DEG:
+                log.warning("%s: ignoring calibrated %s low %.1f°, using default", name, joint, lo)
+                lo = defaults[joint].low
+            if hi > hard.high + PLAUSIBLE_DEG:
+                log.warning("%s: ignoring calibrated %s high %.1f°, using default", name, joint, hi)
+                hi = defaults[joint].high
+            limits[joint] = JointLimit(max(lo, hard.low), min(hi, hard.high))
     return limits
 
 
@@ -449,6 +469,8 @@ def calibrate(name: str = "xarm1", seconds: float = 60.0) -> None:
             except TimeoutError:
                 continue
             for j, v in now.items():
+                if not -120.0 - PLAUSIBLE_DEG <= v <= 120.0 + PLAUSIBLE_DEG:
+                    continue  # a garbled reading, not a position
                 lo[j], hi[j] = min(lo.get(j, v), v), max(hi.get(j, v), v)
             line = "  ".join(f"{j[:8]} {lo[j]:+6.1f}..{hi[j]:+6.1f}" for j in now)
             sys.stdout.write("\r" + line)
