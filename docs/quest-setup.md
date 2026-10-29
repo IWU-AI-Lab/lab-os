@@ -33,6 +33,8 @@ Controls: **grip** held = clutch (arm follows, relative to where it is) · **tri
 | **H** | re-center the virtual hand (only while released, so the arm stays put) |
 | **Esc** | leave desktop control (the arm freezes) |
 
+**Software xArm (IK, no hardware):** `uv run lab-os-teleop --arm fake-xarm1 serve`. With the xArm (real or software) the mapping is **IK**: W/S, A/D, R/F and the trackpad move the *gripper* forward/back, left/right, up/down, and ↑/↓ tilt it; several joints move at once.
+
 **Real arm (xarm1):** `uv run lab-os-teleop --arm xarm1 --speed 0.2 serve` (speed is capped by the venue). Before starting: arm clamped, area clear, power plug in reach, and if the servos are limp press the board's **Run** button (the arm stands up by itself). Stand **behind the arm, opposite the controller board** (the board side is the arm's "front", docs/GOTCHAS.md), so your hand and the arm move the same way. The arm only moves while Space is held; release or Esc freezes it (a move already sent still finishes, ≤ ~0.1 s).
 
 Work in short clutch strokes, like lifting a mouse: hold Space, move, release, re-center with H, repeat. The "Trackpad speed" slider sets how far the hand moves per swipe. The 3D view starts behind the arm, so left/right on screen = left/right of your hand.

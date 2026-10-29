@@ -56,7 +56,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 1. **Arm works from a computer.** `xarm1` over USB HID (`lab_os.robots.xarm`): move each servo, read positions, measure commands/second and delay. Later `so101-white` with LeRobot.
 2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live. *Software done 2026-10-24 and tested with replay + emulator (`lab-os-teleop`, docs/quest-setup.md); real-Quest test pending (Monday checklist).*
 3. **Cheap first mapping with clutch control.** First visible win. *Done on the fake arm 2026-10-24 (joint-space, `teleop/mapping.py`); real arm pending step 1.*
-4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
+4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one). *xArm done 2026-10-29 in software (`lab_os/kinematics.py`, mapper IK mode, `--arm fake-xarm1` to try it at home): hand forward/left/up → gripper forward/left/up at 0.5×, controller pitch = gripper tilt, roll = wrist_roll. Not yet driven on the real arm (ask first). SO-101: needs a URDF-based `fk()`; until then the SO-101 fake arm stays joint-space.*
 5. **Quest display basics.** Passthrough + status panel + stop + workspace box. *Partly done 2026-10-24 (`web/xr-scene.js`): ghost arm (see-through in AR) driven by the driver's commands, status panel, controller markers + clutch line, A/X stop. Still to do: visitor hint; the **HUD mini-arm** (below); the workspace warning shown on the HUD mini-arm + status panel.*
    - **No ghost arm lined up on the real arm** (decision 2026-10-28): lining it up needs calibration and the real arm is visible anyway. Instead a **HUD mini-arm**: a small floating copy of the arm that lazily follows your view (drifts back into view when you turn, rather than being glued to your face, which causes discomfort; or sits on the wrist). It shows *what was commanded*: frozen, at a soft limit (joint turns red near its limit = the "workspace boundary"). Reuses `web/arm/arm-model.js` + `ArmFeed`. The status panel follows the same lazy-follow rule instead of being fixed in the room.
 6. **Hand-tracking input.** Same pipeline; per-user calibration.
@@ -88,7 +88,7 @@ Seen while testing desktop control on the real xArm and the browser XR emulator.
 - ~~**Rotation too sensitive** in desktop control.~~ *Arrow keys 90 → 30 °/s.*
 - ~~**The monitor page shows the SO-101 while the xArm is driven.**~~ *Already picked from `status.arm.model`; most likely a stale cached script (checked: a fresh browser picks "xArm 1S"). Fixed by `Cache-Control: no-cache` (GOTCHAS 2026-10-29).* The page should pick the 3D model from the connected arm (`Arm` already declares `model`).
 
-**Fix with IK (step 4), not by patching the joint-space mapping** (it gets replaced):
+**Fix with IK (step 4), not by patching the joint-space mapping** (it gets replaced): *IK is in for the xArm (2026-10-29); re-check both items with `--arm fake-xarm1` / the real arm.*
 - In the XR emulator, only up/down really controls the arm; nothing else does.
 - Desktop control moves single joints (WASD/RF/arrows). With IK, the same keys move the **hand** in space (forward/left/up…) and the arm works out its joints. That's the right desktop mode. Note: with IK, moving your hand *will* move several joints at once; that's intended.
 
