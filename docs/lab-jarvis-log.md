@@ -192,6 +192,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ---
 
 ## Facts about the lab
+- **Usage pattern (2026-10-28):** the lab is usually empty; startup happens when the first person arrives to a closed lab. Robots are off before that (battery-powered ones must be switched off); all need a physical switch, except the SO-101s (no switch; wall power supply).
 - **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
 - **Displays/wearables (2026-10-27):** 3 small (~7–9") Raspberry Pi touchscreens; a ~75" Newline touchscreen on wheels (standalone, runs Android); Google Glass Explorer Edition (boots, voice commands work).
 - **Computers:** 6 RTX 5070 desktops (12 GB GPU memory, to confirm; 2 Ubuntu → brain + backup, 4 Windows 11); 5 Jetson Orin Nano; several Pi 5s. Remote Control from home works.
@@ -219,7 +220,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - **Absolute vs. relative control:** teleop should be relative (no snapping).
 - **Impressiveness from first principles:** break an expectation; seconds to understand; narrow, controlled demo; filmable; don't overclaim; fewest moving parts.
 - **Separate hardware per track** avoids blocking.
-- **Training project + lab-os at the same time (2026-10-28):** the builder also works on the so101-green training project (now: preparing to record data). Keep them apart: separate folders, separate VS Code windows / Claude Code sessions (lab-os's hook would block legitimate training commands), separate environments (conda `lerobot` vs lab-os uv). Shared-desktop conflicts: a serial port or camera can be opened by only one program at a time; don't run lab-os hardware tests while a recording runs. Open: which of the two USB cameras belong to the training setup (if so, mark them off limits in lab-os too).
+- **Training project + lab-os at the same time (2026-10-28):** the builder also works on the so101-green training project (now: preparing to record data). Keep them apart: separate folders, separate VS Code windows / Claude Code sessions (lab-os's hook would block legitimate training commands), separate environments (conda `lerobot` vs lab-os uv). Shared-desktop conflicts: a serial port or camera can be opened by only one program at a time; don't run lab-os hardware tests while a recording runs. The two USB cameras on the lab desktop belong to the training setup (confirmed 2026-10-28) → off limits in lab-os (GOTCHAS 2026-10-28).
 - **Remote Control vs. cloud sessions:** Remote Control runs on the lab computer; cloud sessions can't reach lab devices.
 - **Router policy:** a quick professor OK costs little. **One-way walls:** outside devices can't reach in.
 - **Bridged robots** add a failure point. **AI makes modular code cheap to write, not free to design.**

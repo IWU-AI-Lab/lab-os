@@ -11,18 +11,26 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 ## Recent ideas (2026-10-28)
 
 ### Startup sequence ("systems coming online")
-- **What:** after a trigger (wake word, card, button…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary ("5 of 7 online · xarm1 is off: flip its power switch"). Devices that take longer (a Pi boots in ~30 s) pop in later during standby; the opening itself stays ≤ several seconds (walk-in decision).
-- **Why:** cool to watch *and* useful: you see at a glance what's up, and the results feed the troubleshooting suite's report files.
-- **Key design point:** three kinds of device, shown differently, so "unpowered" isn't shown as "broken": **always on** (brain, router), **can be powered by the brain** (via smart plugs, below), **manual** (someone flips a switch). Manual ones show as dim "sleeping" with what to do, not as red failures.
-- **Rules:** "only claim what's real": nothing lights up unless it really answered. Sound uses the sound pack with volume/mute + a **quiet mode** (others work in the lab). An arm "waking up" with a small nod/wiggle would be great for visitors, but it's robot motion: only under the safety rules, opt-in, workspace clear, never unattended.
-- **Plugs into:** triggers slot → roll call / health checks → theme + sound packs + decorative layer; displays: desktop monitor, Newline, Quest.
-- **Open questions:** which screen(s) show it? Who is usually in the room at startup? How long are you willing to wait before the arm is usable?
+- **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
+- **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
+- **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
+- **So: the "power-up walk".** Startup shows every expected device dim, with what to do ("xarm1: flip the switch on the base"). As you walk around switching things on, each one lights up with its chime the moment it really answers, like a cockpit pre-flight. The manual chore becomes the show, and when you're done you know everything works. Devices you don't need today can be skipped. Fast: the brain part takes seconds; the rest goes as fast as you flip switches.
+- **Battery levels:** the xArm controller's protocol reportedly has a battery-voltage command (verify in our driver). Raspbot: unknown. A Pi can't measure a battery by itself, but Yahboom's expansion board might; check its docs before giving up.
+- **Sound:** cosmetic, to add life (JARVIS feel). On while someone works in the lab, off otherwise (follows the on/off triggers); volume/mute in the sound pack.
+- **Rules:** "only claim what's real": nothing lights up unless it really answered. An arm "nodding awake" would be great for visitors, but it's robot motion: only under the safety rules, opt-in, workspace clear, never unattended.
+- **Plugs into:** triggers slot → roll call / health checks → theme + sound packs + decorative layer.
 
-### Smart plugs to power robots on/off
-- **What:** network-controlled power plugs/strips for arm power supplies, Pis, Jetsons, so the brain can power devices on for the startup sequence and off at night.
-- **Why:** most robots can't turn themselves on; without this, startup can only report "sleeping".
-- **Watch out:** cutting power to a Pi/Jetson without shutting it down can corrupt its SD card (shut down first, then cut). Powering an arm on may make it move or go limp: check each arm's power-on behavior first; remote power-on counts as robot motion (ask/safety rules; remote mode = no motion). Needs the lab network/router and the professor's OK (devices powered unattended). Pick plugs that work locally without a cloud app (offline rule).
-- **Plugs into:** a new "power" plug-in per device (declared in `config/devices.yaml`), used by the startup sequence and the troubleshooting suite.
+### Smart plugs to power devices on/off (downgraded 2026-10-28)
+- **What:** network-controlled power plugs for things on wall power.
+- **Reality:** almost everything here is battery-powered with a physical switch, so smart plugs can't turn it on. Only useful for the SO-101 power supplies (and later Pis/Jetsons on wall power). Low priority.
+- **Watch out:** cut a Pi/Jetson's power only after a proper shutdown (SD card corruption); powering an arm counts as robot motion (safety rules); needs the lab network + professor's OK; plugs must work without a cloud app (offline rule).
+
+### Many devices at once ("who's driving?")
+- **What:** several people/devices use the system at the same time (Quest, phones, touchscreens, desktop).
+- **Recommendation:** **everyone can watch** (all screens show the same live state); **only one device controls a given robot at a time** (it "has control"; others ask for it or it's handed over); **STOP works from every device, always**. Voice/agent commands go through the same rule.
+- **Why now:** the teleop server already accepts several input pages and mixes them (`current-focus.md` step 6b fixes that for teleop). This generalizes it later.
+- **Plugs into:** brain core (control lock per robot) + outputs/clients + safety layer.
+- **Open question:** should control be grabbed (last one wins) or handed over (current driver must release)? Handing over is safer.
 
 ---
 
