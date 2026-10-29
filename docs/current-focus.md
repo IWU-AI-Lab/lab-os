@@ -57,9 +57,10 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 2. **Controller data reaches the computer.** WebXR page in the Quest browser → controller pose + buttons → WebSocket over USB → printed live. *Software done 2026-10-24 and tested with replay + emulator (`lab-os-teleop`, docs/quest-setup.md); real-Quest test pending (Monday checklist).*
 3. **Cheap first mapping with clutch control.** First visible win. *Done on the fake arm 2026-10-24 (joint-space, `teleop/mapping.py`); real arm pending step 1.*
 4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
-5. **Quest display basics.** Passthrough + status panel + stop + workspace box. *Partly done 2026-10-24 (`web/xr-scene.js`): ghost arm (see-through in AR) driven by the driver's commands, status panel, controller markers + clutch line, A/X stop. Still to do: workspace boundary box, visitor hint, placing the ghost arm on the real arm (calibration).*
+5. **Quest display basics.** Passthrough + status panel + stop + workspace box. *Partly done 2026-10-24 (`web/xr-scene.js`): ghost arm (see-through in AR) driven by the driver's commands, status panel, controller markers + clutch line, A/X stop. Still to do: visitor hint; the **HUD mini-arm** (below); the workspace warning shown on the HUD mini-arm + status panel.*
+   - **No ghost arm lined up on the real arm** (decision 2026-10-28): lining it up needs calibration and the real arm is visible anyway. Instead a **HUD mini-arm**: a small floating copy of the arm that lazily follows your view (drifts back into view when you turn, rather than being glued to your face, which causes discomfort; or sits on the wrist). It shows *what was commanded*: frozen, at a soft limit (joint turns red near its limit = the "workspace boundary"). Reuses `web/arm/arm-model.js` + `ArmFeed`. The status panel follows the same lazy-follow rule instead of being fixed in the room.
 6. **Hand-tracking input.** Same pipeline; per-user calibration.
-6b. **One driver at a time + training cameras off limits** *(found 2026-10-28, do before the Quest test)*: the teleop server merges input from **every** connected input page into one stream (e.g. a desktop-control tab + the Quest → two hands interleaved on the real arm), and one page's `session_end` freezes input for all. Fix: one input page "has control"; others can watch; STOP works from every page. Also mark the two training cameras off limits in `config/devices.yaml` (see GOTCHAS 2026-10-28: identical serials, so by USB socket or by model).
+6b. **One driver at a time + training cameras off limits** *(found 2026-10-28, do before the Quest test)*: the teleop server merges input from **every** connected input page into one stream (e.g. a desktop-control tab + the Quest → two hands interleaved on the real arm), and one page's `session_end` freezes input for all. Fix: one input page "has control"; others can watch; STOP works from every page. Control is **handed over** (the current driver releases it), not grabbed (decision 2026-10-28). Also mark the two training cameras off limits in `config/devices.yaml` (see GOTCHAS 2026-10-28: identical serials, so by USB socket or by model).
 7. **Make it feel good.** Smoothing, latency, limits, dead-man freeze.
 8. **Visitor polish + portability test.** Script, hint, casting, run once from the laptop away from the lab; tag a known-good version; 60-second clip.
 9. **Second act** — see options below.
@@ -77,6 +78,30 @@ A small model trained from scratch on one task (e.g. ACT) tends to break with ne
 **Plan:** A first (fastest generalizing wow — "put anything on the table and ask it to grab it"), then B (learned skills from our own teleop data, with varied lighting/positions/distractors during recording). **Gemini Robotics** (the full action model) is partner-only — not available.
 
 **Recording tips (for B/C/D):** vary object positions, lighting, backgrounds and distractor objects during demonstrations; record in the demo venue too if possible.
+
+## Known teleop issues (builder's testing, 2026-10-28)
+Seen while testing desktop control on the real xArm and the browser XR emulator. Guesses at causes are marked "?".
+
+**Fix now (cheap, or a safety issue on the real arm):**
+- **Wrist roll spins all the way around** when it reaches one end ("rebounds"). ? An angle wrap-around bug (an angle jumping from +180° to −180°). On the real arm a sudden full turn is exactly the "snapping" the glove taught us to avoid, so treat it as a safety bug: clamp, never wrap.
+- **Wrist flex also moves another joint.** ? Rotation math mixing axes in the joint-space mapping.
+- **Rotation too sensitive** in desktop control.
+- **The monitor page shows the SO-101 while the xArm is driven.** The page should pick the 3D model from the connected arm (`Arm` already declares `model`).
+
+**Fix with IK (step 4), not by patching the joint-space mapping** (it gets replaced):
+- In the XR emulator, only up/down really controls the arm; nothing else does.
+- Desktop control moves single joints (WASD/RF/arrows). With IK, the same keys move the **hand** in space (forward/left/up…) and the arm works out its joints. That's the right desktop mode. Note: with IK, moving your hand *will* move several joints at once; that's intended.
+
+**Check, may be correct:**
+- **Shift+WASD in the emulator moves the arm.** That moves the emulated *player*, and the controllers move with you. If the clutch is held, the arm should follow (your hand really moved in the room). If it moves with the clutch released, that's a bug.
+
+**XR UI is fixed in the room, not following you:** handled by the lazy-follow HUD (step 5).
+
+**Emulator vs. real Quest:** don't polish the emulator experience by hand; it's for automated tests. The real Quest is the judge once developer mode works. Desktop control stays as the everyday tool at a computer.
+
+**End goal (unchanged):** on well-equipped inputs (Quest hand tracking, controllers, glove), no buttons besides the clutch (and a pinch/trigger for the gripper): the arm just follows your hand.
+
+**Order:** 6b → the "fix now" list → IK (step 4) → step 5 → Quest test when developer mode is on.
 
 ## Early risks to test first (spikes)
 - `xarm1` commands/second and delay over USB.

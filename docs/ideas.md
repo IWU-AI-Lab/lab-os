@@ -10,11 +10,26 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 
 ## Recent ideas (2026-10-28)
 
+### Hidden sensor data the hardware already has
+- **What:** most of our devices measure more than we use, like a Mac's lid-angle sensor. Read it in health checks, the startup status and the HUD. Candidates (**? = to verify on our exact hardware**):
+  - **SO-101 servos (Feetech STS3215):** besides position, each reports **load (rough force), temperature, voltage**, speed and a "moving" flag. Uses: **grasp detection** (gripper stalls with load = it's holding something), "someone pushed me" / collision detection, rough "how heavy is it?", overheating warnings before a servo cuts out.
+  - **xArm 1S:** battery voltage from the controller (?); per-servo temperature/voltage (?).
+  - **Raspberry Pi:** CPU temperature, and an **under-voltage flag** (`vcgencmd get_throttled`): an indirect **low-battery warning** for the Raspbot even if its battery can't be read directly. Raspbot sensors: ultrasonic distance, line-following sensors (?).
+  - **Jetson:** live power draw in watts and temperatures (`tegrastats`).
+  - **Quest:** battery, **headset on/off your head** (the browser reports when the session is hidden; dead-man input already), 25 tracked joints per hand, floor height.
+  - **Cameras:** auto-exposure/brightness → **room light level**, which predicts whether hand tracking will work (it needs reasonable light).
+  - **Microphones:** background noise level (fans) → whether voice will work.
+  - **Every networked device:** Wi-Fi signal strength and delay → connection-quality warnings before things drop.
+  - **Phones (Android Chrome):** compass, motion sensors, sometimes light sensor.
+- **Why:** cheap "wow" facts plus real early warnings (low battery, hot servo, too dark for hand tracking), right where the troubleshooting suite needs them.
+- **Plugs into:** each device plug-in declares what extra readings it offers; the troubleshooting suite, startup status and HUD read them. Safety: reading sensors is fine; anything that powers or moves stays under the safety rules.
+
 ### Startup sequence ("systems coming online")
 - **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
 - **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
-- **So: the "power-up walk".** Startup shows every expected device dim, with what to do ("xarm1: flip the switch on the base"). As you walk around switching things on, each one lights up with its chime the moment it really answers, like a cockpit pre-flight. The manual chore becomes the show, and when you're done you know everything works. Devices you don't need today can be skipped. Fast: the brain part takes seconds; the rest goes as fast as you flip switches.
+- **Default (decision 2026-10-28): robots are optional.** Startup assumes no robots are on; often the builder just wants to code or ask something. Startup covers the brain, screens and anything always-on. When someone switches a robot on, its status **flickers on** in the main system (with its chime), whenever that happens.
+- **Optional "power-up walk" (demo mode).** For demos: startup shows the devices for that demo dim, with what to do ("xarm1: flip the switch on the base"). As you walk around switching things on, each one lights up with its chime the moment it really answers, like a cockpit pre-flight. The manual chore becomes the show, and when you're done you know everything works. Devices you don't need today can be skipped. Fast: the brain part takes seconds; the rest goes as fast as you flip switches.
 - **Battery levels:** the xArm controller's protocol reportedly has a battery-voltage command (verify in our driver). Raspbot: unknown. A Pi can't measure a battery by itself, but Yahboom's expansion board might; check its docs before giving up.
 - **Sound:** cosmetic, to add life (JARVIS feel). On while someone works in the lab, off otherwise (follows the on/off triggers); volume/mute in the sound pack.
 - **Rules:** "only claim what's real": nothing lights up unless it really answered. An arm "nodding awake" would be great for visitors, but it's robot motion: only under the safety rules, opt-in, workspace clear, never unattended.
@@ -30,7 +45,7 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 - **Recommendation:** **everyone can watch** (all screens show the same live state); **only one device controls a given robot at a time** (it "has control"; others ask for it or it's handed over); **STOP works from every device, always**. Voice/agent commands go through the same rule.
 - **Why now:** the teleop server already accepts several input pages and mixes them (`current-focus.md` step 6b fixes that for teleop). This generalizes it later.
 - **Plugs into:** brain core (control lock per robot) + outputs/clients + safety layer.
-- **Open question:** should control be grabbed (last one wins) or handed over (current driver must release)? Handing over is safer.
+- **Decided (2026-10-28):** control is **handed over** (the current driver releases it), not grabbed.
 
 ---
 
@@ -94,11 +109,6 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 - **What:** a mood board at `docs/design/references/`: depth, layers, 3D models, dynamic and mostly decorative UI elements. Later distilled into `docs/design/DESIGN.md` (colors, type, line/glow style, motion, sound, do's and don'ts), after which the reference folder can be deleted.
 - **Why:** the long-term interface should feel like JARVIS / cyberpunk UIs, consistently across screen, web and headset.
 - **Plugs into:** Theme file (design tokens, `config/theme.yaml`) + sound packs; decorative layer. Design phase starts after teleop works.
-
-### HUD mini-arm in the headset
-- **What:** a small floating copy of the arm as part of the heads-up display (lazy-follow panel or on the wrist), instead of a see-through ghost lined up exactly with the real arm.
-- **Why:** aligning a ghost with the real arm is hard and unnecessary when the real arm is visible. A HUD copy shows *what was commanded* (frozen, at a soft limit, later lag behind the real arm) without clutter.
-- **Plugs into:** Quest display (teleop step 5); reuses `web/arm/arm-model.js` + `ArmFeed`.
 
 ### Claude Code agent module
 - **What:** use Claude Code, through the Claude Agent SDK, as the agent for big, slow tasks, so we get its tools and MCP connectors instead of building our own.
