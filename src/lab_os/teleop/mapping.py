@@ -40,6 +40,10 @@ class MappingConfig:
     deg_per_m: float = 200.0  # joint space: 10 cm of hand motion → 20° of joint motion
     tip_m_per_hand_m: float = 0.5  # IK: 10 cm of hand motion → 5 cm of gripper motion
     slip_m: float = 0.002  # IK: a target further than this from what the arm reached slips
+    # IK: +wrist_roll is counter-clockwise seen from the gripper tip; the operator stands behind
+    # the arm and looks along the gripper the other way, so a counter-clockwise hand roll (as you
+    # see it) is −wrist_roll. Found flipped by the builder on the Quest, 2026-10-29.
+    ik_roll_sign: float = -1.0
     max_deg_per_s: float = 90.0  # ramp limit at speed_scale = 1
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
@@ -221,9 +225,9 @@ class ClutchMapper:
         # controller's x = pitch (nose up > 0), about its z = roll.
         if self.kinematics and all(j in a for j in IK_JOINTS):
             desired = self._desired_ik((dx, dy, dz), self._unwrapped(rel, 0))
-            desired["wrist_roll"] = a.get("wrist_roll", 0.0) + cfg.signs.get(
-                "wrist_roll", 1.0
-            ) * self._unwrapped(rel, 2)
+            desired["wrist_roll"] = a.get("wrist_roll", 0.0) + cfg.ik_roll_sign * self._unwrapped(
+                rel, 2
+            )
             desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * (
                 c.trigger
             )

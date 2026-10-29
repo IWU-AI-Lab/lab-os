@@ -123,3 +123,14 @@ def test_upright_start_does_not_snap():
 def test_arms_without_kinematics_use_joint_space():
     assert kinematics_for("so101") is None
     assert kinematics_for("xarm1s") is KIN or isinstance(kinematics_for("xarm1s"), XArmKinematics)
+
+
+def test_rolling_the_hand_counter_clockwise_rolls_the_gripper_the_same_way_as_seen():
+    # WebXR: +z points back at the user, so +twist about z = counter-clockwise as the user sees it.
+    s = math.sin(math.radians(20) / 2)
+    ccw = ControllerState(
+        HAND, (0.0, 0.0, s, math.cos(math.radians(20) / 2)), 0.0, 1.0, {}, (0.0, 0.0)
+    )
+    _, _, joints = drive(ccw)
+    # Seen from behind (looking along the gripper), counter-clockwise = −wrist_roll.
+    assert joints["wrist_roll"] == pytest.approx(-20.0, abs=0.5)

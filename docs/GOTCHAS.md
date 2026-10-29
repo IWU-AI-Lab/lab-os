@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-10-29 — xArm: the shoulder→elbow servo cable snapped during hand calibration
+**What:** While the builder moved the joints to their ends by hand (servos limp) for `calibrate`, the cable from the shoulder servo to the elbow servo snapped (a spare was available). Joints pushed to their extremes stretch or twist the servo cables; the calibration also came out at (or past) the full servo range for base, elbow and wrist roll. Earlier teleop had driven base and wrist roll to ±116°.
+**Fix:** calibrate only to where the cables are still slack, not the mechanical end; for teleop, keep base, shoulder, elbow and wrist roll well inside the measured range (edit `calibration/xarm1/limits.yaml`). Check cable routing before long sessions.
+
+### 2026-10-29 — Quest IK: wrist roll was mirrored
+**What:** On the Quest (software xArm), rolling the controller clockwise rolled the gripper counter-clockwise. +wrist_roll is counter-clockwise *seen from the gripper tip*; the operator looks along the gripper from behind, the opposite way.
+**Fix:** `MappingConfig.ik_roll_sign = -1` for IK mode (`test_rolling_the_hand_counter_clockwise_rolls_the_gripper_the_same_way_as_seen`). Joint-space mode (SO-101 fake) still uses `signs["wrist_roll"]`; check it when the SO-101 is driven.
+
 ### 2026-10-29 — Quest 3 over USB without developer mode: only Quest Link, no adb
 **What:** `adb devices` listed nothing. The desktop sees the Quest 3 (`2833:5010`), but its USB interfaces are only Quest Link ones ("XRSP", "Crosswind", "Highwind"); an adb interface (class ff, subclass 42) appears only once developer mode / USB debugging is really on. The headset setting "USB connection for apps" doesn't add it. Developer mode can only be switched on from the phone that owns the headset's Meta account, which the builder doesn't have; the Quest also can't join the university network (IT).
 **Fix (done 2026-10-29):** any phone signed into the headset's Meta account can switch developer mode on: the builder installed the Meta Horizon app, signed in as the lab account (adding their own phone number, removable later), turned developer mode on, and `adb devices` then listed the headset. Other options that were considered: the account owner enables developer mode once (then the USB route works with no code), or one Quest is factory-reset onto the lab's own account (professor's call), or a private network (phone hotspot / travel router) with the laptop as brain and a guarded LAN mode. Check from Linux without opening anything: `ls /sys/bus/usb/devices/*/` for idVendor 2833 and its interfaces' `bInterfaceSubClass`.
