@@ -59,6 +59,7 @@ No lab network needed (USB). Kit: Quest + controllers (charged) · laptop with t
 4. **Proper mapping.** Inverse kinematics (SO-101 URDF; xArm needs one).
 5. **Quest display basics.** Passthrough + status panel + stop + workspace box. *Partly done 2026-10-24 (`web/xr-scene.js`): ghost arm (see-through in AR) driven by the driver's commands, status panel, controller markers + clutch line, A/X stop. Still to do: workspace boundary box, visitor hint, placing the ghost arm on the real arm (calibration).*
 6. **Hand-tracking input.** Same pipeline; per-user calibration.
+6b. **One driver at a time + training cameras off limits** *(found 2026-10-28, do before the Quest test)*: the teleop server merges input from **every** connected input page into one stream (e.g. a desktop-control tab + the Quest → two hands interleaved on the real arm), and one page's `session_end` freezes input for all. Fix: one input page "has control"; others can watch; STOP works from every page. Also mark the two training cameras off limits in `config/devices.yaml` (see GOTCHAS 2026-10-28: identical serials, so by USB socket or by model).
 7. **Make it feel good.** Smoothing, latency, limits, dead-man freeze.
 8. **Visitor polish + portability test.** Script, hint, casting, run once from the laptop away from the lab; tag a known-good version; 60-second clip.
 9. **Second act** — see options below.
