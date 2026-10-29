@@ -86,7 +86,7 @@ Broadcast to all clients at 10 Hz.
 - `frozen`: dead-man freeze is active (input stale > 250 ms, disconnected, session ended, or A/X pressed).
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
-- `joints`: what the driver currently reports (degrees).
+- `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
 - `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.

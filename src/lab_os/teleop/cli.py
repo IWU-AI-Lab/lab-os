@@ -85,8 +85,6 @@ def _make_arm(name: str, venue) -> Arm:
         raise SystemExit(f"venue {venue.name!r} doesn't allow motion")
     from lab_os.robots.xarm import XArm
 
-    # HACK: the xArm driver does blocking HID I/O inside the asyncio loop (~10-30 ms per paced
-    # read, 4x/s). Fine for a desk test; move it to a thread before relying on it.
     return XArm(name=name, device_name=name, allow_motion=True)
 
 
