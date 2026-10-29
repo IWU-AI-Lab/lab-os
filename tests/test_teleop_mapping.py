@@ -134,7 +134,11 @@ def test_regrab_after_limit_does_not_jump():
 def test_engaging_outside_soft_range_does_not_move():
     m = ClutchMapper()
     near_limit = JOINTS | {"shoulder_pan": 99.5}  # inside the hard limit, outside the margin
-    assert m.step(ctrl(grip=1.0), near_limit, DT, 1.0, LIMITS) == near_limit
+    out = m.step(ctrl(grip=1.0), near_limit, DT, 1.0, LIMITS)
+    # The gripper follows the trigger (absolute), so only the other joints must stay put.
+    assert {j: v for j, v in out.items() if j != "gripper"} == {
+        j: v for j, v in near_limit.items() if j != "gripper"
+    }
 
 
 def run_l(mapper, c, joints, ticks):
@@ -143,3 +147,48 @@ def run_l(mapper, c, joints, ticks):
         if out:
             joints = joints | out
     return joints
+
+
+def _quat(axis, deg):
+    s = math.sin(math.radians(deg) / 2)
+    return (*(a * s for a in axis), math.cos(math.radians(deg) / 2))
+
+
+def _qmul(a, b):
+    return (
+        a[3] * b[0] + a[0] * b[3] + a[1] * b[2] - a[2] * b[1],
+        a[3] * b[1] - a[0] * b[2] + a[1] * b[3] + a[2] * b[0],
+        a[3] * b[2] + a[0] * b[1] - a[1] * b[0] + a[2] * b[3],
+        a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+    )
+
+
+def with_quat(q):
+    return ControllerState((0.0, 1.0, 0.0), q, 0.0, 1.0, {}, (0.0, 0.0))
+
+
+WIDE_LIMITS = {j: JointLimit(-120.0, 120.0) for j in JOINTS} | {"gripper": JointLimit(0.0, 90.0)}
+
+
+def test_rolling_past_180_never_spins_the_wrist_around():
+    m = ClutchMapper()
+    joints = dict(JOINTS)
+    seen = []
+    for roll in [*range(0, 400, 5), *range(400, 300, -5)]:  # roll far past 180, then back a bit
+        for _ in range(3):
+            out = m.step(ctrl(grip=1.0, roll_deg=roll), joints, DT, 1.0, WIDE_LIMITS)
+            joints = joints | (out or {})
+        seen.append(joints["wrist_roll"])
+    steps = [abs(b - a) for a, b in zip(seen, seen[1:], strict=False)]
+    assert max(steps) < 10  # no jump to the other end
+    assert max(seen) <= 120
+    assert seen[-1] < max(seen)  # rolling back moves it back straight away (no wind-up)
+
+
+def test_pitching_a_tilted_controller_only_moves_wrist_flex():
+    held = _qmul(_quat((0, 1, 0), 40), _quat((1, 0, 0), -30))  # yawed + pitched, like the emulator
+    m = ClutchMapper()
+    joints = run(m, with_quat(held), dict(JOINTS), 2)
+    joints = run(m, with_quat(_qmul(_quat((1, 0, 0), 30), held)), joints, 50)  # +30 about room x
+    assert joints["wrist_flex"] == pytest.approx(-30.0, abs=0.1)
+    assert joints["wrist_roll"] == pytest.approx(0.0, abs=0.1)

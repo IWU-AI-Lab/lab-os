@@ -1,0 +1,30 @@
+# Design tokens: the one place for visual style. This is the seed of the theme system; the real
+# design work (JARVIS / cyberpunk, docs/ideas.md) starts after teleop works.
+#
+# Served to the pages as /theme.json, re-read on every request: edit, then reload the page.
+# Colors are "#rrggbb". "Used by" notes say where each token is read today.
+
+colors:
+  background: "#f6f6f4"  # page background. Used by: (pages still use style.css for now)
+  text: "#1d1d1b"        # main text. Used by: (pages still use style.css for now)
+  primary: "#2f6fde"     # main highlight. Used by: robot joints in the 3D views, controller pointer
+  accent: "#e0782f"      # secondary highlight. Used by: gripper jaws in the 3D views
+  ok: "#2fbf71"          # "following" / clutch engaged. Used by: right controller marker, clutch line
+  frozen: "#7a1d00"      # tint on a frozen arm (dead-man stop). Used by: 3D views
+
+font:
+  family: "system-ui, sans-serif"  # Used by: headset status panel
+  base_size_px: 16                 # Used by: (pages still use style.css for now)
+
+arm3d:                   # the 3D arm (desktop panel + headset)
+  body: "#d2cfc5"        # SO-101 meshes
+  stick: "#3b3b38"       # stick-figure links, base disc
+  grid: "#b8b8b2"        # floor grid (desktop view)
+  grid_center: "#8a8a84" # floor grid center lines
+  idle_marker: "#b8b8b2" # controller marker when not clutched
+  xarm:                  # xArm 1S model parts
+    metal: "#b4b8bf"
+    servo: "#2b2b2b"
+    plate: "#3a3a3a"
+    cup: "#9a9a9a"
+    board: "#1f5a35"

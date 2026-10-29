@@ -95,7 +95,7 @@ async function start(mode, link, ui) {
       }
     }
     link.send({ type: "xr_input", t, hands });
-    ui.showHands(hands);
+    ui.showHands(hands, Object.keys(hands).length ? "" : "no controllers: pick them up (hand tracking comes in step 6)");
     xrScene.updateHands(hands);
     renderer.render(xrScene.scene, camera);
   });

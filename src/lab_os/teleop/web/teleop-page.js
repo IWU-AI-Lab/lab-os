@@ -18,7 +18,17 @@ link.on("open", () => {
 });
 link.on("close", () => setPill($("conn"), "disconnected", "off"));
 link.on("error", (m) => ($("xr-msg").textContent = m.message));
+$("stop").onclick = () => link.send({ type: "stop" });
+
+// Only one page drives at a time; the driver hands control over by leaving (Esc / exit XR).
+const CONTROL = {
+  you: ["this page", "on"],
+  other: ["another page (it must leave first)", "warn"],
+  free: ["free (start an input to take it)", "off"],
+};
 link.on("status", (s) => {
+  const [text, cls] = CONTROL[s.control] || ["—", "off"];
+  setPill($("control"), text, cls);
   if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
   else setPill($("state"), "holding", "off");

@@ -18,22 +18,16 @@ Controls: **grip** held = clutch (arm follows, relative to where it is) · **tri
 ## 1. At home: replay (zero setup)
 `uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop` plays a synthetic 7-second session (grab, move, squeeze, release, move back without the arm following, grab again). Open the monitor page to watch it. Add `--speed 0.5` to slow it down.
 
-## 2. At home: desktop control (recommended for a trackpad/mouse)
-`uv run lab-os-teleop serve`, open **http://localhost:8080/**, click **Desktop control (keyboard + trackpad)**. The page captures the pointer (Esc gives it back) and drives a virtual right-hand controller that sends the same messages as the Quest:
+## 2. At a computer: desktop control
+`uv run lab-os-teleop serve` (fake SO-101), `--arm fake-xarm1` (software xArm) or `--arm xarm1 --speed 0.2` (the real one). Open **http://localhost:8080/**, pick a **mode** under "Desktop control: mode and keys", then click **Desktop control**. The page captures the pointer; **Esc** leaves (the arm freezes and another page may take over). **X** = STOP in every mode. The key table on the page is built from the connected arm's joints.
 
-| Input | Does |
-|---|---|
-| **Space** (hold) | clutch: the arm follows while held |
-| Trackpad / mouse | hand left/right, up/down |
-| Two-finger scroll | hand forward/back ("Invert scroll" if it feels backwards) |
-| **W A S D**, **R F** | steady move: forward/left/back/right, up/down |
-| **← →**, **↑ ↓** | wrist roll, wrist tilt |
-| **C** | gripper close/open (toggle, ramped) |
-| **X** (hold) | stop (= A/X) |
-| **H** | re-center the virtual hand (only while released, so the arm stays put) |
-| **Esc** | leave desktop control (the arm freezes) |
+| Mode | How | Goes through |
+|---|---|---|
+| **Keys** (default) | one key pair per motor, hold to turn: D/A base, W/S shoulder, R/F elbow, T/G wrist tilt, Q/E wrist roll, V/C gripper open/close. Shift = slow. | joint jogging (`joint_input`), never IK |
+| **Mouse** | hold 1–5 (base, shoulder, elbow, wrist tilt, wrist roll) and move the mouse; left/right button = gripper open/close. Shift = slow. | joint jogging |
+| **Virtual hand** (prototype) | a pretend Quest controller: Space = clutch, trackpad/WASD/RF move it, arrows tilt/roll, C gripper. Unintuitive on a desk; kept because it costs nothing and tests the Quest path. | pose (`xr_input`): IK on the xArm, joint space on the SO-101 |
 
-Work in short clutch strokes, like lifting a mouse: hold Space, move, release, re-center with H, repeat. The "Trackpad speed" slider sets how far the hand moves per swipe. The 3D view starts behind the arm, so left/right on screen = left/right of your hand.
+**Real arm (xarm1):** before starting: arm clamped, area clear, power plug in reach, and if the servos are limp press the board's **Run** button (the arm stands up by itself). Stand **behind the arm, opposite the controller board** (the board side is the arm's "front", docs/GOTCHAS.md), so "forward" and "right" match. Motors move only while a key/button is held; a move already sent still finishes (≤ ~0.1 s).
 
 ## 3. At home: browser WebXR emulator
 1. In Chrome or Brave (both work on the lab desktop), install Meta's **Immersive Web Emulator** extension from the Chrome Web Store.

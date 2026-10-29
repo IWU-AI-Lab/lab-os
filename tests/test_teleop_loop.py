@@ -143,3 +143,29 @@ def test_commands_stay_inside_soft_limits():
             assert lim.low + margin - 1e-9 <= v <= lim.high - margin + 1e-9 or j == "gripper"
         assert m["joints"] == m["driver_joints"]  # the driver never had to clamp
     assert loop.last_command["joints"]["shoulder_pan"] == arm.limits["shoulder_pan"].high - margin
+
+
+async def test_loop_survives_a_failing_arm():
+    import asyncio
+
+    class FlakyArm(FakeArm):
+        def read_joints(self):
+            raise TimeoutError("arm not answering")
+
+    arm = FlakyArm()
+    arm.connect()
+    loop = TeleopLoop(arm=arm, inputs=InputState(), rate_hz=200)
+    loop.inputs.update(parse_frame(msg(grip=1.0)))
+    task = asyncio.create_task(loop.run())
+    await asyncio.sleep(0.05)
+    assert not task.done()  # still running
+    assert loop.frozen
+    task.cancel()
+
+
+def test_connected_but_no_frame_yet_just_freezes():
+    loop, _ = make_loop()
+    loop.inputs.connected = True  # e.g. a page said hello but sent no input yet
+    loop.inputs.received_at = 0.0
+    loop.step(0.0, 0.02)  # must not raise
+    assert loop.frozen

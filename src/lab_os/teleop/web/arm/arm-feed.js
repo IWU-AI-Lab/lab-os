@@ -10,8 +10,17 @@ export class ArmFeed {
     this.lastCommand = null;
     this.frozen = false;
     this.status = null;
+    this.armId = null; // "name/model" of the connected arm; a change (or a reconnect) starts over
     this._listeners = [];
+    // A reconnect may be a restarted server with another arm: forget the old arm's commands.
+    link.on("open", () => this._forget());
     link.on("status", (s) => {
+      const id = `${s.arm?.name}/${s.arm?.model}`;
+      if (id !== this.armId) {
+        this._forget();
+        this.armId = id;
+        this._emit("arm");
+      }
       this.status = s;
       this.frozen = s.frozen;
       if (!this.lastCommand) {
@@ -35,12 +44,18 @@ export class ArmFeed {
     });
   }
 
+  _forget() {
+    this.lastCommand = null;
+    this.joints = {};
+    this.armId = null;
+  }
+
   /** The 3D model kind the brain says this arm is ("so101", "xarm1s", ...). */
   get modelKind() {
     return this.status?.arm?.model;
   }
 
-  /** fn(feed, why) on every change; why = "status" | "command" | "stop" | "resume". */
+  /** fn(feed, why) on every change; why = "arm" (another arm connected) | "status" | "command" | "stop" | "resume". */
   onChange(fn) {
     this._listeners.push(fn);
   }

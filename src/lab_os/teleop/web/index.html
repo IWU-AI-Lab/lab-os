@@ -18,12 +18,14 @@
 
     <div class="sources">
       <button id="enter" disabled>Checking WebXR…</button>
-      <button id="desktop">Desktop control (keyboard + trackpad)</button>
+      <button id="desktop">Desktop control</button>
+      <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
     </div>
     <p id="xr-msg" class="hint"></p>
 
     <section class="panel">
       <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
+      <div><span class="label">Control</span> <span id="control" class="pill off">—</span></div>
       <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
       <div><span class="label">Gripper</span> <span id="gripper">—</span></div>
       <div><span class="label">Speed</span> <span id="speed">—</span></div>
@@ -38,23 +40,28 @@
     </section>
 
     <details id="desk-help" class="panel">
-      <summary>Desktop control keys</summary>
+      <summary>Desktop control: mode and keys</summary>
+      <div class="desk-settings">
+        <label>Mode
+          <select id="desk-mode">
+            <option value="keys">Keys: a key pair per motor</option>
+            <option value="mouse">Mouse: hold a motor key, move the mouse</option>
+            <option value="hand">Virtual hand (prototype)</option>
+          </select>
+        </label>
+      </div>
       <table class="keys">
-        <tr><td><kbd>Space</kbd> hold</td><td>clutch (= grip): the arm follows while held</td></tr>
-        <tr><td>Trackpad / mouse</td><td>hand left/right, up/down</td></tr>
-        <tr><td>Two-finger scroll</td><td>hand forward/back</td></tr>
-        <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>R</kbd><kbd>F</kbd></td><td>steady move: forward/left/back/right · up/down</td></tr>
-        <tr><td><kbd>←</kbd><kbd>→</kbd> · <kbd>↑</kbd><kbd>↓</kbd></td><td>wrist roll · wrist tilt</td></tr>
-        <tr><td><kbd>C</kbd></td><td>gripper close / open (toggle; the arm applies it while the clutch is held)</td></tr>
-        <tr><td><kbd>X</kbd> hold</td><td>stop (= A/X): the arm freezes, release and re-grab to continue</td></tr>
-        <tr><td><kbd>H</kbd></td><td>re-center your virtual hand (only while the clutch is released, so the arm stays put)</td></tr>
-        <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes)</td></tr>
+        <tbody id="desk-keys"></tbody>
+        <tbody>
+          <tr><td><kbd>X</kbd></td><td>STOP: the arm freezes; let go of everything to continue</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes, another page may take over)</td></tr>
+        </tbody>
       </table>
       <div class="desk-settings">
-        <label>Trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
-        <label><input id="desk-invert" type="checkbox"> Invert scroll</label>
+        <label>Mouse / trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
+        <label><input id="desk-invert" type="checkbox"> Invert scroll (virtual hand)</label>
       </div>
-      <p class="hint">Tip: clutch in short strokes. Hold Space, move a bit, release, re-center with H, repeat, like lifting a mouse off the desk.</p>
+      <p class="hint">Keys and Mouse turn one motor each, directly. The virtual hand moves a pretend Quest controller; on the xArm that goes through IK (several motors at once).</p>
     </details>
 
     <p class="hint"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>

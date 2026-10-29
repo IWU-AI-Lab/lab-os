@@ -1,4 +1,9 @@
-"""Parsing for the messages the XR page sends (format: docs/protocol.md)."""
+"""Parsing for the messages input pages send (format: docs/protocol.md).
+
+Two kinds of input: *pose* input (`xr_input`: where a hand/controller is; Quest, glove, ...) and
+*joint* input (`joint_input`: how fast to turn each motor; keyboard/mouse jogging). Pose input
+may go through IK; joint input never does.
+"""
 
 from dataclasses import dataclass
 
@@ -68,3 +73,28 @@ def parse_frame(raw: dict) -> XRFrame:
         t=float(raw.get("t", 0.0)),
         hands={side: parse_controller(c) for side, c in hands.items() if side in ("left", "right")},
     )
+
+
+@dataclass(frozen=True)
+class JointFrame:
+    """Joint jogging: per joint, a speed from -1 to 1 (fraction of the jog speed). Joints not
+    listed (or not on this arm) hold still."""
+
+    t: float
+    rates: dict[str, float]
+
+
+def parse_joint_frame(raw: dict) -> JointFrame:
+    """Parse a `joint_input` message. Raises ValueError on anything malformed."""
+    if raw.get("type") != "joint_input":
+        raise ValueError(f"not a joint_input message: {raw.get('type')!r}")
+    rates = raw.get("rates")
+    if not isinstance(rates, dict):
+        raise ValueError("rates: expected an object")
+    out = {}
+    for name, v in rates.items():
+        v = float(v)
+        if not -1.0 <= v <= 1.0:
+            raise ValueError(f"rates.{name}: expected -1..1, got {v}")
+        out[str(name)] = v
+    return JointFrame(t=float(raw.get("t", 0.0)), rates=out)

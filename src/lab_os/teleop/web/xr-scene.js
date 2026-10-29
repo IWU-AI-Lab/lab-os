@@ -7,12 +7,15 @@
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
 import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
+import { color, theme } from "./theme.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
-const FROZEN_TINT = 0x7a1d00;
-const CLUTCH_COLOR = 0x2fbf71;
-const IDLE_COLOR = 0xb8b8b2;
+// Arm/marker colors from config/theme.yaml. (The VR room below is not themed yet: design phase.)
+const FROZEN_TINT = color("colors.frozen");
+const CLUTCH_COLOR = color("colors.ok");
+const IDLE_COLOR = color("arm3d.idle_marker");
+const FONT = theme.font?.family || "system-ui, sans-serif";
 
 export class XRScene {
   /**
@@ -78,6 +81,13 @@ export class XRScene {
 
   /** Called every XR frame with the controller states this page just sent. */
   updateHands(hands) {
+    // No right controller (asleep, off, or the headset switched to hand tracking): say so, and how
+    // to leave, instead of looking broken (2026-10-29: the builder got stuck in the page).
+    const missing = !hands.right?.pos;
+    if (missing !== this.panel.noController) {
+      this.panel.noController = missing;
+      this.panel.update(this.feed);
+    }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
@@ -150,7 +160,7 @@ export class XRScene {
     axes.material.depthTest = false;
     g.add(axes);
     // a short pointer showing where the controller faces
-    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.035, 12), new THREE.MeshStandardMaterial({ color: 0x5d8fe8 }));
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.008, 0.035, 12), new THREE.MeshStandardMaterial({ color: color("colors.primary") }));
     tip.rotation.x = -Math.PI / 2;
     tip.position.z = -0.04;
     g.add(tip);
@@ -186,7 +196,8 @@ class StatusPanel {
 
   update(feed) {
     const s = feed?.status;
-    const state = !s ? ["CONNECTING…", "#8a8a84"]
+    const state = this.noController ? ["NO CONTROLLER", "#e0662e"]
+      : !s ? ["CONNECTING…", "#8a8a84"]
       : feed.frozen ? [s.needs_release ? "FROZEN · release grip" : "FROZEN", "#e0662e"]
       : s.clutch ? ["FOLLOWING", "#2fbf71"]
       : ["HOLDING", "#b8b8b2"];
@@ -196,7 +207,7 @@ class StatusPanel {
       gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
     }
     const speed = s ? `${Math.round(s.speed_scale * 100)}%` : "—";
-    const key = `${state[0]}|${gripper}|${speed}`;
+    const key = `${state[0]}|${gripper}|${speed}|${this.noController}`;
     if (key === this.key) return;
     this.key = key;
 
@@ -210,7 +221,10 @@ class StatusPanel {
     g.stroke();
     fitText(g, state[0], 36, 92, 568, "bold", 58, state[1]);
     fitText(g, `Gripper ${gripper}   ·   Speed ${speed}`, 36, 168, 568, "", 40, "#ececea");
-    fitText(g, "Hold grip = move · Trigger = gripper · A/X = stop", 36, 246, 568, "", 32, "#9a9a94");
+    const hint = this.noController
+      ? "Pick up the controllers · Leave: palm up + pinch"
+      : "Hold grip = move · Trigger = gripper · A/X = stop";
+    fitText(g, hint, 36, 246, 568, "", 32, "#9a9a94");
     this.texture.needsUpdate = true;
   }
 }
@@ -219,7 +233,7 @@ class StatusPanel {
 function fitText(g, text, x, y, maxWidth, weight, size, color) {
   let px = size;
   do {
-    g.font = `${weight} ${px}px system-ui, sans-serif`;
+    g.font = `${weight} ${px}px ${FONT}`;
     px -= 2;
   } while (g.measureText(text).width > maxWidth && px > 12);
   g.fillStyle = color;

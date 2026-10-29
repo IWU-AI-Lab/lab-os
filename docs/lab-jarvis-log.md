@@ -1,6 +1,6 @@
 # Lab JARVIS — Running Log
 
-A living record of decisions, facts, open questions and ideas for the AI-lab "JARVIS" project. Newest entries go at the top of each section. Companion docs: **current-focus.md** (what to work on now), **project-scaffold.md** (what the repo should contain), **dev-setup.md**, **network-setup-checklist.md**.
+A living record of decisions, facts and open questions for the AI-lab "JARVIS" project. Newest entries go at the top of each section. Ideas live only in **ideas.md** (the backlog). Companion docs: **current-focus.md** (what to work on now), **project-scaffold.md** (what the repo should contain), **dev-setup.md**, **network-setup-checklist.md**.
 
 **Current focus:** see **current-focus.md**.
 
@@ -79,6 +79,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 - Lab wall Ethernet port works (which network unknown); classmate in IT says IT doesn't watch for devices — still get the professor's OK.
 - **Direction:** lab's own travel router uplinked by Ethernet to the wall port; brain on the router's side. Fallback: isolated router.
 - **Router shortlist:** GL.iNet Opal ($39.99) vs Beryl AX ($98.99); pending (portability slightly favors Beryl AX).
+- **Beryl AX (GL-MT3000) checked against our needs (2026-10-29):** builder's pick (Amazon B0BPSGJN7T, $98.99). Fits: pocket-sized, **USB-C 5V/3A (runs from a power bank)**; internet from wall Ethernet (2.5G WAN), venue/phone Wi-Fi ("repeater") or phone USB tethering, several at once with failover ("Multi-WAN"); robots always join *its* Wi-Fi, so changing the internet source never reconfigures them; keeps working with no internet (offline lite mode); OpenWrt underneath (DHCP reservations, local names); **Tailscale built in** (remote level 2; still ask IT). Limits: only **1 LAN port** (a small switch if more wired devices); pocket-router Wi-Fi range (one room); one user report of very slow USB tethering vs. repeater, and an older report of Tailscale subnet routes breaking on tethering → **use phone hotspot over Wi-Fi (repeater) first, USB tethering as backup**. To check: joining campus/enterprise Wi-Fi (eduroam-style logins) and hotel-style login pages as repeater. Security setup: strong Wi-Fi + admin passwords, remote admin off, a **separate guest network** (client isolation) for visitors' devices, robots on the main network. Still needs: the professor's OK + who pays.
 - **Setup checklist:** passwords, remote admin off, DHCP reservations, auto-updates off, passwords stored safely, label, cable away from walkways.
 
 ---
@@ -103,7 +104,7 @@ Open the door → one trigger → screens on → greeting → use. Animation ≤
 1. **Milestone 1 — "Connected lab":** lab router, SSH keys + nicknames, device census, standards, one small visible win.
 2. **Milestone 2 — Wake + roll call** (`xarm1`, then Raspbot); venue profiles.
 3. **Milestone 3 — Voice + dev assistant.**
-4. **Later:** Quest client/Quest-only/vision; more robots; offline lite mode; full lab in a bag; GUI from home; live link; cellular robots; bigger VLA models.
+4. **Later:** offline lite mode; more robots; bigger VLA models (second act). Next focus after teleop: troubleshooting suite (`current-focus.md` → "Up next"). Everything else: `ideas.md`.
 
 ---
 
@@ -124,13 +125,13 @@ Handling: census first · thin robots · capability checks · prove inputs · lo
 ---
 
 ## Is it actually useful? (still partly open)
-Primary: faster development via a connected lab. Others: teleoperation for teaching robots (possibly data collection for the lab's training project); **"put anything on the table and ask it to grab it"** (ER look-then-reach); lab health dashboard; testing harness (*not tied to the research paper for now*); shared lab memory; teaching; Quest "what am I looking at?"; two-robot handoff; recruiting demo (portable); remote check-ins. Unofficial; no outreach. ROS 2 optional.
+Primary: faster development via a connected lab. In the plan: teleoperation for teaching robots (and data collection for the lab's training project); **"put anything on the table and ask it to grab it"** (ER look-then-reach). Other possible uses are in `ideas.md` ("Uses, reach, events"). Unofficial; no outreach. ROS 2 optional.
 
 ---
 
 ## The full vision (2026-10-19/20)
 Walk in → ignition (card, "hey Jarvis," button, keyboard, Quest) → screens on + short animation + greeting → optional Quest launch → ambient standby → commands by voice/push-to-talk/typing (fast path or agent harness). Works without the Quest, with the Quest alone, and away from the lab.
-Optional modules: teleoperation; look-then-reach; Quest vision; face recognition (opt-in); student ID sign-in; multi-screen presence; screen-to-screen sending; phones/laptops as mics/remotes; ROS 2 bridge; offline lite mode; remote access; portable kit; live link to the lab; cellular robots.
+Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; offline lite mode; remote access (staged); portable kit. Further optional modules: `ideas.md`.
 
 ---
 
@@ -144,11 +145,38 @@ Optional modules: teleoperation; look-then-reach; Quest vision; face recognition
 - Reliability: auto-restart; start on boot; offline lite mode.
 - Safety: speed/workspace limits, always-working stop, approved visitor commands, remote mode = no motion by default, dead-man stop; drones excluded for now.
 
+### Shapes to design toward (2026-10-24), not things to build now
+- **Triggers slot** (generalizes "ignition"): everything that turns the system on or off is a plug-in: wake word, spoken phrases ("Jarvis, log out"), clap, card swipe, keyboard/button. Each can be switched on/off in config and per venue profile. *Why:* new activation methods keep coming; each should be a small add-on.
+- **Conversation manager:** one component owns voice-conversation behavior (interrupting, queueing, turn-taking), so it isn't scattered across the code.
+- **Theme file ("design tokens") + sound packs:** all visual style (colors, fonts, sizes, glow, animation speed, decorative intensity) lives in one config file (`config/theme.yaml`); nothing hardcodes a style. Sounds are a swappable **sound pack** with volume and mute. Later, a settings panel edits both. *Why:* full, easy control of look and sound from one user-friendly place. Sound sources: my brother (sound design), stock (check licenses), or AI-generated.
+- **Decorative layer separate from the information layer:** decorative effects (3D, animated elements) have an intensity setting; useful information always stays readable on top.
+- **Visual quality levels: full / reduced / minimal.** Can drop automatically when the frame rate falls. The Quest gets its own stricter performance budget (low frame rates in a headset cause motion sickness). Not the same as **offline lite mode** (no internet); keep the names distinct.
+- **The brain doesn't need to be lightweight** (it runs on the desktop or a laptop); robot-side code stays thin, as already decided.
+- **Agent changes to the system:** agent proposes on a branch → tests + CI → I approve → deploy from a tagged version. The agent never modifies the live running system directly. Same for system updates.
+- **Agent harness is a swappable slot** (slow path). A Claude Code / Claude Agent SDK harness is one candidate (`ideas.md`): tools default-deny; any robot motion still goes through our safety layer.
+
 ---
 
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-28 | **Naming: plain names in code and docs; show names live in persona/theme config.** A **plain name** says what a thing does and is used in code, file names, docs, logs and commit messages (e.g. `startup_sequence`, "roll call", "troubleshooting suite"). A **show name** is the in-character name JARVIS *displays or says* to people (e.g. the startup screen's title "INITIATION", the spoken line "Initiating systems…", a mode called "Overwatch"). Show names are text in the persona/theme config (`config/`), so they can change, or differ per persona, without touching code. Code never depends on a show name. Things get a show name only after they exist and run. | Plain names stay searchable and obvious to the next student; the JARVIS flavor stays fully customizable. |
+| 2026-10-28 | **Robots are optional at startup:** by default the system assumes no robots are on; a robot that gets switched on appears in the system when it reports in. A "power-up walk" (expected devices shown dim with instructions) is an optional demo mode. | Often the builder only wants to code or ask something; robots are for projects, learning and demos. |
+| 2026-10-28 | **One device controls a robot at a time; control is handed over** (the current driver releases), not grabbed; everyone can watch; STOP works from every device. Teleop gets this first (current-focus step 6b). | Two inputs interleaved on a real arm is unsafe; handing over is the safer choice. |
+| 2026-10-28 | **No ghost arm lined up on the real arm.** The Quest shows a lazy-follow **HUD mini-arm** (what was commanded; joints turn red near limits) instead; the status panel also lazy-follows instead of being fixed in the room. | Lining up needs calibration and adds little: the real arm is visible; a fixed-in-room panel is awkward. |
+| 2026-10-28 | **"AI lab admin" is the lab's one Meta account** for all current and future Meta devices/platforms (owns the 3 Quests; joins a Meta developer organization for developer mode). Verified with **the professor's phone number** (his OK, 2026-10-28). Handoff docs record the account and whose number is on it; the password lives in the lab's password store, never in git. | Developer mode needs the owner account to be a verified developer; any future Meta product hits the same issue; a lab-owned identity survives the builder's graduation. |
+| 2026-10-27 | **xArm driver = our own ~100-line protocol layer over the `hid` package** (not the `xarm` PyPI wrapper); read-only by default, motion needs `allow_motion=True` + the builder's OK. `devices.yaml` entries may carry `usb:` (vendor/product ID, product, serial); `find_usb_device()` resolves them; so101-green is also blocked by USB serial (any OS path containing it is refused). | Cross-platform lookup by USB ID + serial; the wrapper is unmaintained; see GOTCHAS for the hidapi-vs-hid trade-off. |
+| 2026-10-27 | **The brain is cross-platform: Linux (primary), Windows and macOS.** USB devices are identified by USB ID + serial number (resolved to the OS's own path at run time), not only `/dev/serial/by-id/`; the so101-green block works by its serial numbers on every OS. Robot-side code stays Linux. Needs: a non-bash install path, CI on all three, the safety hook made OS-aware. | The field laptop could be anyone's (Linux, Mac, mostly Windows); both Ubuntu desktops are busy with other projects. |
+| 2026-10-24 | **Ideas live only in `ideas.md`** (single source of truth); new ideas go there, not into code, unless they're the current focus. Earlier idea lists moved there. | Keep the project finishable without losing ideas. |
+| 2026-10-24 | **Triggers slot:** every on/off method (wake word, phrases, clap, card, button) is a plug-in, switchable in config and per venue. | New activation methods keep coming; each should be a small add-on. |
+| 2026-10-24 | **Conversation manager** owns interrupting, queueing and turn-taking. | Keep voice-conversation behavior in one place. |
+| 2026-10-24 | **One theme file (design tokens, `config/theme.yaml`) + swappable sound packs** (volume, mute); nothing hardcodes a style; a settings panel later. | Full, easy control of look and sound from one place. |
+| 2026-10-24 | **Decorative layer separate from the information layer**, with an intensity setting; information always readable on top. | Rich JARVIS / cyberpunk visuals without hurting usability. |
+| 2026-10-24 | **Visual quality levels full / reduced / minimal**, auto-drop on low frame rate; stricter Quest budget. Distinct from offline lite mode. | Headset frame drops cause motion sickness; slower machines still work. |
+| 2026-10-24 | **The brain need not be lightweight**; robot-side code stays thin. | It runs on a desktop or laptop. |
+| 2026-10-24 | **Agent changes (incl. system updates) only via branch → tests + CI → my approval → tagged deploy**; never the live system directly. | Same safety net as human changes. |
+| 2026-10-24 | **Agent harness (slow path) is a swappable slot**; Claude Code / Agent SDK is one candidate (tools default-deny; motion via our safety layer). | Reuse a capable agent without giving up control. |
+| 2026-10-24 | **Next focus after teleop: troubleshooting suite** (mic, cameras, robots, network, accounts, Quest; each check writes a report). | Health checks will find problems; diagnosis must be easy for me, a maintainer or an agent. |
 | 2026-10-24 | **3D arm view with three.js + urdf-loader, vendored in the repo (no CDN); SO-101 drawn from its real URDF, xArm from primitives. All arms share joint names (`shoulder_pan` … `gripper`, degrees); each driver maps them to its servos.** The view draws per-command driver input (`arm_command` messages), not a sampled state. Model code is page-independent so it becomes the Quest ghost arm. No physics yet. | Offline/venue-proof; exact testing at home; one model reused on desktop and in the headset. |
 | 2026-10-24 | **Teleop input = plain HTML/JS WebXR page served by the Python program (aiohttp), WebSocket JSON messages (`docs/protocol.md`); Quest reaches it over USB via `adb reverse` + `http://localhost:8080`.** No Node.js yet. First mapping is joint-space with clutch control; after any freeze the grip must be released and pressed again. JARVIS core grows out of this code rather than being designed up front. | Fewest moving parts; works at home via emulator + record/replay; localhost is a secure context for WebXR. |
 | 2026-10-24 | **lab-os gets its own uv environment** (Python 3.12, uv-managed only); LeRobot for `so101-white` is added to lab-os, never to the shared `lerobot` conda env. **Serial devices are referenced only by `/dev/serial/by-id/`.** `so101-green`'s ports are off limits in code (`config/devices.yaml` + `lab_os.devices`) and via a Claude Code hook. Repo commits authored as JoshuaCYin; pushes use the lab `gh` login. | The conda env and green arm belong to the training project; `ttyACM` numbers swap between boots. |
@@ -169,7 +197,9 @@ Optional modules: teleoperation; look-then-reach; Quest vision; face recognition
 ---
 
 ## Facts about the lab
+- **Usage pattern (2026-10-28):** the lab is usually empty; startup happens when the first person arrives to a closed lab. Robots are off before that (battery-powered ones must be switched off); all need a physical switch, except the SO-101s (no switch; wall power supply).
 - **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
+- **Displays/wearables (2026-10-27):** 3 small (~7–9") Raspberry Pi touchscreens; a ~75" Newline touchscreen on wheels (standalone, runs Android); Google Glass Explorer Edition (boots, voice commands work).
 - **Computers:** 6 RTX 5070 desktops (12 GB GPU memory, to confirm; 2 Ubuntu → brain + backup, 4 Windows 11); 5 Jetson Orin Nano; several Pi 5s. Remote Control from home works.
 - **Network:** lab Wi-Fi with MAC registration via campus IT; wall Ethernet port works.
 - **AI access:** professor credits; user's OpenAI keys; free Gemini keys (Gemini Robotics-ER 2 preview is on the Gemini API).
@@ -195,6 +225,7 @@ Optional modules: teleoperation; look-then-reach; Quest vision; face recognition
 - **Absolute vs. relative control:** teleop should be relative (no snapping).
 - **Impressiveness from first principles:** break an expectation; seconds to understand; narrow, controlled demo; filmable; don't overclaim; fewest moving parts.
 - **Separate hardware per track** avoids blocking.
+- **Training project + lab-os at the same time (2026-10-28):** the builder also works on the so101-green training project (now: preparing to record data). Keep them apart: separate folders, separate VS Code windows / Claude Code sessions (lab-os's hook would block legitimate training commands), separate environments (conda `lerobot` vs lab-os uv). Shared-desktop conflicts: a serial port or camera can be opened by only one program at a time; don't run lab-os hardware tests while a recording runs. The two USB cameras on the lab desktop belong to the training setup (confirmed 2026-10-28) → off limits in lab-os (GOTCHAS 2026-10-28).
 - **Remote Control vs. cloud sessions:** Remote Control runs on the lab computer; cloud sessions can't reach lab devices.
 - **Router policy:** a quick professor OK costs little. **One-way walls:** outside devices can't reach in.
 - **Bridged robots** add a failure point. **AI makes modular code cheap to write, not free to design.**
@@ -206,5 +237,5 @@ Optional modules: teleoperation; look-then-reach; Quest vision; face recognition
 
 ---
 
-## Ideas parked for later
-Teleop second act (ER look-then-reach → SmolVLA → bigger VLAs); "ways to teach a robot"; "one hand controls two robots"; two-hand control; fixed glove; teleop as data collection for the training project; full lab in a bag; live link to the lab; remote GUI from home; cellular robots; Quest vision Q&A; Quest-only mode; offline lite mode; robot testing harness; ROS 2 bridge; two-robot handoff; visitors' phones as remotes; card-swipe ignition; Quest launch → HUD; opt-in face recognition; multi-screen presence; screen-to-screen sending; multiple personas; program-by-voice / agent onboarding; light-sensor ignition; Kinect gestures; escape room; local models; Air:bit module (much later).
+## Ideas
+Moved to **`ideas.md`** (2026-10-24), the single source of truth for ideas.

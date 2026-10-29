@@ -13,6 +13,20 @@ devices:
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00
+    # USB serial numbers: blocks the arm on every OS (COM ports / macOS paths differ, serials don't).
+    usb:
+      - {vendor_id: 0x1a86, serial: "5B41531599"}
+      - {vendor_id: 0x1a86, serial: "5B41533501"}
+
+  training-cameras:
+    kind: camera
+    off_limits: true
+    notes: >-
+      The two USB cameras of so101-green's training setup (Innomaker U20CAM-1080p, lsusb
+      "Microdia Webcam Vitade AF"). Both report serial SN0001, so the whole model is blocked.
+      A camera can only be used by one program; opening it can break a training recording.
+    usb:
+      - {vendor_id: 0x0c45, product_id: 0x6366}
 
   so101-white:
     kind: so101
@@ -26,8 +40,12 @@ devices:
 
   xarm1:
     kind: xarm1s
-    notes: Built, works over USB. Teleop prototype + JARVIS-track robot. Connection details TBD (step 1).
+    notes: >-
+      Built, works over USB HID (not serial). Teleop prototype + JARVIS-track robot.
+      lsusb calls 0483:5750 an "LED badge"; match the product and serial too.
     ports: []
+    usb:
+      - {vendor_id: 0x0483, product_id: 0x5750, product: xArm, serial: "720710C0D60063300023D4D4"}
 
   xarm2:
     kind: xarm1s
