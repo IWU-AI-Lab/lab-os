@@ -9,7 +9,7 @@
 
 const HOME = [0.2, 1.0, -0.3]; // a comfortable spot in front of a seated user (WebXR local-floor)
 const KEY_SPEED = 0.2; // m/s for W A S D R F
-const TURN_SPEED = 90; // °/s for the arrow keys
+const TURN_SPEED = 30; // °/s for the arrow keys (90 was too twitchy on the real arm)
 const GRIPPER_SPEED = 2.0; // trigger units per second (0 → 1 in half a second)
 const HANDLED = new Set(["Space", "KeyW", "KeyA", "KeyS", "KeyD", "KeyR", "KeyF", "KeyC", "KeyX", "KeyH",
   "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);

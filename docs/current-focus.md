@@ -83,10 +83,10 @@ A small model trained from scratch on one task (e.g. ACT) tends to break with ne
 Seen while testing desktop control on the real xArm and the browser XR emulator. Guesses at causes are marked "?".
 
 **Fix now (cheap, or a safety issue on the real arm):**
-- **Wrist roll spins all the way around** when it reaches one end ("rebounds"). ? An angle wrap-around bug (an angle jumping from +180° to −180°). On the real arm a sudden full turn is exactly the "snapping" the glove taught us to avoid, so treat it as a safety bug: clamp, never wrap.
-- **Wrist flex also moves another joint.** ? Rotation math mixing axes in the joint-space mapping.
-- **Rotation too sensitive** in desktop control.
-- **The monitor page shows the SO-101 while the xArm is driven.** The page should pick the 3D model from the connected arm (`Arm` already declares `model`).
+- ~~**Wrist roll spins all the way around**~~ *fixed 2026-10-29: angles are unwrapped, the soft limit holds the joint (`test_rolling_past_180_never_spins_the_wrist_around`).* When it reaches one end ("rebounds"). ? An angle wrap-around bug (an angle jumping from +180° to −180°). On the real arm a sudden full turn is exactly the "snapping" the glove taught us to avoid, so treat it as a safety bug: clamp, never wrap.
+- ~~**Wrist flex also moves another joint.**~~ *fixed 2026-10-29: rotation is now measured in room axes; with a tilted controller, pitch leaked ~17° into roll.* ? Rotation math mixing axes in the joint-space mapping.
+- ~~**Rotation too sensitive** in desktop control.~~ *Arrow keys 90 → 30 °/s.*
+- ~~**The monitor page shows the SO-101 while the xArm is driven.**~~ *Already picked from `status.arm.model`; most likely a stale cached script (checked: a fresh browser picks "xArm 1S"). Fixed by `Cache-Control: no-cache` (GOTCHAS 2026-10-29).* The page should pick the 3D model from the connected arm (`Arm` already declares `model`).
 
 **Fix with IK (step 4), not by patching the joint-space mapping** (it gets replaced):
 - In the XR emulator, only up/down really controls the arm; nothing else does.
