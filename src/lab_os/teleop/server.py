@@ -47,6 +47,13 @@ async def monitor(_request: web.Request) -> web.FileResponse:
     return await _page("monitor.html")
 
 
+async def _no_stale_files(request: web.Request, response: web.StreamResponse) -> None:
+    """Pages and their scripts must always be the current version: without this, Firefox reuses
+    old cached scripts for hours (docs/GOTCHAS.md). `no-cache` still allows a cheap 304."""
+    if not request.path.startswith("/ws"):
+        response.headers.setdefault("Cache-Control", "no-cache")
+
+
 async def theme(_request: web.Request) -> web.Response:
     """config/theme.yaml as JSON, re-read on every request (edit the file, reload the page)."""
     return web.json_response(load_theme(), headers={"Cache-Control": "no-store"})
@@ -113,8 +120,12 @@ async def _broadcaster(app: web.Application) -> None:
                 app[OUTBOX].get(), timeout=max(0.0, next_status - time.monotonic())
             )
         except TimeoutError:
-            msg = app[LOOP].status()
             next_status = time.monotonic() + period
+            try:
+                msg = app[LOOP].status()
+            except Exception:  # a failing arm read must not end status for every page
+                log.exception("status failed")
+                continue
         if not app[CLIENTS]:
             continue
         text = json.dumps(msg)
@@ -150,4 +161,5 @@ def create_app(
     app.router.add_static("/static", WEB_DIR)
     app.router.add_static("/models", MODELS_DIR)
     app.cleanup_ctx.append(_background)
+    app.on_response_prepare.append(_no_stale_files)
     return app

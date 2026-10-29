@@ -119,3 +119,11 @@ async def test_theme_served_fresh(aiohttp_client):
     assert resp.status == 200
     assert resp.headers["Cache-Control"] == "no-store"
     assert (await resp.json())["colors"]["frozen"].startswith("#")
+
+
+async def test_static_files_are_never_stale(aiohttp_client):
+    app, _ = make_app()
+    client = await aiohttp_client(app)
+    for path in ("/", "/static/teleop-page.js", "/static/arm/arm-model.js"):
+        resp = await client.get(path)
+        assert resp.headers["Cache-Control"] == "no-cache", path

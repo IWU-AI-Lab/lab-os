@@ -1,6 +1,7 @@
 """The fixed-rate teleop loop: latest input → mapper → arm, plus the dead-man rule."""
 
 import asyncio
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -8,6 +9,8 @@ from dataclasses import dataclass, field
 from lab_os.robots.base import Arm
 from lab_os.teleop.mapping import ClutchMapper
 from lab_os.teleop.messages import XRFrame
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -108,7 +111,13 @@ class TeleopLoop:
         while True:
             await asyncio.sleep(period)
             now = time.monotonic()
-            self.step(now, now - last)
+            try:
+                self.step(now, now - last)
+            except Exception:
+                # E.g. the arm stopped answering. Freeze and keep running: a dead loop task would
+                # leave every page "connected" but unable to move anything, with no message.
+                log.exception("teleop step failed; arm frozen")
+                self._freeze()
             last = now
             if self.on_tick:
                 self.on_tick(self)
