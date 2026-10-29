@@ -79,7 +79,8 @@ function render() {
 }
 
 feed.onChange((f, why) => {
-  if (why === "status" && !userPicked && !loading) {
+  if (why === "arm") userPicked = false; // another arm: show its own model again
+  if ((why === "status" || why === "arm") && !userPicked && !loading) {
     const choice = MODEL_CHOICES.find((c) => c.kind === f.modelKind);
     if (choice && (!model || model.kind !== choice.kind)) useModel(choice);
   }

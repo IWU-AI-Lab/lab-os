@@ -144,4 +144,7 @@ class TeleopLoop:
                 self._freeze()
             last = now
             if self.on_tick:
-                self.on_tick(self)
+                try:
+                    self.on_tick(self)
+                except Exception:  # a display bug must never stop the arm loop
+                    log.exception("on_tick failed")

@@ -15,7 +15,7 @@ from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import ClutchMapper
-from lab_os.teleop.messages import parse_frame, parse_joint_frame
+from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
 from lab_os.venues import load_venue
@@ -35,7 +35,12 @@ def _fmt_hand(c) -> str:
 
 def _fmt_status(loop: TeleopLoop) -> str:
     frame = loop.inputs.latest
-    hand = frame.hands.get(loop.mapper.config.hand) if frame else None
+    if isinstance(frame, JointFrame):
+        moving = " ".join(f"{j} {r:+.2f}" for j, r in frame.rates.items()) or "nothing pressed"
+        source = f"keys/mouse: {moving}"
+    else:
+        hand = frame.hands.get(loop.mapper.config.hand) if frame else None
+        source = f"{loop.mapper.config.hand}: {_fmt_hand(hand)}"
     state = (
         "FROZEN"
         if loop.frozen
@@ -46,7 +51,7 @@ def _fmt_status(loop: TeleopLoop) -> str:
         else "waiting"
     )
     joints = " ".join(f"{v:+6.1f}" for v in loop.arm.read_joints().values())
-    return f"{loop.mapper.config.hand}: {_fmt_hand(hand)} | {state:8} | arm {joints}"
+    return f"{source} | {state:8} | arm {joints}"
 
 
 def _make_printer():

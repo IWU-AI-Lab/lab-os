@@ -105,3 +105,11 @@ def test_jog_mapper_keeps_its_own_target_between_presses():
     m.step({}, lagging, DT, 1.0)  # released; the reading still says 0
     again = m.step({"wrist_roll": 1.0}, lagging, DT, 1.0)
     assert again["wrist_roll"] > out["wrist_roll"]
+
+
+def test_terminal_status_line_handles_joint_input():
+    from lab_os.teleop.cli import _fmt_status
+
+    loop = xarm_loop()
+    run(loop, jog_msg(gripper=0.5), 1)
+    assert "gripper +0.50" in _fmt_status(loop)
