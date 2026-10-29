@@ -159,6 +159,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-28 | **"AI lab admin" is the lab's one Meta account** for all current and future Meta devices/platforms (owns the 3 Quests; joins a Meta developer organization for developer mode). Verified with **the professor's phone number** (his OK, 2026-10-28). Handoff docs record the account and whose number is on it; the password lives in the lab's password store, never in git. | Developer mode needs the owner account to be a verified developer; any future Meta product hits the same issue; a lab-owned identity survives the builder's graduation. |
 | 2026-10-27 | **xArm driver = our own ~100-line protocol layer over the `hid` package** (not the `xarm` PyPI wrapper); read-only by default, motion needs `allow_motion=True` + the builder's OK. `devices.yaml` entries may carry `usb:` (vendor/product ID, product, serial); `find_usb_device()` resolves them; so101-green is also blocked by USB serial (any OS path containing it is refused). | Cross-platform lookup by USB ID + serial; the wrapper is unmaintained; see GOTCHAS for the hidapi-vs-hid trade-off. |
 | 2026-10-27 | **The brain is cross-platform: Linux (primary), Windows and macOS.** USB devices are identified by USB ID + serial number (resolved to the OS's own path at run time), not only `/dev/serial/by-id/`; the so101-green block works by its serial numbers on every OS. Robot-side code stays Linux. Needs: a non-bash install path, CI on all three, the safety hook made OS-aware. | The field laptop could be anyone's (Linux, Mac, mostly Windows); both Ubuntu desktops are busy with other projects. |
 | 2026-10-24 | **Ideas live only in `ideas.md`** (single source of truth); new ideas go there, not into code, unless they're the current focus. Earlier idea lists moved there. | Keep the project finishable without losing ideas. |
@@ -203,7 +204,6 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ---
 
 ## Open questions
-- **Quest ownership (2026-10-27):** all 3 Quests are owned by one informal "AI lab admin" Meta account. It has **no phone number**; classmates' phones only appear as devices it's signed into. Developer mode needs the owner account to be in a developer organization, and Meta's developer sign-up asks that account for a phone number or a credit card. **Proposed:** keep "AI lab admin" as **the lab's one Meta account** for all current and future Meta devices/platforms (any future Meta product hits the same issue) and verify it once. Whose number/card: ask the professor (theirs, a lab card, or a cheap prepaid SIM); fallback: the builder's own number as a stopgap, swapped before handoff (May 2027). Record the account and whose number is on it in the handoff docs (not the password; that goes in the lab's password store).
 - **Second act:** ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
 - **License/ownership:** what does the professor/university allow?
 - **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.
@@ -219,6 +219,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - **Absolute vs. relative control:** teleop should be relative (no snapping).
 - **Impressiveness from first principles:** break an expectation; seconds to understand; narrow, controlled demo; filmable; don't overclaim; fewest moving parts.
 - **Separate hardware per track** avoids blocking.
+- **Training project + lab-os at the same time (2026-10-28):** the builder also works on the so101-green training project (now: preparing to record data). Keep them apart: separate folders, separate VS Code windows / Claude Code sessions (lab-os's hook would block legitimate training commands), separate environments (conda `lerobot` vs lab-os uv). Shared-desktop conflicts: a serial port or camera can be opened by only one program at a time; don't run lab-os hardware tests while a recording runs. Open: which of the two USB cameras belong to the training setup (if so, mark them off limits in lab-os too).
 - **Remote Control vs. cloud sessions:** Remote Control runs on the lab computer; cloud sessions can't reach lab devices.
 - **Router policy:** a quick professor OK costs little. **One-way walls:** outside devices can't reach in.
 - **Bridged robots** add a failure point. **AI makes modular code cheap to write, not free to design.**

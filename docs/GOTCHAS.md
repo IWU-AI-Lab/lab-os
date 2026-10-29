@@ -44,7 +44,7 @@ Then unplug and re-plug the xArm's USB.
 
 ### 2026-10-27 — The lab Quests' Meta account is tied to classmates' phones
 **What:** All 3 Quest 3s are owned by one informal "AI lab admin" Meta account; its sign-in/verification goes through classmates' phones; there's no lab phone. Developer mode can only be turned on by the account that owns the headset, and Meta asks for a phone number (or card) to verify a developer account.
-**Fix:** see `lab-jarvis-log.md` → Open questions (Quest ownership).
+**Fix:** "AI lab admin" becomes the lab's one Meta account, verified with the professor's phone number (decision 2026-10-28 in `lab-jarvis-log.md`).
 
 ### 2026-10-24 — Joint directions differ per arm: check them with forward kinematics
 **What:** The first joint-space mapping had its signs picked by hand. On the SO-101, "hand up" lowered the arm (in its URDF, +shoulder_lift lowers it, +elbow_flex folds it down, +shoulder_pan swings it to its right).

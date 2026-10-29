@@ -8,6 +8,24 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 
 ---
 
+## Recent ideas (2026-10-28)
+
+### Startup sequence ("systems coming online")
+- **What:** after a trigger (wake word, card, button…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary ("5 of 7 online · xarm1 is off: flip its power switch"). Devices that take longer (a Pi boots in ~30 s) pop in later during standby; the opening itself stays ≤ several seconds (walk-in decision).
+- **Why:** cool to watch *and* useful: you see at a glance what's up, and the results feed the troubleshooting suite's report files.
+- **Key design point:** three kinds of device, shown differently, so "unpowered" isn't shown as "broken": **always on** (brain, router), **can be powered by the brain** (via smart plugs, below), **manual** (someone flips a switch). Manual ones show as dim "sleeping" with what to do, not as red failures.
+- **Rules:** "only claim what's real": nothing lights up unless it really answered. Sound uses the sound pack with volume/mute + a **quiet mode** (others work in the lab). An arm "waking up" with a small nod/wiggle would be great for visitors, but it's robot motion: only under the safety rules, opt-in, workspace clear, never unattended.
+- **Plugs into:** triggers slot → roll call / health checks → theme + sound packs + decorative layer; displays: desktop monitor, Newline, Quest.
+- **Open questions:** which screen(s) show it? Who is usually in the room at startup? How long are you willing to wait before the arm is usable?
+
+### Smart plugs to power robots on/off
+- **What:** network-controlled power plugs/strips for arm power supplies, Pis, Jetsons, so the brain can power devices on for the startup sequence and off at night.
+- **Why:** most robots can't turn themselves on; without this, startup can only report "sleeping".
+- **Watch out:** cutting power to a Pi/Jetson without shutting it down can corrupt its SD card (shut down first, then cut). Powering an arm on may make it move or go limp: check each arm's power-on behavior first; remote power-on counts as robot motion (ask/safety rules; remote mode = no motion). Needs the lab network/router and the professor's OK (devices powered unattended). Pick plugs that work locally without a cloud app (offline rule).
+- **Plugs into:** a new "power" plug-in per device (declared in `config/devices.yaml`), used by the startup sequence and the troubleshooting suite.
+
+---
+
 ## Recent ideas (2026-10-27)
 
 ### Touchscreens as clients (small Pi screens + the big Newline)
