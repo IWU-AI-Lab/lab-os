@@ -161,3 +161,11 @@ async def test_loop_survives_a_failing_arm():
     assert not task.done()  # still running
     assert loop.frozen
     task.cancel()
+
+
+def test_connected_but_no_frame_yet_just_freezes():
+    loop, _ = make_loop()
+    loop.inputs.connected = True  # e.g. a page said hello but sent no input yet
+    loop.inputs.received_at = 0.0
+    loop.step(0.0, 0.02)  # must not raise
+    assert loop.frozen

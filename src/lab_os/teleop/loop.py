@@ -77,8 +77,10 @@ class TeleopLoop:
         live = self.inputs.connected and now - self.inputs.received_at <= self.stale_after
         frame = self.inputs.latest
         kind = "joints" if isinstance(frame, JointFrame) else "pose"
-        stop_pressed = kind == "pose" and any(c.buttons.get("a") for c in frame.hands.values())
-        if not live or stop_pressed:
+        stop_pressed = isinstance(frame, XRFrame) and any(
+            c.buttons.get("a") for c in frame.hands.values()
+        )
+        if not live or frame is None or stop_pressed:
             self._freeze()
             return
         if kind != self.input_kind:
