@@ -60,6 +60,10 @@ class TeleopLoop:
             self._emit({"type": "arm_stop"})
         self.mapper.reset(require_release=True)
 
+    def stop(self) -> None:
+        """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
+        self._freeze()
+
     def step(self, now: float, dt: float) -> None:
         live = self.inputs.connected and now - self.inputs.received_at <= self.stale_after
         frame = self.inputs.latest

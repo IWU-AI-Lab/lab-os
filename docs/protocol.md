@@ -6,7 +6,9 @@ Every message has a `type`. Unknown or malformed messages are ignored (logged), 
 
 ## Connection
 - `ws://<host>:8080/ws`: input clients (the XR page).
-- `ws://<host>:8080/ws?role=monitor`: watchers. They receive `status` but their messages are ignored, so a monitor can never drive the arm.
+- `ws://<host>:8080/ws?role=monitor`: watchers. They receive `status`; the only message they may send is `stop`, so a monitor can never drive the arm.
+
+**One driver at a time.** Several input pages may be connected (desktop tab, Quest, emulator), but only the page that **has control** moves the arm. A page takes control by sending `xr_input` while control is free. Other pages' `xr_input` is ignored (they get one `error` "another page has control"), and their `session_end` changes nothing. Control is **handed over, not grabbed**: it's freed only when the driving page sends `session_end` or disconnects (both freeze the arm, dead-man). `stop` works from every page.
 
 ## Client → server
 
@@ -43,9 +45,15 @@ Sent every XR frame (72–120 Hz on a Quest).
 - A missing hand key means that controller isn't present.
 
 ### `session_end`
-The XR session ended (user exited, headset removed). The server freezes the arm.
+The XR session ended (user exited, headset removed, Esc in desktop control). From the driving page: the server freezes the arm and frees control. From any other page: ignored.
 ```json
 {"type": "session_end"}
+```
+
+### `stop`
+The STOP button, from any page (input or monitor). Freezes the arm like A/X; the driver must release the clutch and press it again to continue. Control stays where it is.
+```json
+{"type": "stop"}
 ```
 
 ## Server → client
@@ -70,6 +78,7 @@ Broadcast to all clients at 10 Hz.
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
 - `joints`: what the driver currently reports (degrees).
+- `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
 
 ### `arm_command`, `arm_stop`, `arm_resume`
 Sent the moment the teleop loop calls the arm driver, one message per call, so viewers (3D view, later the Quest ghost arm) show **exactly what the driver received**.
@@ -87,6 +96,7 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 ### `error`
 ```json
 {"type": "error", "message": "replay running; live input disabled"}
+{"type": "error", "message": "another page has control"}
 ```
 
 ## Recording files (`.jsonl`)
