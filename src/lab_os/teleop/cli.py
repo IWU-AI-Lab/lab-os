@@ -1,4 +1,4 @@
-"""`uv run lab-os-teleop serve|replay` — the teleop program (fake arm, or `--arm xarm1`)."""
+"""`uv run lab-os-teleop serve|replay`: the teleop program (fake arm, or a real one via --arm)."""
 
 import argparse
 import asyncio
@@ -83,6 +83,10 @@ def _make_arm(name: str, venue) -> Arm:
         raise SystemExit(f"{name} is not active in venue {venue.name!r} (config/venues/)")
     if not venue.motion_allowed:
         raise SystemExit(f"venue {venue.name!r} doesn't allow motion")
+    if name == "so101-white":
+        from lab_os.robots.so101 import SO101Arm
+
+        return SO101Arm(name=name, allow_motion=True)
     from lab_os.robots.xarm import XArm
 
     return XArm(name=name, device_name=name, allow_motion=True)
@@ -146,8 +150,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--arm",
         default="fake",
-        choices=["fake", "fake-xarm1", "xarm1"],
-        help="which arm to drive: fake (SO-101), fake-xarm1 (software xArm), xarm1 (real)",
+        choices=["fake", "fake-xarm1", "xarm1", "so101-white"],
+        help="which arm to drive: fake (software SO-101), fake-xarm1 (software xArm), xarm1 or "
+        "so101-white (real; so101-white needs `uv sync --extra so101` and a calibration)",
     )
     parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
