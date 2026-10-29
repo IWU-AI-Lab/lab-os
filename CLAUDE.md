@@ -20,7 +20,7 @@ A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules
 
 ## Environment
 - lab-os has its **own uv environment** (`.venv/`, Python 3.12, uv-managed — never conda). `uv sync` to set up; `uv run …` to run.
-- When `so101-white` needs LeRobot, add it to **this** project (`uv add lerobot`), not to the shared conda env.
+- LeRobot for `so101-white` is the **optional extra `so101`** of this project (`uv sync --extra so101`), never the shared conda env. CI and other machines don't install it; import it lazily.
 - Refer to serial devices **only by `/dev/serial/by-id/…`** names. `ttyACM0/1` swap after reboots/re-plugging.
 
 ## Project rules
@@ -39,6 +39,7 @@ A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules
 ## Commands
 ```bash
 uv sync                      # install / update the environment
+uv sync --extra so101        # same + LeRobot/PyTorch (~5 GB) for the SO-101s; plain `uv sync` removes them
 uv run pytest                # tests (no hardware needed)
 uv run ruff check --fix .    # lint
 uv run ruff format .         # format
