@@ -134,3 +134,8 @@ def test_rolling_the_hand_counter_clockwise_rolls_the_gripper_the_same_way_as_se
     _, _, joints = drive(ccw)
     # Seen from behind (looking along the gripper), counter-clockwise = −wrist_roll.
     assert joints["wrist_roll"] == pytest.approx(-20.0, abs=0.5)
+
+
+def test_trigger_released_opens_the_gripper_all_the_way():
+    _, _, joints = drive(hand())  # trigger 0
+    assert joints["gripper"] == pytest.approx(LIMITS["gripper"].high - 3.0)  # open end − margin

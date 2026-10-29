@@ -134,7 +134,11 @@ def test_regrab_after_limit_does_not_jump():
 def test_engaging_outside_soft_range_does_not_move():
     m = ClutchMapper()
     near_limit = JOINTS | {"shoulder_pan": 99.5}  # inside the hard limit, outside the margin
-    assert m.step(ctrl(grip=1.0), near_limit, DT, 1.0, LIMITS) == near_limit
+    out = m.step(ctrl(grip=1.0), near_limit, DT, 1.0, LIMITS)
+    # The gripper follows the trigger (absolute), so only the other joints must stay put.
+    assert {j: v for j, v in out.items() if j != "gripper"} == {
+        j: v for j, v in near_limit.items() if j != "gripper"
+    }
 
 
 def run_l(mapper, c, joints, ticks):

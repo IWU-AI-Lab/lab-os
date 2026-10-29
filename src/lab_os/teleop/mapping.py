@@ -45,6 +45,8 @@ class MappingConfig:
     # see it) is −wrist_roll. Found flipped by the builder on the Quest, 2026-10-29.
     ik_roll_sign: float = -1.0
     max_deg_per_s: float = 90.0  # ramp limit at speed_scale = 1
+    # Trigger released = fully open, pressed = closed: the ends of the arm's gripper limit (inside
+    # the soft margin). These two are only used for an arm without a gripper limit.
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
     limit_margin_deg: float = 3.0  # stay this far inside each joint limit
@@ -185,6 +187,12 @@ class ClutchMapper:
             self._commanded[joint] = current + delta
         return {j: self._commanded[j] for j in desired}
 
+    def _gripper(self, trigger: float) -> float:
+        """Trigger 0 → the gripper's open end, 1 → its closed end (0 = closed, + = open)."""
+        cfg = self.config
+        lo, hi = self._bounds.get("gripper", (cfg.gripper_closed, cfg.gripper_open))
+        return hi + (lo - hi) * trigger
+
     def _unwrapped(self, rel: Quat, axis: int) -> float:
         """Twist about `axis` since the anchor, continuous across ±180° (no sudden full turn)."""
         prev = self._twist.get(axis, 0.0)
@@ -228,9 +236,7 @@ class ClutchMapper:
             desired["wrist_roll"] = a.get("wrist_roll", 0.0) + cfg.ik_roll_sign * self._unwrapped(
                 rel, 2
             )
-            desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * (
-                c.trigger
-            )
+            desired["gripper"] = self._gripper(c.trigger)
             return {j: v for j, v in desired.items() if j in a}
         motion = {
             "shoulder_pan": dx * cfg.deg_per_m,
@@ -240,5 +246,5 @@ class ClutchMapper:
             "wrist_roll": self._unwrapped(rel, 2),
         }
         desired = {j: a.get(j, 0.0) + cfg.signs.get(j, 1.0) * m for j, m in motion.items()}
-        desired["gripper"] = cfg.gripper_open + (cfg.gripper_closed - cfg.gripper_open) * c.trigger
+        desired["gripper"] = self._gripper(c.trigger)
         return {j: v for j, v in desired.items() if j in a}
