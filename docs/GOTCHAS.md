@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-10-29 — so101-white's board looks almost like green's
+**What:** The white follower's controller board is the same chip (`1a86:55d3`, "USB Single Serial") with serial `5B41532183`; green's are `…1599` and `…3501`. All start with `5B4153`.
+**Rule:** always compare the last digits; use the full `/dev/serial/by-id/` path from `config/devices.yaml`. Green and its cameras were unplugged by the builder (who also owns the green project) for the white setup.
+
 ### 2026-10-29 — xArm: the shoulder→elbow servo cable snapped during hand calibration
 **What:** While the builder moved the joints to their ends by hand (servos limp) for `calibrate`, the cable from the shoulder servo to the elbow servo snapped (a spare was available). Joints pushed to their extremes stretch or twist the servo cables; the calibration also came out at (or past) the full servo range for base, elbow and wrist roll. Earlier teleop had driven base and wrist roll to ±116°.
 **Fix:** calibrate only to where the cables are still slack, not the mechanical end; for teleop, keep base, shoulder, elbow and wrist roll well inside the measured range (edit `calibration/xarm1/limits.yaml`). Check cable routing before long sessions.
