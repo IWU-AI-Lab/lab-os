@@ -59,6 +59,14 @@ In the project's `.claude/settings.json` (permission rules):
 
 ---
 
+## Branches and folders (2026-10-28)
+- **`main` always runs.** Every change reaches it through a pull request (PR).
+- **One branch per coding task** (e.g. `xarm-driver`), merged to `main` when tested, then deleted. GitHub can delete merged branches automatically: repo **Settings → General → "Automatically delete head branches"**.
+- **One folder per Claude session**, so sessions can't switch branches under each other (git worktrees: separate folders, same repo):
+  - `~/lab-os` — coding sessions (the task branch).
+  - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR now and then (after the current task branch merges, since it was started from `xarm-driver`).
+- Create another folder when needed: `git worktree add ../lab-os-<name> -b <branch>`; list them: `git worktree list`.
+
 ## Working away from the lab
 **Most of the system is plain software and can be built anywhere** — your own laptop at home.
 

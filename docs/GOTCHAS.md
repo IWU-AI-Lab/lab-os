@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-10-28 — Two Claude sessions in one folder switch branches under each other
+**What:** A coding session and a planning session both worked in `lab-os/`. The coding session switched the folder to `xarm-driver`, so the planning session's doc commits landed there instead of on its own branch (nothing lost, but confusing).
+**Fix:** One folder per session, via **git worktrees** (several folders on the same repo, each on its own branch). Coding: `lab-os/`. Planning: `lab-os-planning/` on branch `planning`. See `dev-setup.md` → "Branches and folders".
+
 ### 2026-10-28 — The two training cameras have the same serial number
 **What:** Both USB cameras (Innomaker U20CAM-1080p, USB ID `0c45:6366`, `lsusb` calls them "Microdia Webcam Vitade AF") belong to the so101-green training setup. Both report serial `SN0001`, so a serial number can't tell them apart. On the lab desktop they sit in USB sockets `1-7` and `1-8` (each shows up as two `/dev/video*` entries).
 **Rule:** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Mark them off limits either by USB socket path or by blocking that camera model in lab-os entirely (simpler; revisit if lab-os ever gets the same model). Identified from `/sys` only, without opening them.
