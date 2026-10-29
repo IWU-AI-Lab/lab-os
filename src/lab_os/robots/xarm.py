@@ -157,7 +157,7 @@ class XArm:
     limits: dict[str, JointLimit] | None = None  # None = load_limits(name)
     device_name: str = "xarm1"  # key in config/devices.yaml
     allow_motion: bool = False
-    read_timeout_s: float = 0.1
+    read_timeout_s: float = 0.15  # replies take up to ~120 ms (2026-10-29)
     # Motion tuning (worker thread). lead_s: how far ahead a moving joint aims, also the move
     # duration. HACK: values from the first tests, not optimized.
     lead_s: float = 0.3
@@ -185,6 +185,9 @@ class XArm:
     _last_send_t: float = field(default=-1e9, repr=False)
     _last_read_t: float = field(default=-1e9, repr=False)
     measured: dict[str, float] = field(default_factory=dict)  # latest real reading (degrees)
+    # The limits, widened to include where the arm really is: if it starts outside them (moved by
+    # hand, older limits), goals are clamped to here instead of snapping it back into range.
+    _allowed: dict[str, JointLimit] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         if self.limits is None:
@@ -266,7 +269,7 @@ class XArm:
         with self._lock:
             if self.stopped:
                 return
-            self._goal.update({j: self.limits[j].clamp(v) for j, v in targets.items()})
+            self._goal.update({j: self._allow(j).clamp(v) for j, v in targets.items()})
             self._goal_seq += 1
             self._speed = min(max(speed_scale, 0.0), 1.0)
 
@@ -274,6 +277,18 @@ class XArm:
         """The goal as accepted (after clamping), for viewers; read_joints() is the estimate."""
         with self._lock:
             return self._estimate() | dict(self._goal)
+
+    def _allow(self, joint: str) -> JointLimit:
+        return self._allowed.get(joint) or self.limits[joint]
+
+    def _widen_to(self, measured: dict[str, float]) -> None:
+        """Recompute the allowed ranges from the limits and a real reading (caller holds _lock)."""
+        self._allowed = {
+            j: JointLimit(
+                min(lim.low, measured.get(j, lim.low)), max(lim.high, measured.get(j, lim.high))
+            )
+            for j, lim in self.limits.items()
+        }
 
     def _estimate(self) -> dict[str, float]:
         """Where each servo should be now (caller holds _lock)."""
@@ -344,7 +359,7 @@ class XArm:
         aim = {}
         for j, g in goal.items():
             lead = self._vel.get(j, 0.0) * self.lead_s
-            a = self.limits[j].clamp(g + lead)
+            a = self._allow(j).clamp(g + lead)
             now_j = est.get(j, g)
             aim[j] = now_j + min(max(a - now_j, -cap), cap)
         moving = any(abs(aim[j] - est.get(j, aim[j])) > 0.2 for j in aim)
@@ -377,6 +392,7 @@ class XArm:
                 )
         with self._lock:  # the reading is the truth now
             self._seg = {j: _Segment(m, m, now, 0.0) for j, m in measured.items()}
+            self._widen_to(measured)
             self._goal = {j: v for j, v in self._goal.items() if abs(v - measured[j]) > 0.5}
 
     def _init_estimate(self) -> None:
@@ -391,6 +407,7 @@ class XArm:
         self.measured = measured
         now = time.monotonic()
         self._seg = {j: _Segment(m, m, now, 0.0) for j, m in measured.items()}
+        self._widen_to(measured)
 
     # ---- low level ----------------------------------------------------------------------------
     def _write_move(self, targets: dict[str, float], duration_ms: int) -> None:

@@ -294,3 +294,17 @@ def test_move_encoding_and_clamp():
     arm.send_move({"gripper": 500.0}, 300)  # clamped to 90° = fully open
     duration, servos = moves(fake)[-1]
     assert (duration, servos) == (300, {1: xarm.GRIPPER_OPEN})
+
+
+def test_starting_outside_the_limits_does_not_snap_back():
+    # Base found at raw 14 = +116.6° (driven there with older, wider limits); default limit is 72°.
+    arm, fake = motion_arm(positions=dict.fromkeys(xarm.SERVO_IDS.values(), 500) | {6: 14})
+    start = arm.read_joints()["shoulder_pan"]
+    assert start > 100
+    arm.move_joints({"shoulder_pan": start - 1.0}, 1.0)  # jog 1° back toward the middle
+    arm._tick(T())
+    aimed = xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6])
+    assert aimed == pytest.approx(start - 1.0, abs=0.3)  # not clamped to 72°
+    arm.move_joints({"shoulder_pan": start + 5.0}, 1.0)  # but never further out than it is
+    arm._tick(T(0.02))
+    assert xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6]) <= start + 0.3
