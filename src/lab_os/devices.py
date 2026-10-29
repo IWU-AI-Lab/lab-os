@@ -31,6 +31,15 @@ class UsbId:
     product: str = ""
     serial: str = ""
 
+    def matches(self, info: dict) -> bool:
+        """Does a hidapi/pyserial-style info dict (vendor_id, product_id, ...) fit this entry?"""
+        return (
+            info.get("vendor_id") == self.vendor_id
+            and self.product_id in (None, info.get("product_id"))
+            and self.product in ("", info.get("product_string"))
+            and self.serial in ("", info.get("serial_number"))
+        )
+
 
 @dataclass(frozen=True)
 class Device:
@@ -52,6 +61,24 @@ class Registry:
     def off_limits_serials(self) -> set[str]:
         """USB serial numbers of off-limits arms: the same on every OS, unlike port names."""
         return {u.serial for d in self.devices.values() if d.off_limits for u in d.usb if u.serial}
+
+    def off_limits_owner(self, info: dict) -> str | None:
+        """Name of the off-limits device this USB device belongs to, or None. An entry without a
+        serial blocks every device of that model (e.g. the training cameras share a serial)."""
+        for d in self.devices.values():
+            if d.off_limits and any(u.matches(info) for u in d.usb):
+                return d.name
+        return None
+
+
+def check_usb_allowed(info: dict, registry: Registry | None = None) -> None:
+    """Raise PortNotAllowed if this enumerated USB device belongs to an off-limits device."""
+    registry = registry or load_registry()
+    if (info.get("serial_number") or "") in registry.off_limits_serials():
+        raise PortNotAllowed(f"USB device {info.get('path')!r} has an off-limits serial number.")
+    owner = registry.off_limits_owner(info)
+    if owner:
+        raise PortNotAllowed(f"USB device {info.get('path')!r} belongs to {owner}. Never open it.")
 
 
 def load_registry(path: Path | None = None) -> Registry:
@@ -132,12 +159,10 @@ def find_usb_device(
     if len(device.usb) != 1 or device.usb[0].product_id is None:
         raise LookupError(f"{name} needs exactly one usb entry with vendor_id and product_id")
     spec = device.usb[0]
-    forbidden = registry.off_limits_serials()
     found = []
     for info in enumerate_fn(spec.vendor_id, spec.product_id):
+        check_usb_allowed(info, registry)
         serial = info.get("serial_number") or ""
-        if serial in forbidden:
-            raise PortNotAllowed(f"{name}: matching device has an off-limits serial ({serial})")
         if spec.serial and serial != spec.serial:
             continue
         if spec.product and info.get("product_string") != spec.product:

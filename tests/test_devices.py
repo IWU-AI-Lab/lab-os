@@ -38,3 +38,22 @@ def test_other_by_id_port_allowed():
 def test_unconfigured_device_has_no_port():
     with pytest.raises(LookupError):
         serial_port("so101-white")
+
+
+CAMERA = {"vendor_id": 0x0C45, "product_id": 0x6366, "serial_number": "SN0001", "path": b"x"}
+
+
+def test_training_cameras_are_blocked_by_model():
+    from lab_os.devices import check_usb_allowed
+
+    with pytest.raises(PortNotAllowed):
+        check_usb_allowed(CAMERA)
+    with pytest.raises(PortNotAllowed):
+        check_usb_allowed(CAMERA | {"serial_number": "ANY-OTHER"})  # same model, any serial
+
+
+def test_other_usb_devices_are_allowed():
+    from lab_os.devices import check_usb_allowed
+
+    check_usb_allowed({"vendor_id": 0x0483, "product_id": 0x5750, "serial_number": "X"})
+    check_usb_allowed(CAMERA | {"product_id": 0x1234})  # same vendor, other model

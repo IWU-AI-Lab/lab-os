@@ -18,6 +18,16 @@ devices:
       - {vendor_id: 0x1a86, serial: "5B41531599"}
       - {vendor_id: 0x1a86, serial: "5B41533501"}
 
+  training-cameras:
+    kind: camera
+    off_limits: true
+    notes: >-
+      The two USB cameras of so101-green's training setup (Innomaker U20CAM-1080p, lsusb
+      "Microdia Webcam Vitade AF"). Both report serial SN0001, so the whole model is blocked.
+      A camera can only be used by one program; opening it can break a training recording.
+    usb:
+      - {vendor_id: 0x0c45, product_id: 0x6366}
+
   so101-white:
     kind: so101
     notes: Follower. Polished teleop demo + second act. Fill in the port once built.
