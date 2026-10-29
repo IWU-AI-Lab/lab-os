@@ -15,7 +15,7 @@ from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import ClutchMapper
-from lab_os.teleop.messages import parse_frame
+from lab_os.teleop.messages import parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
 from lab_os.venues import load_venue
@@ -126,6 +126,8 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
     async for msg in replay(path, speed=speed, loop=repeat):
         if msg.get("type") == "xr_input":
             loop.inputs.update(parse_frame(msg))
+        elif msg.get("type") == "joint_input":
+            loop.inputs.update(parse_joint_frame(msg))
         elif msg.get("type") == "session_end":
             loop.inputs.disconnect()
     loop.inputs.disconnect()

@@ -63,6 +63,23 @@ class MappingConfig:
 RELATIVE_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
 
 
+def soft_bounds(
+    limits: dict[str, JointLimit], joints: dict[str, float], margin: float
+) -> dict[str, tuple[float, float]]:
+    """Limits minus `margin`, widened to include where the arm already is (so engaging never
+    moves it), but never beyond the hard limits."""
+    bounds = {}
+    for joint, lim in limits.items():
+        lo, hi = lim.low + margin, lim.high - margin
+        if lo > hi:
+            lo = hi = (lim.low + lim.high) / 2
+        now = joints.get(joint)
+        if now is not None:
+            lo, hi = min(lo, now), max(hi, now)
+        bounds[joint] = (max(lo, lim.low), min(hi, lim.high))
+    return bounds
+
+
 def _quat_conj(q: Quat) -> Quat:
     x, y, z, w = q
     return (-x, -y, -z, w)
@@ -138,7 +155,7 @@ class ClutchMapper:
             self._twist = {0: 0.0, 2: 0.0}
             self._anchor_joints = dict(arm_joints)
             self._commanded = dict(arm_joints)
-            self._bounds = self._soft_bounds(limits or {}, arm_joints)
+            self._bounds = soft_bounds(limits or {}, arm_joints, cfg.limit_margin_deg)
             if self.kinematics:
                 self._anchor_tip, self._anchor_angle = self.kinematics.fk(arm_joints)
                 self._ik_seed = dict(arm_joints)
@@ -162,23 +179,6 @@ class ClutchMapper:
             delta = min(max(target - current, -max_step), max_step)
             self._commanded[joint] = current + delta
         return {j: self._commanded[j] for j in desired}
-
-    def _soft_bounds(
-        self, limits: dict[str, JointLimit], joints: dict[str, float]
-    ) -> dict[str, tuple[float, float]]:
-        """Limits minus the margin, widened to include where the arm already is (so engaging
-        never moves it), but never beyond the hard limits."""
-        m = self.config.limit_margin_deg
-        bounds = {}
-        for joint, lim in limits.items():
-            lo, hi = lim.low + m, lim.high - m
-            if lo > hi:
-                lo = hi = (lim.low + lim.high) / 2
-            now = joints.get(joint)
-            if now is not None:
-                lo, hi = min(lo, now), max(hi, now)
-            bounds[joint] = (max(lo, lim.low), min(hi, lim.high))
-        return bounds
 
     def _unwrapped(self, rel: Quat, axis: int) -> float:
         """Twist about `axis` since the anchor, continuous across ±180° (no sudden full turn)."""

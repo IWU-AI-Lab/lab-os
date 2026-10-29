@@ -190,3 +190,15 @@ async def test_stop_works_from_a_monitor(aiohttp_client):
     assert await wait_for(lambda: loop.mapper.engaged)
     await monitor.send_json({"type": "stop"})
     assert await wait_for(lambda: loop.frozen and loop.mapper.needs_release)
+
+
+async def test_joint_input_follows_the_same_control_rules(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    a = await client.ws_connect("/ws")
+    b = await client.ws_connect("/ws")
+    await a.send_json({"type": "joint_input", "t": 0, "rates": {"gripper": 0.5}})
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    await b.send_json({"type": "joint_input", "t": 0, "rates": {"gripper": -0.5}})
+    assert (await next_of(b, "error"))["message"] == "another page has control"
+    assert loop.inputs.latest.rates == {"gripper": 0.5}

@@ -21,7 +21,7 @@ from aiohttp import WSMsgType, web
 
 from lab_os import REPO_ROOT
 from lab_os.teleop.loop import TeleopLoop
-from lab_os.teleop.messages import parse_frame
+from lab_os.teleop.messages import parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder
 from lab_os.theme import load_theme
 
@@ -86,8 +86,8 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
         return True
     if not is_input:
         return True  # monitors can only stop
-    if kind == "xr_input":
-        frame = parse_frame(raw)
+    if kind in ("xr_input", "joint_input"):
+        frame = parse_frame(raw) if kind == "xr_input" else parse_joint_frame(raw)
         control = app[CONTROL]
         if control.get("ws") is None:
             control["ws"] = ws

@@ -1,4 +1,9 @@
-"""The fixed-rate teleop loop: latest input → mapper → arm, plus the dead-man rule."""
+"""The fixed-rate teleop loop: latest input → mapper → arm, plus the dead-man rule.
+
+Pose input (XRFrame: Quest, glove, ...) goes through the ClutchMapper (IK when the arm has
+kinematics); joint input (JointFrame: keyboard/mouse jogging) goes through the JogMapper. Switching
+between the two resets both, so nothing carries over.
+"""
 
 import asyncio
 import logging
@@ -7,8 +12,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from lab_os.robots.base import Arm
+from lab_os.teleop.jog import JogMapper
 from lab_os.teleop.mapping import ClutchMapper
-from lab_os.teleop.messages import XRFrame
+from lab_os.teleop.messages import JointFrame, XRFrame
 
 log = logging.getLogger(__name__)
 
@@ -17,11 +23,11 @@ log = logging.getLogger(__name__)
 class InputState:
     """Written by the WebSocket handler (or a replay), read by the loop."""
 
-    latest: XRFrame | None = None
+    latest: XRFrame | JointFrame | None = None
     received_at: float = 0.0  # monotonic seconds
     connected: bool = False
 
-    def update(self, frame: XRFrame, now: float | None = None) -> None:
+    def update(self, frame: XRFrame | JointFrame, now: float | None = None) -> None:
         self.latest = frame
         self.received_at = time.monotonic() if now is None else now
         self.connected = True
@@ -35,6 +41,7 @@ class TeleopLoop:
     arm: Arm
     inputs: InputState
     mapper: ClutchMapper = field(default_factory=ClutchMapper)
+    jog: JogMapper = field(default_factory=JogMapper)
     speed_scale: float = 0.5
     rate_hz: float = 50.0
     stale_after: float = 0.25  # seconds without input → freeze (dead-man)
@@ -44,6 +51,7 @@ class TeleopLoop:
     on_command: Callable[[dict], None] | None = None
     command_seq: int = 0
     last_command: dict | None = None
+    input_kind: str | None = None  # "pose" / "joints": which mapper the latest input used
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -59,6 +67,7 @@ class TeleopLoop:
             self.frozen = True
             self._emit({"type": "arm_stop"})
         self.mapper.reset(require_release=True)
+        self.jog.reset(require_release=True)
 
     def stop(self) -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
@@ -67,15 +76,25 @@ class TeleopLoop:
     def step(self, now: float, dt: float) -> None:
         live = self.inputs.connected and now - self.inputs.received_at <= self.stale_after
         frame = self.inputs.latest
-        stop_pressed = frame is not None and any(c.buttons.get("a") for c in frame.hands.values())
+        kind = "joints" if isinstance(frame, JointFrame) else "pose"
+        stop_pressed = kind == "pose" and any(c.buttons.get("a") for c in frame.hands.values())
         if not live or stop_pressed:
             self._freeze()
             return
+        if kind != self.input_kind:
+            if self.input_kind is not None:
+                self._freeze()  # another kind of input took over: start clean
+            self.input_kind = kind
 
-        controller = frame.hands.get(self.mapper.config.hand) if frame else None
-        targets = self.mapper.step(
-            controller, self.arm.read_joints(), dt, self.speed_scale, self.arm.limits
-        )
+        if kind == "joints":
+            targets = self.jog.step(
+                frame.rates, self.arm.read_joints(), dt, self.speed_scale, self.arm.limits
+            )
+        else:
+            controller = frame.hands.get(self.mapper.config.hand)
+            targets = self.mapper.step(
+                controller, self.arm.read_joints(), dt, self.speed_scale, self.arm.limits
+            )
         if targets is None:
             return
         if self.frozen:
@@ -100,8 +119,9 @@ class TeleopLoop:
             "type": "status",
             "connected": self.inputs.connected,
             "frozen": self.frozen,
-            "clutch": self.mapper.engaged,
-            "needs_release": self.mapper.needs_release,
+            "clutch": self.mapper.engaged or self.jog.active,
+            "needs_release": self.mapper.needs_release or self.jog.needs_release,
+            "input_kind": self.input_kind,
             "speed_scale": self.speed_scale,
             "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
             "joints": joints,
