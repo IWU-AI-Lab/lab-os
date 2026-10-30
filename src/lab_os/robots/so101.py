@@ -211,11 +211,36 @@ class SO101Arm:
         return self._robot
 
 
+def watch(arm: SO101Arm, hz: float = 10.0) -> None:
+    """Print the joints live until Ctrl+C (move the limp arm by hand to check directions)."""
+    print("watching (read-only): move a joint by hand; Ctrl+C to stop")
+    print("  ".join(f"{j[:13]:>13}" for j in arm.joint_names))
+    try:
+        while True:
+            try:
+                joints = arm.read_measured()
+                sys.stdout.write("\r" + "  ".join(f"{joints[j]:+13.1f}" for j in arm.joint_names))
+                sys.stdout.flush()
+            except (ConnectionError, RuntimeError):
+                pass  # a dropped packet: the next reading comes in 1/hz s
+            time.sleep(1 / hz)
+    except KeyboardInterrupt:
+        print()
+
+
 def main() -> None:
-    """Read-only check: uv run --extra so101 python -m lab_os.robots.so101 [arm name]
-    (joint positions + reads/second; nothing is written to the motors)."""
-    arm = SO101Arm(name=sys.argv[1] if len(sys.argv) > 1 else "so101-white")
+    """Read-only check: uv run --extra so101 python -m lab_os.robots.so101 [--watch] [arm name]
+    (joint positions + reads/second, or --watch: live until Ctrl+C; nothing is written to the
+    motors)."""
+    args = [a for a in sys.argv[1:] if a != "--watch"]
+    arm = SO101Arm(name=args[0] if args else "so101-white")
     arm.connect()
+    if "--watch" in sys.argv:
+        try:
+            watch(arm)
+        finally:
+            arm.close()
+        return
     try:
         print("joints (deg):", {j: round(v, 1) for j, v in arm.read_measured().items()})
         print("limits (deg):", {j: (round(v.low), round(v.high)) for j, v in arm.limits.items()})

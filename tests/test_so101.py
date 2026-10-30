@@ -197,3 +197,19 @@ def test_green_is_refused_before_lerobot_is_touched():
 
     with pytest.raises(PortNotAllowed):
         SO101Arm(name="so101-green", make_robot=must_not_run).connect()
+
+
+def test_watch_only_reads(no_port_check, monkeypatch, capsys):
+    robot = FakeRobot(START)
+    arm = arm_with(robot)
+    arm.connect()
+    ticks = iter([None, KeyboardInterrupt])
+
+    def sleep(_):
+        if (t := next(ticks)) is not None:
+            raise t
+
+    monkeypatch.setattr(so101.time, "sleep", sleep)
+    so101.watch(arm)
+    assert robot.bus.writes == []
+    assert "+40.0" in capsys.readouterr().out  # elbow_flex
