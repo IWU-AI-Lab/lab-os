@@ -1,6 +1,6 @@
 # CLAUDE.md — lab-os
 
-Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the Quest → robot-arm teleop demo.
+Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the core (brain + plug-in interfaces). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
 
 ## Read first, every session
 1. `docs/current-focus.md` — what to work on now (and "Up next").
