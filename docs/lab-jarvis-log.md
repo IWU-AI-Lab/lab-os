@@ -199,6 +199,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ## Facts about the lab
 - **Usage pattern (2026-10-28):** the lab is usually empty; startup happens when the first person arrives to a closed lab. Robots are off before that (battery-powered ones must be switched off); all need a physical switch, except the SO-101s (no switch; wall power supply).
 - **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
+- **Equipment check (2026-10-30):** the lab has most of the demo kit (cables, adapters, extension cords; boxes + a trolley for transport). Also a **Kinect** (version to check) and a spare webcam (the two Innomaker cameras belong to the training project). **To buy:** USB-C power bank (router/field use); **stronger table clamps** (the SO-101s' thin ones are only just sufficient). **Later, not urgent:** better cameras for lab-os (second act). Router: see Network plan.
 - **Displays/wearables (2026-10-27):** 3 small (~7–9") Raspberry Pi touchscreens; a ~75" Newline touchscreen on wheels (standalone, runs Android); Google Glass Explorer Edition (boots, voice commands work).
 - **Computers:** 6 RTX 5070 desktops (12 GB GPU memory, to confirm; 2 Ubuntu → brain + backup, 4 Windows 11); 5 Jetson Orin Nano; several Pi 5s. Remote Control from home works.
 - **Network:** lab Wi-Fi with MAC registration via campus IT; wall Ethernet port works.
@@ -210,7 +211,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ---
 
 ## Open questions
-- **Second act:** ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
+- **Second act:** can the Kinect's depth camera help "look, then reach" (3D position directly, less camera-to-table calibration)? Which Kinect version, and does it run on our OS? ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
 - **License/ownership:** what does the professor/university allow?
 - **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.
 - **Teleop spikes:** `xarm1` speed/delay; Quest WebXR data, overlays, USB forwarding (Quest developer mode / Meta account access); IK library; `so101-white` calibration; end-to-end delay.
