@@ -25,13 +25,15 @@ SO101_LIMITS_RAD = {
 }
 
 
-# Where the fake arm starts: upper arm up (SO-101 zero), elbow bent 60° so the forearm angles down
-# toward the table and "reach forward" has room to reach.
+# Where the fake arm starts: a working pose with room to move every way (the IK teleop drives
+# the gripper from here). URDF zero is an "L": upper arm up, forearm and gripper forward; this
+# leans the upper arm back a little, the forearm down and the gripper tilted toward the table,
+# fingertips ~26 cm out and 5 cm up.
 SO101_HOME = {
     "shoulder_pan": 0.0,
-    "shoulder_lift": 0.0,
-    "elbow_flex": 60.0,
-    "wrist_flex": 0.0,
+    "shoulder_lift": -20.0,
+    "elbow_flex": 40.0,
+    "wrist_flex": 40.0,
     "wrist_roll": 0.0,
     "gripper": 30.0,
 }

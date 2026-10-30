@@ -1,68 +1,21 @@
-"""Hand motion must move the SO-101's gripper the same way, checked with forward kinematics on the
-real URDF (models/so101). Guards the mapping's joint signs."""
+"""Joint-space fallback: hand motion must move the SO-101's gripper the same way, checked with
+forward kinematics on the real URDF (models/so101). Guards the mapping's joint signs."""
 
 import math
-import xml.etree.ElementTree as ET
 
 import pytest
 
-from lab_os import REPO_ROOT
+from lab_os.kinematics import so101_kinematics
 from lab_os.teleop.mapping import ClutchMapper
 from lab_os.teleop.messages import ControllerState
-
-URDF = REPO_ROOT / "models/so101/so101_new_calib.urdf"
-
-
-def _mat(rpy):
-    r, p, y = rpy
-    cr, sr, cp, sp = math.cos(r), math.sin(r), math.cos(p), math.sin(p)
-    cy, sy = math.cos(y), math.sin(y)
-    return [
-        [cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr],
-        [sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr],
-        [-sp, cp * sr, cp * cr],
-    ]
-
-
-def _axis(ax, a):
-    x, y, z = ax
-    c, s, t = math.cos(a), math.sin(a), 1 - math.cos(a)
-    return [
-        [t * x * x + c, t * x * y - s * z, t * x * z + s * y],
-        [t * x * y + s * z, t * y * y + c, t * y * z - s * x],
-        [t * x * z - s * y, t * y * z + s * x, t * z * z + c],
-    ]
-
-
-def _mm(a, b):
-    return [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
-
-
-def _mv(a, v):
-    return [sum(a[i][k] * v[k] for k in range(3)) for i in range(3)]
 
 
 def gripper_tip(joints_deg: dict[str, float]) -> list[float]:
     """Position (m, Z up, arm faces +x) of gripper_frame_link for the given joint angles."""
-    root = ET.parse(URDF).getroot()
-    by_child = {j.find("child").get("link"): j for j in root.findall("joint")}
-    chain, link = [], "gripper_frame_link"
-    while link in by_child:
-        chain.append(by_child[link])
-        link = by_child[link].find("parent").get("link")
-    rot, pos = [[1, 0, 0], [0, 1, 0], [0, 0, 1]], [0.0, 0.0, 0.0]
-    for j in reversed(chain):
-        o = j.find("origin")
-        xyz = [float(v) for v in o.get("xyz").split()]
-        pos = [p + d for p, d in zip(pos, _mv(rot, xyz), strict=True)]
-        rot = _mm(rot, _mat([float(v) for v in o.get("rpy").split()]))
-        if j.get("type") == "revolute":
-            ax = [float(v) for v in j.find("axis").get("xyz").split()]
-            rot = _mm(rot, _axis(ax, math.radians(joints_deg.get(j.get("name"), 0.0))))
-    return pos
+    return list(so101_kinematics().fk(joints_deg)[0])
 
 
-START = {  # a typical working pose: upper arm level, forearm angled down toward the table
+START = {  # a typical working pose: upper arm up, forearm angled down toward the table
     "shoulder_pan": 0.0,
     "shoulder_lift": 0.0,
     "elbow_flex": 60.0,

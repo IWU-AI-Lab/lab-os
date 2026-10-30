@@ -6,21 +6,31 @@ Joints use the shared names and degrees. The IK solves shoulder_pan, shoulder_li
 wrist_flex for a gripper position plus a "tool angle" (the gripper's tilt from vertical in the
 arm's plane, + = forward); wrist_roll and the gripper are passed through unchanged.
 
-Only the xArm 1S is modelled so far (from the same dimensions as web/arm/arm-model.js). The SO-101
-needs a URDF-based model (models/so101) with the same two methods.
+The xArm 1S is modelled by hand (same dimensions as web/arm/arm-model.js); the SO-101 straight from
+its URDF (models/so101), whose joint names are already the shared ones.
 """
 
+import functools
 import math
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
+from lab_os import REPO_ROOT
 from lab_os.robots.base import JointLimit
 
 Vec3 = tuple[float, float, float]
+Mat3 = tuple[Vec3, Vec3, Vec3]
 IK_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex")
+SO101_URDF = REPO_ROOT / "models/so101/so101_new_calib.urdf"
 
 
 class Kinematics(Protocol):
+    # wrist_roll direction for a hand roll that is counter-clockwise as the operator sees it
+    # (standing behind the arm, looking along the gripper). Differs per arm (docs/GOTCHAS.md).
+    roll_sign: float
+
     def fk(self, joints: dict[str, float]) -> tuple[Vec3, float]:
         """Gripper point (m) and tool angle (degrees from vertical, + = forward)."""
         ...
@@ -38,6 +48,9 @@ class XArmKinematics:
     upper: float = 0.101  # shoulder → elbow
     fore: float = 0.095  # elbow → wrist_flex axis
     tool: float = 0.145  # wrist_flex axis → between the fingers (roll 45 + pivot 50 + 50 mm)
+    # +wrist_roll is counter-clockwise seen from the gripper tip, so the operator behind it sees
+    # it clockwise. Found flipped by the builder on the Quest, 2026-10-29.
+    roll_sign: float = -1.0
 
     def fk(self, joints: dict[str, float]) -> tuple[Vec3, float]:
         pan = math.radians(joints.get("shoulder_pan", 0.0))
@@ -55,12 +68,121 @@ class XArmKinematics:
         return (r * math.cos(pan), -r * math.sin(pan), z), math.degrees(a3)
 
 
-KINEMATICS: dict[str, Kinematics] = {"xarm1s": XArmKinematics()}
+# ---- URDF chains (SO-101) ----------------------------------------------------------------------
+def _rpy(r: float, p: float, y: float) -> Mat3:
+    cr, sr, cp, sp, cy, sy = (
+        math.cos(r),
+        math.sin(r),
+        math.cos(p),
+        math.sin(p),
+        math.cos(y),
+        math.sin(y),
+    )
+    return (
+        (cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr),
+        (sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr),
+        (-sp, cp * sr, cp * cr),
+    )
+
+
+def _about(axis: Vec3, a: float) -> Mat3:
+    x, y, z = axis
+    c, s = math.cos(a), math.sin(a)
+    t = 1 - c
+    return (
+        (t * x * x + c, t * x * y - s * z, t * x * z + s * y),
+        (t * x * y + s * z, t * y * y + c, t * y * z - s * x),
+        (t * x * z - s * y, t * y * z + s * x, t * z * z + c),
+    )
+
+
+def _mm(a: Mat3, b: Mat3) -> Mat3:
+    (b0, b1, b2) = b
+    return tuple(tuple(r[0] * b0[j] + r[1] * b1[j] + r[2] * b2[j] for j in range(3)) for r in a)
+
+
+def _mv(a: Mat3, v: Vec3) -> Vec3:
+    return tuple(a[i][0] * v[0] + a[i][1] * v[1] + a[i][2] * v[2] for i in range(3))
+
+
+@dataclass(frozen=True)
+class UrdfJoint:
+    name: str
+    xyz: Vec3  # origin, in the parent link's frame
+    rot: Mat3  # origin rotation (from rpy)
+    axis: Vec3 | None  # None = fixed joint
+
+
+def load_chain(urdf: Path, tip: str) -> tuple[UrdfJoint, ...]:
+    """The joints from the URDF's root link down to link `tip`, in order."""
+    root = ET.parse(urdf).getroot()
+    by_child = {j.find("child").get("link"): j for j in root.findall("joint")}
+    chain, link = [], tip
+    while link in by_child:
+        j = by_child[link]
+        o = j.find("origin")
+        floats = lambda s: tuple(float(v) for v in s.split())  # noqa: E731
+        axis = floats(j.find("axis").get("xyz")) if j.get("type") == "revolute" else None
+        chain.append(
+            UrdfJoint(j.get("name"), floats(o.get("xyz")), _rpy(*floats(o.get("rpy"))), axis)
+        )
+        link = j.find("parent").get("link")
+    return tuple(reversed(chain))
+
+
+@dataclass(frozen=True)
+class UrdfKinematics:
+    """Forward kinematics from a URDF chain whose revolute joints use the shared names (degrees).
+    The tool angle is the tilt of the line from the `pivot` joint's axis to the tip: 0 = pointing
+    up, 90 = pointing forward (away from the base, in the direction shoulder_pan faces), 180 =
+    pointing down; range -90..270."""
+
+    chain: tuple[UrdfJoint, ...]
+    roll_sign: float = 1.0
+    pivot: str = "wrist_flex"
+
+    def frames(self, joints: dict[str, float]) -> dict[str, tuple[Vec3, Mat3]]:
+        """World position + rotation of every joint's frame (after its own rotation), and of
+        the tip under the key "tip"."""
+        rot: Mat3 = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0))
+        pos: Vec3 = (0.0, 0.0, 0.0)
+        out = {}
+        for j in self.chain:
+            pos = tuple(p + d for p, d in zip(pos, _mv(rot, j.xyz), strict=True))
+            rot = _mm(rot, j.rot)
+            if j.axis is not None:
+                rot = _mm(rot, _about(j.axis, math.radians(joints.get(j.name, 0.0))))
+            out[j.name] = (pos, rot)
+        out["tip"] = (pos, rot)
+        return out
+
+    def fk(self, joints: dict[str, float]) -> tuple[Vec3, float]:
+        f = self.frames(joints)
+        tip, pivot = f["tip"][0], f[self.pivot][0]
+        dx, dy, dz = (t - p for t, p in zip(tip, pivot, strict=True))
+        pan = math.radians(joints.get("shoulder_pan", 0.0))
+        forward = dx * math.cos(pan) - dy * math.sin(pan)  # +pan faces the arm's right (−y)
+        angle = math.degrees(math.atan2(forward, dz))
+        # Pointing down (180) is the usual grasp: keep the ±180 wrap away from it, at "pointing
+        # backward" (-90), which the arm can't do with the gripper near the table anyway.
+        return tip, angle + 360.0 if angle < -90.0 else angle
+
+
+@functools.cache
+def so101_kinematics() -> UrdfKinematics:
+    """SO-101 from models/so101 (tip = gripper_frame_link, between the fingertips). Its zero pose
+    is an "L": upper arm up, forearm and gripper forward (tool angle 90). +wrist_roll is clockwise
+    seen from above / counter-clockwise for the operator behind it: the opposite of the xArm."""
+    return UrdfKinematics(load_chain(SO101_URDF, "gripper_frame_link"), roll_sign=1.0)
+
+
+KINEMATICS = {"xarm1s": XArmKinematics, "so101": so101_kinematics}
 
 
 def kinematics_for(model: str) -> Kinematics | None:
     """The kinematics for an `Arm.model`, or None (teleop then falls back to joint space)."""
-    return KINEMATICS.get(model)
+    make = KINEMATICS.get(model)
+    return make() if make else None
 
 
 # Weight of the tool angle against position in the solver: 1 rad of tilt counts like 5 cm.

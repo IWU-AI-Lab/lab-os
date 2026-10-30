@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # One-command setup for lab-os on a fresh Linux machine. No sudo, no conda.
+# --so101: also install LeRobot (+ PyTorch, ~5 GB) for the SO-101 arms.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,7 +11,11 @@ if ! command -v uv >/dev/null; then
 fi
 
 echo "==> Creating the lab-os environment (.venv)"
-uv sync
+if [ "${1:-}" = "--so101" ]; then
+  uv sync --extra so101
+else
+  uv sync
+fi
 
 if ! id -nG | grep -qw dialout; then
   echo "!!  You're not in the 'dialout' group, so serial ports (arms) won't open."
