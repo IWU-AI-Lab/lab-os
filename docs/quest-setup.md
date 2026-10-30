@@ -1,6 +1,6 @@
 # Quest input: at home (no headset) and on the real Quest (USB)
 
-The teleop program serves a WebXR page and receives the controller data over a WebSocket. Everything currently drives the **fake arm**. Real arms come later and always need the builder's OK before motion.
+The teleop program serves a WebXR page and receives the controller data over a WebSocket. By default it drives the **fake arm**; real arms (`--arm xarm1`, `--arm so101-white`) always need the builder's OK before motion.
 
 ```bash
 uv run lab-os-teleop serve                         # XR page + live fake arm
@@ -58,6 +58,8 @@ uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl
 adb reverse tcp:8080 tcp:8080          # re-run after every re-plug
 ```
 In the headset: open **Quest Browser** → `http://localhost:8080` → **Enter AR (passthrough)**. Hold the grip and move the controller; the desktop terminal and `http://localhost:8080/monitor` (on the desktop) should follow.
+
+**Real SO-101:** `uv run --extra so101 lab-os-teleop --arm so101-white --speed 0.2 serve`, then the same `adb reverse` and page. The SO-101 is driven by IK (hand forward/left/up → gripper forward/left/up, controller tilt/roll → wrist). Close any desktop-control tab first (one page has control at a time). Ctrl+C turns torque off and the arm goes limp: hold it or park it low first.
 
 Troubleshooting:
 - Page doesn't load → `adb reverse --list` should show `tcp:8080 tcp:8080`; re-run it after re-plugging.
