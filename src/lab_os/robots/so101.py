@@ -25,12 +25,12 @@ from lab_os.robots.so101_setup import CALIBRATION_DIR, guarded_port
 
 log = logging.getLogger(__name__)
 
-# HACK: LeRobot degree -> shared-convention degree, assumed +1 everywhere because the URDF is made
-# for LeRobot's "new" calibration. Check each joint on the real arm (like the xArm, GOTCHAS
-# 2026-10-27) and flip what's wrong.
+# LeRobot degree -> shared-convention degree: +1 for every joint (the URDF is made for LeRobot's
+# "new" calibration). Checked by hand on so101-white 2026-10-30 (--watch).
 SIGNS = dict.fromkeys(SO101_JOINTS[:-1], 1.0)
-# HACK: LeRobot's gripper is 0..100 % of its calibrated range; assumed 0 % = closed and that
-# 1 % ≈ 1° (the URDF jaw opens to 100°). Check on the real arm.
+# LeRobot's gripper is 0..100 % of its calibrated range, 0 = closed (checked 2026-10-30).
+# so101-white's range is ~129° of jaw travel, so 1 % ≈ 1.3°; 1.0 is close enough (it only changes
+# the jaw angle in the 3D view).
 GRIPPER_DEG_PER_PCT = 1.0
 STEPS = 4096  # STS3215 positions per turn
 
