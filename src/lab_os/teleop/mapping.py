@@ -1,4 +1,4 @@
-"""Clutch-controlled mapping from a hand controller to arm joints (current-focus.md steps 3-4).
+"""Clutch-controlled mapping from a hand controller to arm joints (teleop focus steps 3-4).
 
 Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
 - **IK (hand space), step 4:** the gripper moves the way your hand moves: hand forward/left/up in

@@ -20,7 +20,7 @@ uv run pytest                                            # checks, no hardware n
 uv run lab-os-teleop serve                               # XR page + fake arm, live
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # no browser/headset
 ```
-Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/quest-setup.md`. Where the demo stands: `docs/current-focus.md`.
+Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/quest-setup.md`. Where the demo stands: `docs/archive/focus-2026-10-teleop-demo.md` (what's left: `docs/ideas.md` → "On hold").
 
 ## Repository map
 | Path | What |

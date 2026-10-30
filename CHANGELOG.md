@@ -2,6 +2,11 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-10-30 (tag `demo-2026-10-30`)
+- Teleop demo showable: `so101-white` driven from the real Quest's controllers through IK (`lab-os-teleop --arm so101-white --speed 0.2 serve`). Focus closed and archived (`docs/archive/`); leftovers on hold in `docs/ideas.md`; next focus: the JARVIS core.
+- SO-101: LeRobot as the optional extra `so101`; guarded motor setup / check / calibration (`python -m lab_os.robots.so101_setup`, files in `calibration/so101-white/`); driver `SO101Arm` (read-only by default, goals = present position before torque, speed cap); `--watch` read-only live joints; IK from the URDF in `models/so101`. Joint directions checked on the real arm.
+- (2026-10-25 – 2026-10-29, not itemized here: xArm driver over USB HID, desktop control modes, control handover + STOP on every page, xArm IK, first real-Quest session. See git log and `docs/archive/focus-2026-10-teleop-demo.md`.)
+
 ## 2026-10-24
 - Theme file seed: `config/theme.yaml` (design tokens), served as `/theme.json`; the 3D arm views (desktop + headset arm, markers, frozen tint, status-panel font) read their colors from it. Pages' CSS and the VR room are not themed yet (design phase).
 - Docs: `docs/ideas.md` is now the single source of truth for ideas (earlier lists moved in); architecture shapes to design toward + decisions in the log; "Up next" = troubleshooting suite; mood-board folder `docs/design/references/`.
