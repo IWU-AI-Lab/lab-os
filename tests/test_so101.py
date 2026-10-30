@@ -10,7 +10,7 @@ from lab_os.robots.base import Arm  # noqa: F401  (interface the driver follows)
 from lab_os.robots.fake import SO101_JOINTS, so101_limits
 from lab_os.robots.so101 import MotionDisabled, SO101Arm, calibrated_limits
 
-PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532183-if00"
+PORT = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00"
 
 
 @dataclass

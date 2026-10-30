@@ -6,7 +6,7 @@ from lab_os.devices import PortNotAllowed, load_registry
 from lab_os.robots import so101_setup as setup
 from lab_os.robots.so101_setup import MOTORS
 
-WHITE = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532183-if00"
+WHITE = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00"
 GREEN = "usb-1a86_USB_Single_Serial_5B41531599-if00"
 FRESH = (1_000_000, 1)  # a new STS3215: ID 1 at 1 Mbaud
 
@@ -82,8 +82,8 @@ def fake_sysfs(tmp_path, port, serial):
 
 def test_board_serial_matches_white(tmp_path):
     reg = load_registry()
-    sys_root = fake_sysfs(tmp_path, WHITE, "5B41532183")
-    assert setup.usb_serial_of(WHITE, sys_root) == "5B41532183"
+    sys_root = fake_sysfs(tmp_path, WHITE, "5B41532410")
+    assert setup.usb_serial_of(WHITE, sys_root) == "5B41532410"
     setup.check_board_serial(WHITE, reg.devices["so101-white"], reg, sys_root)
 
 

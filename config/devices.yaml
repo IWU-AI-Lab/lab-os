@@ -31,16 +31,18 @@ devices:
   so101-white:
     kind: so101
     notes: >-
-      Follower. Polished teleop demo + second act. Controller board identified 2026-10-29
-      (1a86:55d3, same chip as green's: compare the LAST digits of the serial).
+      Follower. Polished teleop demo + second act. Controller board 1a86:55d3, same chip as
+      green's: compare the LAST digits of the serial. Board swapped 2026-10-30 (was …2183).
     ports:
-      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532183-if00
+      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00
     usb:
-      - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "5B41532183"}
+      - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "5B41532410"}
 
   so101-white-leader:
     kind: so101-leader
-    notes: Leader arm for so101-white. Fill in the port once built.
+    notes: >-
+      Leader arm for so101-white. Fill in the port once built; the spare white board
+      5B41532183 (the follower's until 2026-10-30) is probably this one's.
     ports: []
 
   xarm1:

@@ -21,7 +21,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 **Fix:** Claude calls `~/.local/bin/uv`. In a normal terminal either works.
 
 ### 2026-10-29 — so101-white's board looks almost like green's
-**What:** The white follower's controller board is the same chip (`1a86:55d3`, "USB Single Serial") with serial `5B41532183`; green's are `…1599` and `…3501`. All start with `5B4153`.
+**What:** The white follower's controller board is the same chip (`1a86:55d3`, "USB Single Serial") with serial `5B41532410` (until 2026-10-30 it was `5B41532183`, now the spare/leader board: the two white boards are easy to swap by accident, and lab-os then refuses the port until devices.yaml is updated); green's are `…1599` and `…3501`. All start with `5B4153`.
 **Rule:** always compare the last digits; use the full `/dev/serial/by-id/` path from `config/devices.yaml`. Green and its cameras were unplugged by the builder (who also owns the green project) for the white setup.
 
 ### 2026-10-29 — xArm: the shoulder→elbow servo cable snapped during hand calibration
