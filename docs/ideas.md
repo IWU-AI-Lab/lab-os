@@ -21,10 +21,27 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
 - **A real-Quest recording as a test fixture** (`serve --record`, commit a short clip).
 - **Check:** in the XR emulator, Shift+WASD moving the arm while the clutch is *released* would be a bug.
 
+### Core plumbing (waits for the lab router)
+From the first draft of the core focus (2026-10-30); the builder chose the hub first. Build when the router is here (Milestone 1):
+- **Map what exists** → `docs/architecture.md`: the `Arm` protocol + drivers (fake, xArm, SO-101), device registry with off-limits devices, venue profiles, the WebSocket server with control handover + STOP, `docs/protocol.md`, the theme file; which slot each belongs to, what's still teleop-specific.
+- **Plug-in description:** name, slot, requirements (Python extra, OS, device in `devices.yaml`) and a read-only `check()` returning a short health report. Robot slot first.
+- **Roll call:** `lab-os roll-call` and in the hub: plugged in? requirements met? off limits? A table + a report file (seed of the troubleshooting suite). Missing robots are normal (decision 2026-10-28). **Read-only**: never moves anything, never opens an off-limits port or camera. Include the checks we already know (Quest plugged in, xArm answers); microphone, network, accounts later.
+- **Inputs as plug-ins:** Quest page, desktop control, replay picked in the page instead of command-line flags.
+- **Robots report in:** a stand-in "network robot" over a WebSocket on `localhost` first, then real ones over the router. **`xarm1` is the second robot through the core.**
+
 ### Troubleshooting suite
 Was "Up next" after teleop (decision 2026-10-24); the builder chose the core first (2026-10-30). Its roll call / health checks start in the core focus; the rest waits here: microphone (level meter, noise, record + play back), cameras (live view, "is it sending images?"), robots (live joints; a test wiggle only with the builder's OK), network (reachable? delay?), accounts (API keys present and working, credits), Quest connected. Each check writes a **report file** humans and agents can read. *Why:* the roll call will find problems, and the builder, a future maintainer or an AI agent need an easy way to diagnose them.
 
 ---
+
+## Recent ideas (2026-10-30)
+
+### Assistant pictures beyond the plain circle
+- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`current-focus.md` → "How it fits together"):
+  - **Orbs inspired by other assistants** (e.g. the feel of ChatGPT's voice-mode orb for a GPT persona, a Claude-feel one for a Claude persona). Our own designs, **no logos or brand assets**. A persona's look should match the model really behind it.
+  - **A 3D character in VRM format** (open format; the `three-vrm` library runs on the three.js we already vendor): blinking, breathing, mouth moving with the voice.
+- **Not Live2D** (the Neuro-sama look): its runtime isn't open source (license to check before vendoring), it needs a paid/licensed character model, and nobody here knows it. VRM gives a similar result with open tools.
+- **Plugs into:** persona `picture:` field; quality levels (characters drop to the plain circle at `minimal`).
 
 ## Recent ideas (2026-10-28)
 
@@ -43,6 +60,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** each device plug-in declares what extra readings it offers; the troubleshooting suite, startup status and HUD read them. Safety: reading sensors is fine; anything that powers or moves stays under the safety rules.
 
 ### Startup sequence ("systems coming online")
+- **In the focus now (2026-10-30):** the startup *animation* itself (`current-focus.md` steps 4–5: prototypes, then the real one, with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
 - **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
 - **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
@@ -79,13 +97,10 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Note:** slider control is the same page as phone teleop's touch mode (below). Build **one touch-control page** that adapts to phone, small screen and the 75" screen.
 - **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
 
-### Voice: build our own, use an existing realtime service, or both?
-- **What:** choose between (a) an existing **speech-to-speech realtime service** (OpenAI's realtime voice models, Google's Gemini Live API), which already handles interruptions, turn-taking and tool calls in the background, and (b) our own **pipeline**: local wake word → speech-to-text → language model → text-to-speech.
-- **Recommendation (not decided yet):** both, as plug-ins. The wake word / push-to-talk part is always ours and runs locally, so we don't stream the room to the cloud all day (cost + privacy). The conversation itself uses a realtime service first (best feel for the least work). Our own pipeline is the fallback for offline lite mode.
-- **Fits:** Conversation manager (it gets thinner: the service does barge-in, while we keep queueing, tool routing and safety) · model router · two speeds (realtime = fast path; it can hand big jobs to the agent harness in the background). Tool calls from the voice model go through our tools + safety layer like everything else.
-- **Watch out:** realtime audio is priced per minute, so check it against the ≤ $20/month budget (look up current prices, don't guess). It needs internet. Fan noise can cause false "interruptions" (push-to-talk helps).
-- **Answer (2026-10-27):** used mostly for testing and **for the show** (visitors), not daily, so per-minute cost is probably fine. That favors the realtime service first; our own pipeline only when offline mode needs it.
-- **Open questions:** which service ("GPT-Live" = OpenAI's realtime voice?); free-tier/data terms; venues need internet for it.
+### Voice beyond push-to-talk
+- **In the focus:** push-to-talk voice is `current-focus.md` step 8 (stretch), with the realtime-service vs. own-pipeline choice made there.
+- **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); our own speech-to-text → model → text-to-speech pipeline as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
+- **Plugs into:** triggers slot, conversation manager, model router.
 
 ### Google Glass (Explorer Edition) as a display + camera
 - **What:** custom app on the lab's Google Glass Explorer Edition: a tiny heads-up status display, and maybe its camera as a first-person view.
@@ -123,26 +138,11 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Why:** real conversations aren't strict turn-taking; waiting for long answers is annoying.
 - **Plugs into:** Conversation manager (one component owns interrupt / queue / turn-taking).
 
-### Design language (JARVIS / cyberpunk feel)
-- **What:** a mood board at `docs/design/references/`: depth, layers, 3D models, dynamic and mostly decorative UI elements. Later distilled into `docs/design/DESIGN.md` (colors, type, line/glow style, motion, sound, do's and don'ts), after which the reference folder can be deleted.
-- **Why:** the long-term interface should feel like JARVIS / cyberpunk UIs, consistently across screen, web and headset.
-- **Plugs into:** Theme file (design tokens, `config/theme.yaml`) + sound packs; decorative layer. Design phase starts after teleop works.
-
-### Claude Code agent module
-- **What:** use Claude Code, through the Claude Agent SDK, as the agent for big, slow tasks, so we get its tools and MCP connectors instead of building our own.
-- **Why:** a capable agent with tools for free; our job shrinks to the harness and safety.
-- **Reference:** https://github.com/ehteshambuildagents/jarvis (runs Claude Code headless via the Agent SDK; tools gated default-deny).
-- **Open questions:**
-  - **Auth + terms:** that project reuses a personal subscription login. Check whether that's allowed for an always-on app. The safer default is an API key paid from the lab credits.
-  - **Cost:** per-task spend vs. the ≤ $20/month AI budget.
-  - **Speed:** too slow for quick commands, so slow path only.
-- **Plugs into:** agent harness slot (slow path). Tools default-deny; any robot motion still goes through our safety layer.
-
-### Self-building agent
-- **What:** the system's own agent can add things to the app (e.g. UI for a new robot, a new HUD status display) and handle system updates.
-- **Why:** faster growth; the system helps maintain itself.
-- **Rule:** **only** through the same path a human uses. Agent proposes on a branch → tests + CI → I approve → deploy from a tagged version. It never modifies the live running system directly. See `lab-jarvis-log.md` → "Agent changes to the system".
-- **Plugs into:** agent harness slot + the normal git / CI / tag workflow.
+### Coding agent ("ask for a feature, it gets built")
+- **Direction decided 2026-10-30** (`current-focus.md` → "After this focus"; log): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
+- **Candidates (2026-10-30: keys are OpenAI's; Anthropic out of credits):** OpenAI's Codex (open-source coding agent, OpenAI API key; to verify), or the Claude Agent SDK (Claude Code's engine with an API key) if Anthropic credits are refilled. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
+- **Open questions:** cost per task vs. the budget (coding tasks cost far more than chat); which tools it gets (default-deny); how it reports progress in the hub.
+- **Plugs into:** agent harness slot (slow path) + the normal git / CI / tag workflow; robot motion only through our safety layer.
 
 ---
 
@@ -160,9 +160,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ### Voice, personas, agents
 | Idea | Why | Plugs into |
 |---|---|---|
-| Multiple personas | — | Personas |
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models | — | AI models (router) |
+| Local models: beyond the chat test in `current-focus.md` step 6 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |
