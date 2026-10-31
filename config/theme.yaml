@@ -1,30 +1,83 @@
-# Design tokens: the one place for visual style. This is the seed of the theme system; the real
-# design work (JARVIS / cyberpunk, docs/ideas.md) starts after teleop works.
+# Design tokens: the one place for visual style. What they mean and how to use them:
+# docs/design/DESIGN.md (change both together). Same theme for every persona.
 #
 # Served to the pages as /theme.json, re-read on every request: edit, then reload the page.
-# Colors are "#rrggbb". "Used by" notes say where each token is read today.
+# Colors are "#rrggbb" (see-through amounts are separate 0–1 numbers). Times: _ms milliseconds,
+# _s seconds. "Used by" notes say where a token is read today; "(planned)" = for the hub, not read yet.
 
 colors:
-  background: "#f6f6f4"  # page background. Used by: (pages still use style.css for now)
-  text: "#1d1d1b"        # main text. Used by: (pages still use style.css for now)
-  primary: "#2f6fde"     # main highlight. Used by: robot joints in the 3D views, controller pointer
-  accent: "#e0782f"      # secondary highlight. Used by: gripper jaws in the 3D views
-  ok: "#2fbf71"          # "following" / clutch engaged. Used by: right controller marker, clutch line
+  background: "#05080b"  # near-black behind everything. Used by: (pages still use style.css for now)
+  surface: "#0b161c"     # panel fill, drawn see-through (glow.panel_fill). (planned)
+  line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. (planned)
+  text: "#d4eef5"        # main text. Used by: (pages still use style.css for now)
+  text_dim: "#6d8c96"    # labels, secondary text. (planned)
+  primary: "#29d4ff"     # cyan, the main color. Used by: robot joints in the 3D views, controller pointer
+  hot: "#eafcff"         # white-hot core of the brightest things only. (planned)
+  accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views
+  danger: "#ff4a3d"      # red: errors, stop. (planned)
+  ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line
   frozen: "#7a1d00"      # tint on a frozen arm (dead-man stop). Used by: 3D views
 
-font:
-  family: "system-ui, sans-serif"  # Used by: headset status panel
-  base_size_px: 16                 # Used by: (pages still use style.css for now)
+font:                    # fonts get bundled in the web vendor folder; until then the fallbacks show
+  family: "Rajdhani, system-ui, sans-serif"                # interface + chat. Used by: headset status panel
+  display: "Orbitron, Rajdhani, system-ui, sans-serif"     # titles only, CAPS. (planned)
+  mono: "'JetBrains Mono', ui-monospace, monospace"         # numbers, typed lines. (planned)
+  base_size_px: 20       # body text on the 32" monitor. Used by: (pages still use style.css for now)
+  label_spacing_em: 0.12 # extra letter spacing for CAPS labels and titles. (planned)
 
-arm3d:                   # the 3D arm (desktop panel + headset)
-  body: "#d2cfc5"        # SO-101 meshes
-  stick: "#3b3b38"       # stick-figure links, base disc
-  grid: "#b8b8b2"        # floor grid (desktop view)
-  grid_center: "#8a8a84" # floor grid center lines
-  idle_marker: "#b8b8b2" # controller marker when not clutched
+assistant:               # the assistant's picture per state; color names a token above. (planned)
+  idle: { color: primary, brightness: 0.6, breathe_s: 5 }
+  listening: { color: primary, brightness: 1.0, breathe_s: 2 }
+  thinking: { color: primary, brightness: 0.8, breathe_s: 1.2 }  # rings spin faster
+  speaking: { color: hot, brightness: 1.0 }                      # brightness follows loudness
+  offline: { color: text_dim, brightness: 0.35 }
+  error: { color: danger, brightness: 0.9 }
+
+lines:                   # (planned)
+  hair_px: 1             # structure
+  normal_px: 2           # active things
+  bold_px: 4             # the few key arcs
+  corner_cut_px: 12      # 45° cut corners instead of rounded ones
+  grid_dot_spacing_px: 32
+
+glow:                    # a sharp line + two soft halos; only active things glow. (planned)
+  near_px: 6
+  near_strength: 0.45
+  wide_px: 18
+  wide_strength: 0.15
+  panel_fill: 0.08       # how see-through panel fills are (0 = invisible)
+  back_layer: 0.35       # brightness of the back layer (dot grid, faint circuits)
+
+motion:                  # (planned)
+  quick_ms: 120          # button reacts
+  normal_ms: 300
+  panel_ms: 600          # panel unfolds
+  cinematic_ms: 1400     # big startup moments
+  stagger_ms: 60         # gap between items appearing one after another
+  arrive: "cubic-bezier(0.16, 1, 0.3, 1)"  # starts fast, settles slowly
+  leave: "cubic-bezier(0.7, 0, 0.84, 0)"   # leaves quickly
+  max_flashes_per_s: 3   # never flash faster (seizure safety)
+  idle:
+    ring_turn_s: [25, 40, 70]  # seconds per full turn, one per ring, alternating direction
+    dot_flow_px_s: 40          # flowing dots in the back layer
+    type_chars_per_s: 40       # typing text
+    event_every_s: [8, 20]     # random pause between small idle events
+
+quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
+  default: full
+  full: { idle: true, glow: true, blur: true, particles: true }
+  reduced: { idle: true, glow: true, blur: false, particles: false }
+  minimal: { idle: false, glow: false, blur: false, particles: false }
+
+arm3d:                   # the 3D arm (desktop panel + headset), on a dark background
+  body: "#8fa3ab"        # SO-101 meshes: light steel, so cyan joints and amber jaws stand out
+  stick: "#4f7380"       # stick-figure links, base disc
+  grid: "#1f3d48"        # floor grid (desktop view)
+  grid_center: "#2f6070" # floor grid center lines
+  idle_marker: "#6d8c96" # controller marker when not clutched
   xarm:                  # xArm 1S model parts
-    metal: "#b4b8bf"
-    servo: "#2b2b2b"
-    plate: "#3a3a3a"
-    cup: "#9a9a9a"
+    metal: "#9aa8b0"
+    servo: "#1a2328"
+    plate: "#24323a"
+    cup: "#7d8b92"
     board: "#1f5a35"
