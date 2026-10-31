@@ -24,6 +24,7 @@ function row(name, lo, hi) {
 
 function show(s) {
   setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
+  setPill($("control"), s.control === "free" ? "free" : "an input page", s.control === "free" ? "off" : "on");
   if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
   else setPill($("state"), "holding", "off");
@@ -35,8 +36,12 @@ function show(s) {
   }
 }
 
+let socket = null;
+$("stop").onclick = () => socket?.readyState === WebSocket.OPEN && socket.send(JSON.stringify({ type: "stop" }));
+
 function connect() {
   const ws = new WebSocket(WS_URL);
+  socket = ws;
   ws.onopen = () => setPill($("conn"), "connected", "on");
   ws.onclose = () => {
     setPill($("conn"), "disconnected", "off");

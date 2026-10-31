@@ -119,3 +119,86 @@ async def test_theme_served_fresh(aiohttp_client):
     assert resp.status == 200
     assert resp.headers["Cache-Control"] == "no-store"
     assert (await resp.json())["colors"]["frozen"].startswith("#")
+
+
+async def test_static_files_are_never_stale(aiohttp_client):
+    app, _ = make_app()
+    client = await aiohttp_client(app)
+    for path in ("/", "/static/teleop-page.js", "/static/arm/arm-model.js"):
+        resp = await client.get(path)
+        assert resp.headers["Cache-Control"] == "no-cache", path
+
+
+def frame_at(x, grip=0.0):
+    return FRAME | {"hands": {"right": FRAME["hands"]["right"] | {"pos": [x, 1, 0], "grip": grip}}}
+
+
+async def next_of(ws, kind, timeout=1.0):
+    for _ in range(50):
+        msg = await ws.receive_json(timeout=timeout)
+        if msg["type"] == kind:
+            return msg
+    raise AssertionError(f"no {kind} message")
+
+
+async def test_only_one_page_drives_and_control_is_handed_over(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    a = await client.ws_connect("/ws")
+    b = await client.ws_connect("/ws")
+    await a.send_json(frame_at(0.1))
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    assert (await next_of(a, "status"))["control"] == "you"
+    assert (await next_of(b, "status"))["control"] == "other"
+
+    await b.send_json(frame_at(0.9))  # ignored: a has control
+    assert (await next_of(b, "error"))["message"] == "another page has control"
+    assert loop.inputs.latest.hands["right"].pos[0] == 0.1
+
+    await b.send_json({"type": "session_end"})  # b's session ending must not freeze a
+    await asyncio.sleep(0.05)
+    assert loop.inputs.connected
+
+    await a.send_json({"type": "session_end"})  # a hands control over
+    assert await wait_for(lambda: not loop.inputs.connected)
+    await b.send_json(frame_at(0.5))
+    assert await wait_for(lambda: loop.inputs.latest.hands["right"].pos[0] == 0.5)
+    assert (await next_of(b, "status"))["control"] == "you"
+
+
+async def test_driver_disconnect_frees_control(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    a = await client.ws_connect("/ws")
+    b = await client.ws_connect("/ws")
+    await a.send_json(frame_at(0.1))
+    assert await wait_for(lambda: loop.inputs.connected)
+    await a.close()
+    assert await wait_for(lambda: not loop.inputs.connected)  # dead-man freeze
+    await b.send_json(frame_at(0.3))
+    assert await wait_for(lambda: loop.inputs.connected)
+
+
+async def test_stop_works_from_a_monitor(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    driver = await client.ws_connect("/ws")
+    monitor = await client.ws_connect("/ws?role=monitor")
+    for x in (0.0, 0.01, 0.02):
+        await driver.send_json(frame_at(x, grip=1.0))
+        await asyncio.sleep(0.03)
+    assert await wait_for(lambda: loop.mapper.engaged)
+    await monitor.send_json({"type": "stop"})
+    assert await wait_for(lambda: loop.frozen and loop.mapper.needs_release)
+
+
+async def test_joint_input_follows_the_same_control_rules(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    a = await client.ws_connect("/ws")
+    b = await client.ws_connect("/ws")
+    await a.send_json({"type": "joint_input", "t": 0, "rates": {"gripper": 0.5}})
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    await b.send_json({"type": "joint_input", "t": 0, "rates": {"gripper": -0.5}})
+    assert (await next_of(b, "error"))["message"] == "another page has control"
+    assert loop.inputs.latest.rates == {"gripper": 0.5}

@@ -19,7 +19,7 @@ MAX_DEGREES = 10.0  # hard cap for this test
 
 def read(arm: XArm, joint: str) -> float | None:
     try:
-        return arm.read_joints()[joint]
+        return arm.read_measured()[joint]
     except TimeoutError:  # common while servos move
         return None
 

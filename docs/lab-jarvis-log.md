@@ -28,7 +28,7 @@ SO-101 over xArm for polished teleop: smoother motors/bus, LeRobot support, URDF
 
 ---
 
-## Quest teleop input & display (2026-10-23) — details in current-focus.md
+## Quest teleop input & display (2026-10-23) — details in archive/focus-2026-10-teleop-demo.md
 Inputs: **controllers first** (grip = clutch, analog trigger = gripper, button = stop), **then hand tracking** (wow); keep both. Display: passthrough + minimal overlay (status, stop, workspace box, visitor hint); later ghost arm + camera feed; cast to a monitor.
 
 ---
@@ -104,7 +104,7 @@ Open the door → one trigger → screens on → greeting → use. Animation ≤
 1. **Milestone 1 — "Connected lab":** lab router, SSH keys + nicknames, device census, standards, one small visible win.
 2. **Milestone 2 — Wake + roll call** (`xarm1`, then Raspbot); venue profiles.
 3. **Milestone 3 — Voice + dev assistant.**
-4. **Later:** offline lite mode; more robots; bigger VLA models (second act). Next focus after teleop: troubleshooting suite (`current-focus.md` → "Up next"). Everything else: `ideas.md`.
+4. **Later:** offline lite mode; more robots; bigger VLA models (second act). Teleop demo showable 2026-10-30 (tag `demo-2026-10-30`). Current focus: the JARVIS core (`current-focus.md`); the troubleshooting suite and the rest of the teleop polish are on hold (`ideas.md` → "On hold"). Everything else: `ideas.md`.
 
 ---
 
@@ -160,9 +160,10 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-30 | **Teleop demo focus closed: showable as is, "needs polishing"** (`so101-white` driven from the Quest controllers through IK at `--speed 0.2`; tag `demo-2026-10-30`). Unfinished steps (hand tracking, speed, Quest display, visitor polish), the leader arm and the xArm leftovers are **on hold** in `ideas.md`. **Next focus: the JARVIS core** (brain + plug-in interfaces, roll call), ahead of the troubleshooting suite; network parts wait for the lab router. The old focus is in `docs/archive/`. | Builder's call: good enough to show; the core is what they want next, and most of it needs no router. |
 | 2026-10-28 | **Naming: plain names in code and docs; show names live in persona/theme config.** A **plain name** says what a thing does and is used in code, file names, docs, logs and commit messages (e.g. `startup_sequence`, "roll call", "troubleshooting suite"). A **show name** is the in-character name JARVIS *displays or says* to people (e.g. the startup screen's title "INITIATION", the spoken line "Initiating systems…", a mode called "Overwatch"). Show names are text in the persona/theme config (`config/`), so they can change, or differ per persona, without touching code. Code never depends on a show name. Things get a show name only after they exist and run. | Plain names stay searchable and obvious to the next student; the JARVIS flavor stays fully customizable. |
 | 2026-10-28 | **Robots are optional at startup:** by default the system assumes no robots are on; a robot that gets switched on appears in the system when it reports in. A "power-up walk" (expected devices shown dim with instructions) is an optional demo mode. | Often the builder only wants to code or ask something; robots are for projects, learning and demos. |
-| 2026-10-28 | **One device controls a robot at a time; control is handed over** (the current driver releases), not grabbed; everyone can watch; STOP works from every device. Teleop gets this first (current-focus step 6b). | Two inputs interleaved on a real arm is unsafe; handing over is the safer choice. |
+| 2026-10-28 | **One device controls a robot at a time; control is handed over** (the current driver releases), not grabbed; everyone can watch; STOP works from every device. Teleop gets this first (teleop focus step 6b, done 2026-10-29). | Two inputs interleaved on a real arm is unsafe; handing over is the safer choice. |
 | 2026-10-28 | **No ghost arm lined up on the real arm.** The Quest shows a lazy-follow **HUD mini-arm** (what was commanded; joints turn red near limits) instead; the status panel also lazy-follows instead of being fixed in the room. | Lining up needs calibration and adds little: the real arm is visible; a fixed-in-room panel is awkward. |
 | 2026-10-28 | **"AI lab admin" is the lab's one Meta account** for all current and future Meta devices/platforms (owns the 3 Quests; joins a Meta developer organization for developer mode). Verified with **the professor's phone number** (his OK, 2026-10-28). Handoff docs record the account and whose number is on it; the password lives in the lab's password store, never in git. | Developer mode needs the owner account to be a verified developer; any future Meta product hits the same issue; a lab-owned identity survives the builder's graduation. |
 | 2026-10-27 | **xArm driver = our own ~100-line protocol layer over the `hid` package** (not the `xarm` PyPI wrapper); read-only by default, motion needs `allow_motion=True` + the builder's OK. `devices.yaml` entries may carry `usb:` (vendor/product ID, product, serial); `find_usb_device()` resolves them; so101-green is also blocked by USB serial (any OS path containing it is refused). | Cross-platform lookup by USB ID + serial; the wrapper is unmaintained; see GOTCHAS for the hidapi-vs-hid trade-off. |

@@ -1,5 +1,7 @@
 """xArm driver and USB lookup tests: no hardware, the HID device is faked."""
 
+import time
+
 import pytest
 
 from lab_os.devices import PortNotAllowed, find_usb_device, load_registry
@@ -140,39 +142,6 @@ def test_read_times_out_without_reply():
         arm.read_raw()
 
 
-def test_reads_are_paced_while_motion_is_on():
-    arm, fake = connected_arm(allow_motion=True)
-    arm.read_raw()
-    arm.read_raw()  # too soon: served from the last reading
-    assert len(fake.written) == 1
-    arm._last_attempt -= 1.0
-    arm.read_raw()
-    assert len(fake.written) == 2
-
-
-def test_failed_read_returns_recent_reading_while_moving():
-    arm, fake = connected_arm(allow_motion=True, read_timeout_s=0.01)
-    first = arm.read_raw()
-    fake.write = lambda data: len(data)  # board stops answering
-    arm._last_attempt -= 1.0
-    assert arm.read_raw() == first
-    arm._last_attempt -= 1.0
-    arm._last_read = (arm._last_read[0] - 5.0, arm._last_read[1])  # too old now
-    with pytest.raises(TimeoutError):
-        arm.read_raw()
-
-
-def test_unchanged_targets_are_not_resent():
-    arm, fake = connected_arm(allow_motion=True)
-    arm.move_joints({"wrist_roll": 5.0, "gripper": 30.0}, 0.5)
-    arm.move_joints({"wrist_roll": 5.1, "gripper": 30.0}, 0.5)  # below a servo unit
-    arm.move_joints({"wrist_roll": 6.0, "gripper": 30.0}, 0.5)
-    moves = [w for w in fake.written if w[4] == xarm.CMD_SERVO_MOVE]
-    assert [m[5] for m in moves] == [2, 1]  # second real move carries only wrist_roll
-    duration = moves[1][6] | moves[1][7] << 8
-    assert duration == 100  # short streamed moves
-
-
 def test_read_only_reads_are_not_paced():
     arm, fake = connected_arm()
     arm.read_raw()
@@ -195,22 +164,169 @@ def test_read_only_driver_cannot_move():
     assert fake.written == []
 
 
-def test_stop_sends_nothing():
-    arm, fake = connected_arm()
+MOVE, READ = xarm.CMD_SERVO_MOVE, xarm.CMD_GET_SERVO_POSITION
+
+
+def moves(fake):
+    """Decoded move commands: (duration_ms, {servo_id: position})."""
+    out = []
+    for w in fake.written:
+        if w[4] == MOVE:
+            n = w[5]
+            out.append(
+                (
+                    w[6] | w[7] << 8,
+                    {w[8 + 3 * k]: w[9 + 3 * k] | w[10 + 3 * k] << 8 for k in range(n)},
+                )
+            )
+    return out
+
+
+def reads(fake):
+    return sum(w[4] == READ for w in fake.written)
+
+
+def motion_arm(**kw):
+    arm, fake = connected_arm(allow_motion=True, limits=xarm.load_limits("none"), **kw)
+    arm.read_joints()  # first call takes one real reading (the starting estimate)
+    arm._last_read_t = time.monotonic()
+    fake.written.clear()
+    return arm, fake
+
+
+def T(offset=0.0):
+    """Tick times on the same clock as the driver's estimate."""
+    return time.monotonic() + offset
+
+
+def stream(arm, joint, start, deg_per_s, ticks, t0, dt=0.02):
+    """Teleop-style: a new goal every tick, moving at deg_per_s."""
+    for k in range(ticks):
+        arm.move_joints({joint: start + deg_per_s * dt * k}, 1.0)
+        arm._tick(t0 + dt * k)
+    return t0 + dt * ticks
+
+
+def test_move_joints_never_touches_usb():
+    arm, fake = motion_arm()
+    arm.move_joints({"wrist_roll": 10.0}, 0.5)
+    assert fake.written == []  # the worker sends; the teleop loop never waits for USB
+
+
+def test_a_moving_joint_aims_ahead_so_the_servo_keeps_running():
+    arm, fake = motion_arm()
+    t = stream(arm, "wrist_roll", 0.0, 12.0, 30, T())  # 12 °/s, like a held key at speed 0.2
+    duration, last = moves(fake)[-1]
+    goal = 12.0 * 0.02 * 29
+    aimed = xarm.position_to_degrees("wrist_roll", last[2])
+    assert aimed == pytest.approx(goal + 12.0 * arm.lead_s, abs=0.5)  # lead_s ahead
+    assert duration == int(arm.lead_s * 1000)
+    # Key released: the goal stops changing → the next command aims at the goal (no coasting).
+    for k in range(5):
+        arm._tick(t + 0.02 * k)
+    assert xarm.position_to_degrees("wrist_roll", moves(fake)[-1][1][2]) == pytest.approx(
+        goal, abs=0.3
+    )
+
+
+def test_no_reads_while_moving_and_one_when_idle():
+    arm, fake = motion_arm()
+    t = stream(arm, "gripper", 30.0, 12.0, 50, T())
+    assert reads(fake) == 0
+    arm._tick(t + 0.1)  # released: one last move, aimed at the goal itself
+    arm._tick(t + 1.0)  # idle for a while
+    assert reads(fake) == 1
+
+
+def test_stop_holds_where_the_servo_is_now():
+    arm, fake = motion_arm()
+    t = stream(arm, "wrist_roll", 0.0, 30.0, 20, T())
+    est = arm.read_joints()["wrist_roll"]
     arm.stop()
-    assert arm.stopped and fake.written == []
+    arm._tick(t)
+    duration, last = moves(fake)[-1]
+    held = xarm.position_to_degrees("wrist_roll", last[2])
+    assert held < 30.0 * 0.02 * 19 + 1  # not the lead target ahead of the goal
+    assert held == pytest.approx(est, abs=2.0)
+    n = len(moves(fake))
+    arm.move_joints({"wrist_roll": 50.0}, 1.0)  # ignored while stopped
+    arm._tick(t + 0.02)
+    assert len(moves(fake)) == n
 
 
-def test_move_encoding_when_motion_is_allowed():
-    arm, fake = connected_arm(allow_motion=True)
-    arm.move_joints({"gripper": 500.0}, 0.5)  # clamped to 90 deg = fully open
-    move = [w for w in fake.written if w[4] == xarm.CMD_SERVO_MOVE][0]
-    assert move[5] == 1  # one servo
-    assert (move[8], move[9] | move[10] << 8) == (1, xarm.GRIPPER_OPEN)
+def test_a_big_jump_is_spread_out():
+    arm, fake = motion_arm()
+    arm.move_joints({"shoulder_pan": 70.0}, 0.5)
+    arm._tick(T())
+    first = xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6])
+    assert abs(first) <= 120.0 * 0.5 * arm.lead_s + 0.3  # ≤ 18° per lead_s, not all 70° at once
 
 
-def test_stopped_arm_ignores_moves():
-    arm, fake = connected_arm(allow_motion=True)
-    arm.stop()
-    arm.move_joints({"gripper": 10.0}, 0.5)
-    assert fake.written == []
+def test_idle_reading_far_from_the_estimate_is_reported(caplog):
+    arm, fake = motion_arm()
+    t = stream(arm, "elbow_flex", 0.0, 30.0, 30, T())  # told to go to ~17°...
+    fake.positions = dict.fromkeys(xarm.SERVO_IDS.values(), 500)  # ...but it never moved (limp)
+    arm._tick(t + 0.1)
+    arm._tick(t + 1.0)
+    assert "elbow_flex" in caplog.text
+    assert arm.read_joints()["elbow_flex"] == pytest.approx(0.0)  # the reading wins
+
+
+def test_limits_from_calibration_file(tmp_path):
+    (tmp_path / "xarm9").mkdir()
+    (tmp_path / "xarm9" / "limits.yaml").write_text(
+        "limits_deg:\n  shoulder_pan: [50, -60]\n  elbow_flex: [-125, 30]\n"
+    )
+    limits = xarm.load_limits("xarm9", tmp_path)
+    assert (limits["shoulder_pan"].low, limits["shoulder_pan"].high) == (-60, 50)
+    assert limits["elbow_flex"].low == -120.0  # never beyond what the servo allows
+    assert limits["wrist_flex"] == xarm.DEFAULT_LIMITS["wrist_flex"]  # not measured: default
+
+
+def test_without_calibration_the_safe_defaults_apply():
+    limits = xarm.load_limits("not-calibrated")
+    assert limits["shoulder_pan"].high == 72.0
+    assert limits["gripper"] == xarm.GRIPPER_LIMIT
+
+
+def test_move_encoding_and_clamp():
+    arm, fake = motion_arm()
+    arm.send_move({"gripper": 500.0}, 300)  # clamped to 90° = fully open
+    duration, servos = moves(fake)[-1]
+    assert (duration, servos) == (300, {1: xarm.GRIPPER_OPEN})
+
+
+def test_starting_outside_the_limits_does_not_snap_back():
+    # Base found at raw 14 = +116.6° (driven there with older, wider limits); default limit is 72°.
+    arm, fake = motion_arm(positions=dict.fromkeys(xarm.SERVO_IDS.values(), 500) | {6: 14})
+    start = arm.read_joints()["shoulder_pan"]
+    assert start > 100
+    arm.move_joints({"shoulder_pan": start - 1.0}, 1.0)  # jog 1° back toward the middle
+    arm._tick(T())
+    aimed = xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6])
+    assert aimed == pytest.approx(start - 1.0, abs=0.3)  # not clamped to 72°
+    arm.move_joints({"shoulder_pan": start + 5.0}, 1.0)  # but never further out than it is
+    arm._tick(T(0.02))
+    assert xarm.position_to_degrees("shoulder_pan", moves(fake)[-1][1][6]) <= start + 0.3
+
+
+def test_positions_past_zero_are_negative_not_huge():
+    report = reply({6: 500}).replace(
+        bytes([6, 500 & 0xFF, 500 >> 8]), bytes([6, 0xDC, 0xFF])
+    )  # -36
+    assert xarm.parse_positions(report)[6] == -36
+
+
+def test_a_garbled_calibration_side_falls_back_to_the_default(tmp_path):
+    # The real file from 2026-10-29: two sides came from the unsigned-parsing bug.
+    (tmp_path / "xarm1").mkdir()
+    (tmp_path / "xarm1" / "limits.yaml").write_text(
+        "limits_deg:\n  shoulder_pan: [-15600.0, 103.2]\n  elbow_flex: [-15603.4, 110.2]\n"
+        "  wrist_flex: [-108.5, 129.4]\n  gripper: [12.7, 126.0]\n"
+    )
+    limits = xarm.load_limits("xarm1", tmp_path)
+    assert limits["shoulder_pan"].low == xarm.DEFAULT_LIMITS["shoulder_pan"].low  # not -120
+    assert limits["shoulder_pan"].high == 103.2
+    assert limits["elbow_flex"].low == xarm.DEFAULT_LIMITS["elbow_flex"].low
+    assert limits["wrist_flex"].high == 120.0  # a bit past the servo range: clamped
+    assert (limits["gripper"].low, limits["gripper"].high) == (12.7, 90.0)

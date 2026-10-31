@@ -4,7 +4,25 @@
 
 Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `lab-jarvis-log.md` → "Architecture sketch"). "—" = not recorded yet.
 
-**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU) and teleop as data collection for the training project (`current-focus.md`). Also offline lite mode, the portable demo kit, and the staged remote-access plan (`lab-jarvis-log.md` → "Mobility, portability & remote access").
+**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`lab-jarvis-log.md` → "Mobility, portability & remote access").
+
+---
+
+## On hold: decided, will be built (2026-10-30)
+Not ideas any more: agreed features, paused when the teleop focus closed (the demo is showable, "needs polishing"; tag `demo-2026-10-30`). Pick them up from here; the teleop focus's full context is in `docs/archive/focus-2026-10-teleop-demo.md` (step numbers below refer to it).
+
+### Teleop demo: what's left
+- **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons).
+- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then the 0.5× hand-to-gripper scale, smoothing, end-to-end delay. Above 0.5 is the builder's call (`config/venues/lab.yaml`).
+- **Quest display (step 5).** Visitor hint until the first grab; the lazy-follow **HUD mini-arm** (decision 2026-10-28) whose joints turn red near their limits (= the workspace warning); the status panel lazy-follows too.
+- **Visitor polish + portability test (step 8).** Script, casting to a monitor, one run from the laptop away from the lab, tag, 60-second clip. The SO-101 port check uses Linux paths (`/dev/serial/by-id/`, sysfs): a Windows/macOS field laptop needs the USB-ID lookup `xarm1` already uses.
+- **`so101-white-leader`.** Build and set it up (spare board `5B41532183`; `python -m lab_os.robots.so101_setup setup-motors --arm so101-white-leader` after its port is in `config/devices.yaml`). For recording training demonstrations (second act B), not needed for the visitor demo.
+- **xarm1 leftovers.** Hand-measured limits (`python -m lab_os.robots.xarm calibrate`), Keys at `--speed 0.4`, a precise delay measurement, hold-position on stop, Mouse mode tried in a browser. Its HACK stays listed in `current-focus.md`.
+- **A real-Quest recording as a test fixture** (`serve --record`, commit a short clip).
+- **Check:** in the XR emulator, Shift+WASD moving the arm while the clutch is *released* would be a bug.
+
+### Troubleshooting suite
+Was "Up next" after teleop (decision 2026-10-24); the builder chose the core first (2026-10-30). Its roll call / health checks start in the core focus; the rest waits here: microphone (level meter, noise, record + play back), cameras (live view, "is it sending images?"), robots (live joints; a test wiggle only with the builder's OK), network (reachable? delay?), accounts (API keys present and working, credits), Quest connected. Each check writes a **report file** humans and agents can read. *Why:* the roll call will find problems, and the builder, a future maintainer or an AI agent need an easy way to diagnose them.
 
 ---
 
@@ -43,7 +61,7 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 ### Many devices at once ("who's driving?")
 - **What:** several people/devices use the system at the same time (Quest, phones, touchscreens, desktop).
 - **Recommendation:** **everyone can watch** (all screens show the same live state); **only one device controls a given robot at a time** (it "has control"; others ask for it or it's handed over); **STOP works from every device, always**. Voice/agent commands go through the same rule.
-- **Why now:** the teleop server already accepts several input pages and mixes them (`current-focus.md` step 6b fixes that for teleop). This generalizes it later.
+- **Why now:** the teleop server already accepts several input pages and mixes them (fixed for teleop 2026-10-29, closed teleop focus step 6b). This generalizes it later.
 - **Plugs into:** brain core (control lock per robot) + outputs/clients + safety layer.
 - **Decided (2026-10-28):** control is **handed over** (the current driver releases it), not grabbed.
 
@@ -125,10 +143,6 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 - **Why:** faster growth; the system helps maintain itself.
 - **Rule:** **only** through the same path a human uses. Agent proposes on a branch → tests + CI → I approve → deploy from a tagged version. It never modifies the live running system directly. See `lab-jarvis-log.md` → "Agent changes to the system".
 - **Plugs into:** agent harness slot + the normal git / CI / tag workflow.
-
-### Troubleshooting suite
-- **What / why / checks:** planned as the next focus after teleop. See `current-focus.md` → "Up next".
-- **Plugs into:** health checks / roll call; every check writes a report file that humans and agents can read.
 
 ---
 

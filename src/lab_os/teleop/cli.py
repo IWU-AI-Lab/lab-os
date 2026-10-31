@@ -1,4 +1,4 @@
-"""`uv run lab-os-teleop serve|replay` — the teleop program (fake arm, or `--arm xarm1`)."""
+"""`uv run lab-os-teleop serve|replay`: the teleop program (fake arm, or a real one via --arm)."""
 
 import argparse
 import asyncio
@@ -10,10 +10,12 @@ from pathlib import Path
 
 from aiohttp import web
 
+from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
-from lab_os.teleop.messages import parse_frame
+from lab_os.teleop.mapping import ClutchMapper
+from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
 from lab_os.venues import load_venue
@@ -33,7 +35,12 @@ def _fmt_hand(c) -> str:
 
 def _fmt_status(loop: TeleopLoop) -> str:
     frame = loop.inputs.latest
-    hand = frame.hands.get(loop.mapper.config.hand) if frame else None
+    if isinstance(frame, JointFrame):
+        moving = " ".join(f"{j} {r:+.2f}" for j, r in frame.rates.items()) or "nothing pressed"
+        source = f"keys/mouse: {moving}"
+    else:
+        hand = frame.hands.get(loop.mapper.config.hand) if frame else None
+        source = f"{loop.mapper.config.hand}: {_fmt_hand(hand)}"
     state = (
         "FROZEN"
         if loop.frozen
@@ -44,7 +51,7 @@ def _fmt_status(loop: TeleopLoop) -> str:
         else "waiting"
     )
     joints = " ".join(f"{v:+6.1f}" for v in loop.arm.read_joints().values())
-    return f"{loop.mapper.config.hand}: {_fmt_hand(hand)} | {state:8} | arm {joints}"
+    return f"{source} | {state:8} | arm {joints}"
 
 
 def _make_printer():
@@ -64,14 +71,24 @@ def _make_printer():
 def _make_arm(name: str, venue) -> Arm:
     if name == "fake":
         return FakeArm()
+    if name == "fake-xarm1":  # software xArm: same model, limits and IK as the real one
+        from lab_os.robots.xarm import XArm
+
+        x = XArm()
+        home = dict.fromkeys(x.joint_names, 0.0) | {"elbow_flex": 70.0, "wrist_flex": 30.0}
+        return FakeArm(
+            name="fake-xarm1", model=x.model, limits=x.limits, joints=home | {"gripper": 30.0}
+        )
     if name not in venue.active_devices:
         raise SystemExit(f"{name} is not active in venue {venue.name!r} (config/venues/)")
     if not venue.motion_allowed:
         raise SystemExit(f"venue {venue.name!r} doesn't allow motion")
+    if name == "so101-white":
+        from lab_os.robots.so101 import SO101Arm
+
+        return SO101Arm(name=name, allow_motion=True)
     from lab_os.robots.xarm import XArm
 
-    # HACK: the xArm driver does blocking HID I/O inside the asyncio loop (~10-30 ms per paced
-    # read, 4x/s). Fine for a desk test; move it to a thread before relying on it.
     return XArm(name=name, device_name=name, allow_motion=True)
 
 
@@ -84,11 +101,14 @@ def _make_loop(args) -> TeleopLoop:
         f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
         f"(joints: {', '.join(arm.joint_names)})"
     )
-    if args.arm != "fake":
+    if not args.arm.startswith("fake"):
         print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
+    kin = kinematics_for(arm.model)
+    print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
     return TeleopLoop(
         arm=arm,
         inputs=InputState(),
+        mapper=ClutchMapper(kinematics=kin),
         speed_scale=speed,
         on_tick=None if args.quiet else _make_printer(),
     )
@@ -113,6 +133,8 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
     async for msg in replay(path, speed=speed, loop=repeat):
         if msg.get("type") == "xr_input":
             loop.inputs.update(parse_frame(msg))
+        elif msg.get("type") == "joint_input":
+            loop.inputs.update(parse_joint_frame(msg))
         elif msg.get("type") == "session_end":
             loop.inputs.disconnect()
     loop.inputs.disconnect()
@@ -128,8 +150,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--arm",
         default="fake",
-        choices=["fake", "xarm1"],
-        help="which arm to drive (default: fake)",
+        choices=["fake", "fake-xarm1", "xarm1", "so101-white"],
+        help="which arm to drive: fake (software SO-101), fake-xarm1 (software xArm), xarm1 or "
+        "so101-white (real; so101-white needs `uv sync --extra so101` and a calibration)",
     )
     parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
