@@ -140,7 +140,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Coding agent ("ask for a feature, it gets built")
 - **Direction decided 2026-10-30** (`current-focus.md` → "After this focus"; log): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
-- **Candidate:** the Claude Agent SDK (Claude Code's engine with an API key), if the lab credits are Anthropic's. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
+- **Candidates (2026-10-30: keys are OpenAI's; Anthropic out of credits):** OpenAI's Codex (open-source coding agent, OpenAI API key; to verify), or the Claude Agent SDK (Claude Code's engine with an API key) if Anthropic credits are refilled. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
 - **Open questions:** cost per task vs. the budget (coding tasks cost far more than chat); which tools it gets (default-deny); how it reports progress in the hub.
 - **Plugs into:** agent harness slot (slow path) + the normal git / CI / tag workflow; robot motion only through our safety layer.
 
@@ -161,7 +161,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models | — | AI models (router) |
+| Local models: beyond the chat test in `current-focus.md` step 6 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |
