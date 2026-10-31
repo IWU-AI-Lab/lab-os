@@ -17,9 +17,22 @@ Dark first. One main color carries almost everything; the warm colors are kept f
 | `text` / `text_dim` | `#d4eef5` / `#6d8c96` | Main text / labels. White with a hint of cyan, never pure white. |
 | `accent` | amber `#ff9a2e` | "Look here": busy, waiting, hazard stripes, warnings. |
 | `danger` | red `#ff4a3d` | Errors, stop, the arm frozen. Rare, so it means something. |
+| `offline` | neutral gray `#56636a` | Offline, disabled, not connected. Dim, no glow. |
 | `ok` | green `#3ee07f` | Only for "engaged / following" in teleop. Not a decoration color. |
 
 Rule of thumb: about 90% cyan and dark, under 10% amber, red only when something is wrong. When the state changes, the whole room can change mood (cyan → amber → red), like the Iron Man helmet does.
+
+**How serious is it?** Four levels, never mixed up:
+| Level | Looks like | Examples |
+|---|---|---|
+| Normal | cyan, glowing | running, connected, idle |
+| Warning | amber, glowing, may pulse slowly | busy, waiting for a key press, battery low |
+| Critical | red, bright, pulses until handled | error, emergency stop, arm frozen |
+| Offline / unavailable | gray, dim, **no glow**, maybe hatched | AI offline (no internet), robot not plugged in |
+
+Offline is not an error: it's quiet, never red. Red is reserved for "a person needs to act".
+
+**Changing the main color** is one edit: `primary` in the theme. `surface`, `line`, `hot` and `text` carry a slight cyan tint; nudge them toward the new hue to match.
 
 ## Lines, shapes and glow
 - **Lines are thin.** Hairline (1 px) for structure, 2 px for active things, 4 px for the few key arcs. No filled blocks except small solid accents.
@@ -35,7 +48,7 @@ Three layers, like the Iron Man helmet shots:
 2. **Middle:** the real stuff: panels, buttons, chat, status strip. Sharp and readable.
 3. **Front:** a few bright accents: the cursor, reticles, the thing being pointed at.
 
-**The assistant is the center.** Everything else is arranged around it and connected to it by circuit-like traces, as in the startup ending picture. The hub at rest is **busy at the edges, calm in the middle**: the area you read (chat, assistant) stays clean.
+**The assistant is the center.** Everything else is arranged around it and connected to it by circuit-like traces, as in the startup ending picture. The hub at rest is **busy at the edges, calm in the middle**: the area you read (chat, assistant) stays clean. How busy is one setting (`hub.density`: `sparse`, `busy-edges`, `dense`) so it's easy to try the others.
 
 ## Type
 Fonts must be bundled with the code (works offline) and free to ship (SIL Open Font License).
@@ -54,7 +67,7 @@ Things **never just pop in**. They are drawn:
 **Idle life on the hub** (in full and reduced quality, not in minimal):
 - **Orbital rings** turn around the assistant and, smaller, around module buttons: two or three segmented rings each, different speeds (one full turn every 25–70 s), alternating directions.
 - **Flowing dots:** columns of faint dots trickle down the back layer, matrix-style; small bright pulses travel along the circuit traces toward the assistant.
-- **Typing text:** real log lines and status lines type out at the edges, then fade.
+- **Typing text:** real things only: log lines, recent git commits, doc headings, joint angles. They type out at the edges, then fade. Obviously decorative filler (hex streams, scrolling code) in the dim back layer is one switch (`hub.filler`), off for now.
 - **Breathing:** the assistant's glow swells and fades about every 5 s.
 - **Small idle events** every 8–20 s, at random: a ring re-locks with a tick, a reticle scans a panel, a trace lights up. Never two at once.
 - Motion in the corner of your eye is slow; nothing moves inside the area you're reading.

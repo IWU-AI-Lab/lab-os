@@ -11,10 +11,11 @@ colors:
   line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. (planned)
   text: "#d4eef5"        # main text. Used by: (pages still use style.css for now)
   text_dim: "#6d8c96"    # labels, secondary text. (planned)
-  primary: "#29d4ff"     # cyan, the main color. Used by: robot joints in the 3D views, controller pointer
+  primary: "#29d4ff"     # cyan, the main color; change this to recolor (surface/line/hot/text are cyan-tinted). Used by: robot joints in the 3D views, controller pointer
   hot: "#eafcff"         # white-hot core of the brightest things only. (planned)
   accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views
-  danger: "#ff4a3d"      # red: errors, stop. (planned)
+  danger: "#ff4a3d"      # red: critical, a person must act (error, stop). (planned)
+  offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. (planned)
   ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line
   frozen: "#7a1d00"      # tint on a frozen arm (dead-man stop). Used by: 3D views
 
@@ -30,7 +31,7 @@ assistant:               # the assistant's picture per state; color names a toke
   listening: { color: primary, brightness: 1.0, breathe_s: 2 }
   thinking: { color: primary, brightness: 0.8, breathe_s: 1.2 }  # rings spin faster
   speaking: { color: hot, brightness: 1.0 }                      # brightness follows loudness
-  offline: { color: text_dim, brightness: 0.35 }
+  offline: { color: offline, brightness: 0.35 }
   error: { color: danger, brightness: 0.9 }
 
 lines:                   # (planned)
@@ -62,6 +63,10 @@ motion:                  # (planned)
     dot_flow_px_s: 40          # flowing dots in the back layer
     type_chars_per_s: 40       # typing text
     event_every_s: [8, 20]     # random pause between small idle events
+
+hub:                     # (planned)
+  density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
+  filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full
