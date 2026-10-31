@@ -2,7 +2,7 @@
 
 **Read this at the start of every Claude Code session.** It says what to work on *now*. The long-term plan, decisions and module list live in **lab-jarvis-log.md**; this file only sets the current priority. When this focus is done, move it to `docs/archive/` and write the next one. Previous focus: the teleop demo, closed 2026-10-30 (`docs/archive/focus-2026-10-teleop-demo.md`; what's left of it is in `docs/ideas.md` → "On hold").
 
-**Status: draft (2026-10-30).** Refine it with the builder at the start of the first session on this focus, then drop this line.
+**Status: draft (2026-10-30), direction changed by the builder the same day (see "Builder's answers" below).** To be rewritten in the planning session around the JARVIS hub first; then drop this line.
 
 ---
 
@@ -28,10 +28,11 @@ One `lab-os` brain program that knows which plug-ins the venue has, starts them,
 5. **Inputs as plug-ins.** Quest page, desktop control and replay become the input slot, picked in the page instead of by command-line flags.
 6. **Robots report in.** A stand-in "network robot" talking to the brain over a WebSocket on `localhost`, so the network path exists and is tested before the router does.
 
-## Open questions for the builder
-- What should the brain's first screen show? (Guess: roll call + a button into teleop.)
-- Second robot through the core: `xarm1` (USB, works now) or a Raspbot (needs the router)?
-- Troubleshooting suite: fold its robot and Quest checks into roll call now, the rest later?
+## Builder's answers (2026-10-30)
+- **Start with the JARVIS system itself**, not the plumbing: the startup animation, then the **control hub** (dashboard) with buttons into the rest of the system (teleop, later roll call, …), and an **"alive" picture of the AI assistant** that breathes / reacts. Hope: once it runs, it helps build the rest alongside Claude Code sessions.
+- **The assistant's picture depends on the loaded personality (persona).** Not decided: a plain circle, or one per persona, e.g. a circle in the style of ChatGPT's voice mode for a GPT persona, one in Claude's style for a Claude persona, or a Live2D character (like Neuro-sama).
+- **Roll call and robot connections wait for the router** (easier to build with it at hand). When they come, the second robot through the core is **`xarm1`**.
+- **Device checks:** when the roll call is built, also build the checks we already know how to do (e.g. is the Quest plugged in, does the xArm answer). The harder ones (microphone, network, accounts) can come later.
 
 ## Hacks to clean up
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
