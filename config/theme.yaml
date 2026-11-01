@@ -14,17 +14,29 @@ colors:
   primary: "#29d4ff"     # cyan, the main color; change this to recolor (surface/line/hot/text are cyan-tinted). Used by: robot joints in the 3D views, controller pointer
   hot: "#eafcff"         # white-hot core of the brightest things only. (planned)
   accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views
-  danger: "#ff4a3d"      # red: critical, a person must act (error, stop). (planned)
+  danger: "#ff2436"      # aggressive red: critical, a person must act (error, stop). (planned)
   offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. (planned)
   ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line
-  frozen: "#7a1d00"      # tint on a frozen arm (dead-man stop). Used by: 3D views
+  frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views
 
-font:                    # fonts get bundled in the web vendor folder; until then the fallbacks show
-  family: "Rajdhani, system-ui, sans-serif"                # interface + chat. Used by: headset status panel
-  display: "Orbitron, Rajdhani, system-ui, sans-serif"     # titles only, CAPS. (planned)
-  mono: "'JetBrains Mono', ui-monospace, monospace"         # numbers, typed lines. (planned)
+font:                    # one font per role; every font in `bundled` ships with the code, so swap freely
+  bundled: [Orbitron, Oxanium, Chakra Petch, Rajdhani, Inter, JetBrains Mono, DSEG7, DSEG14, Doto, Share Tech Mono]
+  display: "Orbitron, 'Chakra Petch', system-ui, sans-serif"  # titles only, CAPS. (planned)
+  display_weight: 700
+  family: "'Chakra Petch', system-ui, sans-serif"   # interface + chat. Used by: headset status panel
+  family_weight: 500
+  lines: "Inter, system-ui, sans-serif"             # typed-out lines, lighter secondary text. (planned)
+  lines_weight: 300      # light only; heavier looks bloated
+  digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. (planned)
+  mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. (planned)
   base_size_px: 20       # body text on the 32" monitor. Used by: (pages still use style.css for now)
   label_spacing_em: 0.12 # extra letter spacing for CAPS labels and titles. (planned)
+
+alerts:                  # (planned)
+  mood: room             # local = only the affected thing changes color; room = the whole screen shifts
+  warning_pulse_s: 2     # one slow amber pulse every 2 s
+  critical_pulse_hz: 1.5 # red pulses per second (stay under 3: seizure safety)
+  critical_edge: true    # red glow around the screen edge while critical
 
 assistant:               # the assistant's picture per state; color names a token above. (planned)
   idle: { color: primary, brightness: 0.6, breathe_s: 5 }
@@ -47,7 +59,14 @@ glow:                    # a sharp line + two soft halos; only active things glo
   wide_px: 18
   wide_strength: 0.15
   panel_fill: 0.08       # how see-through panel fills are (0 = invisible)
-  back_layer: 0.35       # brightness of the back layer (dot grid, faint circuits)
+  back_layer: 0.35       # brightness of the far layer (the network, faint circuits)
+
+network:                 # the far background: drifting dots linked when close. (planned)
+  dots_per_mpx: 90       # dots per million screen pixels (~190 on a 1080p screen)
+  link_px: 140           # dots closer than this get a line; closer = brighter
+  drift_px_s: 10         # drift speed
+  push_radius_px: 170    # mouse / finger pushes dots away within this distance
+  fire_every_s: [2, 6]   # random pause between pulses running along links (faster while thinking)
 
 motion:                  # (planned)
   quick_ms: 120          # button reacts
@@ -63,6 +82,8 @@ motion:                  # (planned)
     dot_flow_px_s: 40          # flowing dots in the back layer
     type_chars_per_s: 40       # typing text
     event_every_s: [8, 20]     # random pause between small idle events
+    event_sound_chance: 0.35   # share of idle events that make a matching sound; silent otherwise
+    sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned)
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
@@ -70,9 +91,9 @@ hub:                     # (planned)
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full
-  full: { idle: true, glow: true, blur: true, particles: true }
-  reduced: { idle: true, glow: true, blur: false, particles: false }
-  minimal: { idle: false, glow: false, blur: false, particles: false }
+  full: { idle: true, glow: true, blur: true, particles: true, network: interactive }
+  reduced: { idle: true, glow: true, blur: false, particles: false, network: small }
+  minimal: { idle: false, glow: false, blur: false, particles: false, network: still }
 
 arm3d:                   # the 3D arm (desktop panel + headset), on a dark background
   body: "#8fa3ab"        # SO-101 meshes: light steel, so cyan joints and amber jaws stand out
