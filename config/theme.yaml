@@ -86,11 +86,22 @@ motion:                  # (planned)
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned)
+  layout: launcher       # launcher = buttons around the assistant open full-screen modules | panels
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
+  background_text: verses     # far-layer typing text in maximal quality: verses | none
+  verses_translation: KJV     # public domain
+  type_to_chat: true     # typing anywhere opens the chat with the letters in it
+
+clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). (planned)
+
+startup:                 # (planned)
+  style: assemble        # assemble | hyperspace
+  max_s: 6               # any input skips straight to the hub
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full
+  maximal: { idle: true, glow: true, blur: true, particles: true, network: dense, extra_rings: true, frame_details: true, background_text: true }
   full: { idle: true, glow: true, blur: true, particles: true, network: interactive }
   reduced: { idle: true, glow: true, blur: false, particles: false, network: small }
   minimal: { idle: false, glow: false, blur: false, particles: false, network: still }
