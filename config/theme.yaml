@@ -30,6 +30,7 @@ font:                    # one font per role; every font in `bundled` ships with
   digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. (planned)
   mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. (planned)
   base_size_px: 20       # body text on the 32" monitor. Used by: (pages still use style.css for now)
+  scale_with_screen: true  # hub sizes follow the screen (the smaller of width/height decides), so the core keeps its share. (planned)
   label_spacing_em: 0.12 # extra letter spacing for CAPS labels and titles. (planned)
 
 alerts:                  # (planned)
@@ -86,7 +87,11 @@ motion:                  # (planned)
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned)
-  layout: launcher       # launcher = buttons around the assistant open full-screen modules | panels
+  layout: launcher       # launcher = buttons around the core open full-screen modules | panels
+  modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works.
+                         # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
+  devices_view: graph    # graph = devices around the brain | compact = one icon per device; the panel has a toggle
+  portrait: stack        # portrait screens: core on top, buttons in a row under it, facts in two columns
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
   background_text: verses     # far-layer typing text in maximal quality: verses | none
@@ -98,6 +103,11 @@ clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace
   max_s: 6               # any input skips straight to the hub
+  hyperspace:            # the speed curve: drift, breath in, steep launch, flash, then a hard brake
+    spool_s: 1.0
+    pull_back_s: 0.33
+    launch_s: 0.87
+    brake_s: 1.5
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full

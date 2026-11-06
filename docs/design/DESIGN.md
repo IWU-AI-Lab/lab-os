@@ -46,17 +46,29 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 - **Icons instead of words** where the meaning is obvious: warning triangle, pause (held), globe (internet), chip (AI), pin (venue), person (persona), hand (teleop), screen (monitor), speech box (chat). Line icons drawn like everything else (same stroke, no fills).
 - **Callouts:** a thin line with an elbow, from a thing to its label (arm joints → their names and angles), Hydra-style.
 - **Connecting traces** run from the assistant to each panel with 45° bends and **end exactly on the panel's edge**, with a dot at each end.
-- **Panels:** cut-corner outline, see-through fill. A small CAPS label only when it says something (e.g. "AI spend this month"). No drop shadows.
+- **Panels:** cut-corner outline, see-through fill, no drop shadows. **A value and an icon, not a sentence:** a coin icon and `$0.00/20` over a meter, not "AI spend this month … of the $20.00 budget". The full sentence goes in the tooltip.
+- **Fewer words everywhere:** buttons are an icon and one word (no subtitles); chat has no "You" / "Assistant" labels (the side of the screen says who); no numbers or labels on decorative rings.
 - **The screen frame** isn't a plain rectangle: cut corners, a raised tab in the middle of the top and bottom edges, notches on the sides, bright brackets on the corners and tabs.
 
 ## Hub layout
+**The core** is the assistant's picture: the rings around a glowing center. It sits **exactly in the middle of the screen** (the layout is symmetric around it), and the startup and hyperspace jump are centered on it.
+
 Two layouts, one setting (`hub.layout`):
-- **launcher** (default): the assistant big in the middle, module buttons around it (Teleop, Monitor, Arm, Chat). Each button unfolds its module full-screen. This frees the sides for **panels of real project facts**: current focus progress, AI spend against the budget, commits per day, which devices are connected.
+- **launcher** (default): the core big in the middle, module buttons left and right of it. Each button unfolds its module full-screen. The sides hold **panels of real project facts**: current focus progress, AI spend against the budget, commits per day, connected devices.
 - **panels:** modules on the left, the chat on the right, the arm's joint readouts and the typed log at the bottom.
 
-In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`sparse`, `busy-edges`, `dense`). **Just start typing** anywhere and the chat opens with your letters in it.
+In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`sparse`, `busy-edges`, `dense`).
 
-**Chat:** your messages on the right in a box with broken edges (bright corners, gaps in the sides); the assistant on the left with a thin line beside its text.
+**Modular:**
+- **Buttons come from a list** (`hub.modules`), in order, alternating left and right of the core so it stays balanced. Any number works, **including none**.
+- **Chat is not a module.** It belongs to the core and is always there: tap the core, its small chat tab, or **just start typing** anywhere (the chat opens with your letters in it). With no modules the hub is the core, its chat and the fact panels.
+- **The device panel takes any number of devices.** As a graph, devices sit evenly around the brain; past six, names move into tooltips. As a compact row, one icon per device, lit when connected. A small toggle on the panel switches between them (`hub.devices_view`). The header shows `connected/total`.
+
+**The core never disappears.** When a module opens, the core flies along with it instead of fading with the hub:
+- in **chat** it sits full size beside the conversation (left of it; above it on a portrait screen), so listening, thinking and speaking stay visible, and network pulses still flow into it;
+- in **other modules** it shrinks into the bottom-right corner and keeps reacting (a voice reply, an alert).
+
+**Chat:** your messages on the right in a box with broken edges (bright corners, gaps in the sides); the assistant on the left, its hexagon mark beside a thin line.
 
 ## Depth
 Three layers, like the Iron Man helmet shots:
@@ -93,7 +105,7 @@ Things **never just pop in**. Lines trace, rings sweep open, panels unfold from 
 - **offline:** rings stop and dim to gray.
 - **error:** rings stop and turn red, and a short message appears under the assistant (what's wrong, what still works).
 
-**Modules** unfold from their button while the hub shrinks back and blurs; Back (or Esc) folds them into the button again. Arm views are line-drawn "holograms": a slowly turning wireframe over a round floor grid with faint scan lines, joints as hexagons with callouts.
+**Modules** unfold from their button (chat unfolds from the core) while the hub shrinks back and blurs and the core flies to its dock; Back (or Esc) folds them into the button again and the core flies home. Arm views are line-drawn "holograms": a slowly turning wireframe over a round floor grid with faint scan lines, joints as hexagons with callouts.
 
 **Sleep:** after a few minutes with nobody using it, the hub dims to the network and the breathing assistant; any input wakes it with a re-lock.
 
@@ -101,11 +113,17 @@ Things **never just pop in**. Lines trace, rings sweep open, panels unfold from 
 The first thing people see, so it's the flashiest part.
 - **Ignition screen** (waiting to start): a slow spinning ring and a soft pulsing core. It says how to start with **the inputs this device actually has**: "Touch, click or press any key to start", plus their icons; a gamepad adds "press any button". (A badge-card reader types like a keyboard, so it already counts.) A line with a shield icon says **"Safe to start. This only opens the hub; no robot moves."** Venue and clock at the bottom.
 - **Assemble** (default): a bright line opens the screen like an old TV → the frame draws itself → the assistant, big in the center, gets its rings one by one, each locking on with a rising tone and spinning fast before settling → the core ignites and a shockwave reveals the network → real checks type out → the title decodes from scrambled letters → **everything flies to its place on the hub**: the title shrinks into the corner, the assistant settles into its spot, the panels unfold outward along growing traces.
-- **Hyperspace jump** (`startup.style: hyperspace`): stars stream out of the center faster and faster, a single flash, then the network's dots streak in from the center to their places and the hub assembles quickly. Also a candidate for the Quest.
+- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core. **The speed curve is the whole effect:**
+  1. **Spool** (~1 s): a still star field starts drifting toward you, slowly speeding up; a low rumble rises.
+  2. **Pull back** (~0.3 s): the stars ease to a stop and drift back a little, like a breath in; the sound dips.
+  3. **Launch** (~0.9 s): the speed climbs steeply, so dots stretch into long streaks; a slight shake, a glow in the center, a rising roar.
+  4. **Flash**, then **brake**: the network's dots streak in from the center to their places, fast at first and settling slowly, streaks shrinking to dots as they slow. The hub assembles quickly.
+
+  Also a candidate for the Quest.
 - Any input skips straight to the hub. ≤ ~6 s. Only real checks ("Internet: online", "AI: not connected").
 
 **Quality levels** (`quality` in the theme):
-- **maximal:** everything, plus more ring types on the assistant (bearing numbers, an outer bar ring, a satellite orbit, inward-pointing markers, crosshair ticks), ruler ticks, hatched blocks and sliding markers on the frame, a denser network, more dot columns, and **Bible verses** (King James Version, public domain) typing out faintly in the far layer and fading.
+- **maximal:** everything, plus more ring types on the core (an outer bar ring, a satellite orbit, inward-pointing markers, crosshair ticks), ruler ticks, hatched blocks and sliding markers on the frame, a denser network, more dot columns, and **Bible verses** (King James Version, public domain) typing out faintly in the far layer and fading.
 - **full:** the standard look described above.
 - **reduced:** rings, breathing, typing, a smaller network (no pulses, no dot columns), no blur.
 - **minimal** (the lightweight mode): no idle motion at all; still lines, color changes, short fades; flat, no glow; the assistant a still circle that changes color; the network a still dot grid. If the computer asks for reduced motion, use minimal.
@@ -114,6 +132,8 @@ The first thing people see, so it's the flashiest part.
 Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so it carries over the lab's fans. **Silence between events**, no hum. About a third of idle events make a matching sound (a tick, a faint shimmer). Startup: a low swell, rising lock-on tones, a deep shockwave thump, a soft chord for the title, a landing whoosh (hyperspace: a long rising roar, then a deep arrival boom). Buttons: a short soft blip. Assistant: a two-note rise when it starts listening, a falling one when done. Warning: two falling tones. Critical: an urgent low double tone in step with the red pulse. Volume and mute live in the sound pack.
 
 ## Screens and places
+**Everything scales with the screen,** the core included: sizes are set relative to the screen (the smaller of width and height decides), so the core keeps its share instead of shrinking first. **Portrait screens get their own layout:** the core on top, the buttons in a row under it, the fact panels in two columns below, and the page scrolls if it has to.
+
 - **32" lab monitor (main):** seen from 1–3 m, often by visitors standing. Big text, strong contrast, the assistant readable from across the room. Left on, waiting at the ignition screen.
 - **Quest headset:** panels float at arm's length; bigger text; no large bright areas. HUD arcs can wrap around tracked hands and the arm, FRIDAY-style; the network can become a 3D cloud; the hyperspace jump fits here.
 - **Touchscreen (later):** the network reacts to fingers; buttons big enough for a fingertip.
@@ -124,7 +144,7 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 - Start from darkness; add light only where it means something.
 - Fill space with **real information** (progress, budget, activity, devices), not filler.
 - Draw things in; let the center stay calm.
-- Use an icon when it says it faster than a word.
+- Use an icon when it says it faster than a word; cut every word that the layout already says.
 
 ## Don't
 - **Generic "AI-made" interface habits:** labels that say nothing, section eyebrows, dots `•` used as separators.
