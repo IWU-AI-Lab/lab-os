@@ -90,7 +90,8 @@ hub:                     # (planned)
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works.
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
-  devices_view: graph    # graph = devices around the brain | compact = one icon per device; the panel has a toggle
+  devices_view: auto     # auto = graph up to devices_graph_max, hive above | graph | hive. The panel's arrow expands a named list.
+  devices_graph_max: 8   # graph = a star of devices around the brain; hive = one row of small hexagons per kind
   portrait: stack        # portrait screens: core on top, buttons in a row under it, facts in two columns
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
@@ -103,11 +104,11 @@ clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace
   max_s: 6               # any input skips straight to the hub
-  hyperspace:            # the speed curve: drift, breath in, steep launch, flash, then a hard brake
-    spool_s: 1.0
-    pull_back_s: 0.33
-    launch_s: 0.87
-    brake_s: 1.5
+  hyperspace:            # stars stretch into lines, the lines charge up, the jump, then a flash and a hard brake
+    stretch_s: 1.6       # lines grow outward from the stars, bright at the star end
+    charge_s: 0.6        # lines brighten, a glow builds in the middle
+    jump_s: 0.7          # bright end flips outward, lines shoot past
+    brake_s: 1.5         # after the flash: dots streak in and settle into the network
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full
