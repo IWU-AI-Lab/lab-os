@@ -45,14 +45,14 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 - **The shape vocabulary:** segmented rings, tick marks, reticles, hexagons, chevrons, dashed lines ending in a dot, diagonal hatching, `+` marks at grid crossings.
 - **Icons instead of words** where the meaning is obvious: warning triangle, pause (held), globe (internet), chip (AI), pin (venue), person (persona), hand (teleop), screen (monitor), speech box (chat). Line icons drawn like everything else (same stroke, no fills).
 - **Callouts:** a thin line with an elbow, from a thing to its label (arm joints → their names and angles), Hydra-style.
-- **Connecting traces** run from the assistant to each panel with 45° bends and **end exactly on the panel's edge**, with a dot at each end.
-- **Panels: say what each one is without looking like a template.** A bare value is mysterious: `$0.00/20` reads like division, and `14d` or "JARVIS hub" alone tell a newcomer nothing. But the fix "icon + small spaced-out CAPS title + big number" on every panel is the stock dashboard tile, the main thing that makes a UI look AI-made (a blend of every template). Two candidates, undecided (`hub.panel_style`):
-  - **callouts** (current favorite): no boxes. The label sits on a thin line in plain sentence case ("AI spend, November"), with a small node at the end facing the core, like a film-HUD callout. The line does the labeling.
-  - **sentences:** no titles. One specific line with the number in it: "**90** commits in the last two weeks", "**$0.00** of $20 spent on AI this month".
-  - (**tiles**, the stat-tile version, is kept only for comparison.)
-  - Either way, **the graphic leads and differs per panel** (steps bar, meter, bars, hive), so the panels don't all share one shape.
+- **Connecting traces** run from the core **only to things you can press** (module buttons; the status strip and log above and below), with 45° bends, ending exactly on the edge with a dot at each end. Fact panels float free: lines to everything turn into clutter around the buttons.
+- **Panels are callouts** (decided). The **title sits on a thin line**: plain words, Title Case, as few as possible ("Current Project", "AI Spend", "Commits", "Devices"), with a small node at the end facing the core, like a film-HUD callout. **Everything else sits under the line** on a see-through fill with a cut corner, for readability: counts, units, dates, "this month", "1 of 8 connected", the time range.
+  - Why: a bare value is mysterious (`$0.00/20` reads like division), but "icon + small spaced-out CAPS title + big number" on every panel is the stock dashboard tile, the main thing that makes a UI look AI-made (a blend of every template).
+  - **The graphic leads and differs per panel** (steps bar, meter, bars, hive), so the panels don't all share one shape.
+  - **Full and maximal** decorate the line, never the content: a bright lead-in, a few ticks by the end node; maximal adds a small hatch block. **Module buttons** get corner brackets just outside the frame that open slightly on hover. Reduced and minimal: plain lines.
+  - **Ranges are controls, not titles:** the commits panel shows `7d 14d 30d` under the line, not "Commits, 14 days".
 - **Few words, never mysterious.** The test: someone walking in for the first time can say what each thing is. So:
-  - every panel says what it *is* in a few words, as a callout label or inside its one sentence;
+  - every panel says what it *is* in its title on the line;
   - numbers carry their unit (`of $20`, `step 0 of 8`, `17 of 31 online`);
   - say "Next: first hub page", not an arrow and an internal name ("brain + hub skeleton");
   - inputs get placeholder text ("Ask anything"), not just a blinking cursor;
@@ -80,8 +80,8 @@ In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`
   - **Two statuses per device:** *on* (plugged in, or answers on the network) and *connected* (talking to the brain). Hexagons: lit = connected, cyan outline = on but not connected, gray outline = off, hatched = locked.
   - **Locked** devices belong to a project (today: the green SO-101 and the training cameras, locked to the SO-101 training). The hub shows them but never opens their ports.
   - **Tap any device** for a card beside the panel. Identification first: the **sticker** on the device (Pis: 1–10; desktops and ThinkCentres: the university IT number) as the title, with what it's used for. Then the two statuses. Then the facts: the lab-os name, the computer's own name, the IP address, and whatever else it reports. Lists show the sticker first, too.
-  - The arrow in the header **expands the panel into a list** of every device by name, grouped by kind.
-  - The header says `17 of 31 online`. Settings: `hub.devices_view`, `hub.devices_graph_max`.
+  - The arrow by the title **expands the panel into a table**, grouped by kind. Statuses are icon columns (power = on, link = connected, lock = locked). **Which columns show is one list** (`hub.device_columns`: id, on, connected; also available: use, host, ip), so adding information later is one word.
+  - Under the line: `9 of 31 connected`. Settings: `hub.devices_view`, `hub.devices_graph_max`.
 
 **The core never disappears.** When a module opens, the core flies along with it instead of fading with the hub:
 - in **chat** it sits full size beside the conversation (left of it; above it on a portrait screen), so listening, thinking and speaking stay visible, and network pulses still flow into it;
@@ -132,14 +132,13 @@ Things **never just pop in**. Lines trace, rings sweep open, panels unfold from 
 The first thing people see, so it's the flashiest part.
 - **Ignition screen** (waiting to start): a slow spinning ring and a soft pulsing core. It says how to start with **the inputs this device actually has**: "Touch, click or press any key to start", plus their icons; a gamepad adds "press any button". (A badge-card reader types like a keyboard, so it already counts.) A line with a shield icon says **"Safe to start. This only opens the hub; no robot moves."** Venue and clock at the bottom.
 - **Assemble** (default): a bright line opens the screen like an old TV → the frame draws itself → the assistant, big in the center, gets its rings one by one, each locking on with a rising tone and spinning fast before settling → the core ignites and a shockwave reveals the network → real checks type out → the title decodes from scrambled letters → **everything flies to its place on the hub**: the title shrinks into the corner, the assistant settles into its spot, the panels unfold outward along growing traces.
-- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, about 2.5 s before the flash. **Dense**: ~1,000 stars, ~2,000 lines by the jump.
-  1. **Stretch** (~1.1 s): stars are there right away. Each flies toward you, leaving a line that points away from the middle. A low hum swells.
-  2. **Charge** (~0.6 s): the lines brighten and thicken, a glow builds in the middle, a slight tremble, a rising whine.
-  3. **Jump** (~0.8 s): the lines shoot past you, new ones streaming from the middle; a stronger shake and a roar.
-  4. **Impact frame** (optional, `impact_frame`): the last streaks frozen for ~80 ms, black lines on white. Never red: red means critical.
-  5. **Flash**, then a long **brake** (~2.6 s), like a rollercoaster coming to a halt. The network's dots streak in from the center and settle. The network starts **white-hot and dims** to normal as it settles, and the core arrives big and shrinks into place on the same curve.
+- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, 3 s before the flash. A real 3D star field (~2,400 stars) and **one smooth speed curve**: it only ever builds, never fast-slow-fast.
+  1. **Ramp** (~2 s, slow in: speed grows with time^1.5): dots on the screen start drifting outward, each leaving a short fading trail. The trails stretch and brighten, and the view slowly turns faintly blue. A hum rises with the speed.
+  2. **Hold** (~1 s): full speed. Complete lines from near the middle to the edges, a steady shake, the roar.
+  3. **Impact frame** (optional, `impact_frame`): the streaks frozen for ~80 ms, black lines on white. Never red: red means critical.
+  4. **Flash**, then a long **brake** (~2.6 s), like a rollercoaster coming to a halt (follow-through). The network's dots streak in from the center and settle. The network starts **white-hot and dims** as it settles, and the core arrives big and shrinks into place on the same curve.
 
-  Every line looks the same the whole time: a bright head (the star) and a tail fading toward the middle. Each keeps its place from frame to frame; only how far it has stretched changes. Lines that re-randomize every frame look like noise.
+  Animation principles at work: slow in (the ramp), exaggeration (the trails are motion blur stretched far beyond real physics, so lines get long while each star moves only a little per frame and keeps its place), secondary action (shake, glow, sound follow the speed), follow-through (the brake). Every line looks the same the whole time: a faint tail and a bright head. Lines that re-randomize every frame look like noise.
 
   Also a candidate for the Quest.
 - Any input skips straight to the hub. ≤ ~6 s. Only real checks ("Internet: online", "AI: not connected").
@@ -167,6 +166,11 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 - Fill space with **real information** (progress, budget, activity, devices), not filler.
 - Draw things in; let the center stay calm.
 - Use an icon when it says it faster than a word; cut every word that the layout already says, but keep the few that say what a thing *is*.
+- **Titles name things; details live under them.** A title is one or two words. Counts, units, dates and ranges go in the content.
+- **Give content a readable surface;** put decoration on lines and edges, and let it scale with the quality level.
+- **Only connect what you can act on.** Lines lead to buttons, not to every panel.
+- **Anything that will grow is a table or a hive whose columns come from config,** so new information is a setting, not a redesign.
+- **Animate with one curve per effect.** Speed, brightness, shake and sound follow the same curve, so the motion reads as one intention.
 
 ## Don't
 - **Generic "AI-made" interface habits:** labels that say nothing, section eyebrows, dots `•` used as separators.
