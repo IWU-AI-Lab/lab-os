@@ -46,9 +46,13 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 - **Icons instead of words** where the meaning is obvious: warning triangle, pause (held), globe (internet), chip (AI), pin (venue), person (persona), hand (teleop), screen (monitor), speech box (chat). Line icons drawn like everything else (same stroke, no fills).
 - **Callouts:** a thin line with an elbow, from a thing to its label (arm joints → their names and angles), Hydra-style.
 - **Connecting traces** run from the assistant to each panel with 45° bends and **end exactly on the panel's edge**, with a dot at each end.
-- **Panels:** cut-corner outline, see-through fill, no drop shadows. Each one is **an icon + a short title, then the value**: `AI SPEND, NOVEMBER` / `$0.00 of $20` over a meter. Not a sentence ("AI spend this month … of the $20.00 budget"), but not a bare value either: `$0.00/20` reads like division, and `14d` or "JARVIS hub" alone tell a newcomer nothing.
+- **Panels: say what each one is without looking like a template.** A bare value is mysterious: `$0.00/20` reads like division, and `14d` or "JARVIS hub" alone tell a newcomer nothing. But the fix "icon + small spaced-out CAPS title + big number" on every panel is the stock dashboard tile, the main thing that makes a UI look AI-made (a blend of every template). Two candidates, undecided (`hub.panel_style`):
+  - **callouts** (current favorite): no boxes. The label sits on a thin line in plain sentence case ("AI spend, November"), with a small node at the end facing the core, like a film-HUD callout. The line does the labeling.
+  - **sentences:** no titles. One specific line with the number in it: "**90** commits in the last two weeks", "**$0.00** of $20 spent on AI this month".
+  - (**tiles**, the stat-tile version, is kept only for comparison.)
+  - Either way, **the graphic leads and differs per panel** (steps bar, meter, bars, hive), so the panels don't all share one shape.
 - **Few words, never mysterious.** The test: someone walking in for the first time can say what each thing is. So:
-  - every panel gets a 1–3 word title (it says what the panel *is*; that's not filler);
+  - every panel says what it *is* in a few words, as a callout label or inside its one sentence;
   - numbers carry their unit (`of $20`, `step 0 of 8`, `17 of 31 online`);
   - say "Next: first hub page", not an arrow and an internal name ("brain + hub skeleton");
   - inputs get placeholder text ("Ask anything"), not just a blinking cursor;
@@ -72,9 +76,10 @@ In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`
 - **Chat is not a module.** It belongs to the core and is always there: tap the core, its small chat tab, or **just start typing** anywhere (the chat opens with your letters in it). With no modules the hub is the core, its chat and the fact panels.
 - **The device panel takes any number of devices** (the lab may have 30+: arms, the headset, cameras, ~10 Raspberry Pis, ~7 ThinkCentres, ~6 desktops).
   - **Up to 8:** a star, each device a dot connected to the brain, pulses running along live links. Names show when there are 6 or fewer.
-  - **More:** a **hive**, one row per kind (icon, `online/total`, then one small hexagon per device). Lit = online, gray outline = offline, hatched = locked.
+  - **More:** a **hive**, one row per kind (icon, `connected/total`, then one small hexagon per device).
+  - **Two statuses per device:** *on* (plugged in, or answers on the network) and *connected* (talking to the brain). Hexagons: lit = connected, cyan outline = on but not connected, gray outline = off, hatched = locked.
   - **Locked** devices belong to a project (today: the green SO-101 and the training cameras, locked to the SO-101 training). The hub shows them but never opens their ports.
-  - **Tap any device** for a small card beside the panel: name, what it is, online / not connected / locked to which project.
+  - **Tap any device** for a card beside the panel. Identification first: the **sticker** on the device (Pis: 1–10; desktops and ThinkCentres: the university IT number) as the title, with what it's used for. Then the two statuses. Then the facts: the lab-os name, the computer's own name, the IP address, and whatever else it reports. Lists show the sticker first, too.
   - The arrow in the header **expands the panel into a list** of every device by name, grouped by kind.
   - The header says `17 of 31 online`. Settings: `hub.devices_view`, `hub.devices_graph_max`.
 
@@ -127,13 +132,14 @@ Things **never just pop in**. Lines trace, rings sweep open, panels unfold from 
 The first thing people see, so it's the flashiest part.
 - **Ignition screen** (waiting to start): a slow spinning ring and a soft pulsing core. It says how to start with **the inputs this device actually has**: "Touch, click or press any key to start", plus their icons; a gamepad adds "press any button". (A badge-card reader types like a keyboard, so it already counts.) A line with a shield icon says **"Safe to start. This only opens the hub; no robot moves."** Venue and clock at the bottom.
 - **Assemble** (default): a bright line opens the screen like an old TV → the frame draws itself → the assistant, big in the center, gets its rings one by one, each locking on with a rising tone and spinning fast before settling → the core ignites and a shockwave reveals the network → real checks type out → the title decodes from scrambled letters → **everything flies to its place on the hub**: the title shrinks into the corner, the assistant settles into its spot, the panels unfold outward along growing traces.
-- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, about 3 s before the flash:
-  1. **Stretch** (~1.6 s): stars are visible right away as bright dots. Each grows a line outward, slowly at first, all pointing away from the middle. The bright end stays **at the star**, so you watch them stretch. A low hum swells.
+- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, about 2.5 s before the flash. **Dense**: ~1,000 stars, ~2,000 lines by the jump.
+  1. **Stretch** (~1.1 s): stars are there right away. Each flies toward you, leaving a line that points away from the middle. A low hum swells.
   2. **Charge** (~0.6 s): the lines brighten and thicken, a glow builds in the middle, a slight tremble, a rising whine.
-  3. **Jump** (~0.7 s): the bright end **flips to the outside** and the lines shoot past you, new ones streaming from the middle; a stronger shake and a roar.
-  4. **Flash**, then **brake** (~1.5 s): the network's dots streak in from the center to their places, fast at first and settling slowly. The streaks become the background network. The hub assembles quickly.
+  3. **Jump** (~0.8 s): the lines shoot past you, new ones streaming from the middle; a stronger shake and a roar.
+  4. **Impact frame** (optional, `impact_frame`): the last streaks frozen for ~80 ms, black lines on white. Never red: red means critical.
+  5. **Flash**, then a long **brake** (~2.6 s), like a rollercoaster coming to a halt. The network's dots streak in from the center and settle. The network starts **white-hot and dims** to normal as it settles, and the core arrives big and shrinks into place on the same curve.
 
-  Every line keeps its place from frame to frame; only how far it has stretched changes. Lines that re-randomize every frame look like noise.
+  Every line looks the same the whole time: a bright head (the star) and a tail fading toward the middle. Each keeps its place from frame to frame; only how far it has stretched changes. Lines that re-randomize every frame look like noise.
 
   Also a candidate for the Quest.
 - Any input skips straight to the hub. ≤ ~6 s. Only real checks ("Internet: online", "AI: not connected").
@@ -152,7 +158,7 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 
 - **32" lab monitor (main):** seen from 1–3 m, often by visitors standing. Big text, strong contrast, the assistant readable from across the room. Left on, waiting at the ignition screen.
 - **Quest headset:** panels float at arm's length; bigger text; no large bright areas. HUD arcs can wrap around tracked hands and the arm, FRIDAY-style; the network can become a 3D cloud; the hyperspace jump fits here.
-- **Touchscreen (later):** the network reacts to fingers; buttons big enough for a fingertip.
+- **Large touch display (Newline) and hallway screens:** seen by people passing by, so the "newcomer can tell what it is" test matters most here. The network reacts to fingers; buttons big enough for a fingertip. **Public screens hide internal details** (IP addresses, spend): the venue profile decides.
 - **Projector / bright rooms:** lines must stay bright; minimal quality reads best.
 - **Laptops:** same layout, scaled down; reduced quality by default.
 

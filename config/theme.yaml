@@ -92,6 +92,7 @@ hub:                     # (planned)
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
   devices_view: auto     # auto = graph up to devices_graph_max, hive above | graph | hive. The panel's arrow expands a named list.
   devices_graph_max: 8   # graph = a star of devices around the brain; hive = one row of small hexagons per kind
+  panel_style: callouts  # callouts = label on a line, no boxes | sentences = one line with the number in it | tiles (comparison only)
   portrait: stack        # portrait screens: core on top, buttons in a row under it, facts in two columns
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
@@ -104,11 +105,13 @@ clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace
   max_s: 6               # any input skips straight to the hub
-  hyperspace:            # stars stretch into lines, the lines charge up, the jump, then a flash and a hard brake
-    stretch_s: 1.6       # lines grow outward from the stars, bright at the star end
+  hyperspace:            # stars stretch into lines, the lines charge up, the jump, then a flash and a long brake
+    stars: 1000          # how dense the star field is (lines are drawn in batches, so this stays cheap)
+    stretch_s: 1.1       # stars fly toward you, leaving lines that point away from the middle
     charge_s: 0.6        # lines brighten, a glow builds in the middle
-    jump_s: 0.7          # bright end flips outward, lines shoot past
-    brake_s: 1.5         # after the flash: dots streak in and settle into the network
+    jump_s: 0.8          # lines shoot past, new ones stream from the middle
+    impact_frame: true   # ~80 ms freeze, black lines on white, right before the flash (never red)
+    brake_s: 2.6         # after the flash: a long ease-out; the network starts white-hot and dims as it settles
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
   default: full
