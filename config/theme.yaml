@@ -107,9 +107,9 @@ startup:                 # (planned)
   style: assemble        # assemble | hyperspace
   max_s: 6               # any input skips straight to the hub
   hyperspace:            # a 3D star field on one smooth speed curve, then an impact frame, a flash and a long brake
-    stars: 2400          # how dense the star field is (lines are drawn in batches, so this stays cheap)
-    ramp_s: 2.0          # dots drift outward, trails stretch and brighten; speed grows with time^1.5 (slow in)
-    hold_s: 1.0          # full speed: complete lines from the middle to the edges
+    stars: 3000          # how dense the star field is; the ignition screen shows the same stars, barely drifting
+    ramp_s: 2.0          # stars drift outward, trails stretch and brighten; speed grows with time^1.5 (slow in)
+    hold_s: 0.7          # full speed: complete lines sweeping past the edges, with the shake
     impact_frame: true   # ~80 ms freeze, black lines on white, right before the flash (never red)
     brake_s: 2.6         # after the flash: a long ease-out; the network starts white-hot and dims as it settles
 
