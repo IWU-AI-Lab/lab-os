@@ -34,6 +34,68 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-08)
+"Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md` (design branch).
+
+### GPU-busy indicator on the hub
+- **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 6 already warns about it); a visible sign beats remembering.
+- **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
+- **Plugs into:** status strip or the desktop's device card; model router (local setups).
+
+### Teleop delay graph
+- **What:** a small live graph of the Quest-to-arm delay over the last minute, in the teleop module (and the monitor page).
+- **Why:** shows whether lag comes from the network, the brain or the arm; makes speed tuning measurable ("feel" on hold: `ideas.md` → "On hold" → speed and feel).
+- **Watch out:** the Quest and the brain have different clocks, so measure with a round trip (the brain echoes a timestamp back) rather than comparing clocks. "Reached the arm" can mean *command sent* (easy) or *arm got there* (needs position read-back; slower, arm-specific). Start with command sent; label which one the graph shows.
+- **Plugs into:** teleop module + monitor; the troubleshooting suite (network delay).
+
+### Battery and diagnostics in the device cards
+- **What:** each device card shows what that device can actually report: battery, temperatures, voltage, servo load, signal strength, under-voltage warnings. Nothing shown that the device can't measure (no fake "100%").
+- **Why:** low batteries and hot servos are the usual silent failures.
+- **Source list:** "Hidden sensor data the hardware already has" (below) says what each device offers.
+- **Plugs into:** each device plug-in declares its readings; the device card shows them; the troubleshooting suite logs them.
+
+### Projects module
+- **What:** an expandable list of the lab's active and past projects: name, people, devices it uses, status (active / paused / done), maybe a link to its repo or docs.
+- **Why:** shows what the lab is doing; explains to visitors and the next student why a device is "locked" (today: the green SO-101 + training cameras → the SO-101 training project).
+- **Idea for later:** devices get locked *by* a project entry (`config/projects.yaml`) instead of a separate flag.
+- **Plugs into:** a hub module (button); the device card ("Used by: SO-101 training"). Different from the hub's "Current Project" panel, which shows lab-os's own focus.
+- **Open questions:** who edits the list (a config file, or a form in the hub)? People's names are fine internally, but check before showing it to visitors.
+
+### "Find me" button
+- **What:** in a device's card (tap it in the hive), "Find me" makes the real device show itself, depending on what it can do: a Pi blinks its LED, a Raspbot beeps, a Pi with a touchscreen shows its sticker number big on screen, the Quest plays a sound.
+- **Why:** with ~10 identical Pis, finding "Pi 7" on the shelf is a real chore.
+- **Rules:** each device declares which "find me" actions it supports; robot **motion** (e.g. an arm wiggle) is not a find-me action (safety rules). Needs the device connected to the brain (router). Blinking a Pi's LED may need a one-time permission setup on the Pi.
+- **Later, location:** GPS doesn't work indoors. Inside, a rough location could come from which Wi-Fi access point a device is near; GPS only for outdoor/cellular robots (the "cellular robots" idea).
+- **Plugs into:** device plug-ins (an optional "identify" action); device card.
+
+### AR labels in the Quest
+- **What:** in the headset, look at any device and its name + status float above it.
+- **Why:** visually cool (the builder: "somewhat useless but visually cool").
+- **Methods, simplest first:**
+  1. **Place labels by hand once:** point the controller at a device, pick its name; the Quest remembers the spot (WebXR anchors). No camera needed. Moving a device means re-placing its label.
+  2. **QR codes / AprilTags** (square printed markers made for robots, readable from far): automatic, but the Quest's browser may not give web pages access to the camera images; to check (native apps can use Meta's camera access).
+  3. **Recognizing devices by sight** (computer vision): hardest; identical Pis look the same anyway.
+- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and the dropped ghost-arm alignment (decision 2026-10-28).
+- **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
+
+### Brain as an MCP server
+- **What:** the brain offers its abilities as **MCP tools** (MCP, Model Context Protocol, is the standard way AI agents plug into outside tools). For example: list devices, device status, arm readouts, the project docs. Claude Code, Codex, LM Studio and other MCP clients can then reach the lab directly.
+- **Builder's version:** the hub's ask line just forwards to the configured harness (Claude Code / Codex / LM Studio) instead of having its own chat backend.
+- **Recommendation (to decide):** do the MCP server, but **keep a small fast chat of our own** next to it, and let the ask line pick:
+  - The tools are defined **once**, in the brain, as MCP tools; our own chat and any outside agent use the same ones.
+  - **Quick questions** ("what's next?", "is the xArm on?") go to the fast path: our own chat, one model call, answers in about a second, cheap. Agent harnesses take seconds to start and loop, cost more per question, and later voice needs fast answers (two-speed decision, 2026-10-19).
+  - **"Build/do" requests** ("add the touchscreen page") go to the configured harness (slow path; the coding agent).
+  - Config picks the harness (`codex`, `claude-code`, `lm-studio`, …), so "forward everything to a harness" stays a setting, not a rebuild.
+- **Rules:** read-only tools first; anything that moves a robot goes through the safety layer and is off by default; off-limits devices are never exposed; the server listens on this computer only (`localhost`) unless decided otherwise.
+- **Effect on the current focus (if agreed):** step 7's read-only project tools would be built as the brain's first MCP tools.
+- **Plugs into:** tools slot + agent harness slot + model router.
+
+### LLMs/VLMs driving the green SO-101s
+- **What:** bring `so101-green` and its cameras into lab-os later, e.g. to test general AI models that see and reason (LLMs/VLMs, like the "look, then reach" route) driving the arm, compared with the trained VLA (SmolVLA).
+- **Status:** future goal. **The hard rules stay unchanged** (CLAUDE.md, `config/devices.yaml`: never open its ports) until this integration is planned as a focus.
+- **Plugs into:** robots slot (SO-101 driver exists for so101-white); cameras/vision; AI models; the projects module (the device moves from "locked" to shared).
+
 ## Recent ideas (2026-10-30)
 
 ### Assistant pictures beyond the plain circle

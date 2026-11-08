@@ -19,7 +19,7 @@ Day one: README, CLAUDE.md (points to current focus + log; rules), docs/, SAFETY
 ## Arm roles (2026-10-23)
 | Arm | Name | Role |
 |---|---|---|
-| SO-101 set (leader + follower), green | `so101-green` | **In use for another training project — not part of this project; don't touch/recalibrate.** |
+| SO-101 set (leader + follower), green | `so101-green` | **The builder's own SO-101 training project** (with the two training cameras; clarified 2026-11-08: not someone else's). Not part of lab-os *yet*: the hard rules (never open its ports, never recalibrate) stay until its integration is planned (`ideas.md` → "LLMs/VLMs driving the green SO-101s"). |
 | SO-101 set (leader + follower), white | `so101-white` (follower), `so101-white-leader` | **Polished teleop demo + second act.** Parts printed; camera mounts printing; to be built. May also join the training project — teleop then doubles as its data-collection tool. |
 | xArm 1S #1 (built, works) | `xarm1` | **Teleop prototype now** + **the JARVIS-track robot** + fallback teleop arm. |
 | xArm 1S #2 (unbuilt) | `xarm2` | Spare / later. |
@@ -50,6 +50,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 - **NVIDIA GR00T N1.6, Physical Intelligence π0/π0.5** — bigger open models; training needs ~22–70 GB GPU memory (rented cloud GPU); GR00T has an SO-101 route.
 - **Gemini Robotics** (full action model) — partner-only; not available.
 - **ACT from scratch** — weakest generalization; fine as a learning exercise.
+**Result so far (2026-11, training project):** SmolVLA fine-tuned on **50 episodes** on `so101-green` sometimes performs the task. First real evidence for route B on our hardware (success rate, training time and GPU: to record).
 **Plan:** (A) "look, then reach" with Gemini Robotics-ER 2 first (most magic per hour: "put anything on the table and ask it to grab it"); (B) then SmolVLA fine-tuned on our own teleop recordings with varied conditions. Recording tip: vary positions, lighting, backgrounds, distractors; record in the demo venue too.
 
 ---
