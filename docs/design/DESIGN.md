@@ -50,6 +50,8 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
   - Why: a bare value is mysterious (`$0.00/20` reads like division), but "icon + small spaced-out CAPS title + big number" on every panel is the stock dashboard tile, the main thing that makes a UI look AI-made (a blend of every template).
   - **The graphic leads and differs per panel** (steps bar, meter, bars, hive), so the panels don't all share one shape.
   - **Full and maximal** decorate the line, never the content: a bright lead-in, a few ticks by the end node; maximal adds a small hatch block. **Module buttons** get corner brackets just outside the frame that open slightly on hover. Reduced and minimal: plain lines.
+  - **The title sits in a tab:** a small box on the line, open at the bottom (the line is its floor), its corner facing the core cut at 45°, a faint fill. Full and maximal add a bright notch on the tab's top edge.
+  - **Current Project:** the project name; then the step bar with "Step 0 of 8" at its right end; then **NEXT ⁄ First hub page** on its own line, larger, with a slanted separator between the word and the step.
   - **Spacing:** the content sits well inside its fill (about 1 rem from every edge), stacked callouts have clear air between them (~2 rem), and callouts keep a gap from the module buttons so the two kinds never touch.
   - **Boxes are for pressing, callouts are for reading.** Module buttons (Teleop, Monitor, Arm) stay framed boxes because you press them; facts are callouts because you read them. Keeping the two shapes apart tells people what's clickable without words.
   - **Ranges are controls, not titles:** the commits panel shows `7d 14d 30d` under the line, not "Commits, 14 days".
@@ -65,6 +67,8 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 - **The screen frame** isn't a plain rectangle: cut corners, a raised tab in the middle of the top and bottom edges, notches on the sides, bright brackets on the corners and tabs.
 
 ## Hub layout
+**The title** in the top-left corner is the lab's name (`hub.title`, "AI Comp Lab" for now), not the project's code name: people in the hallway should read where they are. The startup decodes the same text.
+
 **The core** is the assistant's picture: the rings around a glowing center. It sits **exactly in the middle of the screen** (the layout is symmetric around it), and the startup and hyperspace jump are centered on it.
 
 Two layouts, one setting (`hub.layout`):
@@ -75,21 +79,24 @@ In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`
 
 **Modular:**
 - **Buttons come from a list** (`hub.modules`), in order, alternating left and right of the core so it stays balanced. Any number works, **including none**.
-- **Chat is not a module.** It belongs to the core and is always there: tap the core, its small chat tab, or **just start typing** anywhere (the chat opens with your letters in it). With no modules the hub is the core, its chat and the fact panels.
+- **Chat is not a module.** It belongs to the core and is always there. **Asking doesn't open anything:** type into the line under the core, or **just start typing** anywhere (the letters land in that line). The answer types out **under the core**, up to three lines, and fades after ~14 s; the core listens, thinks and speaks as usual. The **conversation** (the history) opens only when you want it: the history button at the end of the ask line (with a count of questions), tapping the answer, or tapping the core. With no modules the hub is the core, its ask line and the fact panels.
 - **The device panel takes any number of devices** (the lab may have 30+: arms, the headset, cameras, ~10 Raspberry Pis, ~7 ThinkCentres, ~6 desktops).
   - **Up to 8:** a star, each device a dot connected to the brain, pulses running along live links. Names show when there are 6 or fewer.
   - **More:** a **hive**, one row per kind (icon, `connected/total`, then one small hexagon per device).
   - **Two statuses per device:** *on* (plugged in, or answers on the network) and *connected* (talking to the brain). Hexagons: lit = connected, cyan outline = on but not connected, gray outline = off, hatched = locked.
   - **Locked** devices belong to a project (today: the green SO-101 and the training cameras, locked to the SO-101 training). The hub shows them but never opens their ports.
   - **Tap any device** for a card beside the panel. Identification first: the **sticker** on the device (Pis: 1–10; desktops and ThinkCentres: the university IT number) as the title, with what it's used for. Then the two statuses. Then the facts: the lab-os name, the computer's own name, the IP address, and whatever else it reports. Lists show the sticker first, too.
-  - The arrow by the title **expands the panel into a table**, grouped by kind. Statuses are icon columns (power = on, link = connected, lock = locked). **Which columns show is one list** (`hub.device_columns`: id, on, connected; also available: use, host, ip), so adding information later is one word.
+  - A **wide bar at the bottom** of the panel, "List all devices" with a chevron (big enough for a finger), **expands it into a table**, grouped by kind; the same bar then says "Back to the map". Opening it **moves nothing above it**: the column stays pinned and the list grows downward, capped so it stops above the bottom row. When it holds more than fits it **scrolls**, with a thin cyan scroll bar and a fade at the bottom that disappears once you reach the end.
+  - **Statuses are words with a dot** ("● On", "○ Off", "● Yes", "🔒 Locked"), never bare icons: icons like power and link look like buttons that would switch the device off. Column heads: Power, Brain. Long names shorten with "…".
+  - **Actions live in the device card,** as a real framed button: "Connect to the brain" / "Disconnect from the brain" ("Turn it on to connect" when it's off; nothing for locked devices). Boxes are for pressing, so the table stays read-only. **Which columns show is one list** (`hub.device_columns`: id, on, connected; also available: use, host, ip), so adding information later is one word.
   - Under the line: `9 of 31 connected`. Settings: `hub.devices_view`, `hub.devices_graph_max`.
 
 **The core never disappears.** When a module opens, the core flies along with it instead of fading with the hub:
+- the three small markers inside the arcs shrink with them when the core contracts (listening), so the arcs never sit on top of them;
 - in **chat** it sits full size beside the conversation (left of it; above it on a portrait screen), so listening, thinking and speaking stay visible, and network pulses still flow into it;
 - in **other modules** it shrinks into the bottom-right corner and keeps reacting (a voice reply, an alert).
 
-**Chat:** your messages on the right in a box with broken edges (bright corners, gaps in the sides); the assistant on the left, its hexagon mark beside a thin line.
+**Chat** (the conversation page) sits on a near-black background, so the core beside it keeps its contrast. Your messages on the right in a box with broken edges (bright corners, gaps in the sides); the assistant on the left, its hexagon mark beside a thin line.
 
 ## Depth
 Three layers, like the Iron Man helmet shots:
@@ -134,8 +141,8 @@ Things **never just pop in**. Lines trace, rings sweep open, panels unfold from 
 The first thing people see, so it's the flashiest part.
 - **Ignition screen** (waiting to start): a slow spinning ring and a soft pulsing core over a **still star field** that barely drifts and twinkles. The stars are the anchor for the startup: the hyperspace lines grow out of them, and with assemble they glide into place as the network's dots while the rest fade. It says how to start with **the inputs this device actually has**: "Touch, click or press any key to start", plus their icons; a gamepad adds "press any button". (A badge-card reader types like a keyboard, so it already counts.) A line with a shield icon says **"Safe to start. This only opens the hub; no robot moves."** Venue and clock at the bottom.
 - **Assemble** (default): a bright line opens the screen like an old TV → the frame draws itself → the assistant, big in the center, gets its rings one by one, each locking on with a rising tone and spinning fast before settling → the core ignites and a shockwave reveals the network → real checks type out → the title decodes from scrambled letters → **everything flies to its place on the hub**: the title shrinks into the corner, the assistant settles into its spot, the panels unfold outward along growing traces.
-- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, 2.7 s before the flash. A real 3D star field (~3,000 stars, spread evenly over the whole screen so the edges are as full as the middle) and **one smooth speed curve**: it only ever builds, never fast-slow-fast. It starts from the ignition screen's drift, so nothing jumps.
-  1. **Ramp** (~2 s, slow in: speed grows with time^1.5): the waiting stars start drifting outward, each leaving a short fading trail. The trails stretch and brighten, and the view slowly turns faintly blue. A hum rises with the speed.
+- **Hyperspace jump** (`startup.style: hyperspace`), centered on the core, 2.7 s before the flash. A real 3D star field (~3,000 stars over the whole screen so the edges are full, with **a third gathered around the middle** so the place you look at isn't empty) and **one smooth speed curve**: it only ever builds, never fast-slow-fast. It starts from the ignition screen's drift, so nothing jumps.
+  1. **Ramp** (~2 s): the speed is **exponential**: the dots barely crawl at first, then race. The trails lead the speed (they grow with time²), so the lines stretch while the dots are still slow, and only then does the speed catch up (anticipation). The waiting stars start drifting outward, each leaving a short fading trail. The trails stretch and brighten, and the view slowly turns faintly blue. A hum rises with the speed.
   2. **Hold** (~0.7 s): full speed. Complete lines that sweep all the way past the edges (a star leaves only when its tail does), a steady shake, the roar.
   3. **Impact frame** (optional, `impact_frame`): the streaks frozen for ~80 ms, black lines on white. Never red: red means critical.
   4. **Flash**: a burst of light from the core that clears from the edges first (an even white fade reads as gray fog). Then a long **brake** (~2.6 s), like a rollercoaster coming to a halt (follow-through). The network's dots streak in from the center and settle. The network starts **white-hot and dims** as it settles, and the core arrives big and shrinks into place on the same curve.

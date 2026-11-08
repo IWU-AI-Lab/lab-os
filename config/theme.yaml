@@ -87,6 +87,7 @@ motion:                  # (planned)
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned)
+  title: "AI Comp Lab"   # top-left title and the startup title: the lab's name, not the project's code name
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works.
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
@@ -99,7 +100,7 @@ hub:                     # (planned)
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
   background_text: verses     # far-layer typing text in maximal quality: verses | none
   verses_translation: KJV     # public domain
-  type_to_chat: true     # typing anywhere opens the chat with the letters in it
+  type_to_chat: true     # typing anywhere goes into the ask line under the core; the answer shows under the core (the conversation page stays closed)
 
 clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). (planned)
 
@@ -108,7 +109,7 @@ startup:                 # (planned)
   max_s: 6               # any input skips straight to the hub
   hyperspace:            # a 3D star field on one smooth speed curve, then an impact frame, a flash and a long brake
     stars: 3000          # how dense the star field is; the ignition screen shows the same stars, barely drifting
-    ramp_s: 2.0          # stars drift outward, trails stretch and brighten; speed grows with time^1.5 (slow in)
+    ramp_s: 2.0          # trails stretch first (time²) while the dots crawl; speed is exponential, so it races at the end
     hold_s: 0.7          # full speed: complete lines sweeping past the edges, with the shake
     impact_frame: true   # ~80 ms freeze, black lines on white, right before the flash (never red)
     brake_s: 2.6         # after the flash: a long ease-out; the network starts white-hot and dims as it settles
