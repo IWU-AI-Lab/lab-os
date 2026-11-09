@@ -4,7 +4,7 @@
 
 The numbers (colors, fonts, sizes, timings) live in `config/theme.yaml`. This page says what they mean and how to use them. **Everything here is meant to be swapped easily:** colors, fonts, layout, how busy the hub is, how alerts look, each one a single setting in the theme. The theme is the same for every persona; a persona only changes the assistant's picture, voice, lines and sounds.
 
-A clickable concept of all of this exists as a private artifact (the "Lab JARVIS Hub" concept page, built in the design session); it's for feeling out the design language, not the hub's code. Much of it should survive, but the real hub needs far more behind each part.
+**The reference: [`hub-concept.html`](hub-concept.html)** (approved by the builder 2026-11-09, after ten rounds). Open it in a browser: click to start, or add `#skip` to the address to jump to the hub; "Concept controls" (bottom right) switches quality, layout, states, alerts, devices and greeting cases. **The real hub copies its look and motion**; this page explains the why, and `config/theme.yaml` holds the numbers. See "Building the real hub" at the end.
 
 ## Colors
 Dark first. One main color carries almost everything; the warm colors are kept for things that need a human.
@@ -207,3 +207,11 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 | `hud_elements_4.jpg`, `hud_elements_5.jpg` | Composition: one core of rings in the center, everything around it. Also what to avoid: blue haze, filler charts, everything equally bright. |
 | `hud_elements_cyberpunk_1.jpg` | Big bold numbers, diagonal hatching, `+` grid marks, triangle icons. |
 | `hud_elements_cyberpunk_2.jpg` | Text panels: title tab, chevrons, dot rows, soft neon glow on outlines with readable text inside. |
+
+## Building the real hub
+When the hub is implemented (focus steps 1, 3, 5), **this design is the spec**: `hub-concept.html` shows how it should look, move and sound, this page says why, and `config/theme.yaml` holds the numbers. Open the concept next to the real page and compare them side by side.
+- **Take from the concept:** the layout, every animation and its timing, the sounds (WebAudio recipes in its `SFX` object), the startup (unlock, hyperspace, assembly, checks, greeting), the callouts and their details pages, the device panel, the ask line under the core, the module pages and the docked core. Lift code where it fits; it's one file, written to be read.
+- **Don't take:** the concept controls (`#dock`), the fake data (canned answers, `ANSWERS`, the example computers, `GREET_EXAMPLES`, the simulated arm), and the Google Fonts link. The real pages work offline: fonts are bundled (see `font.bundled` in the theme) and vendored like the three.js copy in `src/lab_os/teleop/web/vendor/`.
+- **Read every number from the theme** (`/theme.json`), not from constants in the page. The concept hard-codes them; where a token exists, the token wins.
+- **Real facts only:** the checks, the greeting's news line, the panels and the device statuses all read real state. Where something isn't real yet, leave it out instead of faking it.
+- **Changing the design:** update this page, the theme and the concept together (a design session), so the three never disagree.
