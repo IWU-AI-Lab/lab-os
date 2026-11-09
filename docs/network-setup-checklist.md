@@ -109,6 +109,13 @@ From here on, Claude Code (on the desktop) can reach every device by name.
 
 ---
 
+## Step 7 — The brain's secure address (for voice on every screen)
+Details: `current-focus.md` → "Step 7, concretely".
+- **Fixed address for the brain:** a DHCP reservation in the lab router, so `hub.indwesailab.com` keeps pointing to the right computer. (Before the router: the desktop's university address may change; check it before relying on the name.)
+- **Local DNS entry in the router:** `hub.indwesailab.com` → the brain's address, so the name works without internet. On the GL.iNet (OpenWrt) this is a custom DNS / hosts entry.
+- **DNS rebinding protection:** routers and some networks block public names that point to private addresses (like `192.168.x.x`). If the name doesn't resolve on the lab network, allow the domain in the router's rebind protection, or rely on the local DNS entry.
+- **Can the screens reach the brain?** University networks often block devices from talking to each other. Before the router: open the brain's address from the Newline once to check.
+
 ## Gotchas found so far
 - Wi-Fi MAC ≠ Ethernet MAC.
 - Pi 5 = micro-HDMI; Jetson Orin Nano dev kit = DisplayPort.
