@@ -34,6 +34,79 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-09)
+
+### Screens without browser bars ("kiosk clients")
+- **What:** any lab screen (32" monitor, Pi touchscreens, the Newline) shows the hub, or any other web app, full screen, with no tabs or address bar, and starts by itself.
+- **How, simplest first:**
+  1. **Full screen from the page itself:** the hub's ignition press switches to full screen (in the current focus). Works in any browser, Newline's included, but Esc or a reload leaves it.
+  2. **Kiosk mode:** Chrome/Chromium/Edge started with `--kiosk <address>` show only the page, start at boot, and can't be left by accident. The standard setup for Raspberry Pi screens; works on the lab desktops (Linux, Windows).
+  3. **Install as an app:** the hub can declare itself an installable web app ("PWA"); Chrome/Edge/Android then offer "Install", and it opens in its own window without browser bars. Needs `localhost` or HTTPS (the certificate question again for other screens).
+- **The Newline (TT-7523QCA+, a Q+ Pro: Android 15 with the Google Play Store).** Its Chrome has **no full-screen button** (builder, 2026-11-09). Options, quickest first (needed for another project by 2026-11-11/12):
+  1. **The page asks for full screen itself:** a "tap to start" layer that calls `document.documentElement.requestFullscreen()` on the first tap (Android Chrome allows it after a tap; works over plain `http` too). Needs a small change to that project's page; a reload or the Back gesture leaves full screen, so the tap layer comes back.
+  2. **Install the page as an app (PWA)** with a web app manifest saying `"display": "fullscreen"`: Chrome's menu → "Install app" / "Add to home screen", then it opens from its icon with no bars. Needs HTTPS (a plain `http://` LAN address won't install; workaround: `chrome://flags` → "Insecure origins treated as secure", if the Newline allows flags) and Chrome's install rules (a manifest with name + icons; older Chrome versions also want a small service worker).
+  3. **A kiosk browser app from the Play Store** (e.g. Fully Kiosk Browser: full screen, starts at boot, locks to one address; check its license terms): no change to the page. Only if the Newline lets us install apps.
+  4. **A small computer on its HDMI + USB touch** (spare Pi 5 or ThinkCentre) with Chromium `--kiosk` (2 above): always works, same recipe as the Pi screens; the long-term choice for the hub.
+  - Test 1 and 2 today on any **Android phone** with Chrome (it behaves like the Newline's); try 3 at the Newline.
+- **Newline Signage Pro** (corrected 2026-11-09): installed on the Newline but needs registering; Newline names only the Q Pro and STV+ as "fully integrated", and resellers sell a license (~$99 per display per year; a free year comes with Newline's media-player box), so maybe not free. Its listed content is images, videos, text, weather, QR codes and live feeds: **no mention of web pages or touch**. The builder checks at the lab: does registering ask for a license, can it show a URL full screen, does touch work. Good for watch-only screens if so; the interactive hub uses 1–4.
+- **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows ("Screen-to-screen sending" idea).
+- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `network-setup-checklist.md`).
+
+## Recent ideas (2026-11-08)
+"Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md` (design branch).
+
+### GPU-busy indicator on the hub
+- **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 7 already warns about it); a visible sign beats remembering.
+- **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
+- **Plugs into:** status strip or the desktop's device card; model router (local setups).
+
+### Teleop delay graph
+- **What:** a small live graph of the Quest-to-arm delay over the last minute, in the teleop module (and the monitor page).
+- **Why:** shows whether lag comes from the network, the brain or the arm; makes speed tuning measurable ("feel" on hold: `ideas.md` → "On hold" → speed and feel).
+- **Watch out:** the Quest and the brain have different clocks, so measure with a round trip (the brain echoes a timestamp back) rather than comparing clocks. "Reached the arm" can mean *command sent* (easy) or *arm got there* (needs position read-back; slower, arm-specific). Start with command sent; label which one the graph shows.
+- **Plugs into:** teleop module + monitor; the troubleshooting suite (network delay).
+
+### Battery and diagnostics in the device cards
+- **What:** each device card shows what that device can actually report: battery, temperatures, voltage, servo load, signal strength, under-voltage warnings. Nothing shown that the device can't measure (no fake "100%").
+- **Why:** low batteries and hot servos are the usual silent failures.
+- **Source list:** "Hidden sensor data the hardware already has" (below) says what each device offers.
+- **Plugs into:** each device plug-in declares its readings; the device card shows them; the troubleshooting suite logs them.
+
+### Projects module
+- **What:** an expandable list of the lab's active and past projects: name, people, devices it uses, status (active / paused / done), maybe a link to its repo or docs.
+- **Why:** shows what the lab is doing; explains to visitors and the next student why a device is "locked" (today: the green SO-101 + training cameras → the SO-101 training project).
+- **Idea for later:** devices get locked *by* a project entry (`config/projects.yaml`) instead of a separate flag.
+- **Plugs into:** a hub module (button); the device card ("Used by: SO-101 training"). Different from the hub's "Current Project" panel, which shows lab-os's own focus.
+- **Open questions:** who edits the list (a config file, or a form in the hub)? People's names are fine internally, but check before showing it to visitors.
+
+### "Find me" button
+- **What:** in a device's card (tap it in the hive), "Find me" makes the real device show itself, depending on what it can do: a Pi blinks its LED, a Raspbot beeps, a Pi with a touchscreen shows its sticker number big on screen, the Quest plays a sound.
+- **Why:** with ~10 identical Pis, finding "Pi 7" on the shelf is a real chore.
+- **Rules:** each device declares which "find me" actions it supports; robot **motion** (e.g. an arm wiggle) is not a find-me action (safety rules). Needs the device connected to the brain (router). Blinking a Pi's LED may need a one-time permission setup on the Pi.
+- **Later, location:** GPS doesn't work indoors. Inside, a rough location could come from which Wi-Fi access point a device is near; GPS only for outdoor/cellular robots (the "cellular robots" idea).
+- **Plugs into:** device plug-ins (an optional "identify" action); device card.
+
+### AR labels in the Quest
+- **What:** in the headset, look at any device and its name + status float above it.
+- **Why:** visually cool (the builder: "somewhat useless but visually cool").
+- **Methods, simplest first:**
+  1. **Place labels by hand once:** point the controller at a device, pick its name; the Quest remembers the spot (WebXR anchors). No camera needed. Moving a device means re-placing its label.
+  2. **QR codes / AprilTags** (square printed markers made for robots, readable from far): automatic, but the Quest's browser may not give web pages access to the camera images; to check (native apps can use Meta's camera access).
+  3. **Recognizing devices by sight** (computer vision): hardest; identical Pis look the same anyway.
+- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and the dropped ghost-arm alignment (decision 2026-10-28).
+- **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
+
+### Brain as an MCP server
+- **Decided 2026-11-09** (log; `current-focus.md` steps 2, 8 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
+
+### LLMs/VLMs driving the green SO-101s
+- **Started 2026-11-09 on `so101-white`** (`current-focus.md` steps 2–3: MCP robot tools, Fable 5.2 in Claude Code, blind first, then the white arm's cameras). The green arm stays this entry's future goal.
+- **What:** bring `so101-green` and its cameras into lab-os later, e.g. to test general AI models that see and reason (LLMs/VLMs, like the "look, then reach" route) driving the arm, compared with the trained VLA (SmolVLA).
+- **Status:** future goal. **The hard rules stay unchanged** (CLAUDE.md, `config/devices.yaml`: never open its ports) until this integration is planned as a focus.
+- **Plugs into:** robots slot (SO-101 driver exists for so101-white); cameras/vision; AI models; the projects module (the device moves from "locked" to shared).
+
 ## Recent ideas (2026-10-30)
 
 ### Assistant pictures beyond the plain circle
@@ -98,7 +171,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
 
 ### Voice beyond push-to-talk
-- **In the focus:** push-to-talk voice is `current-focus.md` step 8 (stretch), with the realtime-service vs. own-pipeline choice made there.
+- **In the focus:** push-to-talk voice is `current-focus.md` step 9 (stretch), with the realtime-service vs. own-pipeline choice made there.
 - **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); our own speech-to-text → model → text-to-speech pipeline as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Plugs into:** triggers slot, conversation manager, model router.
 
@@ -161,7 +234,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models: beyond the chat test in `current-focus.md` step 6 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
+| Local models: beyond the chat test in `current-focus.md` step 7 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |

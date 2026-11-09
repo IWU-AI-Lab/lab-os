@@ -66,6 +66,7 @@ In the project's `.claude/settings.json` (permission rules):
   - `~/lab-os` — coding sessions (the task branch).
   - `~/lab-os-design` — design sessions, branch `design` (`docs/design/`, `config/theme.yaml`).
   - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR now and then (after the current task branch merges, since it was started from `xarm-driver`).
+- Long-lived branches (`planning`, `design`): GitHub's auto-delete removes them after each merge. Recreate from the planning folder: `git fetch && git merge --ff-only origin/main && git push -u origin planning`.
 - Create another folder when needed: `git worktree add ../lab-os-<name> -b <branch>`; list them: `git worktree list`.
 
 ## Working away from the lab
