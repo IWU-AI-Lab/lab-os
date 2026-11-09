@@ -86,16 +86,19 @@ motion:                  # (planned)
     event_sound_chance: 0.35   # share of idle events that make a matching sound; silent otherwise
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
-hub:                     # (planned)
-  title: "AI Comp Lab"   # top-left title and the startup title: the lab's name, not the project's code name
+hub:                     # (planned) except where "Used by" says otherwise
+  title: "AI Comp Lab"   # top-left title and the startup title: the lab's name, not the project's code name. Used by: the hub
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
-  modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works.
+  modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub
+                         # (ids without a page yet, like arm, get no button: MODULES in src/lab_os/hub/server.py).
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
+  reset_after_s: 180     # nobody touched it this long: back to the start screen (never while something is in use).
+                         # A venue profile can set its own reset_after_s. Used by: the hub
   devices_view: auto     # auto = graph up to devices_graph_max, hive above | graph | hive. "List all" beside the count expands a named list.
   devices_graph_max: 8   # graph = a star of devices around the brain; hive = one row of small hexagons per kind
   device_columns: [id, on, linked]  # the expanded device table, in order; also available: use, host, ip (ip is hidden on public screens).
                          # The devices details page (tap the callout) shows all of them.
-  commits_days: [7, 14, 30]  # the range buttons under the commits line; the first view shows 14
+  commits_days: [7, 14, 30]  # the range buttons under the commits line; the first view shows 14. Used by: the hub
   portrait: stack        # portrait screens: core on top, buttons in a row under it, facts in two columns
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
   filler: false          # true = decorative hex/code streams in the dim back layer (real data otherwise)
@@ -103,7 +106,7 @@ hub:                     # (planned)
   verses_translation: KJV     # public domain
   type_to_chat: true     # typing anywhere goes into the ask line under the core; the answer shows under the core (the conversation page stays closed)
 
-clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). (planned)
+clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). Used by: the hub
 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace

@@ -7,6 +7,9 @@ import { initDesktop } from "./desktop-input.js";
 const $ = (id) => document.getElementById(id);
 const link = getLink("input");
 
+// Inside the hub the monitor has its own button, and a new tab would leave full screen.
+if (window.self !== window.top) $("monitor-link").hidden = true;
+
 function setPill(el, text, cls) {
   el.textContent = text;
   el.className = `pill ${cls}`;

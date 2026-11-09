@@ -32,7 +32,7 @@ A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules
 - **Every surprise** goes in `docs/GOTCHAS.md`.
 - **New ideas go into `docs/ideas.md`, not code**, unless they are part of the current focus in `docs/current-focus.md`. `ideas.md` is the single source of truth for ideas; don't list them in other docs.
 - **Secrets never in git**: real values in `.env` (gitignored); `.env.example` lists names with fake values.
-- **Works offline**: no CDN or internet-loaded code in the web pages. Browser libraries are vendored in `src/lab_os/teleop/web/vendor/` (versions + licenses in its README); robot models in `models/`.
+- **Works offline**: no CDN or internet-loaded code in the web pages. Browser libraries are vendored in `src/lab_os/web/vendor/` (versions + licenses in its README); robot models in `models/`.
 - **Shared joint names** for all arms (`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`, degrees); each driver maps them to its own servos.
 - **Small commits, branch per feature**; `main` always runs. Demo only from a tagged version.
 - Update the docs when decisions change — part of "done".
@@ -44,7 +44,8 @@ uv sync --extra so101        # same + LeRobot/PyTorch (~5 GB) for the SO-101s; p
 uv run pytest                # tests (no hardware needed)
 uv run ruff check --fix .    # lint
 uv run ruff format .         # format
-uv run lab-os-teleop serve   # teleop: XR page + fake arm (docs/quest-setup.md)
+uv run lab-os serve          # the brain: hub at http://localhost:8080/ + fake arm (docs/hub.md)
+uv run lab-os-teleop serve   # teleop on its own: XR page + fake arm (docs/quest-setup.md)
 ```
 Message format between clients and the brain: `docs/protocol.md`. Keep it updated when adding message types. The JARVIS core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
 

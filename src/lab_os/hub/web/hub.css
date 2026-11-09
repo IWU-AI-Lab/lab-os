@@ -1,0 +1,108 @@
+/* The plain hub. Plain on purpose until the reveal (current-focus.md step 9): a dark background,
+   the system font, readable text, no animation, none of the design's colors or fonts. */
+
+:root { color-scheme: dark; }
+html, body { margin: 0; min-height: 100%; background: #111; color: #e6e6e6; }
+body { font-family: system-ui, sans-serif; font-size: clamp(16px, 1.6vmin, 40px); line-height: 1.4; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+
+/* ---------- start screen ---------- */
+#ignite {
+  position: fixed; inset: 0; display: grid; place-content: center; text-align: center;
+  cursor: pointer; user-select: none; -webkit-user-select: none; background: #111;
+  touch-action: manipulation;
+}
+#ign-orb { width: 5em; height: 5em; margin: 0 auto 1.5em; border-radius: 50%; border: 2px solid #777; }
+#ign-what { font-size: 1.6em; margin: 0.4em 0; }
+#ign-full { font-size: 1.1em; margin: 0.4em 0; color: #ccc; }
+body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display: none; }
+.safe { color: #aaa; }
+.ign-foot {
+  position: fixed; left: 1.2em; right: 1.2em; bottom: 1em;
+  display: flex; justify-content: space-between; color: #999;
+}
+.ampm { margin-left: 0.3em; font-size: 0.75em; }
+
+/* ---------- hub: title + status strip on top; buttons left and right of the core; panels at the sides */
+#hub {
+  min-height: 100vh; box-sizing: border-box; padding: 1em 1.5em;
+  display: grid; gap: 1.5em;
+  grid-template-columns: 1fr auto auto auto 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "strip strip strip strip strip" "left ml core mr right";
+}
+.strip { grid-area: strip; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5em 2em; }
+.brand { font-size: 1.3em; font-weight: 600; margin-right: auto; }
+.fact.off { color: #999; }
+.clock { font-variant-numeric: tabular-nums; }
+
+#mods { display: contents; }
+.mcol { display: flex; flex-direction: column; justify-content: center; gap: 1em; }
+.mcol.l { grid-area: ml; }
+.mcol.r { grid-area: mr; }
+.mod {
+  min-width: 7em; min-height: 3.5em; padding: 0.6em 1.2em; font-size: 1.1em; cursor: pointer;
+  background: #1c1c1c; border: 1px solid #555; border-radius: 6px;
+}
+.mod:hover, .mod:focus-visible { border-color: #bbb; }
+
+.core { grid-area: core; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8em; }
+#orb { width: min(36vmin, 24em); aspect-ratio: 1; border-radius: 50%; background: var(--orb, #444); }
+#state-word { color: #aaa; }
+/* one plain color per assistant state; the reveal swaps in the real picture, which reads the same state */
+[data-state="idle"] { --orb: #8a8a8a; }
+[data-state="listening"] { --orb: #5b8fd6; }
+[data-state="thinking"] { --orb: #c9a43a; }
+[data-state="speaking"] { --orb: #e6e6e6; }
+[data-state="offline"] { --orb: #3a3a3a; }
+[data-state="error"] { --orb: #b03a3a; }
+[data-state="speaking"] #orb { opacity: calc(0.5 + 0.5 * var(--loud, 1)); }
+
+.side { display: flex; flex-direction: column; justify-content: center; gap: 1.5em; min-width: 0; }
+.side.left { grid-area: left; }
+.side.right { grid-area: right; }
+.side .panel { background: #161616; border: 1px solid #333; border-radius: 6px; padding: 1em 1.2em; }
+.cap { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.85em; color: #aaa; }
+.big { font-size: 1.2em; margin: 0.3em 0; }
+.stepn, .k { color: #aaa; }
+.row2 { display: flex; justify-content: space-between; align-items: center; gap: 1em; margin-top: 0.3em; }
+#range { display: flex; gap: 0.3em; }
+#range button {
+  min-height: 2.2em; min-width: 2.6em; padding: 0 0.5em; cursor: pointer;
+  background: none; border: 1px solid #555; border-radius: 4px;
+}
+#range button[aria-pressed="true"] { background: #333; border-color: #bbb; }
+#spark { display: flex; align-items: flex-end; gap: 2px; height: 5em; margin-top: 0.6em; }
+#spark i { flex: 1; min-height: 1px; height: calc(var(--h) * 100%); background: #888; }
+#spark i.zero { background: #333; }
+.axis { display: flex; justify-content: space-between; font-size: 0.8em; color: #999; }
+
+/* ---------- a module, open inside the hub (no page load, so full screen stays) ---------- */
+#module { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: #111; }
+#module .bar { display: flex; align-items: center; gap: 1.2em; padding: 0.5em 1em; border-bottom: 1px solid #333; }
+.back {
+  min-height: 2.8em; padding: 0 1.2em; cursor: pointer;
+  background: #1c1c1c; border: 1px solid #555; border-radius: 6px;
+}
+.back .key { margin-left: 0.5em; font-size: 0.75em; color: #999; }
+.tab { font-size: 1.2em; }
+#mod-slot { flex: 1; min-height: 0; }
+#mod-slot iframe { display: block; width: 100%; height: 100%; border: 0; }
+#orb-dock { position: fixed; right: 1em; bottom: 1em; z-index: 11; width: 2.5em; pointer-events: none; }
+#orb-dock #orb { width: 100%; }
+
+/* ---------- portrait: core on top, buttons in a row under it, facts in two columns ---------- */
+@media (orientation: portrait) {
+  #hub {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas: "strip strip" "core core" "ml mr" "left right";
+  }
+  .mcol.l { align-items: flex-end; }
+  .mcol.r { align-items: flex-start; }
+}
+@media (max-width: 600px) {
+  #hub { grid-template-columns: 1fr; grid-template-areas: "strip" "core" "ml" "mr" "left" "right"; }
+  .mcol.l, .mcol.r { align-items: stretch; }
+}

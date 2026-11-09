@@ -17,15 +17,16 @@ This installs [uv](https://docs.astral.sh/uv/) if needed and creates the project
 ## Run
 ```bash
 uv run pytest                                            # checks, no hardware needed
+uv run lab-os serve                                      # the hub + teleop pages + fake arm
 uv run lab-os-teleop serve                               # XR page + fake arm, live
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # no browser/headset
 ```
-Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/quest-setup.md`. Where the demo stands: `docs/archive/focus-2026-10-teleop-demo.md` (what's left: `docs/ideas.md` → "On hold").
+With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). With `lab-os-teleop`, open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/quest-setup.md`. Where the demo stands: `docs/archive/focus-2026-10-teleop-demo.md` (what's left: `docs/ideas.md` → "On hold").
 
 ## Repository map
 | Path | What |
 |---|---|
-| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`, vendored three.js in `web/vendor/`), `venues.py` |
+| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `web/` (files all pages share: vendored three.js, `theme.js`), `cli.py` (`lab-os serve`), `venues.py` |
 | `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …), `theme.yaml` (design tokens: colors, font) |
 | `models/` | Robot models (SO-101 URDF + meshes) for the 3D view and, later, inverse kinematics |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
@@ -36,6 +37,7 @@ Open http://localhost:8080/monitor to watch the fake arm. Testing at home with a
 
 ## Docs
 - `docs/current-focus.md`: what's being worked on now
+- `docs/hub.md`: running the hub, the two taps, other screens, the performance test
 - `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
 - `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`
 - `docs/GOTCHAS.md`: surprises and their fixes

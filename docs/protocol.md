@@ -110,5 +110,50 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 {"type": "error", "message": "another page has control"}
 ```
 
+## HTTP endpoints (the hub)
+Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET`, never cached. The hub page reads only these and `/theme.json`, so the designed page (focus step 9) can read the same ones.
+
+### `/api/status`
+Polled every 3 s by the hub.
+```json
+{
+  "venue": "lab",
+  "internet": true,
+  "ai": {"connected": false},
+  "assistant": {"state": "offline", "loudness": 0.0},
+  "arm": {"name": "fake-arm", "control": "free"},
+  "in_use": [],
+  "time_ms": 1794264745533
+}
+```
+- `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
+- `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected.
+- `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, else `free`.
+- `in_use`: what's in use right now (today only `"teleop"`); the hub never goes back to the start screen while it isn't empty.
+- `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.
+
+### `/api/project`
+The Current Project panel, from the Steps list in `docs/current-focus.md`.
+```json
+{"available": true, "focus": "The JARVIS hub + AI driving a robot arm", "step": 1, "of": 9,
+ "next": "Plain hub", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
+```
+`step` is the first step that isn't done (`next` its title, `null` when all are done). `{"available": false}` when the file is missing or has no steps.
+
+### `/api/commits?days=14`
+Commits per day for the last `days` days (1–90; today included, oldest first), all local and remote branches, merges left out.
+```json
+{"available": true, "days": 14, "total": 84, "per_day": [{"date": "2026-10-27", "count": 9}, "…"]}
+```
+`{"available": false, "days": 14}` when git or the repository is missing.
+
+### `/api/hub`
+```json
+{"modules": [{"id": "teleop", "title": "Teleop", "page": "/teleop"},
+             {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
+ "reset_after_s": 180}
+```
+`modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.

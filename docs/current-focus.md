@@ -60,7 +60,7 @@ Roll call and robot connections over the network wait for the lab router (`ideas
 ## Steps (each one is a small, testable win)
 The Current Project panel reads this list: each step's **bold title** is what the hub shows ("Next: Plain hub"), so titles are short plain words. A finished step gets `(done YYYY-MM-DD)` right after its title.
 
-0. **Settle before coding** (planning sessions):
+0. **Settle before coding** (done 2026-11-09) (planning sessions):
    - **AI service (settled 2026-10-30):** **OpenAI first**; free Gemini keys as a backup; the Anthropic key is out of credits. **Local models** as a second setup. **Keys (2026-11-09, believed, not confirmed):** the OpenAI account is the professor's, paid by the university. Budget ≤ $20/month so far.
    - **Design: done (2026-11-09, approved by the builder)**, including the startup. Used in step 9 only. Later design changes go through a design session in `~/lab-os-design` (branch `design`).
 
@@ -76,6 +76,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
    - Tests (no hardware, no internet): pages and endpoints answer; the Steps parser on a sample file; commit counting on a temporary git repo; **no `http://` or `https://` loads in any web file**.
    - **Done when:** it runs offline, teleop with the fake arm works when opened from the hub, `ruff` + `pytest` pass, and **the two taps work on the Newline** (full screen, start, a module, Back, reset).
    - **Also in step 1, a performance test page** (`/perf`): only drifting dots, links and star streaks on a black page (no frame, no core, no hub: nothing that gives the design away), at the screen's full size, showing frames per second. Run it on the Newline (a 4K panel on a phone-class chip) and the Pi screens, so step 9 knows which quality level each screen can carry.
+   - **Status (2026-11-09):** built and checked on a laptop (headless Chrome: the two taps, a module, Back/Esc, the reset and "not while teleop has the arm", teleop driving the fake arm from inside the hub). **Left before it's done:** the two taps on the Newline, and `/perf` numbers from the Newline and the Pi screens. How to run it: `docs/hub.md`.
 
 2. **Robot tools for AI.** The brain becomes an MCP server with tools for `so101-white`, so an AI tool can drive it **blind** (no camera yet; the builder describes the scene in words). Fake arm first, then the real one. Details: "Step 2, concretely". **Before 2026-11-16** if possible (end of the builder's Fable access); after that the same tools work with any AI tool, so nothing is lost by waiting except trying Fable.
 

@@ -92,7 +92,8 @@ def _make_arm(name: str, venue) -> Arm:
     return XArm(name=name, device_name=name, allow_motion=True)
 
 
-def _make_loop(args) -> TeleopLoop:
+def make_loop(args) -> TeleopLoop:
+    """The teleop loop for the arm, venue and speed in `args` (see `add_arm_args`)."""
     venue = load_venue(args.venue)
     speed = min(args.speed, venue.max_speed_scale) if args.speed else venue.max_speed_scale
     arm = _make_arm(args.arm, venue)
@@ -114,12 +115,17 @@ def _make_loop(args) -> TeleopLoop:
     )
 
 
-async def _serve(app: web.Application, port: int, extra=None) -> None:
+async def serve(
+    app: web.Application, port: int, extra=None, host: str = "127.0.0.1", banner: str = ""
+) -> None:
+    """Run `app` until `extra` finishes (or forever). The default host is localhost only: a secure
+    context for WebXR, and nothing else on the network can connect."""
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    # localhost only: secure context for WebXR, and nothing else on the network can connect.
-    await web.TCPSite(runner, "127.0.0.1", port).start()
-    print(f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor")
+    await web.TCPSite(runner, host, port).start()
+    print(
+        banner or f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor"
+    )
     try:
         if extra:
             await extra
@@ -142,9 +148,8 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
     print("\nreplay finished")
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="lab-os-teleop", description=__doc__)
-    parser.add_argument("--port", type=int, default=8080)
+def add_arm_args(parser: argparse.ArgumentParser) -> None:
+    """--venue, --quiet, --arm, --speed: shared by `lab-os-teleop` and `lab-os serve`."""
     parser.add_argument("--venue", help="venue profile (default: $LAB_OS_VENUE or 'lab')")
     parser.add_argument("--quiet", action="store_true", help="don't print the live status line")
     parser.add_argument(
@@ -157,10 +162,16 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
     )
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="lab-os-teleop", description=__doc__)
+    parser.add_argument("--port", type=int, default=8080)
+    add_arm_args(parser)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    serve = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
-    serve.add_argument("--record", type=Path, help="save incoming input to this .jsonl file")
+    serve_cmd = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
+    serve_cmd.add_argument("--record", type=Path, help="save incoming input to this .jsonl file")
 
     rep = sub.add_parser("replay", help="drive the fake arm from a recording")
     rep.add_argument("file", type=Path)
@@ -169,16 +180,16 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
-    loop = _make_loop(args)
+    loop = make_loop(args)
 
     if args.command == "serve":
         recorder = Recorder(args.record) if args.record else None
         if recorder:
             print(f"recording to {args.record}")
-        coro = _serve(create_app(loop, recorder), args.port)
+        coro = serve(create_app(loop, recorder), args.port)
     else:
         app = create_app(loop, accept_input=False)
-        coro = _serve(app, args.port, _feed_replay(loop, args.file, args.speed, args.loop))
+        coro = serve(app, args.port, _feed_replay(loop, args.file, args.speed, args.loop))
 
     try:
         with contextlib.suppress(KeyboardInterrupt):

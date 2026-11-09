@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — Headless Chrome refuses full screen and pointer lock
+**What:** In headless Chrome (`--headless=new`), `requestFullscreen()` and `requestPointerLock()` are refused even after a real (DevTools-sent) click. So the hub's tap 1 takes its "can't go full screen" path (straight to tap 2), and teleop's Desktop control never starts. Not a bug in the pages: the standalone `/teleop` page behaves the same.
+**Fix:** for headless checks, fake both APIs before the page loads (DevTools `Page.addScriptToEvaluateOnNewDocument`: define `document.fullscreenElement` / `pointerLockElement` getters, patch `Element.prototype.requestFullscreen` / `requestPointerLock` to set them and fire `fullscreenchange` / `pointerlockchange`; patch the prototype, because `document.documentElement` doesn't exist yet when the script runs). The real two-tap check happens on the Newline.
+
 ### 2026-11-09 — `gh pr edit` fails on this repo
 **What:** `gh pr edit <n>` (GitHub CLI 2.45, Ubuntu's package) stops with `GraphQL: Projects (classic) is being deprecated … (repository.pullRequest.projectCards)`: this old `gh` still asks GitHub for the retired "classic projects" field. Nothing is changed. Checked on PR #3.
 **Fix:** use the REST API through `gh api`:

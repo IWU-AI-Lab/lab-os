@@ -7,8 +7,8 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/style.css">
   <script type="importmap">
-    { "imports": { "three": "/static/vendor/three/three.module.js",
-                   "three/examples/jsm/": "/static/vendor/three/examples/jsm/" } }
+    { "imports": { "three": "/web/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
   </script>
 </head>
 <body>
@@ -64,7 +64,7 @@
       <p class="hint">Keys and Mouse turn one motor each, directly. The virtual hand moves a pretend Quest controller; on the xArm that goes through IK (several motors at once).</p>
     </details>
 
-    <p class="hint"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
+    <p class="hint" id="monitor-link"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
   </main>
   <script type="module" src="/static/teleop-page.js"></script>
   <script type="module" src="/static/arm/arm-panel.js"></script>
