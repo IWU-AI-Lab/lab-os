@@ -36,6 +36,18 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-09)
 
+### Open a module on another screen ("screen-to-screen sending")
+- **What:** the hub runs on one screen (say the Newline); tap a module and choose to open it on another screen (the 32" monitor, a Pi screen, later the Quest). Example: a visitor at the Newline taps Monitor → "on the big monitor", and the arm view appears there while the hub stays on the Newline. Also: send a chat answer, a picture from a camera, or the other project's poster to a screen.
+- **Why it's doable:** the concept page shows modules as layers over the hub, but the real modules are already separate pages (`/teleop`, `/monitor`) that the hub loads inside itself, so any screen can show any module. Missing: the brain knowing which screens are there.
+- **How:**
+  - every screen running the hub connects to the brain and is named once ("Newline", "Desk monitor": a setting, or picked on the screen the first time); the brain keeps the list (this is the "roll call" for screens);
+  - a module button gets "open on…" (a long press, or a small send icon) listing the screens that are there; the brain tells that screen to open the module; Back on that screen, or "bring it back" on the sender, closes it;
+  - **the two taps make it work:** a page can only go full screen after a tap on *that* screen, so a screen left full screen at its start screen (tap 1 done, sound unlocked) can be taken over from elsewhere; a screen that isn't full screen shows the module in a window and says so;
+  - the reset brings every screen back to its start screen; one controller per robot still applies (a teleop page sent to a screen asks before taking control).
+- **Watch out:** screens over the network need to reach the brain (the university network may block it; the router fixes it) and a secure address for the voice and Esc parts (`current-focus.md` → "Step 7, concretely"). How a sent module looks (it flies off toward the edge, a callout on the hub says where it went) is a design-session question.
+- **When:** after the plain demo check (`current-focus.md` step 8), unless the builder wants it in the reveal.
+- **Plugs into:** outputs/clients; the screens roll call (Milestone 1); kiosk clients (entry above); casting in `use-cases.md` (the visit, another project borrows a screen).
+
 ### Screens without browser bars ("kiosk clients")
 - **What:** any lab screen (32" monitor, Pi touchscreens, the Newline) shows the hub, or any other web app, full screen, with no tabs or address bar, and starts by itself.
 - **How, simplest first:**
@@ -241,7 +253,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Multi-screen presence (lab PCs/displays) | The system "lives" on the room's screens; lab only. | Outputs/clients |
-| Screen-to-screen sending | — | Outputs/clients |
+| Screen-to-screen sending (detailed above: "Open a module on another screen") | — | Outputs/clients |
 | Visitors' phones as remotes | Let visitors interact without the headset. | Inputs, clients |
 | Quest-only mode | — | Quest client |
 | Quest launch → HUD (launch animation into the HUD) | — | Quest client, theme/decorative layer |
