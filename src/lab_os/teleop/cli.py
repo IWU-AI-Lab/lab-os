@@ -170,8 +170,8 @@ def main(argv: list[str] | None = None) -> None:
     add_arm_args(parser)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    serve = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
-    serve.add_argument("--record", type=Path, help="save incoming input to this .jsonl file")
+    serve_cmd = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
+    serve_cmd.add_argument("--record", type=Path, help="save incoming input to this .jsonl file")
 
     rep = sub.add_parser("replay", help="drive the fake arm from a recording")
     rep.add_argument("file", type=Path)
