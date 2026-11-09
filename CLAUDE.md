@@ -6,6 +6,7 @@ Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the 
 1. `docs/current-focus.md` — what to work on now (and "Up next").
 2. `docs/lab-jarvis-log.md` — plan, decisions, device names.
 3. `docs/GOTCHAS.md` — surprises already found.
+4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). Build to match them; the numbers come from `config/theme.yaml`.
 
 Setup and conventions: `docs/dev-setup.md`, `docs/project-scaffold.md`. Safety: `SAFETY.md`.
 
