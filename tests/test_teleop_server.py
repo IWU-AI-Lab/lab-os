@@ -39,6 +39,9 @@ async def test_pages_served(aiohttp_client):
         "/static/xr-scene.js",
         "/static/arm/arm-feed.js",
         "/static/monitor.js",
+        "/web/theme.js",
+        "/web/vendor/three/three.module.js",
+        "/web/vendor/urdf-loader/URDFLoader.js",
     ):
         resp = await client.get(path)
         assert resp.status == 200, path
@@ -91,8 +94,7 @@ async def test_model_files_served(aiohttp_client):
     for path in (
         "/models/so101/so101_new_calib.urdf",
         "/models/so101/assets/base_so101_v2.stl",
-        "/static/vendor/three/three.module.js",
-        "/static/vendor/urdf-loader/URDFLoader.js",
+        "/web/vendor/three/examples/jsm/loaders/STLLoader.js",
         "/static/arm/arm-panel.js",
     ):
         resp = await client.get(path)

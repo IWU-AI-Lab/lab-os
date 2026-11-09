@@ -8,8 +8,8 @@
 // wrist_roll, gripper), angles in degrees, exactly as the Python `Arm` driver receives them.
 // Models never clamp: a command outside the model's limits is drawn as-is and reported.
 import * as THREE from "three";
-import URDFLoader from "/static/vendor/urdf-loader/URDFLoader.js";
-import { color } from "../theme.js";
+import URDFLoader from "/web/vendor/urdf-loader/URDFLoader.js";
+import { color } from "/web/theme.js";
 
 const DEG = Math.PI / 180;
 const SO101_URDF = "/models/so101/so101_new_calib.urdf";

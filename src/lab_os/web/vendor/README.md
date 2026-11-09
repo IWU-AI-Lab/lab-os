@@ -1,6 +1,6 @@
 # Vendored browser libraries
 
-Saved in the repo (not loaded from a CDN) so the pages work offline, at demo venues and on the Quest over USB. Pages map the bare `three` imports to these files with an import map (`index.html`, `monitor.html`).
+Saved in the repo (not loaded from a CDN) so the pages work offline, at demo venues and on the Quest over USB. Every page shares them (served at `/web/vendor/`). Pages map the bare `three` imports to these files with an import map (`src/lab_os/teleop/web/index.html`, `monitor.html`).
 
 | Library | Version | License | Files kept |
 |---|---|---|---|

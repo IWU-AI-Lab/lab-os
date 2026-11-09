@@ -7,7 +7,7 @@
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
 import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
-import { color, theme } from "./theme.js";
+import { color, theme } from "/web/theme.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);

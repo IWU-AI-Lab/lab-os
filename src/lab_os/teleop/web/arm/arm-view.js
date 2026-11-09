@@ -1,7 +1,7 @@
 // Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel at a time.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { color } from "../theme.js";
+import { color } from "/web/theme.js";
 
 const DEG = Math.PI / 180;
 

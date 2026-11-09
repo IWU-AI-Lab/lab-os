@@ -7,7 +7,7 @@ import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
 import { getArmFeed } from "./arm-feed.js";
-import { color } from "../theme.js";
+import { color } from "/web/theme.js";
 
 const $ = (id) => document.getElementById(id);
 const FROZEN_TINT = color("colors.frozen");
