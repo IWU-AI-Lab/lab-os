@@ -90,7 +90,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 7. **Voice** (part of the demo now, not a stretch; typing must not suffer). Push-to-talk first (hold a key, or hold a button on a touch screen, speak, it answers aloud); the circle follows the voice's loudness (state `listening`, `speaking` + loudness). Decide the route here: a realtime voice service (OpenAI's or Google's; handles interruptions; per-minute price; needs internet) or speech-to-text → our chat model → text-to-speech (same model as typing; slower). Fan noise is why push-to-talk comes first. **Voice works on whatever screen the hub is on**, which needs the secure address: see "Step 7, concretely". **No microphone, no voice button:** typing always works. Wake word later.
 
-8. **Screens.** Open a module on another screen, and everything starts by itself (decision 2026-11-09: before the reveal). Details: "Step 8, concretely".
+8. **Screens.** Open a module on another screen, and one tap or click opens the hub on any screen (decision 2026-11-09: before the reveal). Details: "Step 8, concretely".
 
 9. **Demo check (plain).** On the plain hub, with nobody's help: start it from the start screen, teleop the fake arm, ask a typed and a spoken question, have the AI move the arm (step 2), open the arm view on another screen (step 8). Fix what breaks. Tag the version. Phase 1 is done.
 
@@ -112,14 +112,15 @@ The Current Project panel reads this list: each step's **bold title** is what th
 ### Step 8, concretely (screens)
 - **Screens have names:** each screen running the hub connects to the brain under a name given in its address (`/?screen=newline`, `/?screen=desk`), so a saved address or a kiosk autostart keeps it with no typing. The brain keeps the list of screens that are there.
 - **Open on another screen:** a module button gets "open on…" (a long press, or a small send icon) listing the screens that are there; the brain tells that screen to open the module; Back on that screen, or "bring it back" on the sender, closes it. Works best on screens left full screen at their start screen (tap 1 done; a page can't make itself full screen from a remote command); otherwise the module opens in a window and that screen says so. One controller per robot still applies, and other screens stay view-only while a real arm is connected (step 2). The reset brings every screen back to its start screen.
-- **Everything starts by itself**, because the devices are switched off every night:
-  - the brain starts at boot on its computer (a systemd user service on Linux; Windows/macOS later);
-  - screens with their own computer (Pis, desktops) start Chromium/Chrome in kiosk mode at boot with their address: already full screen, so tap 1 is skipped;
-  - the Newline: whichever of its options can open an address at boot (its own startup setting, a kiosk browser app, Signage Pro, or a small computer on HDMI + USB touch; `ideas.md` → "Screens without browser bars"): the builder checks on Tuesday;
-  - screens reconnect by themselves when the brain restarts.
+- **One tap or click opens it; nothing starts by itself** (builder, 2026-11-09). The devices are switched off every night, and the screens (the Newline above all) are used for other things, so lab-os never takes a screen over and uses nothing on a computer where it isn't open:
+  - **the brain's computer:** a "Start lab-os" shortcut (an icon on the desktop; the VS Code launch entry already exists). Starting at boot is an option, off by default (that desktop is shared with the training project);
+  - **other computers (desktops, Pi screens):** a "Lab hub" icon that opens Chrome/Chromium as a full-screen app window with the screen's address (`--app=<address>/?screen=desk --start-fullscreen`; not `--kiosk`, which is hard to leave on purpose). Already full screen, so tap 1 is skipped; it closes like any window;
+  - **the Newline:** an icon on its home screen (Chrome → "Add to home screen"; an installed app once the secure address exists); its Home button leaves it. The builder checks on Tuesday what the Newline allows (`ideas.md` → "Screens without browser bars");
+  - **only screens with the hub open** show up in "open on…", so a screen being used for something else is never taken over;
+  - screens with the hub open reconnect by themselves when the brain restarts.
 - **The brain's address:** before the router, the desktop's address on the university network can change from day to day. So at start the brain updates `hub.indwesailab.com` in Route 53 to its current address (the same limited AWS key as the certificate, step 7), and the screens' saved address keeps working. With the router: a fixed address and a local DNS entry.
 - **The screens must reach the brain:** `network-setup-checklist.md` → "Networks before the router".
-- **Done when:** from the Newline, Monitor opens on the desk monitor and comes back; after switching everything off and on, every screen is back at its start screen without anyone typing an address.
+- **Done when:** from the Newline, Monitor opens on the desk monitor and comes back; after switching everything off and on, one tap or click per screen brings the hub back with its name, without typing an address.
 
 ### Step 2, concretely (robot tools for AI)
 **Goal:** in a Claude Code session on the lab desktop, the builder types "pick up the cube that's 15 cm in front of the base and put it 10 cm to the left", and the AI does it on `so101-white` through the brain's tools, asking before every move.

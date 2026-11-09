@@ -45,7 +45,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   - **the two taps make it work:** a page can only go full screen after a tap on *that* screen, so a screen left full screen at its start screen (tap 1 done, sound unlocked) can be taken over from elsewhere; a screen that isn't full screen shows the module in a window and says so;
   - the reset brings every screen back to its start screen; one controller per robot still applies (a teleop page sent to a screen asks before taking control).
 - **Watch out:** screens over the network need to reach the brain (the university network may block it; the router fixes it) and a secure address for the voice and Esc parts (`current-focus.md` → "Step 7, concretely"). How a sent module looks (it flies off toward the edge, a callout on the hub says where it went) is a design-session question.
-- **In the focus (2026-11-09):** `current-focus.md` step 8, before the reveal, with names in the screens' addresses and everything starting by itself.
+- **In the focus (2026-11-09):** `current-focus.md` step 8, before the reveal, with names in the screens' addresses and one tap or click to open the hub on a screen (nothing starts by itself).
 - **Plugs into:** outputs/clients; the screens roll call (Milestone 1); kiosk clients (entry above); casting in `use-cases.md` (the visit, another project borrows a screen).
 
 ### Screens without browser bars ("kiosk clients")

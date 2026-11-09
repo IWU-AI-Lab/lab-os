@@ -23,14 +23,14 @@ ping -c 4 <first desktop's address>
 ---
 
 ## Networks before the router (2026-11-09)
-lab-os needs the screens to reach the brain (the hub on the Newline, modules on other screens). Options, best first:
-1. **The lab Wi-Fi itself.** The Pis and desktops are already on it. Do the Step 0 test above between the desktop and a Pi (or two desktops). Replies → the Newline joins the lab Wi-Fi too and opens the brain's address. No replies → client isolation; go on.
-2. **A cable from the brain's computer to the Newline.**
+lab-os needs the screens to reach the brain (the hub on the Newline, modules on other screens). **New devices can't join the lab Wi-Fi without campus IT, and that's slow** (the Raspbots have waited two weeks), so nothing here adds a device to it. Options, best first:
+1. **Test the lab Wi-Fi with what's already on it.** The desktops and the Pis are on it. Do the Step 0 test above between the desktop and a Pi. Replies → no client isolation: Pi screens can open the brain's address directly, and option 2 works. No replies → skip to 3.
+2. **The Newline through a Pi** (your idea): Newline → Ethernet cable → a Pi that's already on the lab Wi-Fi. Set the Pi's wired connection to "Shared to other computers"; it gives the Newline an address and passes on internet and the way to the brain. Only works if test 1 replied. (If the Newline is already on a university network itself, try opening the brain's address from it first.)
+3. **A cable from the brain's computer to the Newline.**
    - *HDMI + the Newline's USB touch cable:* the Newline becomes that computer's screen; the hub runs at `http://localhost` (a secure page, so voice works). No network at all. Only if the Newline is close to that computer.
-   - *An Ethernet cable straight between them:* a private two-device network. On Ubuntu, set the brain's Ethernet connection to "Shared to other computers" (Settings → Network → the wired connection → IPv4); it hands the Newline an address and passes on internet. The Newline opens the brain's Ethernet address. Needs a free Ethernet port on the brain (the desktops use Wi-Fi) and a long enough cable.
-3. **A phone hotspot as a stand-in router.** Every device joins the phone's Wi-Fi; phones normally let their clients reach each other. Limits: ~5–10 devices, the phone stays there and charged, addresses change, the internet uses the phone's data (chat is light).
-4. **A Pi between the Newline and the lab Wi-Fi** (Newline → Ethernet → Pi → Wi-Fi, the Pi's Ethernet "Shared to other computers"). The Newline gets internet, but reaches the brain only if the lab Wi-Fi lets the Pi reach it (test 1), and then the Newline could join the lab Wi-Fi itself. Only worth it if the Newline can't join the lab Wi-Fi (e.g. it needs a login the Newline can't do).
-5. **The lab router (GL.iNet Beryl AX)** solves all of it: devices reach each other, fixed addresses, a local DNS entry for `hub.indwesailab.com`, the Quest over Wi-Fi. Waiting on the professor's OK.
+   - *An Ethernet cable straight between them:* set the brain's wired connection to "Shared to other computers" (Ubuntu: Settings → Network → the wired connection → IPv4); the Newline opens the brain's Ethernet address. Needs a free Ethernet port on the brain (the desktops use Wi-Fi) and a long enough cable.
+4. **A phone hotspot as a stand-in router.** Every device joins the phone's Wi-Fi; phones normally let their clients reach each other. Limits: ~5–10 devices, the phone stays there and charged, addresses change, the internet uses the phone's data (chat is light).
+5. **The lab router (GL.iNet Beryl AX)** solves all of it: devices reach each other, fixed addresses, a local DNS entry for `hub.indwesailab.com`, the Quest over Wi-Fi, no IT registration per device. Waiting on the professor's OK.
 
 ---
 
