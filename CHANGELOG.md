@@ -2,6 +2,10 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-09
+- Plain hub (focus step 1, not yet checked on the Newline): `uv run lab-os serve` serves it at http://localhost:8080/ with the teleop and monitor pages inside it (teleop moves to `/teleop` there). Start screen with two taps (full screen, then start), Esc = Back via the Keyboard Lock API, back to the start screen after `hub.reset_after_s` (never while teleop has the arm), status strip, module buttons from `hub.modules`, a plain circle for the assistant's state, Current Project (from the Steps list) and Commits (from `git log`). Endpoints `/api/status`, `/api/project`, `/api/commits`, `/api/hub` (`docs/protocol.md`). Performance test page `/perf`. Docs: `docs/hub.md`.
+- Shared web files (vendored three.js + urdf-loader, `theme.js`) moved to `src/lab_os/web/`, served at `/web/`.
+
 ## 2026-10-30 (tag `demo-2026-10-30`)
 - Teleop demo showable: `so101-white` driven from the real Quest's controllers through IK (`lab-os-teleop --arm so101-white --speed 0.2 serve`). Focus closed and archived (`docs/archive/`); leftovers on hold in `docs/ideas.md`; next focus: the JARVIS core.
 - SO-101: LeRobot as the optional extra `so101`; guarded motor setup / check / calibration (`python -m lab_os.robots.so101_setup`, files in `calibration/so101-white/`); driver `SO101Arm` (read-only by default, goals = present position before torque, speed cap); `--watch` read-only live joints; IK from the URDF in `models/so101`. Joint directions checked on the real arm.

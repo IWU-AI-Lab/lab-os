@@ -7,7 +7,7 @@ uv run lab-os-teleop serve                         # XR page + live fake arm
 uv run lab-os-teleop serve --record recordings/try1.jsonl
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser needed
 ```
-Then open **http://localhost:8080/monitor** to watch the fake arm. In VS Code, the Run and Debug panel has buttons for each of these (`.vscode/launch.json`).
+Then open **http://localhost:8080/monitor** to watch the fake arm. **Under `uv run lab-os serve`** (the brain with the hub, `docs/hub.md`) the same page is at **http://localhost:8080/teleop**; `/`, `/ws` and `/monitor` work the same otherwise, so use `/teleop` wherever this page says `http://localhost:8080/`. In VS Code, the Run and Debug panel has buttons for each of these (`.vscode/launch.json`).
 
 **3D view** (on both pages): draws exactly the joint angles the arm driver receives, per command, unclamped. Pick the model in its dropdown: SO-101 (real URDF meshes), SO-101 stick figure, or xArm 1S boxes. Drag to orbit, scroll to zoom. The table under it flags joints the driver clamped and commands outside the model's limits; the arm turns dark red while frozen. Works offline (three.js and the model are in the repo). Note: control is relative, so `replay --loop` adds the same motion every loop until joints reach their soft limits (3° inside the real ones). There the clutch slips: the arm stops, and moving the hand back moves it back right away.
 
