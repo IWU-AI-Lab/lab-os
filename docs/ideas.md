@@ -42,7 +42,13 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   1. **Full screen from the page itself:** the hub's ignition press switches to full screen (in the current focus). Works in any browser, Newline's included, but Esc or a reload leaves it.
   2. **Kiosk mode:** Chrome/Chromium/Edge started with `--kiosk <address>` show only the page, start at boot, and can't be left by accident. The standard setup for Raspberry Pi screens; works on the lab desktops (Linux, Windows).
   3. **Install as an app:** the hub can declare itself an installable web app ("PWA"); Chrome/Edge/Android then offer "Install", and it opens in its own window without browser bars. Needs `localhost` or HTTPS (the certificate question again for other screens).
-- **The Newline:** recommended: plug a small computer (a spare Pi 5 or a ThinkCentre) into its HDMI + USB touch port and run kiosk mode (2). Then the Newline is just a big touch monitor, set up exactly like the Pi screens: one recipe for every screen. Quick test first: the Newline's own browser + full screen (1). A custom Android app for it is possible but adds an app to install and maintain (and installing may be locked); not worth it unless 1–2 fail. **Newline Signage Pro:** not free (a reseller lists ~$99 per display per year) and made for playlists, not interactive apps; skip.
+- **The Newline (TT-7523QCA+, a Q+ Pro: Android 15 with the Google Play Store).** Its Chrome has **no full-screen button** (builder, 2026-11-09). Options, quickest first (needed for another project by 2026-11-11/12):
+  1. **The page asks for full screen itself:** a "tap to start" layer that calls `document.documentElement.requestFullscreen()` on the first tap (Android Chrome allows it after a tap; works over plain `http` too). Needs a small change to that project's page; a reload or the Back gesture leaves full screen, so the tap layer comes back.
+  2. **Install the page as an app (PWA)** with a web app manifest saying `"display": "fullscreen"`: Chrome's menu → "Install app" / "Add to home screen", then it opens from its icon with no bars. Needs HTTPS (a plain `http://` LAN address won't install; workaround: `chrome://flags` → "Insecure origins treated as secure", if the Newline allows flags) and Chrome's install rules (a manifest with name + icons; older Chrome versions also want a small service worker).
+  3. **A kiosk browser app from the Play Store** (e.g. Fully Kiosk Browser: full screen, starts at boot, locks to one address; check its license terms): no change to the page. Only if the Newline lets us install apps.
+  4. **A small computer on its HDMI + USB touch** (spare Pi 5 or ThinkCentre) with Chromium `--kiosk` (2 above): always works, same recipe as the Pi screens; the long-term choice for the hub.
+  - Test 1 and 2 today on any **Android phone** with Chrome (it behaves like the Newline's); try 3 at the Newline.
+- **Newline Signage Pro** (corrected 2026-11-09): installed on the Newline but needs registering; Newline names only the Q Pro and STV+ as "fully integrated", and resellers sell a license (~$99 per display per year; a free year comes with Newline's media-player box), so maybe not free. Its listed content is images, videos, text, weather, QR codes and live feeds: **no mention of web pages or touch**. The builder checks at the lab: does registering ask for a license, can it show a URL full screen, does touch work. Good for watch-only screens if so; the interactive hub uses 1–4.
 - **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows ("Screen-to-screen sending" idea).
 - **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `network-setup-checklist.md`).
 
@@ -51,7 +57,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### GPU-busy indicator on the hub
 - **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
-- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 6 already warns about it); a visible sign beats remembering.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 7 already warns about it); a visible sign beats remembering.
 - **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
 - **Plugs into:** status strip or the desktop's device card; model router (local setups).
 
@@ -92,10 +98,11 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **Decided 2026-11-09** (log; `current-focus.md` step 7 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **Decided 2026-11-09** (log; `current-focus.md` steps 2, 8 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
+- **Started 2026-11-09 on `so101-white`** (`current-focus.md` steps 2–3: MCP robot tools, Fable 5.2 in Claude Code, blind first, then the white arm's cameras). The green arm stays this entry's future goal.
 - **What:** bring `so101-green` and its cameras into lab-os later, e.g. to test general AI models that see and reason (LLMs/VLMs, like the "look, then reach" route) driving the arm, compared with the trained VLA (SmolVLA).
 - **Status:** future goal. **The hard rules stay unchanged** (CLAUDE.md, `config/devices.yaml`: never open its ports) until this integration is planned as a focus.
 - **Plugs into:** robots slot (SO-101 driver exists for so101-white); cameras/vision; AI models; the projects module (the device moves from "locked" to shared).
@@ -164,7 +171,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
 
 ### Voice beyond push-to-talk
-- **In the focus:** push-to-talk voice is `current-focus.md` step 8 (stretch), with the realtime-service vs. own-pipeline choice made there.
+- **In the focus:** push-to-talk voice is `current-focus.md` step 9 (stretch), with the realtime-service vs. own-pipeline choice made there.
 - **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); our own speech-to-text → model → text-to-speech pipeline as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Plugs into:** triggers slot, conversation manager, model router.
 
@@ -227,7 +234,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models: beyond the chat test in `current-focus.md` step 6 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
+| Local models: beyond the chat test in `current-focus.md` step 7 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |

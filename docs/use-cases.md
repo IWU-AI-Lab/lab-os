@@ -81,14 +81,14 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 | Feature | Workflows | Status |
 |---|---|---|
 | Hub + status strip + devices panel | 1, 2, 6, 7, 8 | focus (devices: roll call waits for the router) |
-| MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | focus step 7 |
+| MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | focus steps 2 (server), 8 (project tools) |
 | Roll call / device diagnostics / battery | 1, 2, 6 | on hold (router) / idea |
 | Teleop + control handover + STOP everywhere | 2, 3 | done (polish on hold) |
-| Personas per venue | 2, 3 | focus step 2 |
-| Kiosk screens | 3, 9 | idea (full screen on ignition: focus step 5) |
+| Personas per venue | 2, 3 | focus step 4 |
+| Kiosk screens | 3, 9 | idea (full screen on ignition: focus step 6) |
 | Remote access + tokens + tiers | 4, 8 | after focus / idea (needs router + IT) |
 | Harness toggle + lab-paid agent + cost display | 5 | after focus |
 | GPU-busy indicator | 1, 7 | idea |
 | Find me | 6 | idea |
 | Projects module (locks) | 7 | idea |
-| Voice | 3 | focus step 8 (stretch) |
+| Voice | 3 | focus step 9 (stretch) |

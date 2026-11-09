@@ -4,6 +4,15 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — `gh pr edit` fails on this repo
+**What:** `gh pr edit <n>` (GitHub CLI 2.45, Ubuntu's package) stops with `GraphQL: Projects (classic) is being deprecated … (repository.pullRequest.projectCards)`: this old `gh` still asks GitHub for the retired "classic projects" field. Nothing is changed. Checked on PR #3.
+**Fix:** use the REST API through `gh api`:
+```bash
+gh api -X PATCH repos/IWU-AI-Lab/lab-os/pulls/<n> -f body="..."      # or -f title="..."
+gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
+```
+(`gh pr create`, `gh pr view --json …` work.) A newer `gh` (GitHub's own apt repository) likely fixes it.
+
 ### 2026-10-29 — wrist_roll turns the opposite way on the SO-101 and the xArm
 **What:** The "shared convention" (`robots/xarm.py`) says +wrist_roll is counter-clockwise from above. The SO-101 URDF does the opposite: with the gripper pointing up, +wrist_roll is **clockwise** from above (checked two ways with forward kinematics). Other joints agree (+pan = the arm's right; +lift/elbow/wrist_flex tilt forward/down). Also: the SO-101's zero pose is an "L" (upper arm up, forearm and gripper forward), not upright like the xArm, and a gripper pointing straight down sits at the ±180° wrap of a plain `atan2` tilt angle.
 **Fix:** each arm's kinematics carries `roll_sign` (xArm −1, SO-101 +1), used by the IK teleop instead of one global setting; the SO-101's tool angle runs −90…270 so "pointing down" (180) never wraps. Whether LeRobot's degrees match the URDF's signs is **not yet checked on the real arm**.
