@@ -107,8 +107,8 @@ clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). 
 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace
-  max_s: 7               # any input skips straight to the hub
-  unlock_s: 0.45         # the ignition's unlock (bolts, ring, burst, sound) plays this long before the startup begins
+  max_s: 8               # any input skips straight to the hub
+  unlock_s: 1.35         # the ignition's unlock (bolts, ring, burst, sound) finishes before the startup begins
   hyperspace:            # a 3D star field on one smooth speed curve, then an impact frame, a flash and a long brake
     stars: 3000          # how dense the star field is; the ignition screen shows the same stars, barely drifting
     ramp_s: 2.0          # trails stretch first (time²) while the dots crawl; speed is exponential, so it races at the end
