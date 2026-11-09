@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hub</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/hub/hub.css">
+</head>
+<body class="waiting">
+<!--
+  The plain hub (current-focus.md, phase 1). It has the same parts, ids and classes as the approved
+  concept (docs/design/hub-concept.html), so the reveal (step 9) restyles them instead of rebuilding.
+  Plain on purpose until then. All data comes from the brain's /api/ endpoints and /theme.json.
+-->
+
+<main id="hub" hidden>
+  <header class="strip panel">
+    <div class="brand" id="brand"></div>
+    <div class="fact" id="f-venue" title="Venue"></div>
+    <div class="fact" id="f-net" title="Internet"></div>
+    <div class="fact" id="f-ai" title="AI"></div>
+    <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
+  </header>
+
+  <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
+  <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
+
+  <section class="core" data-state="offline" aria-label="Assistant">
+    <div id="orb" aria-hidden="true"></div>
+    <span id="state-word" aria-live="polite"></span>
+    <!-- the ask line (#ask-btn) and the reply (#reply) arrive with typed chat (step 5) -->
+  </section>
+
+  <aside class="side left">
+    <div class="panel" data-detail="project" id="p-panel" hidden>
+      <div class="head"><span class="cap">Current Project</span></div>
+      <div class="big" id="p-focus"></div>
+      <div class="prog"><span class="stepn" id="p-step"></span></div>
+      <div class="next"><span class="k">Next:</span> <span id="p-next"></span></div>
+    </div>
+    <!-- AI Spend arrives with typed chat (step 5) -->
+  </aside>
+
+  <aside class="side right">
+    <div class="panel" data-detail="commits" id="c-panel" hidden>
+      <div class="head"><span class="cap">Commits</span></div>
+      <div class="row2">
+        <span><b class="tot" id="commit-total"></b> commits</span>
+        <span class="range" id="range" role="group" aria-label="How many days"></span>
+      </div>
+      <div id="spark" role="img" aria-label="Commits per day"></div>
+      <div class="axis"><span id="ax0"></span><span id="ax1"></span></div>
+    </div>
+    <!-- Devices arrive with the roll call (ideas.md → "On hold") -->
+  </aside>
+</main>
+
+<div id="module" role="dialog" aria-modal="true" aria-labelledby="mod-title" hidden>
+  <div class="bar">
+    <button class="back" id="mod-back" type="button" aria-label="Back to the hub">‹ Back <span class="key">Esc</span></button>
+    <div class="tab"><span id="mod-title"></span></div>
+  </div>
+  <div id="mod-slot"></div>
+</div>
+<!-- while a module is open, the assistant's picture sits here (the core never disappears) -->
+<div id="orb-dock" data-state="offline" aria-hidden="true"></div>
+
+<div id="ignite" role="button" tabindex="0" aria-label="Start the hub">
+  <div id="ign-orb" aria-hidden="true"></div>
+  <div class="stack">
+    <p id="ign-full">Tap for full screen</p>
+    <p id="ign-what">Tap, click or press any key to start</p>
+    <p class="safe"><span>Safe to start. This only opens the hub; no robot moves.</span></p>
+  </div>
+  <div class="ign-foot">
+    <span id="ign-venue"></span>
+    <span><span class="clock" id="ign-clock"></span><span class="ampm" id="ign-ampm"></span></span>
+  </div>
+</div>
+
+<script type="module" src="/hub/hub.js"></script>
+</body>
+</html>

@@ -15,6 +15,7 @@ class Venue:
     active_devices: tuple[str, ...]
     motion_allowed: bool
     max_speed_scale: float
+    reset_after_s: float | None = None  # hub: back to the start screen; None = the theme's value
 
 
 def load_venue(name: str | None = None, config_dir: Path = CONFIG_DIR) -> Venue:
@@ -26,4 +27,5 @@ def load_venue(name: str | None = None, config_dir: Path = CONFIG_DIR) -> Venue:
         active_devices=tuple(raw.get("active_devices") or ()),
         motion_allowed=bool(raw.get("motion_allowed", False)),
         max_speed_scale=float(raw.get("max_speed_scale", 0.3)),
+        reset_after_s=float(raw["reset_after_s"]) if raw.get("reset_after_s") else None,
     )

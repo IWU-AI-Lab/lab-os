@@ -1,6 +1,7 @@
 """One Python program serves the WebXR page and receives its input over a WebSocket.
 
-GET /            the XR input page (Quest browser or a desktop browser + WebXR emulator)
+GET /teleop      the XR input page (Quest browser or a desktop browser + WebXR emulator);
+                 also at GET / for `lab-os-teleop` (`lab-os serve` puts the hub there)
 GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
 GET /static/...  the teleop pages' own scripts
 GET /web/...     web files every page shares (vendored libraries, theme.js): src/lab_os/web/
@@ -193,8 +194,12 @@ async def _background(app: web.Application):
 
 
 def create_app(
-    loop: TeleopLoop, recorder: Recorder | None = None, accept_input: bool = True
+    loop: TeleopLoop,
+    recorder: Recorder | None = None,
+    accept_input: bool = True,
+    root_page: bool = True,
 ) -> web.Application:
+    """The teleop server. `root_page=False` leaves `/` free (the brain serves the hub there)."""
     app = web.Application()
     app[LOOP] = loop
     app[RECORDER] = recorder
@@ -203,7 +208,9 @@ def create_app(
     app[INPUTS] = set()
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
-    app.router.add_get("/", index)
+    if root_page:
+        app.router.add_get("/", index)
+    app.router.add_get("/teleop", index)
     app.router.add_get("/monitor", monitor)
     app.router.add_get("/theme.json", theme)
     app.router.add_get("/ws", websocket)
