@@ -36,6 +36,13 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-09)
 
+### lab-os at home, or in someone else's place
+- **What:** the builder runs lab-os at home with their own devices and screens; other people could do the same with theirs.
+- **In the focus already:** rule 9 (nothing place-specific in code; another place = another config folder outside the repo, `--config`) and one brain per network (step 8).
+- **Later:** a short "set up your own place" guide (copy the example config, name your devices, your own `.env` keys, an optional domain or just `localhost`); example configs for a home (one screen, a fake arm or one robot) and a lab.
+- **Watch out:** the lab's hard rules (the green arm) stay in the lab's config, and the lab's domain name is updated only by the lab's brain.
+- **Plugs into:** config/venues; the brain program; docs.
+
 ### Open a module on another screen ("screen-to-screen sending")
 - **What:** the hub runs on one screen (say the Newline); tap a module and choose to open it on another screen (the 32" monitor, a Pi screen, later the Quest). Example: a visitor at the Newline taps Monitor → "on the big monitor", and the arm view appears there while the hub stays on the Newline. Also: send a chat answer, a picture from a camera, or the other project's poster to a screen.
 - **Why it's doable:** the concept page shows modules as layers over the hub, but the real modules are already separate pages (`/teleop`, `/monitor`) that the hub loads inside itself, so any screen can show any module. Missing: the brain knowing which screens are there.
