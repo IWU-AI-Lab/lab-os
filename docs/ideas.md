@@ -57,7 +57,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### GPU-busy indicator on the hub
 - **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
-- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 7 already warns about it); a visible sign beats remembering.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 5 already warns about it); a visible sign beats remembering.
 - **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
 - **Plugs into:** status strip or the desktop's device card; model router (local setups).
 
@@ -98,7 +98,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **Decided 2026-11-09** (log; `current-focus.md` steps 2, 8 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **Decided 2026-11-09** (log; `current-focus.md` steps 2, 6 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
@@ -133,7 +133,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** each device plug-in declares what extra readings it offers; the troubleshooting suite, startup status and HUD read them. Safety: reading sensors is fine; anything that powers or moves stays under the safety rules.
 
 ### Startup sequence ("systems coming online")
-- **In the focus now (2026-10-30):** the startup *animation* itself (`current-focus.md` steps 4–5: prototypes, then the real one, with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
+- **In the focus now (2026-10-30):** the startup *animation* itself (designed; built in `current-focus.md` step 9, the reveal, with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
 - **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
 - **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
@@ -171,7 +171,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
 
 ### Voice beyond push-to-talk
-- **In the focus:** push-to-talk voice is `current-focus.md` step 9 (stretch), with the realtime-service vs. own-pipeline choice made there.
+- **In the focus:** push-to-talk voice is `current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
 - **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); our own speech-to-text → model → text-to-speech pipeline as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Plugs into:** triggers slot, conversation manager, model router.
 
@@ -234,7 +234,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models: beyond the chat test in `current-focus.md` step 7 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
+| Local models: beyond the chat test in `current-focus.md` step 5 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |
