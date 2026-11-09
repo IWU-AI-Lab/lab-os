@@ -1,6 +1,6 @@
 # The hub
 
-The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. Plain on purpose until the reveal (`current-focus.md` step 9): it has the same parts and names as the approved concept (`docs/design/hub-concept.html`), without the concept's looks.
+The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. Plain on purpose until the reveal (`current-focus.md` step 10): it has the same parts and names as the approved concept (`docs/design/hub-concept.html`), without the concept's looks.
 
 ## Start it
 ```bash

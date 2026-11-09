@@ -8,8 +8,8 @@
 The hub is left running **full screen** on the Newline or a lab desktop, waiting at its start screen. Someone curious taps it: the startup plays, with sound, and lands in the **hub**: buttons into the system (teleop today, more later), panels of real project facts, and the **assistant**, a picture that breathes and reacts. They ask it something, typed or **by voice**, and it answers. In the lab, the builder can also have an AI drive `so101-white` (Fable 5.2 in Claude Code, through the brain's tools).
 
 **Two phases (decision 2026-11-09):**
-- **Phase 1, make it work (steps 1–8): plain looks on purpose.** Everything works, but the pages stay simple: dark background, system fonts, no animation, a plain circle for the assistant. **Don't apply the approved design yet**, not even partly: it's a surprise, and people in the lab see the screens while the builder works.
-- **Phase 2, the reveal (step 9): the full design in one sitting** (about 1–2 hours, uninterrupted), once at least one or two things plus voice can be demoed. Then it's left on a screen for someone to find.
+- **Phase 1, make it work (steps 1–9): plain looks on purpose.** Everything works, but the pages stay simple: dark background, system fonts, no animation, a plain circle for the assistant. **Don't apply the approved design yet**, not even partly: it's a surprise, and people in the lab see the screens while the builder works.
+- **Phase 2, the reveal (step 10): the full design in one sitting** (about 1–2 hours, uninterrupted), once at least one or two things plus voice can be demoed. Then it's left on a screen for someone to find.
 
 **The design is approved** (2026-11-09): `docs/design/DESIGN.md` (the why), `docs/design/hub-concept.html` (how it looks, moves and sounds; open it with `#skip` to jump to the hub) and `config/theme.yaml` (the numbers). Phase 1 doesn't copy its looks, but **does copy its structure** (see "Ready for the reveal" below), so the reveal is mostly a new skin.
 
@@ -51,7 +51,7 @@ Roll call and robot connections over the network wait for the lab router (`ideas
 1. **Grow it out of the teleop code**: extract what exists; formal interfaces only when a second real user needs them.
 2. **Fake first, offline first**: every step runs without hardware and (except the AI steps) without internet. The robot tools run on the fake arm before the real one.
 3. **Only claim what's real**: the start screen, status strip and panels never show a check or number that didn't happen.
-4. **Plain until the reveal**: phase 1 pages use no fonts, colors, animations or sounds from the design beyond a dark background and readable text. Visible design work waits for step 9.
+4. **Plain until the reveal**: phase 1 pages use no fonts, colors, animations or sounds from the design beyond a dark background and readable text. Visible design work waits for step 10.
 5. **The hub's built-in assistant never changes anything in this focus.** It reads and answers. The **move tools** (step 2) are for a developer's AI tool on this computer only: same safety layer as teleop, **ask every time** (move tier). Writing code by AI comes later, and only via branch → tests → the builder's approval (decision 2026-10-24).
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable**: Linux, Windows, macOS (decision 2026-10-27). **Plain names** in code, show names in persona files (decision 2026-10-28).
@@ -62,7 +62,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 0. **Settle before coding** (done 2026-11-09) (planning sessions):
    - **AI service (settled 2026-10-30):** **OpenAI first**; free Gemini keys as a backup; the Anthropic key is out of credits. **Local models** as a second setup. **Keys (2026-11-09, believed, not confirmed):** the OpenAI account is the professor's, paid by the university. Budget ≤ $20/month so far.
-   - **Design: done (2026-11-09, approved by the builder)**, including the startup. Used in step 9 only. Later design changes go through a design session in `~/lab-os-design` (branch `design`).
+   - **Design: done (2026-11-09, approved by the builder)**, including the startup. Used in step 10 only. Later design changes go through a design session in `~/lab-os-design` (branch `design`).
 
 ### Phase 1: make it work (plain looks)
 1. **Plain hub.** `uv run lab-os serve` serves a plain hub page:
@@ -75,7 +75,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
    - Brain side: small JSON endpoints (`/api/status`, `/api/project`, `/api/commits?days=14`); internet checked in the background (~every 30 s). Move the shared web files (`vendor/`, `theme.js`) to one folder both use, e.g. `src/lab_os/web/`; update the vendor README and the path in CLAUDE.md. The teleop pages and `/ws` keep working from the Quest (update `docs/quest-setup.md` if its address changes).
    - Tests (no hardware, no internet): pages and endpoints answer; the Steps parser on a sample file; commit counting on a temporary git repo; **no `http://` or `https://` loads in any web file**.
    - **Done when:** it runs offline, teleop with the fake arm works when opened from the hub, `ruff` + `pytest` pass, and **the two taps work on the Newline** (full screen, start, a module, Back, reset).
-   - **Also in step 1, a performance test page** (`/perf`): only drifting dots, links and star streaks on a black page (no frame, no core, no hub: nothing that gives the design away), at the screen's full size, showing frames per second. Run it on the Newline (a 4K panel on a phone-class chip) and the Pi screens, so step 9 knows which quality level each screen can carry.
+   - **Also in step 1, a performance test page** (`/perf`): only drifting dots, links and star streaks on a black page (no frame, no core, no hub: nothing that gives the design away), at the screen's full size, showing frames per second. Run it on the Newline (a 4K panel on a phone-class chip) and the Pi screens, so step 10 knows which quality level each screen can carry.
    - **Status (2026-11-09):** built and checked on a laptop (headless Chrome: the two taps, a module, Back/Esc, the reset and "not while teleop has the arm", teleop driving the fake arm from inside the hub). **Left before it's done:** the two taps on the Newline, and `/perf` numbers from the Newline and the Pi screens. How to run it: `docs/hub.md`.
 
 2. **Robot tools for AI.** The brain becomes an MCP server with tools for `so101-white`, so an AI tool can drive it **blind** (no camera yet; the builder describes the scene in words). Fake arm first, then the real one. Details: "Step 2, concretely". **Before 2026-11-16** if possible (end of the builder's Fable access); after that the same tools work with any AI tool, so nothing is lost by waiting except trying Fable.
@@ -90,22 +90,36 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 7. **Voice** (part of the demo now, not a stretch; typing must not suffer). Push-to-talk first (hold a key, or hold a button on a touch screen, speak, it answers aloud); the circle follows the voice's loudness (state `listening`, `speaking` + loudness). Decide the route here: a realtime voice service (OpenAI's or Google's; handles interruptions; per-minute price; needs internet) or speech-to-text → our chat model → text-to-speech (same model as typing; slower). Fan noise is why push-to-talk comes first. **Voice works on whatever screen the hub is on**, which needs the secure address: see "Step 7, concretely". **No microphone, no voice button:** typing always works. Wake word later.
 
-8. **Demo check (plain).** On the plain hub, with nobody's help: start it from the start screen, teleop the fake arm, ask a typed and a spoken question, have the AI move the arm (step 2). Fix what breaks. Tag the version. Phase 1 is done.
+8. **Screens.** Open a module on another screen, and everything starts by itself (decision 2026-11-09: before the reveal). Details: "Step 8, concretely".
+
+9. **Demo check (plain).** On the plain hub, with nobody's help: start it from the start screen, teleop the fake arm, ask a typed and a spoken question, have the AI move the arm (step 2), open the arm view on another screen (step 8). Fix what breaks. Tag the version. Phase 1 is done.
 
 ### Phase 2: the reveal (one sitting)
-9. **The design.** **Build to match the concept page** (DESIGN.md → "Building the real hub": what to take, what to leave): fonts bundled (instead of the concept's Google Fonts link; files in `vendor/fonts/` with their licenses), every number from `/theme.json`, the frame and network, the core with every state, the module buttons and traces, the panels as callouts with their details pages, the ask line and reply under the core, the startup (unlock; **`hyperspace` by default**, with `assemble` and "per venue" as the other choices of `startup.style`, decision 2026-11-09; update the theme then; real checks, the title decoding `hub.title`, the greeting; **about 8 s including the unlock**, any input skips), sounds from the concept's `SFX`, quality levels. Then leave it at the start screen on the Newline or a desktop.
+10. **The design.** **Build to match the concept page** (DESIGN.md → "Building the real hub": what to take, what to leave): fonts bundled (instead of the concept's Google Fonts link; files in `vendor/fonts/` with their licenses), every number from `/theme.json`, the frame and network, the core with every state, the module buttons and traces, the panels as callouts with their details pages, the ask line and reply under the core, the startup (unlock; **`hyperspace` by default**, with `assemble` and "per venue" as the other choices of `startup.style`, decision 2026-11-09; update the theme then; real checks, the title decoding `hub.title`, the greeting; **about 8 s including the unlock**, any input skips), sounds from the concept's `SFX`, quality levels. How a module **sent to another screen** looks (it flies off toward the edge, a callout says where it went) isn't in the concept: settle it in a short design session before the reveal, or keep it plain. Then leave it at the start screen on the Newline or a desktop.
 
    **Making it fit 1–2 hours** (the concept is ~2,500 lines; a full port in one sitting is tight):
-   - Phase 1 already has every part with the same structure and real data (see "Ready for the reveal"), so step 9 is mostly lifting the concept's CSS, SVG and JavaScript onto parts that work.
+   - Phase 1 already has every part with the same structure and real data (see "Ready for the reveal"), so step 10 is mostly lifting the concept's CSS, SVG and JavaScript onto parts that work.
    - Prep that shows nothing on screen can happen earlier: download and license the font files, list which concept functions go where.
    - If time runs short, this order: the look of the hub + the core and its states → the startup → the panels' details pages → the rest. Whatever isn't done stays plain and gets finished in a second sitting.
-   - Alternative that removes the time limit: do step 9 away from the lab on a laptop (it runs with the fake arm, offline), on a branch, and only bring it to the lab's screens when it's done.
+   - Alternative that removes the time limit: do step 10 away from the lab on a laptop (it runs with the fake arm, offline), on a branch, and only bring it to the lab's screens when it's done.
 
-### Ready for the reveal (phase 1 rules that make step 9 quick)
-- The plain pages have **the same parts as the concept** (status strip, module buttons, core, ask line, reply, panels, start screen) in separate, clearly named elements, so step 9 restyles them instead of rebuilding.
+### Ready for the reveal (phase 1 rules that make step 10 quick)
+- The plain pages have **the same parts as the concept** (status strip, module buttons, core, ask line, reply, panels, start screen) in separate, clearly named elements, so step 10 restyles them instead of rebuilding.
 - **All data comes from the brain's endpoints** (status, project, commits, assistant state, chat), never from the page, so the designed page reads the same endpoints.
 - The **assistant's state and loudness** are already sent to the page (step 5, 7); the picture only reads them.
 - The pages already read `/theme.json` for the few values they use (e.g. `hub.title`, `hub.modules`, `clock`), so the design's numbers slot in.
+
+### Step 8, concretely (screens)
+- **Screens have names:** each screen running the hub connects to the brain under a name given in its address (`/?screen=newline`, `/?screen=desk`), so a saved address or a kiosk autostart keeps it with no typing. The brain keeps the list of screens that are there.
+- **Open on another screen:** a module button gets "open on…" (a long press, or a small send icon) listing the screens that are there; the brain tells that screen to open the module; Back on that screen, or "bring it back" on the sender, closes it. Works best on screens left full screen at their start screen (tap 1 done; a page can't make itself full screen from a remote command); otherwise the module opens in a window and that screen says so. One controller per robot still applies, and other screens stay view-only while a real arm is connected (step 2). The reset brings every screen back to its start screen.
+- **Everything starts by itself**, because the devices are switched off every night:
+  - the brain starts at boot on its computer (a systemd user service on Linux; Windows/macOS later);
+  - screens with their own computer (Pis, desktops) start Chromium/Chrome in kiosk mode at boot with their address: already full screen, so tap 1 is skipped;
+  - the Newline: whichever of its options can open an address at boot (its own startup setting, a kiosk browser app, Signage Pro, or a small computer on HDMI + USB touch; `ideas.md` → "Screens without browser bars"): the builder checks on Tuesday;
+  - screens reconnect by themselves when the brain restarts.
+- **The brain's address:** before the router, the desktop's address on the university network can change from day to day. So at start the brain updates `hub.indwesailab.com` in Route 53 to its current address (the same limited AWS key as the certificate, step 7), and the screens' saved address keeps working. With the router: a fixed address and a local DNS entry.
+- **The screens must reach the brain:** `network-setup-checklist.md` → "Networks before the router".
+- **Done when:** from the Newline, Monitor opens on the desk monitor and comes back; after switching everything off and on, every screen is back at its start screen without anyone typing an address.
 
 ### Step 2, concretely (robot tools for AI)
 **Goal:** in a Claude Code session on the lab desktop, the builder types "pick up the cube that's 15 cm in front of the base and put it 10 cm to the left", and the AI does it on `so101-white` through the brain's tools, asking before every move.
