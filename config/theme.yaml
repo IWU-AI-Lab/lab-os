@@ -91,9 +91,10 @@ hub:                     # (planned)
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works.
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
-  devices_view: auto     # auto = graph up to devices_graph_max, hive above | graph | hive. The panel's arrow expands a named list.
+  devices_view: auto     # auto = graph up to devices_graph_max, hive above | graph | hive. "List all" beside the count expands a named list.
   devices_graph_max: 8   # graph = a star of devices around the brain; hive = one row of small hexagons per kind
-  device_columns: [id, on, connected]  # the expanded device table, in order; also available: use, host, ip (ip is hidden on public screens)
+  device_columns: [id, on, linked]  # the expanded device table, in order; also available: use, host, ip (ip is hidden on public screens).
+                         # The devices details page (tap the callout) shows all of them.
   commits_days: [7, 14, 30]  # the range buttons under the commits line; the first view shows 14
   portrait: stack        # portrait screens: core on top, buttons in a row under it, facts in two columns
   density: busy-edges    # sparse | busy-edges | dense: how full the hub looks at rest
@@ -106,7 +107,8 @@ clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). 
 
 startup:                 # (planned)
   style: assemble        # assemble | hyperspace
-  max_s: 6               # any input skips straight to the hub
+  max_s: 7               # any input skips straight to the hub
+  unlock_s: 0.45         # the ignition's unlock (bolts, ring, burst, sound) plays this long before the startup begins
   hyperspace:            # a 3D star field on one smooth speed curve, then an impact frame, a flash and a long brake
     stars: 3000          # how dense the star field is; the ignition screen shows the same stars, barely drifting
     ramp_s: 2.0          # trails stretch first (time²) while the dots crawl; speed is exponential, so it races at the end
