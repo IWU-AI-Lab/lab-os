@@ -50,7 +50,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 - **NVIDIA GR00T N1.6, Physical Intelligence π0/π0.5** — bigger open models; training needs ~22–70 GB GPU memory (rented cloud GPU); GR00T has an SO-101 route.
 - **Gemini Robotics** (full action model) — partner-only; not available.
 - **ACT from scratch** — weakest generalization; fine as a learning exercise.
-**Result so far (2026-11, training project):** SmolVLA fine-tuned on **50 episodes** on `so101-green` sometimes performs the task. First real evidence for route B on our hardware (success rate, training time and GPU: to record).
+**Result so far (2026-11, training project):** SmolVLA fine-tuned on **50 episodes** on `so101-green`: **~30% success**, better when objects are near the positions seen in training (limited generalization, as expected; more varied demonstrations should help). Training took **~2 h on the RTX 5070 (12 GB), using ~8 GB**, with tweaks (e.g. the VLM part frozen). First real evidence for route B on our hardware.
 **Plan:** (A) "look, then reach" with Gemini Robotics-ER 2 first (most magic per hour: "put anything on the table and ask it to grab it"); (B) then SmolVLA fine-tuned on our own teleop recordings with varied conditions. Recording tip: vary positions, lighting, backgrounds, distractors; record in the demo venue too.
 
 ---
@@ -161,6 +161,8 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-09 | **The brain is an MCP server; the hub keeps a small fast chat; a "send to harness" toggle (+ a send-everything setting) hands requests to a coding agent.** Tools are defined once and grouped in **permission tiers**: read (everyone, incl. the built-in chat), act and move (developers with a token; move through the safety layer, asks every time), admin (humans only). | One set of tools for every AI; quick questions stay fast and cheap; anyone at the screen can't change things. |
+| 2026-11-09 | **Two routes for AI-assisted development, same branch → tests → PR → approval rule:** (1) bring your own tool (laptop + VS Code with Claude Code / Codex / Claude Desktop + repo + the brain's MCP tools); (2) a lab-paid harness on the brain with the lab's API key (Codex with the OpenAI key, to verify), with a spend cap. | Most students have no subscription; the system shouldn't depend on one person's account. |
 | 2026-10-30 | **AI provider: OpenAI first; free Gemini as backup; local models as a second setup.** The chat speaks the OpenAI-style interface so OpenAI, Gemini and local servers (Ollama / llama.cpp) differ only by config. The Anthropic key is out of credits; coding-agent candidate changes accordingly (OpenAI Codex, or Claude Agent SDK if refilled). | Where the keys are; one interface keeps the model router simple and makes offline chat possible. |
 | 2026-10-30 | **Focus = the JARVIS hub first** (supersedes the core-plumbing order of the earlier 2026-10-30 entry): `lab-os serve` → hub page → personas → the assistant's picture → startup prototypes → real startup → typed chat → read-only project helper → voice (stretch). Roll call, plug-in descriptions and robots reporting in wait for the router (`ideas.md` → "On hold"). | The builder wants the system itself first; most core plumbing is easier with the router at hand. |
 | 2026-10-30 | **The assistant's state is separate from its picture.** States: idle / listening / thinking / speaking / offline / error (+ loudness). Pictures are per-persona decorative renderers (plain circle first; inspired orbs and VRM characters later; no brand assets; Live2D dropped). | New looks never touch the conversation code; quality levels come for free. |
@@ -219,7 +221,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ---
 
 ## Open questions
-- **Second act:** can the Kinect's depth camera help "look, then reach" (3D position directly, less camera-to-table calibration)? Which Kinect version, and does it run on our OS? ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; SmolVLA training on 12 GB; cloud GPU option/cost for bigger models.
+- **Second act:** can the Kinect's depth camera help "look, then reach" (3D position directly, less camera-to-table calibration)? Which Kinect version, and does it run on our OS? ER pointing accuracy with our camera; camera-to-arm calibration method; ER preview pricing/free-tier limits and data terms; ~~SmolVLA training on 12 GB~~ (works: ~8 GB with the VLM frozen, 2026-11); cloud GPU option/cost for bigger models.
 - **License/ownership:** what does the professor/university allow?
 - **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.
 - **Teleop spikes:** `xarm1` speed/delay; Quest WebXR data, overlays, USB forwarding (Quest developer mode / Meta account access); IK library; `so101-white` calibration; end-to-end delay.

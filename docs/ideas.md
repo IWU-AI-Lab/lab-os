@@ -34,6 +34,18 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-09)
+
+### Screens without browser bars ("kiosk clients")
+- **What:** any lab screen (32" monitor, Pi touchscreens, the Newline) shows the hub, or any other web app, full screen, with no tabs or address bar, and starts by itself.
+- **How, simplest first:**
+  1. **Full screen from the page itself:** the hub's ignition press switches to full screen (in the current focus). Works in any browser, Newline's included, but Esc or a reload leaves it.
+  2. **Kiosk mode:** Chrome/Chromium/Edge started with `--kiosk <address>` show only the page, start at boot, and can't be left by accident. The standard setup for Raspberry Pi screens; works on the lab desktops (Linux, Windows).
+  3. **Install as an app:** the hub can declare itself an installable web app ("PWA"); Chrome/Edge/Android then offer "Install", and it opens in its own window without browser bars. Needs `localhost` or HTTPS (the certificate question again for other screens).
+- **The Newline:** recommended: plug a small computer (a spare Pi 5 or a ThinkCentre) into its HDMI + USB touch port and run kiosk mode (2). Then the Newline is just a big touch monitor, set up exactly like the Pi screens: one recipe for every screen. Quick test first: the Newline's own browser + full screen (1). A custom Android app for it is possible but adds an app to install and maintain (and installing may be locked); not worth it unless 1–2 fail. **Newline Signage Pro:** not free (a reseller lists ~$99 per display per year) and made for playlists, not interactive apps; skip.
+- **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows ("Screen-to-screen sending" idea).
+- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `network-setup-checklist.md`).
+
 ## Recent ideas (2026-11-08)
 "Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md` (design branch).
 
@@ -80,16 +92,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **What:** the brain offers its abilities as **MCP tools** (MCP, Model Context Protocol, is the standard way AI agents plug into outside tools). For example: list devices, device status, arm readouts, the project docs. Claude Code, Codex, LM Studio and other MCP clients can then reach the lab directly.
-- **Builder's version:** the hub's ask line just forwards to the configured harness (Claude Code / Codex / LM Studio) instead of having its own chat backend.
-- **Recommendation (to decide):** do the MCP server, but **keep a small fast chat of our own** next to it, and let the ask line pick:
-  - The tools are defined **once**, in the brain, as MCP tools; our own chat and any outside agent use the same ones.
-  - **Quick questions** ("what's next?", "is the xArm on?") go to the fast path: our own chat, one model call, answers in about a second, cheap. Agent harnesses take seconds to start and loop, cost more per question, and later voice needs fast answers (two-speed decision, 2026-10-19).
-  - **"Build/do" requests** ("add the touchscreen page") go to the configured harness (slow path; the coding agent).
-  - Config picks the harness (`codex`, `claude-code`, `lm-studio`, …), so "forward everything to a harness" stays a setting, not a rebuild.
-- **Rules:** read-only tools first; anything that moves a robot goes through the safety layer and is off by default; off-limits devices are never exposed; the server listens on this computer only (`localhost`) unless decided otherwise.
-- **Effect on the current focus (if agreed):** step 7's read-only project tools would be built as the brain's first MCP tools.
-- **Plugs into:** tools slot + agent harness slot + model router.
+- **Decided 2026-11-09** (log; `current-focus.md` step 7 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
 - **What:** bring `so101-green` and its cameras into lab-os later, e.g. to test general AI models that see and reason (LLMs/VLMs, like the "look, then reach" route) driving the arm, compared with the trained VLA (SmolVLA).
