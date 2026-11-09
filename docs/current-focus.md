@@ -56,8 +56,11 @@ Roll call and robot connections over the network wait for the lab router (`ideas
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable**: Linux, Windows, macOS (decision 2026-10-27). **Plain names** in code, show names in persona files (decision 2026-10-28).
 8. **The green arm and its training cameras stay off limits** (CLAUDE.md hard rules), including for the AI tools and camera code.
+9. **Nothing place-specific in code** (decision 2026-11-09): the lab's name, the domain, the device list, what's off limits, venues and personas live in config, so the builder can run lab-os at home and someone else in their own place. Another place = another config folder (e.g. `lab-os serve --config ~/my-lab-os`), kept outside the repo with its own `.env`. Example today: `hub.title` ("AI Comp Lab") sits in the theme, which is the same everywhere; it belongs in the place's config.
 
 ## Steps (each one is a small, testable win)
+**Time box:** the semester ends 2026-12-15, finals the week before, so the reveal should happen by about **2026-12-04**, leaving a buffer. **Build order:** 1 (done) → 2 (Fable, by 2026-11-16) → 5 → 7 → then 3, 4, 6, 8 in whatever order the lab allows → 9 → 10. The code may go quickly; what takes calendar time is testing at the lab (the real arm, the Newline, cameras, microphones, the network), so plan lab days around the steps that need them.
+
 The Current Project panel reads this list: each step's **bold title** is what the hub shows ("Next: Plain hub"), so titles are short plain words. A finished step gets `(done YYYY-MM-DD)` right after its title.
 
 0. **Settle before coding** (done 2026-11-09) (planning sessions):
@@ -118,7 +121,14 @@ The Current Project panel reads this list: each step's **bold title** is what th
   - **the Newline:** an icon on its home screen (Chrome → "Add to home screen"; an installed app once the secure address exists); its Home button leaves it. The builder checks on Tuesday what the Newline allows (`ideas.md` → "Screens without browser bars");
   - **only screens with the hub open** show up in "open on…", so a screen being used for something else is never taken over;
   - screens with the hub open reconnect by themselves when the brain restarts.
-- **The brain's address:** before the router, the desktop's address on the university network can change from day to day. So at start the brain updates `hub.indwesailab.com` in Route 53 to its current address (the same limited AWS key as the certificate, step 7), and the screens' saved address keeps working. With the router: a fixed address and a local DNS entry.
+- **The brain's address:** before the router, the desktop's address on the university network can change from day to day. So at start the brain updates `hub.indwesailab.com` in Route 53 to its current address (the same limited AWS key as the certificate, step 7), and the screens' saved address keeps working. With the router: a fixed address and a local DNS entry. **Only the place that owns the name updates it** (a setting in the lab's config), so a brain at someone's home never points the lab's screens at itself.
+- **One brain per network** (decision 2026-11-09). The brain can run on any computer, but only one at a time on a network:
+  - at start, the brain looks for another brain on the network for a couple of seconds (announced like a network printer is, e.g. with mDNS / the `zeroconf` Python package, which works on Linux, Windows and macOS);
+  - **if one is already there, it doesn't start:** it says where the running one is ("A brain is already running on ai-comp-lab-ubuntu-76358: open http://… there");
+  - **if two find each other later** (a laptop brain joins the network), the one that came later closes. If two start at the same moment, the earlier start time wins (then the name);
+  - **never unsafely:** a brain that's driving a robot doesn't vanish mid-move: it stops the motion, holds or parks the arm (an SO-101 goes limp when its brain quits), says why, and then closes;
+  - for development: an explicit `--second-brain` option that runs anyway on another port, doesn't announce itself, doesn't update the DNS name and refuses real robots;
+  - watch out: some networks block these announcements (the same networks that block devices reaching each other), so two brains may not see each other there; that's harmless as long as only one owns the DNS name.
 - **The screens must reach the brain:** `network-setup-checklist.md` → "Networks before the router".
 - **Done when:** from the Newline, Monitor opens on the desk monitor and comes back; after switching everything off and on, one tap or click per screen brings the hub back with its name, without typing an address.
 
