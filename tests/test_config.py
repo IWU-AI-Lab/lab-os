@@ -63,6 +63,24 @@ def test_new_place_writes_a_starter(home):
     assert load_venue().active_devices == ("fake-arm",)
 
 
+def test_new_place_never_copies_keys(tmp_path, monkeypatch):
+    """Someone's .env saved in the template (by mistake) must not spread to every new place."""
+    import shutil
+
+    template = tmp_path / "template"
+    shutil.copytree(config.TEMPLATE_DIR, template)
+    (template / ".env").write_text("GEMINI_API_KEY=real-key\n")
+    monkeypatch.setattr(config, "TEMPLATE_DIR", template)
+    folder = config.new_place(tmp_path / "home")
+    assert (folder / ".env.example").is_file() and not (folder / ".env").exists()
+
+
+def test_a_missing_env_is_named(tmp_path, caplog):
+    with caplog.at_level("WARNING"):
+        config.use(tmp_path)
+    assert f"no {config.env_file()}: no API keys" in caplog.text
+
+
 def test_new_place_never_overwrites(home):
     with pytest.raises(config.ConfigError, match="already has a place.yaml"):
         config.new_place(home)

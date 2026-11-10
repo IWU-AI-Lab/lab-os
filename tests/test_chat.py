@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from aiohttp import web
 
+from lab_os import config
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
 from lab_os.ai.client import AiError, Reply, Usage, check, stream_chat
@@ -112,7 +113,7 @@ def test_models_yaml_setups():
 
 def test_fallback_when_a_key_is_missing(monkeypatch):
     setups = load_setups()
-    with pytest.raises(NoSetup, match="add OPENAI_API_KEY or GEMINI_API_KEY to the .env file"):
+    with pytest.raises(NoSetup, match=r"add OPENAI_API_KEY or GEMINI_API_KEY to /.+/\.env, then"):
         pick("main", setups)
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     assert pick("main", setups).name == "backup"
@@ -254,8 +255,8 @@ async def test_no_key_pauses_with_a_sentence(tmp_path):
     assert events == [
         {
             "type": "error",
-            "message": "The AI isn't set up here yet: add LAB_TEST_KEY_UNSET to the .env file, "
-            "then restart.",
+            "message": "The AI isn't set up here yet: add LAB_TEST_KEY_UNSET to "
+            f"{config.env_file()}, then restart.",
         }
     ]
     assert await conv.check() is False
