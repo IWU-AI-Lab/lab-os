@@ -126,7 +126,7 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 Moves return `{"result": "arrived" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`. Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
 ## HTTP endpoints (the hub)
-Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET`, never cached. The hub page reads only these and `/theme.json`, so the designed page (focus step 9) can read the same ones.
+Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET` (the chat also uses `POST`), never cached. The hub page reads only these and `/theme.json`, so the designed page (focus step 9) can read the same ones.
 
 ### `/api/status`
 Polled every 3 s by the hub.
@@ -134,17 +134,19 @@ Polled every 3 s by the hub.
 {
   "venue": "lab",
   "internet": true,
-  "ai": {"connected": false},
-  "assistant": {"state": "offline", "loudness": 0.0},
+  "ai": {"setup": "main", "where": "OpenAI", "model": "gpt-6-luna", "connected": true,
+         "paused": null, "problem": null, "busy": false},
+  "assistant": {"state": "idle", "loudness": 0.0},
   "arm": {"name": "fake-arm", "control": "free"},
   "in_use": [],
   "time_ms": 1794264745533
 }
 ```
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
-- `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected.
+- `ai`: the chat's AI setup (`docs/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
+- `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected; `error` after a failed answer until the service answers again.
 - `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
-- `in_use`: what's in use right now (`"teleop"`, `"ai"`); the hub never goes back to the start screen while it isn't empty.
+- `in_use`: what's in use right now (`"teleop"`, `"ai"`, `"chat"` while an answer streams); the hub never goes back to the start screen while it isn't empty.
 - `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.
 
 ### `/api/project`
@@ -170,6 +172,28 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
  "reset_after_s": 180}
 ```
 `title`: the place's name (`name` in `place.yaml`, `docs/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+
+### Chat
+- `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}}`: the conversation the brain holds (one per brain; the hub's reset clears it).
+- `POST /api/chat` with `{"text": "…"}` (at most 2000 characters) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
+  ```
+  {"type": "state", "state": "thinking"}
+  {"type": "state", "state": "speaking"}
+  {"type": "text", "text": "Next is "}          (pieces of the answer, in order)
+  {"type": "text", "text": "step 5."}
+  {"type": "state", "state": "idle"}
+  {"type": "done", "setup": "main", "cost_usd": 0.000164}
+  ```
+  or `{"type": "error", "message": "<a full sentence for the screen>"}` (no key, budget used up, the service refused or didn't answer, "I'm still answering the last question."). One turn at a time.
+- `POST /api/chat/clear` → `{"ok": true}`: forget the conversation.
+
+### `/api/spend`
+This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.
+```json
+{"available": true, "month": "2026-11", "spent_usd": 0.0123, "budget_usd": 20.0, "chats": 7,
+ "by_setup": {"main": 0.0123, "backup": 0.0}}
+```
+`{"available": false}` on a venue with `public: true`. `budget_usd` is `null` when the place sets none.
 
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.

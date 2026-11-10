@@ -50,6 +50,35 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 .core { grid-area: core; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8em; }
 #orb { width: min(36vmin, 24em); aspect-ratio: 1; border-radius: 50%; background: var(--orb, #444); }
 #state-word { color: #aaa; }
+
+/* ---------- typed chat: the ask line and the latest answer under the core ---------- */
+#ask-btn { display: flex; gap: 0.5em; align-items: center; width: min(32em, 80vw); }
+#quick-form { flex: 1; }
+#quick, #ask {
+  width: 100%; box-sizing: border-box; padding: 0.5em 0.7em; font: inherit; color: inherit;
+  background: #1c1c1c; border: 1px solid #555; border-radius: 6px;
+}
+#quick:focus, #ask:focus { outline: none; border-color: #bbb; }
+#open-chat { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; }
+#reply { width: min(32em, 80vw); white-space: pre-wrap; }
+#reply .q { color: #aaa; }
+#reply .q:empty, #reply .a:empty { display: none; }
+#reply .a { margin-top: 0.3em; max-height: 9em; overflow-y: auto; }
+#errmsg { width: min(32em, 80vw); color: #e0b0b0; }
+.money { font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.meter { height: 0.5em; margin-top: 0.5em; background: #333; }
+.meter i { display: block; height: 100%; width: calc(var(--fill, 0) * 100%); background: #888; }
+.budget { margin-top: 0.3em; font-size: 0.85em; color: #999; }
+
+/* ---------- the conversation page ---------- */
+#chat { position: fixed; inset: 0; z-index: 12; display: flex; flex-direction: column; background: #111; }
+#chat .bar { display: flex; align-items: center; gap: 1.2em; padding: 0.5em 1em; border-bottom: 1px solid #333; }
+#log-chat { flex: 1; overflow-y: auto; padding: 1em 1.5em; display: flex; flex-direction: column; gap: 0.8em; }
+#log-chat .msg { max-width: 48em; white-space: pre-wrap; }
+#log-chat .msg.user { color: #aaa; }
+#log-chat .msg.user::before { content: "› "; }
+#log-chat .msg.error { color: #e0b0b0; }
+.ask { display: flex; gap: 0.5em; align-items: center; padding: 0.8em 1.5em; border-top: 1px solid #333; }
 /* one plain color per assistant state; the reveal swaps in the real picture, which reads the same state */
 [data-state="idle"] { --orb: #8a8a8a; }
 [data-state="listening"] { --orb: #5b8fd6; }

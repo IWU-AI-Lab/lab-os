@@ -8,11 +8,16 @@ GET /api/project         the Current Project panel (docs/current-focus.md → St
 GET /api/commits?days=N  commits per day for the last N days
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
+GET /api/chat            the conversation so far and the chat's status
+POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/protocol.md)
+POST /api/chat/clear     forget the conversation (the hub's reset)
+GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
 
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass
@@ -21,6 +26,9 @@ from pathlib import Path
 from aiohttp import web
 
 from lab_os import REPO_ROOT, config
+from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
+from lab_os.ai.chat import Conversation
+from lab_os.ai.spend import SpendLog
 from lab_os.hub.commits import commits_per_day
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
@@ -38,25 +46,12 @@ HUB_WEB_DIR = Path(__file__).parent / "web"
 # get a button and in what order; ids without a page here get no button (only claim what's real).
 MODULES = {"teleop": ("Teleop", "/teleop"), "monitor": ("Monitor", "/monitor")}
 
-ASSISTANT_STATES = ("idle", "listening", "thinking", "speaking", "offline", "error")
 DEFAULT_RESET_AFTER_S = 180.0
 MAX_COMMIT_DAYS = 90
+MAX_QUESTION_CHARS = 2000
+AI_CHECK_EVERY_S = (60.0, 20.0)  # while connected / while not
 
 log = logging.getLogger(__name__)
-
-
-@dataclass
-class Assistant:
-    """The assistant's state (the information layer). The rest of the system sets it; the
-    picture on the page only reads it. Offline until an AI is connected (focus step 5)."""
-
-    state: str = "offline"
-    loudness: float = 0.0  # 0–1 while speaking
-
-    def set(self, state: str, loudness: float = 0.0) -> None:
-        if state not in ASSISTANT_STATES:
-            raise ValueError(f"unknown assistant state {state!r}")
-        self.state, self.loudness = state, max(0.0, min(1.0, loudness))
 
 
 @dataclass
@@ -67,11 +62,20 @@ class Brain:
     assistant: Assistant
     focus_file: Path
     repo: Path
+    chat: Conversation
+    check_ai: bool = False  # check the AI service in the background (off in tests)
 
 
 BRAIN = web.AppKey("brain", Brain)
 TOOLS = web.AppKey("tools", RobotTools)
 MCP = web.AppKey("mcp", McpHttp | None)
+
+
+def _read(path: Path) -> str:
+    try:
+        return path.read_text()
+    except OSError:
+        return ""
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -101,6 +105,8 @@ def in_use(app: web.Application) -> list[str]:
         used.append("teleop")
     if app[LOOP].motion_active:
         used.append("ai")
+    if app[BRAIN].chat.busy:
+        used.append("chat")
     return used
 
 
@@ -124,7 +130,7 @@ async def api_status(request: web.Request) -> web.Response:
         {
             "venue": brain.venue.name,
             "internet": brain.internet.online if brain.internet else None,  # None = not known
-            "ai": {"connected": False},
+            "ai": brain.chat.status(),
             "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
             "arm": {
                 "name": loop.arm.name,
@@ -165,6 +171,53 @@ async def api_hub(request: web.Request) -> web.Response:
     )
 
 
+async def api_chat_get(request: web.Request) -> web.Response:
+    chat = request.app[BRAIN].chat
+    return web.json_response({"messages": chat.messages, "status": chat.status()})
+
+
+async def api_chat_post(request: web.Request) -> web.StreamResponse:
+    """One turn, streamed as JSON lines: state / text / done / error events."""
+    try:
+        text = str((await request.json()).get("text", ""))[:MAX_QUESTION_CHARS]
+    except (ValueError, AttributeError):
+        raise web.HTTPBadRequest(text='send {"text": "..."}') from None
+    resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
+    await resp.prepare(request)
+    async for event in request.app[BRAIN].chat.ask(text):
+        await resp.write((json.dumps(event) + "\n").encode())
+    await resp.write_eof()
+    return resp
+
+
+async def api_chat_clear(request: web.Request) -> web.Response:
+    request.app[BRAIN].chat.clear()
+    return web.json_response({"ok": True})
+
+
+async def api_spend(request: web.Request) -> web.Response:
+    brain = request.app[BRAIN]
+    if brain.venue.public:
+        return web.json_response({"available": False})  # a public screen hides spend
+    return web.json_response({"available": True} | brain.chat.spend.month())
+
+
+async def _ai_task(app: web.Application):
+    brain = app[BRAIN]
+
+    async def run():
+        while True:
+            internet = brain.internet.online if brain.internet else None
+            ok = await brain.chat.check(internet)
+            await asyncio.sleep(AI_CHECK_EVERY_S[0] if ok else AI_CHECK_EVERY_S[1])
+
+    task = asyncio.create_task(run()) if brain.check_ai else None
+    yield
+    if task:
+        task.cancel()
+    await brain.chat.close()
+
+
 async def _internet_task(app: web.Application):
     check = app[BRAIN].internet
     task = asyncio.create_task(check.run()) if check else None
@@ -193,13 +246,22 @@ def create_brain_app(
     repo: Path = REPO_ROOT,
     mcp_port: int | None = None,
     place: config.Place | None = None,
+    chat: Conversation | None = None,
+    check_ai: bool = False,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml."""
     app = create_app(loop, root_page=False)
     place = place or config.load_place()
-    app[BRAIN] = Brain(place, venue, internet, Assistant(), focus_file, repo)
+    assistant = chat.assistant if chat else Assistant()
+    chat = chat or Conversation(
+        assistant,
+        SpendLog(budget_usd=place.ai_budget_usd_month),
+        personality=_read(config.shared_path("personas/lab-assistant.md")),
+        place_name=place.name,
+    )
+    app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, check_ai)
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     app[MCP] = McpHttp(create_mcp_server(app[TOOLS]), mcp_port) if mcp_port else None
@@ -209,7 +271,12 @@ def create_brain_app(
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/hub", api_hub)
+    app.router.add_get("/api/chat", api_chat_get)
+    app.router.add_post("/api/chat", api_chat_post)
+    app.router.add_post("/api/chat/clear", api_chat_clear)
+    app.router.add_get("/api/spend", api_spend)
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)
+    app.cleanup_ctx.append(_ai_task)
     return app

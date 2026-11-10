@@ -76,7 +76,9 @@ def main(argv: list[str] | None = None) -> None:
     use_config(args)
     loop = make_loop(args)  # stops with a message if the venue or arm doesn't fit this place
     venue = load_venue(args.venue)
-    app = create_brain_app(loop, venue, internet=InternetCheck(), mcp_port=args.mcp_port or None)
+    app = create_brain_app(
+        loop, venue, internet=InternetCheck(), mcp_port=args.mcp_port or None, check_ai=True
+    )
     if args.mcp_port and not args.arm.startswith("fake"):
         print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
     if args.host not in LOCAL_HOSTS:
