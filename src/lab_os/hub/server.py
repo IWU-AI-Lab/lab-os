@@ -3,6 +3,8 @@
 GET /                    the hub: start screen, status strip, module buttons, assistant, panels
                          (plain, or the designed one when the theme says hub.look: design)
 GET /plain, /design      each look by name (the design = the reveal, docs/design/DESIGN.md)
+GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
+GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
 GET /api/status          venue, internet, AI, assistant state, the brain's clock, what's in use
@@ -10,6 +12,9 @@ GET /api/project         the Current Project panel (docs/current-focus.md → St
 GET /api/commits?days=N  commits per day for the last N days, and the latest few commits
 GET /api/arm             the arm now: name, joints (degrees), held still, who has control
 GET /api/devices         the place's devices (devices.yaml): kind, off limits, linked to the brain
+GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
+GET /api/settings        the settings (src/lab_os/settings.py) and their values
+POST /api/settings       {"key": "theme:hub.look", "value": "design"}: change one (here only)
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
@@ -26,6 +31,7 @@ The robot tools for AI tools run as an MCP server on their own port (lab_os.tool
 import asyncio
 import json
 import logging
+import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -33,7 +39,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT, config
+from lab_os import REPO_ROOT, config, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
@@ -45,7 +51,7 @@ from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.personas import Persona, current_persona
 from lab_os.teleop.loop import TeleopLoop
-from lab_os.teleop.server import CONTROL, LOOP, create_app
+from lab_os.teleop.server import CONTROL, LOOP, create_app, is_local
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, create_mcp_server
@@ -58,7 +64,11 @@ LOOKS = {"plain": "index.html", "design": "design.html"}  # theme hub.look picks
 
 # Every module the hub knows: id → (button title, page). The theme's hub.modules picks which ones
 # get a button and in what order; ids without a page here get no button (only claim what's real).
-MODULES = {"teleop": ("Teleop", "/teleop"), "monitor": ("Monitor", "/monitor")}
+MODULES = {
+    "teleop": ("Teleop", "/teleop"),
+    "monitor": ("Monitor", "/monitor"),
+    "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
+}
 
 DEFAULT_RESET_AFTER_S = 180.0
 MAX_COMMIT_DAYS = 90
@@ -139,6 +149,69 @@ async def design_page(request: web.Request) -> web.FileResponse:
     return await _file(request, LOOKS["design"])
 
 
+async def ai_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "ai.html")
+
+
+async def settings_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "settings.html")
+
+
+async def api_ai_calls(request: web.Request) -> web.Response:
+    """The robot tools' calls this run (newest last), for the AI Control page."""
+    try:
+        after = float(request.query.get("after", 0))
+    except ValueError:
+        raise web.HTTPBadRequest(text="after must be a number (epoch seconds)") from None
+    app = request.app
+    tools = app[TOOLS]
+    calls = [c for c in tools.calls.entries if c["t"] > after]
+    mcp = app[MCP]
+    return web.json_response(
+        {
+            "calls": calls[-50:],
+            "mcp": mcp.url if mcp and not mcp.failed else None,
+            "motion_allowed": app[BRAIN].venue.motion_allowed,
+            "control": tools.who_has_control(),
+        },
+        dumps=lambda o: json.dumps(o, default=str),
+    )
+
+
+async def api_settings_get(request: web.Request) -> web.Response:
+    brain = request.app[BRAIN]
+    return web.json_response(
+        {
+            "sections": settings.read(brain.venue.name),
+            "writable": is_local(request),
+            "why_not": None
+            if is_local(request)
+            else "Settings change only on the brain's computer.",
+            "venue": brain.venue.name,
+        }
+    )
+
+
+async def api_settings_post(request: web.Request) -> web.Response:
+    """Change one setting. Only from the brain's computer: other screens may be in a hallway."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="Settings change only on the brain's computer.")
+    try:
+        body = await request.json()
+        key, value = str(body["key"]), body["value"]
+    except (ValueError, KeyError, TypeError):
+        raise web.HTTPBadRequest(text='send {"key": "...", "value": ...}') from None
+    try:
+        value = await asyncio.to_thread(settings.write, key, value, request.app[BRAIN].venue.name)
+    except settings.SettingError as e:
+        return web.json_response({"ok": False, "message": str(e)}, status=400)
+    except (OSError, config.ConfigError) as e:
+        return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
+    field = settings.find(key)
+    log.info("setting %s = %r (from the settings page)", key, value)
+    return web.json_response({"ok": True, "key": key, "value": value, "applies": field.applies})
+
+
 async def perf_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "perf.html")
 
@@ -168,6 +241,26 @@ async def api_status(request: web.Request) -> web.Response:
     )
 
 
+def side_view_cm(kin, joints: dict[str, float]) -> list[dict] | None:
+    """The arm seen from its side: each joint's distance forward from the base and height (cm),
+    base first, the gripper's tip last. None when the arm has no joint-by-joint kinematics."""
+    frames = getattr(kin, "frames", None)
+    if frames is None:
+        return None
+    pan = math.radians(joints.get("shoulder_pan", 0.0))
+    all_frames = frames(joints)
+    # measured along the way the arm faces, from its pan axis (which isn't at the base's origin), so
+    # the drawing stays the same shape when the arm turns; +pan turns toward -y (as in fk)
+    ax, ay, _ = all_frames.get("shoulder_pan", ((0.0, 0.0, 0.0), None))[0]
+    points = [{"name": "base", "r": 0.0, "z": 0.0}]
+    for name, (p, _rot) in all_frames.items():
+        if name == "gripper_frame_joint":
+            continue  # the same point as "tip"
+        forward = ax + (p[0] - ax) * math.cos(pan) - (p[1] - ay) * math.sin(pan)
+        points.append({"name": name, "r": round(forward * 100, 1), "z": round(p[2] * 100, 1)})
+    return points
+
+
 async def api_arm(request: web.Request) -> web.Response:
     """The arm's joints for the hub's readouts (the driver rate-limits real reads)."""
     app = request.app
@@ -175,8 +268,13 @@ async def api_arm(request: web.Request) -> web.Response:
     out = {"name": loop.arm.name, "model": getattr(loop.arm, "model", "unknown")}
     try:
         joints = {j: round(v, 1) for j, v in loop.arm.read_joints().items()}
+        where = app[TOOLS].position()  # the gripper point (cm) where the arm has kinematics
     except Exception as e:  # the arm stopped answering: say so, don't fail the page
         return web.json_response(out | {"connected": False, "problem": str(e)})
+    out |= {k: where[k] for k in ("gripper_point_cm", "gripper_open_pct") if k in where}
+    side = side_view_cm(app[TOOLS].kin, joints)
+    if side:
+        out["side_cm"] = side
     control = (
         "ai" if loop.motion_active else "teleop" if app[CONTROL].get("ws") is not None else "free"
     )
@@ -222,9 +320,13 @@ async def api_commits(request: web.Request) -> web.Response:
 
 async def api_hub(request: web.Request) -> web.Response:
     theme = load_theme()  # re-read each time, like /theme.json: edit, then reload the page
+    try:
+        title = config.load_place().name  # re-read: the settings page can rename the place
+    except (config.ConfigError, OSError):
+        title = request.app[BRAIN].place.name
     return web.json_response(
         {
-            "title": request.app[BRAIN].place.name,
+            "title": title,
             "modules": hub_modules(theme),
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
         }
@@ -372,12 +474,17 @@ def create_brain_app(
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
+    app.router.add_get("/ai", ai_page)
+    app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/arm", api_arm)
     app.router.add_get("/api/devices", api_devices)
+    app.router.add_get("/api/ai-calls", api_ai_calls)
+    app.router.add_get("/api/settings", api_settings_get)
+    app.router.add_post("/api/settings", api_settings_post)
     app.router.add_get("/api/hub", api_hub)
     app.router.add_get("/api/greeting", api_greeting)
     app.router.add_post("/api/chat/start", api_chat_start)

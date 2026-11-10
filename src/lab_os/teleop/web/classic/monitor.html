@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arm monitor (classic)</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/classic/style.css">
+  <script type="importmap">
+    { "imports": { "three": "/web/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+  <main>
+    <h1>Arm monitor</h1>
+    <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
+    <section class="panel">
+      <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
+      <div><span class="label">Input</span> <span id="input" class="pill off">—</span></div>
+      <div><span class="label">Control</span> <span id="control" class="pill off">—</span></div>
+      <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
+    </section>
+    <section id="arm-panel" class="panel arm3d" data-role="monitor"></section>
+    <section class="panel" id="joints"><div class="label">Driver state (what the arm reports)</div></section>
+  </main>
+  <script src="/static/monitor.js"></script>
+  <script type="module" src="/static/arm/arm-panel.js"></script>
+</body>
+</html>

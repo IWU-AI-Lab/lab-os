@@ -643,14 +643,25 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 /* ---------- the real hub's additions (not in the concept) ---------- */
 .panel.gone { display: none !important; }
 .steps span.done { background: color-mix(in srgb, var(--c) 55%, var(--line)); }
-#mod-slot iframe { flex: 1; width: 100%; height: 100%; border: 1px solid var(--line); background: var(--bg); }
+#mod-slot iframe { flex: 1; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: dark; }
 #reply .a .look { color: var(--text-dim); font: var(--w-lines) 0.85rem/1.4 var(--f-lines); }
 #log-chat .msg.err .body { color: var(--danger); }
 #log-chat .copy { display: block; margin-top: 0.5rem; font: 500 0.75rem/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); padding: 0.35rem 0.6rem; cursor: pointer; }
 #log-chat .copy:hover, #log-chat .copy:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
-#restore-chat { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 5; font: 500 0.8rem/1 var(--f-ui); color: var(--text-dim); background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid var(--line); padding: 0.55rem 0.9rem; cursor: pointer; }
-#restore-chat:hover, #restore-chat:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
-#restore-chat[hidden] { display: none; }
+#restore-chat { display: flex; align-items: center; justify-content: center; min-width: 2.2rem; min-height: 2rem; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--accent); cursor: pointer; }
+#restore-chat:hover, #restore-chat:focus-visible { color: var(--hot); outline: none; }
+#restore-chat[hidden], #restore-line[hidden] { display: none; }
+#restore-line { align-self: flex-start; display: flex; align-items: center; gap: 0.5rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.5rem 0.8rem; cursor: pointer; }
+#restore-line:hover, #restore-line:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+/* the strip's quiet tools: back to the start screen, settings */
+.tools { display: flex; gap: 0.2rem; margin-left: -0.6rem; }
+.tool { display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; opacity: 0.7; }
+.tool:hover, .tool:focus-visible { color: var(--hot); opacity: 1; outline: none; }
+/* a module page can go to another monitor of this computer */
+#module .send { position: absolute; right: 4.2rem; top: 0.8rem; display: none; align-items: center; gap: 0.5rem; height: 2.6rem; padding: 0 0.9rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
+body[data-mod="page"] #module .send { display: flex; }
+#module .send:hover, #module .send:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
+#module .send-msg { position: absolute; right: 4.2rem; top: 3.8rem; max-width: 26rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); text-align: right; }
 </style>
 </head>
 <body>
@@ -691,6 +702,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></symbol>
     <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 9.5c0-1.4 1.1-2.5 2.5-2.5h13c1.4 0 2.5 1.1 2.5 2.5v5c0 1.4-1.1 2.5-2.5 2.5h-3.2l-1.6-2.2a2 2 0 0 0-3.4 0L8.7 17H5.5A2.5 2.5 0 0 1 3 14.5z"/></symbol>
     <symbol id="i-leader" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12v3.5M17 14h3"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.3"/></symbol><symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 0 11h-2"/></symbol><symbol id="i-cast" viewBox="0 0 24 24"><rect x="2.5" y="4" width="13" height="9.5"/><rect x="11" y="10" width="10.5" height="8"/><path d="M5.5 20.5h5"/></symbol>
     <pattern id="hatchP" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" fill="currentColor"/></pattern>
   </defs>
 </svg>
@@ -711,6 +723,10 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>checking</span></div>
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
+    <div class="tools">
+      <button class="tool" id="sleep-btn" type="button" title="Back to the start screen" aria-label="Back to the start screen"><svg class="ico"><use href="#i-power"/></svg></button>
+      <button class="tool" id="settings-btn" data-module="settings" type="button" title="Settings" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
+    </div>
   </header>
 
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
@@ -745,16 +761,16 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation"><svg class="ico"><use href="#i-hist"/></svg><b id="chat-n"></b></button>
+      <button id="restore-chat" type="button" hidden><svg class="ico"><use href="#i-undo"/></svg></button>
     </div></div></div>
     <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
-    <!-- a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes) -->
-    <button id="restore-chat" type="button" hidden></button>
     <div id="toast" class="alertable" role="status"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div class="msg-t" id="toast-msg"></div></div></div></div>
     <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>No answer</b><span></span></div></div></div></div>
   </section>
 
   <section class="chat panel" aria-label="Chat">
     <div class="cut" style="height:100%"><div class="in">
+      <button id="restore-line" type="button" hidden></button>
       <div id="log-chat" aria-live="polite"></div>
       <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"></form>
     </div></div>
@@ -811,6 +827,8 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     <div id="mod-slot"></div>
     <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title"></span></div>
     <button class="back" id="mod-back" type="button" aria-label="Back to the hub"><svg class="ico"><use href="#i-back"/></svg></button>
+    <button class="send" id="mod-send" type="button" title="Open this page full screen on another monitor of this computer"><svg class="ico"><use href="#i-cast"/></svg>Show on another screen</button>
+    <div class="send-msg" id="send-msg" aria-live="polite"></div>
   </div></div>
 </div>
 <div id="orb-dock" aria-hidden="true"></div>
@@ -1850,6 +1868,25 @@ const TOOL_WORDS = {
   project_status: "the current focus", list_docs: "the docs", read_doc: "a doc", search_docs: "the docs",
   git_status: "git", git_log: "the git history", list_devices: "the devices", arm_status: "the arm", list_poses: "the arm's poses",
 };
+// The answer types itself out at a steady pace, like a model writing: the stream arrives in chunks
+// (a few words to a whole sentence), so the page reveals them a few characters per frame and speeds up
+// when it falls behind. minimal quality shows each chunk at once.
+function typewriter(render) {
+  let full = "", shown = 0, done = false, resolve;
+  const finished = new Promise((r) => (resolve = r));
+  const timer = setInterval(() => {
+    const behind = full.length - shown;
+    if (behind > 0) {
+      shown = S.quality === "minimal" ? full.length : Math.min(full.length, shown + Math.max(2, Math.ceil(behind / 60)));  // ~125 chars/s, faster only when far behind
+      render(full.slice(0, shown), true);
+    } else if (done) {
+      clearInterval(timer);
+      render(full, false);
+      resolve();
+    }
+  }, 16);
+  return { add: (text) => (full += text), end: () => (done = true), finished };
+}
 // one way in for questions, from the chat page or from the core
 let replyTimer = null;
 async function ask(q, fromCore) {
@@ -1862,17 +1899,19 @@ async function ask(q, fromCore) {
   if (fromCore) { clearTimeout(replyTimer); r.querySelector(".q").textContent = q; a.innerHTML = ""; r.classList.add("on"); }
   setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
   let live = null;  // the answer's bubble in the conversation
+  const typer = typewriter((text, typing) => {
+    live.innerHTML = richText(text); live.classList.toggle("typing", typing); $("#log-chat").scrollTop = 1e9;
+    if (fromCore) { a.innerHTML = richText(text); a.classList.toggle("typing", typing); a.scrollTop = 1e9; }
+  });
   const onEvent = (ev) => {
-    if (ev.type === "state") setState(ev.state);
+    if (ev.type === "state") { if (!(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out
     else if (ev.type === "tool") {
       if (!answer.content && fromCore) a.innerHTML = `<span class="look">Looking up ${esc(TOOL_WORDS[ev.name] || ev.name)}…</span>`;
       if (traces.length) pulseTrace(traces[Math.floor(Math.random() * traces.length)], true, 320);
     } else if (ev.type === "text") {
-      if (!answer.content) { S.chat.push(answer); live = addMsg(false); }
+      if (!answer.content) { S.chat.push(answer); live = addMsg(false); setState("speaking"); }
       answer.content += ev.text;
-      const html = richText(answer.content);
-      live.innerHTML = html; $("#log-chat").scrollTop = 1e9;
-      if (fromCore) { a.innerHTML = html; a.scrollTop = 1e9; }
+      typer.add(ev.text);
     } else if (ev.type === "error") {
       S.chat.push({ role: "error", content: ev.message });
       showError(ev.message);
@@ -1895,6 +1934,8 @@ async function ask(q, fromCore) {
     console.warn(`hub: chat failed (${e.message})`);
     onEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." });
   }
+  typer.end();
+  if (live) await typer.finished;
   S.asking = false;
   renderChat();
   if (S.state === "thinking" || S.state === "speaking") setState("idle");
@@ -1915,20 +1956,24 @@ $("#ask").addEventListener("blur", () => { if (S.state === "listening" && !S.ask
 // a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes): "Bring back"
 // swaps it in (and the current one aside, so a second press swaps back)
 function showRestore(prev) {
-  const b = $("#restore-chat");
-  b.hidden = !prev;
+  const icon = $("#restore-chat"), line = $("#restore-line");
+  icon.hidden = line.hidden = !prev;
   if (!prev) return;
   const at = new Date(prev.saved_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), n = prev.questions;
-  b.textContent = `Bring back the last conversation (${n} question${n === 1 ? "" : "s"}, ${at})`;
+  const text = `Bring back the last conversation (${n} question${n === 1 ? "" : "s"}, ${at})`;
+  icon.title = text; icon.setAttribute("aria-label", text);
+  line.innerHTML = `<svg class="ico"><use href="#i-undo"/></svg>${esc(text)}`;
 }
-$("#restore-chat").addEventListener("click", async (e) => {
+const restoreChat = async (e) => {
   e.stopPropagation();
   if (S.asking) return;
   const res = await fetch("/api/chat/restore", { method: "POST" }).catch(() => null);
   const back = res?.ok ? await res.json() : null;
   if (back?.ok) { S.chat = back.messages.map((m) => ({ role: m.role, content: m.content })); renderChat(); SFX.blip(); }
   showRestore(back?.previous);
-});
+};
+$("#restore-chat").addEventListener("click", restoreChat);
+$("#restore-line").addEventListener("click", restoreChat);
 
 /* ---------- idle events ---------- */
 let nextEvent = 0;
@@ -1958,9 +2003,9 @@ const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
 // every module the hub knows; the venue's list (hub.modules) picks which ones and their order.
 // Chat isn't in the list: it belongs to the core and is always there. "test" ones only try the layout.
 // every module the hub knows: id -> [title, icon, kind]. The theme's hub.modules picks which ones and
-// their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it);
-// "side" = the arm's side view, drawn here from its real joints. Chat isn't one: it belongs to the core.
-const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], arm: ["Arm", "i-arm", "side"] };
+// their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it).
+// Settings opens from the gear in the strip. Chat isn't one: it belongs to the core.
+const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], settings: ["Settings", "i-gear", "page"] };
 const CHAT = ["Chat", "i-chat", "chat"];
 function buildMring(g) {
   el("circle", { r: 22, fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "14 5 2 5", opacity: 0.8 }, g);
@@ -1994,7 +2039,8 @@ function flipOrb(orb, from) {
 function openModule(btn) {
   if (S.moduleOpen) return;
   const [title, ico, kind] = btn.dataset.module ? MODULES[btn.dataset.module] : btn.dataset.detail ? DETAILS[btn.dataset.detail] : CHAT;
-  S.moduleOpen = kind;
+  S.moduleOpen = kind; S.moduleId = btn.dataset.module || null;
+  $("#send-msg").textContent = "";
   const r = btn.getBoundingClientRect(), m = $("#module");
   modFrom = `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)`;
   $("#mod-title").textContent = title;
@@ -2459,6 +2505,10 @@ function sleep() { if (!S.booted || S.moduleOpen) return; S.sleeping = true; bod
 function wake() { S.sleeping = false; body.classList.remove("sleep"); relockTarget = { to: Math.round((rings.ticks.a + 30) / 30) * 30 }; SFX.relock(); }
 
 /* ---------- the brain: theme numbers, real facts, polling, back to the start screen ---------- */
+// this screen's own choices (Settings → This screen): level of detail, sound, full screen on start
+function screenPrefs() {
+  try { return JSON.parse(localStorage.getItem("lab-os.screen")) || {}; } catch { return {}; }
+}
 async function getJSON(url) {
   try {
     const res = await fetch(url, { cache: "no-store" });
@@ -2500,7 +2550,9 @@ function applyTheme(t) {
   if (hub.commits_days?.length) COMMIT_RANGES = hub.commits_days;
   if (hub.device_columns?.length) DEVICE_COLUMNS = hub.device_columns.filter((k) => COLUMNS[k]);
   if (hub.devices_graph_max) GRAPH_MAX = hub.devices_graph_max;
-  setQuality(params.get("quality") || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
+  const mine = screenPrefs();
+  S.sound = params.get("sound") !== "0" && mine.sound !== false;
+  setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
 }
 function setQuality(q) {
@@ -2514,6 +2566,7 @@ function setQuality(q) {
 }
 // the buttons: the theme's hub.modules, in order; a page module only if the brain has its page (/api/hub)
 function setModules(themeIds, pages) {
+  S.page.settings = "/settings";
   for (const m of pages) { S.page[m.id] = m.page; MODULES[m.id] = [m.title, MODULES[m.id]?.[1] || "i-test", "page"]; }
   const ids = themeIds || pages.map((m) => m.id);
   S.modules = ids.filter((id) => S.page[id] || MODULES[id]?.[2] === "side");
@@ -2531,6 +2584,19 @@ async function init() {
   setModules(t?.hub?.modules, hub?.modules || []);
   await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
 }
+// a setting changed (the settings page inside the hub, or another window): apply it without a reload
+async function reapply() {
+  const [t, hub] = await Promise.all([getJSON("/theme.json"), getJSON("/api/hub")]);
+  if (t) applyTheme(t);
+  if (hub) {
+    S.title = hub.title; document.title = hub.title; $("#brand").textContent = hub.title; $("#boot-title").textContent = hub.title;
+    if (hub.reset_after_s) S.resetAfterMs = hub.reset_after_s * 1000;
+    setModules(t?.hub?.modules, hub.modules || []);
+  }
+  pollStatus();
+}
+addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
+addEventListener("storage", (e) => e.key === "lab-os.screen" && reapply());
 function setFact(id, text, off) { const f = $(id); f.querySelector("span").textContent = text; f.classList.toggle("off", !!off); }
 let noteShown = null;
 function showNote(msg) {  // a calm sentence at the top of the core (e.g. why the chat is paused)
@@ -2595,7 +2661,7 @@ async function startChat() {
 // the page (Back) and the screen stays awake where the browser allows it (localhost or https).
 function goFull() {
   const el = document.documentElement;
-  if (!document.fullscreenElement && document.fullscreenEnabled && params.get("full") !== "0") {
+  if (!document.fullscreenElement && document.fullscreenEnabled && params.get("full") !== "0" && screenPrefs().full !== false) {
     el.requestFullscreen({ navigationUI: "hide" })
       .then(() => navigator.keyboard?.lock?.(["Escape"]).catch(() => {}))
       .catch((e) => console.warn(`hub: no full screen (${e.message})`));
@@ -2624,6 +2690,33 @@ function watchFrame(frame) {
     console.warn(`hub: can't watch the module page (${e.message}); use the Back button`);
   }
 }
+// the strip's quiet tools: back to the start screen now, and settings (opens like a module)
+$("#sleep-btn").addEventListener("click", (e) => { e.stopPropagation(); SFX.close(); toStart("the power button"); });
+$("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
+// A module page full screen on another monitor of this computer (HDMI/DP): Chrome's Window Management
+// API places the window there (it asks once for permission; localhost or https only). The page then asks
+// for one click to go full screen (browsers' rule). Elsewhere: a new window to drag over.
+let screenDetails = null;
+async function sendToScreen(id) {
+  const url = `${S.page[id]}?screen=1`, say = (m) => ($("#send-msg").textContent = m);
+  let place = "";
+  if ("getScreenDetails" in window) {
+    try {
+      screenDetails ||= await window.getScreenDetails();
+      const others = screenDetails.screens.filter((s) => s !== screenDetails.currentScreen);
+      const s = others.find((o) => !o.isPrimary) || others[0];
+      if (!s) return say("Only one monitor is connected to this computer.");
+      place = `popup,left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight}`;
+    } catch (e) {
+      say(`The browser didn't allow placing windows (${e.message}); dragging the new window works too.`);
+    }
+  }
+  const w = window.open(url, `lab-os-${id}`, place || "popup,width=1280,height=800");
+  if (!w) return say("The browser blocked the new window: press the button again.");
+  say(place ? "Opened on the other monitor: click it there for full screen." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
+  if (place) setTimeout(closeModule, 900);  // it lives there now; the hub's copy would hold a second connection
+}
+$("#mod-send").addEventListener("click", (e) => { e.stopPropagation(); if (S.moduleId && S.page[S.moduleId]) sendToScreen(S.moduleId); });
 // nobody there for hub.reset_after_s (never while something is in use): back to the start screen, with a
 // fresh conversation for the next visitor (the last one is kept for a while: "Bring back")
 const IGNITE_HTML = $("#ignite").outerHTML;

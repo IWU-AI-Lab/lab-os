@@ -162,7 +162,14 @@ async def serve(
     context for WebXR, and nothing else on the network can connect."""
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
-    await web.TCPSite(runner, host, port).start()
+    try:
+        await web.TCPSite(runner, host, port).start()
+    except OSError as e:  # e.g. another brain already runs on this port
+        await runner.cleanup()
+        raise SystemExit(
+            f"Port {port} is in use ({e.strerror}): is another lab-os already running? Stop it "
+            f"(Ctrl+C in its terminal), or use another port: --port {port + 10}"
+        ) from None
     print(
         banner or f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor"
     )

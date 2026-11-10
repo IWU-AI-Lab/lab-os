@@ -189,9 +189,18 @@ class McpHttp:
         self.uvicorn = _Uvicorn(config)
         self.port = port
         self.url = f"http://{MCP_HOST}:{port}/mcp"
+        self.failed = False  # couldn't start (the port is taken): the brain runs on without it
 
     async def serve(self) -> None:
-        await self.uvicorn.serve()
+        try:
+            await self.uvicorn.serve()
+        except SystemExit:  # uvicorn exits the whole program when it can't bind; keep the brain
+            self.failed = True
+            log.error(
+                "AI tools (MCP) are off: port %d is in use (another lab-os serve running?). The "
+                "hub works without them; stop the other brain, or pick a port with --mcp-port.",
+                self.port,
+            )
 
     def shutdown(self) -> None:
         self.uvicorn.should_exit = True

@@ -191,7 +191,19 @@ The arm the brain drives, for the designed hub's readouts (polled 4 times a seco
  "joints": {"shoulder_pan": 0.0, "shoulder_lift": -20.0, "elbow_flex": 40.0, "wrist_flex": 40.0, "wrist_roll": 0.0, "gripper": 30.0},
  "held": true, "control": "free"}
 ```
-`joints`: degrees, shared joint names. `held`: held still (dead-man; true whenever nothing drives it). `control`: `free`, `teleop` or `ai`. When the arm stops answering: `{"name": …, "model": …, "connected": false, "problem": "<why>"}`.
+`joints`: degrees, shared joint names. `held`: held still (dead-man; true whenever nothing drives it). `control`: `free`, `teleop` or `ai`. Where the arm has kinematics also `gripper_point_cm` (`{x, y, z}` from the base), `gripper_open_pct`, and (SO-101) `side_cm`: every joint seen from the arm's side, `[{"name": "base", "r": 0, "z": 0}, …, {"name": "tip", "r": 25.8, "z": 4.9}]` (`r` = cm forward along the way the arm faces, `z` = cm up), for AI Control's drawing. When the arm stops answering: `{"name": …, "model": …, "connected": false, "problem": "<why>"}`.
+
+### `/api/ai-calls?after=T`
+The robot tools' calls this brain run (the last 50 after `T`, epoch seconds), for AI Control, polled once a second:
+```json
+{"calls": [{"time": "2026-11-10T12:44:04.120", "t": 1794336244.12, "tool": "move_to",
+            "args": {"x_cm": 60, "y_cm": 0, "z_cm": 5}, "outcome": "clipped", "result": {"result": "arrived", "clipped": ["went 26% of the way: …"], "…": "…"}}],
+ "mcp": "http://127.0.0.1:8081/mcp", "motion_allowed": true, "control": "free"}
+```
+`outcome`: `ok`, `clipped`, `refused` (then `result` is the sentence why), `stopped`, `error`. `mcp`: null when the AI tools are off (`--mcp-port 0`, or their port was taken).
+
+### `/api/settings`
+`GET`: `{"sections": [{"id", "title", "help", "fields": [{"key": "theme:hub.look", "file", "label", "kind", "help", "choices", "min", "max", "step", "unit", "applies", "value"}]}], "writable": true, "why_not": null, "venue": "lab"}` (from `src/lab_os/settings.py`). `POST {"key": "theme:hub.look", "value": "design"}` changes one value in its file (comments kept): `{"ok": true, "key", "value", "applies": "reload" | "next" | "restart"}`, or `400 {"ok": false, "message": "<why>"}`. Only from the brain's computer: `403` otherwise, and `writable: false`.
 
 ### `/api/devices`
 The place's devices from `devices.yaml` (no ports, nothing opened or probed):

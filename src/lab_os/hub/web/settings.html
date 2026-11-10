@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    .sections { columns: 2 30rem; column-gap: 1rem; overflow-y: auto; scrollbar-width: thin; padding-bottom: 1rem; }
+    .sections > .card { break-inside: avoid; margin: 0 0 1rem; }
+    .sections .in { overflow: visible; }
+    .field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 1rem; align-items: center; padding: 0.7rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+    h2 + .field, .section-help + .field { border-top: 0; }
+    .field label { font: 500 0.95rem/1.3 var(--f-ui); color: var(--text); }
+    .field .help { grid-column: 1; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); }
+    .field .ctl { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
+    .field .said { grid-column: 1 / -1; font: var(--w-lines) 0.78rem/1.3 var(--f-lines); color: var(--c); min-height: 0; }
+    .field .said.bad { color: var(--accent); }
+    .field .said:empty { display: none; }
+    .seg { display: inline-flex; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+    .seg button { font: 500 0.82rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 0; padding: 0.55rem 0.75rem; cursor: pointer; }
+    .seg button[aria-pressed="true"] { color: var(--bg); background: var(--c); }
+    .seg button:hover:not([aria-pressed="true"]):not(:disabled) { color: var(--hot); }
+    input.switch { appearance: none; width: 2.6rem; height: 1.4rem; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); position: relative; cursor: pointer; background: none; }
+    input.switch::after { content: ""; position: absolute; top: 0.2rem; left: 0.2rem; width: 0.9rem; height: 0.9rem; background: var(--offline); transition: left 0.15s, background 0.15s; }
+    input.switch:checked::after { left: 1.45rem; background: var(--c); box-shadow: 0 0 6px var(--c); }
+    input[type="number"] { width: 6.5rem; text-align: right; }
+    input[type="text"] { width: 14rem; }
+    input[type="color"] { width: 2.6rem; height: 2.2rem; padding: 0; border: 1px solid var(--line); background: none; }
+    .unit { font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--text-dim); }
+    .order { display: grid; gap: 0.3rem; }
+    .order div { display: flex; align-items: center; gap: 0.5rem; font: 500 0.88rem/1 var(--f-ui); }
+    .order button { font: 0.8rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); width: 1.8rem; height: 1.6rem; cursor: pointer; }
+    .order button:hover:not(:disabled) { color: var(--hot); border-color: var(--c); }
+    .section-help { margin: -0.3rem 0 0.4rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+    #screens li { font: var(--w-lines) 0.85rem/1.6 var(--f-lines); }
+    :disabled { cursor: default !important; opacity: 0.55; }
+  </style>
+</head>
+<!--
+  Settings: whatever src/lab_os/settings.py lists (GET /api/settings), written back into the config
+  files with their comments kept (POST /api/settings, this computer only). "This screen" lives in this
+  screen's browser (localStorage), so each screen can have its own level of detail.
+-->
+<body class="settings">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-gear"/></svg><span>Settings</span></div>
+    <span class="place"></span>
+    <div class="chips"><span class="chip"><b>Changes</b><span id="mode" class="pill off">—</span></span></div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="sections" id="sections">
+    <section class="card"><div class="in" id="this-screen">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg>This screen</h2>
+      <p class="section-help">Kept in this screen's browser only; every other screen keeps its own.</p>
+    </div></section>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/settings.js"></script>
+</body>
+</html>

@@ -3,70 +3,83 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>lab-os teleop</title>
+  <title>Teleop</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/static/pages.css">
   <script type="importmap">
     { "imports": { "three": "/web/vendor/three/three.module.js",
                    "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
   </script>
 </head>
-<body>
-  <main>
-    <h1>lab-os teleop</h1>
-    <p class="hint">Grip = clutch (hold to move) · Trigger = gripper · A/X = stop</p>
-
-    <div class="sources">
-      <button id="enter" disabled>Checking WebXR…</button>
-      <button id="desktop">Desktop control</button>
-      <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
+<!--
+  Teleop, in the hub's design (2026-11-10). Same element ids as before, so the scripts are shared with
+  the plain page kept at /classic/teleop. Left: what the arm does (3D). Right: how to drive it.
+-->
+<body class="teleop">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg><span>Teleop</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
+      <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
+      <span class="chip"><b>Arm</b><span id="state" class="pill off">—</span></span>
     </div>
-    <p id="xr-msg" class="hint"></p>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page; X on the keyboard, A/X on the Quest)">STOP</button>
+  </header>
 
-    <section class="panel">
-      <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
-      <div><span class="label">Control</span> <span id="control" class="pill off">—</span></div>
-      <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
-      <div><span class="label">Gripper</span> <span id="gripper">—</span></div>
-      <div><span class="label">Speed</span> <span id="speed">—</span></div>
-    </section>
+  <main class="split">
+    <section class="card view"><div id="arm-panel" class="in arm3d" data-role="input"></div></section>
 
-    <section id="arm-panel" class="panel arm3d" data-role="input"></section>
+    <aside class="side">
+      <section class="card"><div class="in">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
+        <div class="sources">
+          <button id="enter" class="btn primary" type="button" disabled>Checking WebXR…</button>
+          <button id="desktop" class="btn" type="button">Desktop control</button>
+        </div>
+        <p id="xr-msg" class="msg" aria-live="polite"></p>
+        <dl class="facts">
+          <dt>Gripper</dt><dd id="gripper">—</dd>
+          <dt>Speed</dt><dd id="speed">—</dd>
+        </dl>
+        <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop. Let go and the arm holds still.</p>
+      </div></section>
 
-
-    <section class="panel">
-      <div class="label">Controllers (what this page sends)</div>
-      <pre id="readout">no XR session yet</pre>
-    </section>
-
-    <details id="desk-help" class="panel">
-      <summary>Desktop control: mode and keys</summary>
-      <div class="desk-settings">
-        <label>Mode
+      <details id="desk-help" class="card"><summary>Desktop control: mode and keys</summary><div class="in">
+        <label class="row">Mode
           <select id="desk-mode">
             <option value="keys">Keys: a key pair per motor</option>
             <option value="mouse">Mouse: hold a motor key, move the mouse</option>
             <option value="hand">Virtual hand (prototype)</option>
           </select>
         </label>
-      </div>
-      <table class="keys">
-        <tbody id="desk-keys"></tbody>
-        <tbody>
-          <tr><td><kbd>X</kbd></td><td>STOP: the arm freezes; let go of everything to continue</td></tr>
-          <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes, another page may take over)</td></tr>
-        </tbody>
-      </table>
-      <div class="desk-settings">
-        <label>Mouse / trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
-        <label><input id="desk-invert" type="checkbox"> Invert scroll (virtual hand)</label>
-      </div>
-      <p class="hint">Keys and Mouse turn one motor each, directly. The virtual hand moves a pretend Quest controller; on the xArm that goes through IK (several motors at once).</p>
-    </details>
+        <table class="keys">
+          <tbody id="desk-keys"></tbody>
+          <tbody>
+            <tr><td><kbd>X</kbd></td><td>STOP: the arm freezes; let go of everything to continue</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes; another page may take over)</td></tr>
+          </tbody>
+        </table>
+        <label class="row">Mouse / trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
+        <label class="row"><input id="desk-invert" type="checkbox"> Invert scroll (virtual hand)</label>
+        <p class="hint">Keys and Mouse turn one motor each. The virtual hand moves a pretend Quest controller (through IK where the arm has it).</p>
+      </div></details>
 
-    <p class="hint" id="monitor-link"><a href="/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
+      <section class="card grow-card"><div class="in">
+        <h2>What this page sends</h2>
+        <pre id="readout">nothing yet: pick a way to drive it</pre>
+      </div></section>
+
+      <p class="hint" id="monitor-link"><a href="/monitor" target="_blank">Open the monitor</a> on another screen · <a href="/classic/teleop">classic page</a></p>
+    </aside>
   </main>
-  <script type="module" src="/static/teleop-page.js"></script>
-  <script type="module" src="/static/arm/arm-panel.js"></script>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/static/teleop-page.js"></script>
+<script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

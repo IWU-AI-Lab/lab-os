@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+<!-- The design's icons (from src/lab_os/hub/web/design.html), for the module pages: <svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg> -->
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.2-3.6 3.8-5.4 7-5.4s5.8 1.8 7 5.4"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5M12 3.5C9.4 5.9 8.2 8.7 8.2 12s1.2 6.1 3.8 8.5"/></symbol>
+<symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/><circle cx="12" cy="12" r="1.2"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.2 22 20.5H2z"/><path d="M12 9.5v5.2M12 17.4v.4"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V5a1.5 1.5 0 0 1 3 0v6M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 4-2.5 6.5-6 6.5-2.6 0-4.2-1.4-5.4-3.6L4 14a1.5 1.5 0 0 1 2.6-1.5L8 14.5"/></symbol>
+<symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12"/><path d="M9 20h6M12 16.5V20M6.5 13l3.5-3.5 3 3 4.5-4.5"/></symbol>
+<symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12l1.5-2.2M18.5 12l2.4.6"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-4 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+<symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z"/><circle cx="12" cy="12" r="2"/></symbol>
+<symbol id="i-test" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z" stroke-dasharray="2.5 2.5"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z"/><path d="m8.6 12.2 2.4 2.4 4.6-4.8"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M7 14h10"/></symbol>
+<symbol id="i-mouse" viewBox="0 0 24 24"><rect x="7" y="3.5" width="10" height="17" rx="5"/><path d="M12 3.5V9"/></symbol>
+<symbol id="i-touch" viewBox="0 0 24 24"><path d="M10 13V5.5a1.5 1.5 0 0 1 3 0V11l4.2.9a2 2 0 0 1 1.6 2.3L18 19.5H10.5L7 15.2a1.4 1.4 0 0 1 2.1-1.9z"/><path d="M6.5 6.5a4.5 4.5 0 0 1 10 0"/></symbol>
+<symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 7h10a4.5 4.5 0 0 1 4.3 5.8l-1.1 3.8a2.3 2.3 0 0 1-3.8 1L14.5 16h-5l-1.9 1.6a2.3 2.3 0 0 1-3.8-1l-1.1-3.8A4.5 4.5 0 0 1 7 7z"/><path d="M7 10.5v3M5.5 12h3M16 11h.1M18 13h.1"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2.1 0 2.9 5.8 1.6 5.8 4.3 0 1.3-1.3 2.1-3 2.1-1.3 0-2.4-.5-2.9-1.5M12 6v1.8M12 16.3V18"/></symbol>
+<symbol id="i-commit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M2 12h6.5M15.5 12H22"/></symbol>
+<symbol id="i-net" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6"/><circle cx="4.5" cy="5" r="1.8"/><circle cx="19.5" cy="5" r="1.8"/><circle cx="4.5" cy="19" r="1.8"/><circle cx="19.5" cy="19" r="1.8"/><path d="m6 6.4 4 3.8M18 6.4l-4 3.8M6 17.6l4-3.8M18 17.6l-4-3.8"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8h4l1.5-2.5h7L17 8h4v11H3z"/><circle cx="12" cy="13.2" r="3.6"/></symbol>
+<symbol id="i-pi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M6 5v-2M9 5v-2M12 5v-2M15 5v-2M18 5v-2"/><rect x="8" y="9.5" width="6" height="5"/><path d="M17 10h1.5M17 14h1.5"/></symbol>
+<symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="13" height="10"/><path d="M6.5 19h5M9 14.5V19"/><rect x="17.5" y="4.5" width="4" height="14.5"/><path d="M19.5 7.5v.1"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3.5v8"/><path d="M7.2 6.5a7 7 0 1 0 9.6 0"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+<symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+<symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></symbol>
+<symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 9.5c0-1.4 1.1-2.5 2.5-2.5h13c1.4 0 2.5 1.1 2.5 2.5v5c0 1.4-1.1 2.5-2.5 2.5h-3.2l-1.6-2.2a2 2 0 0 0-3.4 0L8.7 17H5.5A2.5 2.5 0 0 1 3 14.5z"/></symbol>
+<symbol id="i-leader" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12v3.5M17 14h3"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.3"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 0 11h-2"/></symbol>
+<symbol id="i-cast" viewBox="0 0 24 24"><rect x="2.5" y="4" width="13" height="9.5"/><rect x="11" y="10" width="10.5" height="8"/><path d="M5.5 20.5h5"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M8.5 12h7"/></symbol>
+</svg>
