@@ -8,6 +8,8 @@ GET /api/project         the Current Project panel (docs/current-focus.md → St
 GET /api/commits?days=N  commits per day for the last N days
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
+GET /api/greeting        "Good evening." + one line of real news, else the persona's line
+POST /api/chat/start     start a fresh conversation with the greeting (the start press)
 GET /api/chat            the conversation so far and the chat's status
 POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/protocol.md)
 POST /api/chat/clear     forget the conversation (the hub's reset)
@@ -20,6 +22,7 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,8 +33,10 @@ from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used 
 from lab_os.ai.chat import Conversation
 from lab_os.ai.spend import SpendLog
 from lab_os.hub.commits import commits_per_day
+from lab_os.hub.greeting import greeting
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
+from lab_os.personas import Persona, persona_for_venue
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.server import CONTROL, LOOP, create_app
 from lab_os.theme import load_theme
@@ -63,19 +68,13 @@ class Brain:
     focus_file: Path
     repo: Path
     chat: Conversation
+    persona: Callable[[], Persona]  # the venue's persona, re-read each time (edit + reload)
     check_ai: bool = False  # check the AI service in the background (off in tests)
 
 
 BRAIN = web.AppKey("brain", Brain)
 TOOLS = web.AppKey("tools", RobotTools)
 MCP = web.AppKey("mcp", McpHttp | None)
-
-
-def _read(path: Path) -> str:
-    try:
-        return path.read_text()
-    except OSError:
-        return ""
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -129,6 +128,7 @@ async def api_status(request: web.Request) -> web.Response:
     return web.json_response(
         {
             "venue": brain.venue.name,
+            "persona": brain.persona().public(),
             "internet": brain.internet.online if brain.internet else None,  # None = not known
             "ai": brain.chat.status(),
             "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
@@ -169,6 +169,23 @@ async def api_hub(request: web.Request) -> web.Response:
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
         }
     )
+
+
+def _greeting(brain: Brain) -> dict:
+    line = brain.persona().lines.get("greeting", "")
+    return greeting(line, brain.focus_file, brain.repo, list(brain.place.calendar))
+
+
+async def api_greeting(request: web.Request) -> web.Response:
+    return web.json_response(await asyncio.to_thread(_greeting, request.app[BRAIN]))
+
+
+async def api_chat_start(request: web.Request) -> web.Response:
+    """The start press: a fresh conversation whose first message is the greeting."""
+    brain = request.app[BRAIN]
+    hello = await asyncio.to_thread(_greeting, brain)
+    brain.chat.clear(opening=hello["text"])
+    return web.json_response(hello)
 
 
 async def api_chat_get(request: web.Request) -> web.Response:
@@ -248,20 +265,22 @@ def create_brain_app(
     place: config.Place | None = None,
     chat: Conversation | None = None,
     check_ai: bool = False,
+    persona: Callable[[], Persona] | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml."""
     app = create_app(loop, root_page=False)
     place = place or config.load_place()
+    persona = persona or (lambda: persona_for_venue(venue.name))
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
         assistant,
         SpendLog(budget_usd=place.ai_budget_usd_month),
-        personality=_read(config.shared_path("personas/lab-assistant.md")),
         place_name=place.name,
+        persona=persona,
     )
-    app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, check_ai)
+    app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, persona, check_ai)
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     app[MCP] = McpHttp(create_mcp_server(app[TOOLS]), mcp_port) if mcp_port else None
@@ -271,6 +290,8 @@ def create_brain_app(
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/hub", api_hub)
+    app.router.add_get("/api/greeting", api_greeting)
+    app.router.add_post("/api/chat/start", api_chat_start)
     app.router.add_get("/api/chat", api_chat_get)
     app.router.add_post("/api/chat", api_chat_post)
     app.router.add_post("/api/chat/clear", api_chat_clear)

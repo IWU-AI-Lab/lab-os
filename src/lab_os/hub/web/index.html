@@ -18,10 +18,14 @@
   <header class="strip panel">
     <div class="brand" id="brand"></div>
     <div class="fact" id="f-venue" title="Venue"></div>
+    <div class="fact" id="f-persona" title="Assistant (persona)"></div>
     <div class="fact" id="f-net" title="Internet"></div>
     <div class="fact" id="f-ai" title="AI"></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
   </header>
+
+  <!-- the greeting after the start press: "Good evening." + one line of real news (or the persona's line) -->
+  <div id="boot-greet" aria-live="polite"></div>
 
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
   <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>

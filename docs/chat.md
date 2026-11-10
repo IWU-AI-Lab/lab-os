@@ -16,11 +16,11 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 | Setup | Where | Model | Key |
 |---|---|---|---|
 | `main` | OpenAI | `gpt-6-luna` ($0.10 / $0.50 per 1M tokens in / out) | `OPENAI_API_KEY` |
-| `backup` | Gemini's OpenAI-compatible address | `gemini-3.8-flash` (free key: $0) | `GEMINI_API_KEY` |
+| `backup` | Gemini's OpenAI-compatible address | `gemini-3.5-flash-lite` (free key: $0) | `GEMINI_API_KEY` |
 | `local` | Ollama on this computer, no internet | `qwen3:4b` | none |
 
 - `fallback: backup` on `main`: no OpenAI key → the backup answers. Only a **missing key** switches; an error doesn't (it shows the error).
-- **Switching:** today the chat always asks for `main` (step 4's personas will pick the setup: `model: main`). To try another, edit `main` or swap names in `models.yaml`, then restart the brain.
+- **Switching:** the persona picks the setup (`model: main` in `config/personas/<id>.yaml`, `docs/personas.md`). Change it there, or edit the setups in `models.yaml`; the brain re-reads both before every answer (no restart).
 - **Local:** `ollama serve`, `ollama pull qwen3:4b`, then point `main` at the `local` values (or give a home place its own `models.yaml`, `docs/places.md`). On the lab desktop, mind the GPU: it's shared with the training project. llama.cpp's server also works but defaults to port 8080, the hub's port: start it on another port.
 - `options` are sent with every request as they are (e.g. `reasoning_effort: none`, `max_completion_tokens: 800` for OpenAI; Gemini wants `max_tokens`).
 - Prices are in the file (checked 2026-11-09); they only feed the spend log, so keep them current.
@@ -31,7 +31,7 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 - The **AI Spend** panel shows the month's total against the budget. A venue with `public: true` hides it (a hallway screen).
 
 ## What it knows
-The system prompt is the persona's personality text (`config/personas/lab-assistant.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. Step 6 adds read tools (docs, git, devices).
+The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press). Step 6 adds read tools (docs, git, devices).
 
 ## Privacy and the public screen
 Anyone at the screen can type. The conversation clears when the hub goes back to the start screen (after ~3 minutes with nobody there). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.

@@ -1,0 +1,12 @@
+# The show persona. Fields: docs/personas.md. Pick it in a venue profile: `persona: jarvis`.
+version: 1
+id: jarvis
+display_name: "J.A.R.V.I.S."
+personality: jarvis.md
+model: main
+voice: none                   # step 7
+wake_word: none               # later
+picture: { type: orb, style: calm-ring, color: primary }
+lines:
+  greeting: "All local systems are up."
+sounds: default

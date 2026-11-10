@@ -29,11 +29,12 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
   min-height: 100vh; box-sizing: border-box; padding: 1em 1.5em;
   display: grid; gap: 1.5em;
   grid-template-columns: 1fr auto auto auto 1fr;
-  grid-template-rows: auto 1fr;
-  grid-template-areas: "strip strip strip strip strip" "left ml core mr right";
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas: "strip strip strip strip strip" "greet greet greet greet greet" "left ml core mr right";
 }
 .strip { grid-area: strip; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5em 2em; }
 .brand { font-size: 1.3em; font-weight: 600; margin-right: auto; }
+#boot-greet { grid-area: greet; text-align: center; font-size: 1.2em; min-height: 1.4em; }
 .fact.off { color: #999; }
 .clock { font-variant-numeric: tabular-nums; }
 
@@ -125,13 +126,13 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 @media (orientation: portrait) {
   #hub {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto;
-    grid-template-areas: "strip strip" "core core" "ml mr" "left right";
+    grid-template-rows: auto auto auto auto auto;
+    grid-template-areas: "strip strip" "greet greet" "core core" "ml mr" "left right";
   }
   .mcol.l { align-items: flex-end; }
   .mcol.r { align-items: flex-start; }
 }
 @media (max-width: 600px) {
-  #hub { grid-template-columns: 1fr; grid-template-areas: "strip" "core" "ml" "mr" "left" "right"; }
+  #hub { grid-template-columns: 1fr; grid-template-areas: "strip" "greet" "core" "ml" "mr" "left" "right"; }
   .mcol.l, .mcol.r { align-items: stretch; }
 }

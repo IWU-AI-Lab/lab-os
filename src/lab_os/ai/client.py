@@ -61,6 +61,10 @@ def _http_error(setup: Setup, status: int, body: str) -> AiError:
         return AiError(f"{who} refused the API key ({setup.key_env}), so chat is paused.")
     if status == 429:
         return AiError(f"{who} says we're sending too much or the account is out of credit.")
+    if status in (500, 502, 503, 504):
+        return AiError(
+            f"{who} is busy or having trouble right now (HTTP {status}). Try again soon."
+        )
     if status == 404:
         return AiError(f"{who} doesn't know the model {setup.model!r} (models.yaml).")
     log.warning("%s: HTTP %s: %s", setup.name, status, body[:500])

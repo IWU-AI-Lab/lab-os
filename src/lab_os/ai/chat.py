@@ -16,6 +16,7 @@ from lab_os.ai.assistant import Assistant
 from lab_os.ai.client import AiError, Reply, check, estimate, stream_chat
 from lab_os.ai.models import NoSetup, Setup, load_setups, pick
 from lab_os.ai.spend import SpendLog
+from lab_os.personas import Persona
 
 log = logging.getLogger(__name__)
 
@@ -36,8 +37,13 @@ class Conversation:
         personality: str = "",
         place_name: str = "",
         setups: Callable[[], dict[str, Setup]] = load_setups,
+        persona: Callable[[], Persona] | None = None,
     ):
+        """`persona`: read before every turn, so a venue or persona edit applies without a restart;
+        it then sets the setup (`model`) and the personality instead of the two arguments."""
         self.assistant = assistant
+        self._persona = persona
+        self.display_name = ""
         self.spend = spend
         self.setup_name = setup_name
         self.personality = personality.strip()
@@ -51,8 +57,18 @@ class Conversation:
 
     # ---------- setup and status ----------
 
+    def _refresh(self) -> None:
+        if self._persona:
+            p = self._persona()
+            self.setup_name, self.personality, self.display_name = (
+                p.model,
+                p.personality,
+                p.display_name,
+            )
+
     def setup(self) -> Setup:
         """The setup that would answer now (follows `fallback` when a key is missing)."""
+        self._refresh()
         return pick(self.setup_name, self._setups())
 
     def paused(self) -> str | None:
@@ -122,14 +138,18 @@ class Conversation:
     # ---------- a turn ----------
 
     def system_prompt(self) -> str:
+        self._refresh()
         now = datetime.now().strftime("%A %Y-%m-%d, %H:%M")
         rules = RULES.format(place=self.place_name or "this place", now=now)
+        if self.display_name:
+            rules = f"Your name on the screen is {self.display_name}.\n{rules}"
         return f"{self.personality}\n\n{rules}" if self.personality else rules
 
-    def clear(self) -> None:
-        """Forget the conversation (the hub's reset: the next visitor starts fresh)."""
+    def clear(self, opening: str | None = None) -> None:
+        """Forget the conversation (the hub's reset: the next visitor starts fresh). `opening`:
+        the assistant's first message (the greeting), sent along with later questions."""
         if not self.busy:
-            self.messages = []
+            self.messages = [{"role": "assistant", "content": opening}] if opening else []
 
     async def ask(self, text: str) -> AsyncIterator[dict]:
         """One turn. Yields events for the page: state, text (pieces of the answer), done or

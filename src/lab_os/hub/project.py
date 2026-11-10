@@ -13,12 +13,12 @@ from lab_os import REPO_ROOT
 FOCUS_FILE = REPO_ROOT / "docs" / "current-focus.md"
 
 _STEP = re.compile(r"^(\d+)\.\s+\*\*(.+?)\*\*(.*)$")
-_DONE = re.compile(r"^\s*\(done \d{4}-\d{2}-\d{2}\)")
+_DONE = re.compile(r"^\s*\(done (\d{4}-\d{2}-\d{2})\)")
 
 
 def parse_steps(text: str) -> list[dict]:
     """The steps under `## Steps` (the heading may go on, e.g. `## Steps (each one ...)`), until
-    the next `## ` heading: number, title, done."""
+    the next `## ` heading: number, title, done, done_on (the date, or None)."""
     steps = []
     in_steps = False
     for line in text.splitlines():
@@ -28,8 +28,15 @@ def parse_steps(text: str) -> list[dict]:
         m = _STEP.match(line) if in_steps else None
         if m:
             title = m.group(2).strip().rstrip(".").strip()
-            done = bool(_DONE.match(m.group(3)))
-            steps.append({"n": int(m.group(1)), "title": title, "done": done})
+            done = _DONE.match(m.group(3))
+            steps.append(
+                {
+                    "n": int(m.group(1)),
+                    "title": title,
+                    "done": bool(done),
+                    "done_on": done.group(1) if done else None,
+                }
+            )
     return steps
 
 

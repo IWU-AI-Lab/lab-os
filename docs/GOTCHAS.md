@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — Gemini's free key: gemini-3.8-flash overloaded, flash-lite answers
+**What:** with the builder's free Gemini key, `gemini-3.8-flash` answered HTTP 503 "This model is currently experiencing high demand", then on retry sent nothing for 30 s. Listing the models (the brain's connection check) worked, so the status said "connected" while answers failed. `gemini-3.5-flash-lite` answered at once through the same OpenAI-compatible address, with token counts.
+**Fix:** `backup` uses `gemini-3.5-flash-lite`. A 5xx now shows "… is busy or having trouble right now". The connection check only proves the address and key, not that the model has capacity.
+
 ### 2026-11-09 — OpenAI's gpt-6-luna: tools on Chat Completions only with `reasoning_effort: none`
 **What:** per OpenAI's model page, `gpt-6-luna` supports function calling on Chat Completions only when `reasoning_effort` is `none` (the Responses API has no such limit). It also defaults to `medium` reasoning, which is slower and bills reasoning tokens as output. Gemini's OpenAI-compatible address wants `max_tokens`, OpenAI's newer models `max_completion_tokens`.
 **Fix:** each setup in `config/models.yaml` carries its own `options` (sent as they are): `main` has `reasoning_effort: none` + `max_completion_tokens`, `backup` has `max_tokens`.
