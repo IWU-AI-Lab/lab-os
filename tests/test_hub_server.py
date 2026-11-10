@@ -40,7 +40,7 @@ async def test_pages_answer(aiohttp_client):
         resp = await client.get(path)
         assert resp.status == 200, path
     assert 'id="ignite"' in await (await client.get("/")).text()
-    assert "lab-os teleop" in await (await client.get("/teleop")).text()
+    assert 'id="enter"' in await (await client.get("/teleop")).text()  # the designed teleop page
 
 
 async def test_status(aiohttp_client):
@@ -94,7 +94,7 @@ async def test_commits(aiohttp_client):
 async def test_hub_config(aiohttp_client):
     client = await aiohttp_client(make_app())
     h = await (await client.get("/api/hub")).json()
-    assert [m["id"] for m in h["modules"]] == ["teleop", "monitor"]  # theme: [teleop, monitor, arm]
+    assert [m["id"] for m in h["modules"]] == ["teleop", "monitor", "ai"]
     assert h["modules"][0]["page"] == "/teleop"
     assert h["reset_after_s"] == 180
 
