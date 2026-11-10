@@ -51,6 +51,7 @@ from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.personas import Persona, current_persona
 from lab_os.teleop.loop import TeleopLoop
+from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import CONTROL, LOOP, create_app, is_local
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
@@ -70,7 +71,7 @@ MODULES = {
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
 }
 
-DEFAULT_RESET_AFTER_S = 180.0
+DEFAULT_RESET_AFTER_S = 1800.0
 MAX_COMMIT_DAYS = 90
 MAX_QUESTION_CHARS = 2000
 AI_CHECK_EVERY_S = (60.0, 20.0)  # while connected / while not
@@ -110,7 +111,7 @@ def hub_modules(theme: dict) -> list[dict]:
 
 
 def reset_after_s(theme: dict, venue: Venue) -> float:
-    """The venue's value wins, then the theme's hub.reset_after_s, then 3 minutes."""
+    """The venue's value wins, then the theme's hub.reset_after_s, then 30 minutes."""
     if venue.reset_after_s:
         return venue.reset_after_s
     return float((theme.get("hub") or {}).get("reset_after_s") or DEFAULT_RESET_AFTER_S)
@@ -444,12 +445,14 @@ def create_brain_app(
     check_ai: bool = False,
     persona: Callable[[], Persona] | None = None,
     local_control_only: bool = False,
+    recorder: Recorder | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml. `local_control_only`: only pages on this
-    computer may drive the arm (a real arm served to the network)."""
-    app = create_app(loop, root_page=False, local_control_only=local_control_only)
+    computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
+    input (`lab-os serve --record`)"""
+    app = create_app(loop, recorder, root_page=False, local_control_only=local_control_only)
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the

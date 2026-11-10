@@ -151,6 +151,7 @@ def make_loop(args) -> TeleopLoop:
         inputs=InputState(),
         mapper=ClutchMapper(kinematics=kin),
         speed_scale=speed,
+        max_speed_scale=venue.max_speed_scale,
         on_tick=None if args.quiet else _make_printer(),
     )
 
@@ -190,6 +191,8 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
             loop.inputs.update(parse_joint_frame(msg))
         elif msg.get("type") == "session_end":
             loop.inputs.disconnect()
+        elif msg.get("type") == "set_speed":
+            loop.set_speed(float(msg["speed_scale"]))
     loop.inputs.disconnect()
     await asyncio.sleep(0.5)  # let the loop register the end (freeze) before exiting
     print("\nreplay finished")

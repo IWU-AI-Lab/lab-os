@@ -192,3 +192,14 @@ def test_pitching_a_tilted_controller_only_moves_wrist_flex():
     joints = run(m, with_quat(_qmul(_quat((1, 0, 0), 30), held)), joints, 50)  # +30 about room x
     assert joints["wrist_flex"] == pytest.approx(-30.0, abs=0.1)
     assert joints["wrist_roll"] == pytest.approx(0.0, abs=0.1)
+
+
+def test_joints_slow_down_together():
+    # pan needs 20°, lift 10°: at the start both move in that 2:1 ratio, arriving together
+    m = ClutchMapper(MappingConfig(max_deg_per_s=90.0))
+    m.step(ctrl(grip=1.0), JOINTS, DT, 0.5)
+    out = m.step(ctrl(pos=(0.1, 1.05, 0.0), grip=1.0), JOINTS, DT, 0.5)
+    pan = out["shoulder_pan"] - JOINTS["shoulder_pan"]
+    lift = out["shoulder_lift"] - JOINTS["shoulder_lift"]
+    assert pan == pytest.approx(90 * 0.5 * DT)
+    assert lift == pytest.approx(-pan / 2)

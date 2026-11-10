@@ -4,6 +4,21 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — Quest teleop: the SO-101 stretched out its elbow and went into the table
+**What:** after a while of Quest teleop, `so101-white`'s elbow straightened and the arm hit the table. Reproduced offline (a wandering hand through `ClutchMapper` + the SO-101 model): with the hand 2 m forward, shoulder_lift 89°, elbow −75° (straight is −90°), the gripper 8.6 cm *below* the table. Nothing knew where the table was, and relative control lets the arm wander as the hand re-grabs. Also, each joint's speed was limited on its own, so at low speed the joints arrived at different times and the gripper didn't move along the hand's line ("doesn't follow exactly").
+**Fix:** the IK mapping keeps the gripper and wrist `floor_m` (1 cm) above the base's bottom (the table) and slips there like a joint limit; a step that would dip goes as far as it can; all joints slow down together. (A rule keeping the elbow 15° from straight was tried and dropped the same day: the builder found it got in the way of some movements.) Tuning: `docs/quest-setup.md` → "Tuning". Still possible: the real arm sags when stretched out flat near the table; raise `floor_m` if it touches.
+
+### 2026-11-10 — The Newline doesn't look like 60 Hz from a laptop (open)
+**What:** the laptop says the Newline runs at 60 Hz, but motion looks no smoother. Several ways tried by the builder; not solved yet. Likely suspects, cheapest first: the browser's energy saver (Chrome/Edge/Brave cap pages at 30 frames a second on battery: plug in, or turn it off under Settings → Performance / System); a 4K signal (60 Hz at 4K needs HDMI 2.0 at both ends and a "Premium High Speed" cable, and 4× the pixels for a laptop's graphics to draw: set the laptop to 1920×1080 at 60 Hz and let the Newline scale it); the Newline's HDMI/EDID version setting (1.4 vs 2.0) on its input menu, where the model has one; its USB-C input instead of HDMI, if both ends carry video over USB-C. Measure with `/perf` (frames the browser actually draws) on the Newline.
+
+### 2026-11-10 — Editing `.env` does nothing until the brain restarts
+**What:** the hub's core stayed red and the brain kept trying OpenAI ("OpenAI refused the API key") although `OPENAI_API_KEY` was already commented out in `.env`: the brain had started before that edit, with a placeholder key still in `.env`. `.env` is read once, at start. The core also said "No answer" for this standing problem, and the ⏻ button couldn't clear it (the page copies the brain's state every 3 s).
+**Fix:** restart the brain after editing `.env`. The designed hub now says "AI not connected" with the brain's sentence for a standing problem; "No answer" is only for a question that failed.
+
+### 2026-11-10 — Hyperspace stutters in Firefox on Linux, smooth in Brave and VS Code
+**What:** the jump draws 3000 stars as up to ~36,000 short lines per frame on a 2D canvas. Chromium (Brave, VS Code) draws canvases on the graphics card; Firefox on Linux often doesn't (`about:support` → "Canvas backend"). Headless Chromium without a GPU: 3000 stars ≈ 30 fps, 1500 ≈ 41, none ≈ 60.
+**Fix:** the jump measures its own frame rate: under ~40 fps it drops a fifth of the stars at a time (not below ~1000) and keeps that for the next jump; `reduced` detail starts with half. If Firefox is still choppy, use Brave or Chrome on that screen, or check `about:support` for hardware acceleration.
+
 ### 2026-11-10 — A second `lab-os serve` took the first one's AI-tools port, and the whole brain quit
 **What:** with one brain already running (`lab-os serve --persona jarvis`, port 8080 + MCP 8081), a second one on `--port 8090` died at start: its MCP server couldn't bind 8081, and uvicorn calls `sys.exit()` when it can't bind, which ended the whole program with a long traceback.
 **Fix:** the brain now catches that, logs "AI tools (MCP) are off: port 8081 is in use …" and runs on without them (`/api/ai-calls` says `mcp: null`). A taken hub port now stops with one sentence instead of a traceback. Two brains on one computer: give the second `--port` and `--mcp-port`.

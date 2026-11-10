@@ -96,7 +96,7 @@ async def test_hub_config(aiohttp_client):
     h = await (await client.get("/api/hub")).json()
     assert [m["id"] for m in h["modules"]] == ["teleop", "monitor", "ai"]
     assert h["modules"][0]["page"] == "/teleop"
-    assert h["reset_after_s"] == 180
+    assert h["reset_after_s"] == 1800
 
 
 def test_modules_without_a_page_get_no_button():
@@ -108,7 +108,7 @@ def test_modules_without_a_page_get_no_button():
 def test_reset_time_venue_wins_over_theme():
     theme = {"hub": {"reset_after_s": 120}}
     assert reset_after_s(theme, VENUE) == 120
-    assert reset_after_s({}, VENUE) == 180
+    assert reset_after_s({}, VENUE) == 1800
     hallway = Venue("hallway", (), False, 0.3, reset_after_s=60)
     assert reset_after_s(theme, hallway) == 60
 

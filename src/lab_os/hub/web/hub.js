@@ -20,7 +20,7 @@ const S = {
   startedFull: false, // started while full screen: losing it returns to the start screen
   fullFailed: false, // the browser refused full screen once: don't keep asking for tap 1
   lastInput: performance.now(),
-  resetAfterMs: 180_000,
+  resetAfterMs: 1_800_000,
   resetting: false,
   startGuardUntil: 0, // ignore start presses right after showing the start screen
   status: null, // last /api/status (null = brain not reachable)

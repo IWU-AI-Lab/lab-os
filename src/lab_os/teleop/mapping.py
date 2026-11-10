@@ -10,7 +10,9 @@ Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
 - Grip held = clutch engaged = the arm follows the controller. Released = the arm freezes.
 - Relative: on engage, remember the controller pose and the arm's *current* joints; afterwards the
   arm moves by how far the controller has moved since then. No snapping, ever.
-- Gentle ramps: each joint's commanded position changes by at most `max_deg_per_s * speed_scale`.
+- Gentle ramps: the joint furthest from its target moves at most `max_deg_per_s * speed_scale`;
+  the others are slowed by the same factor, so all arrive together and the gripper moves along the
+  line the hand drew (the gripper itself ramps on its own).
 - Tilt-for-rotation (kept from the glove): controller pitch → wrist_flex, roll → wrist_roll.
   Measured in the room's axes (left-right = pitch, forward = roll), so pitching a tilted
   controller doesn't leak into roll. Angles are unwrapped frame to frame: rolling past 180° keeps
@@ -20,8 +22,12 @@ Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
   has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
   back moves the arm back immediately (no wind-up, no jump on the next grab).
 
-Joint limits don't prevent every self-collision (e.g. the gripper hitting the base or table);
-that needs a collision model.
+- IK only: the table. The gripper and the wrist stay `floor_m` above the base's bottom (z = 0); a
+  target below that slips like a limit, and a step that would dip goes as far as it can (the arm
+  used to stretch out into the table: docs/GOTCHAS.md, 2026-11-10).
+
+Joint limits and the floor don't prevent every self-collision (e.g. the gripper hitting the
+base); that needs a collision model.
 """
 
 import math
@@ -47,6 +53,7 @@ class MappingConfig:
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
     limit_margin_deg: float = 3.0  # stay this far inside each joint limit
+    floor_m: float = 0.01  # IK: gripper and wrist at least this high above the base's bottom
     # Direction of each joint for the hand motion that drives it (+1 / -1). Defaults are the SO-101
     # convention (checked with forward kinematics on models/so101): +pan swings the gripper to the
     # arm's right, +lift and +elbow lower/fold it, +wrist_flex tilts it down. The xArm model in
@@ -126,6 +133,7 @@ class ClutchMapper:
     _anchor_tip: Vec3 = (0.0, 0.0, 0.0)  # IK: gripper point / tool angle the hand motion adds to
     _anchor_angle: float = 0.0
     _ik_seed: dict[str, float] = field(default_factory=dict)
+    _floor: float = 0.0
 
     def reset(self, require_release: bool = True) -> None:
         """Drop the clutch (e.g. on connection loss). Requires a fresh grip press to move again."""
@@ -163,6 +171,8 @@ class ClutchMapper:
             if self.kinematics:
                 self._anchor_tip, self._anchor_angle = self.kinematics.fk(arm_joints)
                 self._ik_seed = dict(arm_joints)
+                # like the limits: an arm already lower may stay there or come up, never go lower
+                self._floor = min(cfg.floor_m, self._lowest(arm_joints))
         elif self.engaged and controller.grip < cfg.grip_off:
             self.engaged = False
         if not self.engaged:
@@ -178,11 +188,37 @@ class ClutchMapper:
                 self._anchor_joints[joint] += clamped - target  # slip: hand moves, arm stays
             desired[joint] = clamped
         max_step = cfg.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt
-        for joint, target in desired.items():
-            current = self._commanded.get(joint, target)
-            delta = min(max(target - current, -max_step), max_step)
-            self._commanded[joint] = current + delta
+        deltas = {j: t - self._commanded.get(j, t) for j, t in desired.items()}
+        arm = [abs(d) for j, d in deltas.items() if j != "gripper"]
+        k = min(1.0, max_step / max(arm)) if arm and max(arm) > 0 else 1.0
+        for joint, delta in deltas.items():
+            if joint == "gripper":
+                delta = min(max(delta, -max_step), max_step)
+            else:
+                delta *= k  # all arm joints slowed together: they arrive at the same time
+            self._commanded[joint] = self._commanded.get(joint, desired[joint]) + delta
         return {j: self._commanded[j] for j in desired}
+
+    def _above_floor(self, start: dict[str, float], end: dict[str, float]) -> dict[str, float]:
+        """The furthest point from `start` toward `end` (in joint space) that stays above the
+        floor; `start` itself if none does."""
+        lo, hi = 0.0, 1.0
+        for _ in range(8):  # 8 halvings: within 0.4 % of the way
+            mid = (lo + hi) / 2
+            q = {j: start[j] + (end[j] - start[j]) * mid for j in end}
+            if self._lowest(q) >= self._floor - 0.001:
+                lo = mid
+            else:
+                hi = mid
+        return {j: start[j] + (end[j] - start[j]) * lo for j in end}
+
+    def _lowest(self, joints: dict[str, float]) -> float:
+        """Height of the lowest of the wrist and the gripper point (m above the base's bottom)."""
+        frames = getattr(self.kinematics, "frames", None)
+        if frames is None:
+            return self.kinematics.fk(joints)[0][2]
+        f = frames(joints)
+        return min(f[n][0][2] for n in ("wrist_flex", "tip") if n in f)
 
     def _gripper(self, trigger: float) -> float:
         """Trigger 0 → the gripper's open end, 1 → its closed end (0 = closed, + = open)."""
@@ -203,17 +239,18 @@ class ClutchMapper:
         cfg, kin = self.config, self.kinematics
         dx, dy, dz = dpos
         s = cfg.tip_m_per_hand_m
-        target = tuple(
-            a + d for a, d in zip(self._anchor_tip, (-dz * s, -dx * s, dy * s), strict=True)
-        )
+        x, y, z = (a + d for a, d in zip(self._anchor_tip, (-dz * s, -dx * s, dy * s), strict=True))
+        target = (x, y, max(z, self._floor))
         angle = self._anchor_angle - pitch  # nose up → the gripper tilts back/up
         bounds = {j: JointLimit(*self._bounds[j]) for j in IK_JOINTS if j in self._bounds}
         q = solve_ik(kin, self._ik_seed, target, angle, bounds)
+        if self._lowest(q) < self._floor - 0.001:
+            q = self._above_floor(self._ik_seed, q)  # e.g. the wrist would dip: go as far as it can
         self._ik_seed = q
         reached, reached_angle = kin.fk(q)
         # Slip: an unreachable target moves the anchor instead, so moving the hand back moves the
         # arm back straight away.
-        miss = [r - t for r, t in zip(reached, target, strict=True)]
+        miss = [r - t for r, t in zip(reached, (x, y, z), strict=True)]  # the floor slips too
         if math.sqrt(sum(m * m for m in miss)) > cfg.slip_m:
             self._anchor_tip = tuple(a + m for a, m in zip(self._anchor_tip, miss, strict=True))
         if abs(reached_angle - angle) > 1.0:

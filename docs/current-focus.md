@@ -45,7 +45,7 @@ Roll call and robot connections over the network wait for the lab router (`ideas
   1. **Tap 1 = full screen.** The idle start screen goes full screen (and sound is unlocked). This is the builder's tap when leaving the hub on a screen; skipped when the page is already full screen (kiosk mode, F11, an installed app) or the browser can't do it.
   2. **Tap 2 = start.** The visitor's tap: the unlock and the startup (hyperspace by default), then the hub.
   - If full screen is lost (a swipe, Esc, a reload), the start screen asks for tap 1 again.
-- **Back to the start screen when nobody's there (decision 2026-11-09):** after ~3 minutes with no input (a setting, e.g. `hub.reset_after_s: 180`, a venue can change it), the hub closes any open module, clears the conversation from the screen (the next visitor shouldn't see the last one's questions) and returns to the start screen, still full screen, so the next person only needs tap 2. **Never while something is in use:** teleop has the arm, the AI tools are moving it, or a voice turn is running.
+- **Back to the start screen when nobody's there (decision 2026-11-09):** after 30 minutes with no input (a setting, `hub.reset_after_s: 1800`, a venue can change it; was 3 minutes until 2026-11-10, too short for the builder), the hub closes any open module, clears the conversation from the screen (the next visitor shouldn't see the last one's questions) and returns to the start screen, still full screen, so the next person only needs tap 2. **Never while something is in use:** teleop has the arm, the AI tools are moving it, or a voice turn is running.
 - **Sound** is generated in the browser (WebAudio) until real ones exist.
 
 ## Rules for this focus
@@ -71,7 +71,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 ### Phase 1: make it work (plain looks)
 1. **Plain hub.** `uv run lab-os serve` serves a plain hub page:
    - a **start screen with the two taps**: tap 1 "Tap for full screen" (skipped when already full screen), tap 2 "Tap, click or press any key to start" + "Safe to start. This only opens the hub; no robot moves." (this also answers "full screen on the Newline's Chrome", which has no full-screen button). Modules open **inside** the hub page (no page loads), because loading a new page leaves full screen. In Chrome/Edge, use the Keyboard Lock API in full screen so Esc can mean "Back" without leaving full screen;
-   - the **reset to the start screen** after ~3 minutes with nobody there (see "How it fits together");
+   - the **reset to the start screen** after a while with nobody there (30 minutes since 2026-11-10) (see "How it fits together");
    - the **status strip** (venue, internet yes/no, AI: not connected, clock);
    - **module buttons from `hub.modules`** that open the existing teleop and monitor pages (inside the hub, with Back/Esc);
    - a **plain circle** for the assistant (one color per state);

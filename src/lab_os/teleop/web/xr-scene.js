@@ -3,7 +3,8 @@
 //   - a marker on each controller (green while the clutch is held) and a line from where you grabbed
 //   - a floating status panel (connected / following / frozen, gripper, speed, hint)
 //   - VR only: a dim room with a floor grid and a table, so there's something to stand in
-// The arm stands on the table in front of you, facing away (you operate it from behind).
+// The arm stands on the table in front of you, facing away (you operate it from behind), until it's
+// moved (setPlacement: e.g. onto the real arm, with the left grip; xr.js).
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
 import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
@@ -52,6 +53,12 @@ export class XRScene {
     this._loadArm(feed.modelKind || "so101");
   }
 
+  /** Move the 3D arm from its usual spot by {x, y, z} metres and turn it by `yaw` radians. */
+  setPlacement({ x, y, z, yaw }) {
+    this.armHolder.position.set(ARM_BASE.x + x, ARM_BASE.y + y, ARM_BASE.z + z);
+    this.armHolder.rotation.y = Math.PI / 2 + yaw;
+  }
+
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
   setFloorOffset(y) {
     this.root.position.y = y;
@@ -79,13 +86,15 @@ export class XRScene {
     this.panel.update(f);
   }
 
-  /** Called every XR frame with the controller states this page just sent. */
-  updateHands(hands) {
-    // No right controller (asleep, off, or the headset switched to hand tracking): say so, and how
-    // to leave, instead of looking broken (2026-10-29: the builder got stuck in the page).
+  /** Called every XR frame with the controller states (in room space), their source
+   * ("controllers" / "hands" / null) and, for hands, each one's pinch (0..1). */
+  updateHands(hands, source = "controllers", pinches = null) {
+    // No right controller or hand: say so, and how to leave, instead of looking broken
+    // (2026-10-29: the builder got stuck in the page).
     const missing = !hands.right?.pos;
-    if (missing !== this.panel.noController) {
+    if (missing !== this.panel.noController || source !== this.panel.source) {
       this.panel.noController = missing;
+      this.panel.source = source;
       this.panel.update(this.feed);
     }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
@@ -95,7 +104,12 @@ export class XRScene {
       if (!marker.visible) continue;
       marker.position.fromArray(c.pos);
       marker.quaternion.fromArray(c.quat);
-      marker.userData.ball.material.color.setHex(side === "right" && clutch ? CLUTCH_COLOR : IDLE_COLOR);
+      // hands: the ball grows as the fingers close; the left one is green while its pinch holds the
+      // clutch (the server engages above 0.6), the right one while the arm follows
+      const p = pinches ? pinches[side] : 0;
+      marker.userData.ball.scale.setScalar(1 + 1.5 * p);
+      const on = side === "right" ? clutch : !!pinches && p > 0.6;
+      marker.userData.ball.material.color.setHex(on ? CLUTCH_COLOR : IDLE_COLOR);
     }
     const right = hands.right;
     if (clutch && right?.pos) {
@@ -196,9 +210,9 @@ class StatusPanel {
 
   update(feed) {
     const s = feed?.status;
-    const state = this.noController ? ["NO CONTROLLER", "#e0662e"]
+    const state = this.noController ? [this.source === "hands" ? "NO RIGHT HAND" : "NO CONTROLLER", "#e0662e"]
       : !s ? ["CONNECTING…", "#8a8a84"]
-      : feed.frozen ? [s.needs_release ? "FROZEN · release grip" : "FROZEN", "#e0662e"]
+      : feed.frozen ? [s.needs_release ? `FROZEN · release ${this.source === "hands" ? "the pinch" : "grip"}` : "FROZEN", "#e0662e"]
       : s.clutch ? ["FOLLOWING", "#2fbf71"]
       : ["HOLDING", "#b8b8b2"];
     let gripper = "—";
@@ -207,7 +221,7 @@ class StatusPanel {
       gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
     }
     const speed = s ? `${Math.round(s.speed_scale * 100)}%` : "—";
-    const key = `${state[0]}|${gripper}|${speed}|${this.noController}`;
+    const key = `${state[0]}|${gripper}|${speed}|${this.noController}|${this.source}`;
     if (key === this.key) return;
     this.key = key;
 
@@ -221,9 +235,11 @@ class StatusPanel {
     g.stroke();
     fitText(g, state[0], 36, 92, 568, "bold", 58, state[1]);
     fitText(g, `Gripper ${gripper}   ·   Speed ${speed}`, 36, 168, 568, "", 40, "#ececea");
-    const hint = this.noController
-      ? "Pick up the controllers · Leave: palm up + pinch"
-      : "Hold grip = move · Trigger = gripper · A/X = stop";
+    const hint = this.source === "hands"
+      ? "Hold left pinch = move · Right pinch = gripper"
+      : this.noController
+        ? "Pick up the controllers · Leave: palm up + pinch"
+        : "Hold grip = move · Trigger = gripper · A/X = stop";
     fitText(g, hint, 36, 246, 568, "", 32, "#9a9a94");
     this.texture.needsUpdate = true;
   }

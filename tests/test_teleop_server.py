@@ -264,3 +264,21 @@ def test_what_counts_as_this_computer():
         (None, False),
     ]:
         assert is_local(SimpleNamespace(remote=addr)) is local, addr
+
+
+async def test_speed_control_stays_within_the_venue_cap(aiohttp_client):
+    app, loop = make_app()
+    loop.max_speed_scale = 0.5
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws")
+    await ws.send_json({"type": "set_speed", "speed_scale": 0.2})
+    assert await wait_for(lambda: loop.speed_scale == 0.2)
+    await ws.send_json({"type": "set_speed", "speed_scale": 0.9})
+    assert await wait_for(lambda: loop.speed_scale == 0.5)
+    await ws.send_json({"type": "set_speed", "speed_scale": 0.0})
+    assert await wait_for(lambda: loop.speed_scale == 0.05)  # never 0: the arm wouldn't move
+    monitor = await client.ws_connect("/ws?role=monitor")
+    await monitor.send_json({"type": "set_speed", "speed_scale": 0.3})
+    await asyncio.sleep(0.05)
+    assert loop.speed_scale == 0.05  # watchers can only STOP
+    assert loop.status()["max_speed_scale"] == 0.5
