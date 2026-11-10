@@ -34,7 +34,7 @@ In the Claude Code session, for example:
 or the step-2 goal:
 > Pick up the cube that's 15 cm in front of the base and put it 10 cm to the left.
 
-Watch the monitor page while you approve each move. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
+Watch **AI Control** (`/ai`, or the hub's AI Control button) while you approve each move: each call appears there as it happens, with what it did. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
 
 ## The tools
 Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
@@ -84,7 +84,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …
    ```bash
    uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
    ```
-   It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/monitor** (or `/design` → Arm) to watch. To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
+   It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move aims, every call and its outcome, STOP) or `/monitor` (3D) to watch; on a second monitor of this computer they can stay open full screen (`docs/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
 3. In the Claude Code session (VS Code): `/mcp` → `lab-os` → reconnect (the brain restarted), `/model` → Fable 5.2.
 4. Small steps first, approving each one after reading it:
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.

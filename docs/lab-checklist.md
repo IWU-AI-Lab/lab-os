@@ -51,10 +51,13 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [ ] "Move the gripper 3 cm lower, pointing straight down."
 - [ ] The cube: measure it (cm in front of the base's middle, cm to the left), then the step-2 prompt.
 - [ ] STOP from the Newline stops a move.
+- [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Show on another screen**.
 - Approve every move after reading it; never "always allow". Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
 - Afterwards: `logs/ai-tools/` has the calls. Write in `current-focus.md` step 2 what worked.
 
 ## 4. If there's time
+- **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
+- The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?
 - The Quest: teleop through the hub (`adb reverse tcp:8080 tcp:8080`, then `http://localhost:8080/teleop` on the Quest; `docs/quest-setup.md`).
 - Show someone: `/design`, press start, ask it something, open Arm while Fable moves the arm.

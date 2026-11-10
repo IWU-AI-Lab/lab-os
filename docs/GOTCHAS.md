@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — A second `lab-os serve` took the first one's AI-tools port, and the whole brain quit
+**What:** with one brain already running (`lab-os serve --persona jarvis`, port 8080 + MCP 8081), a second one on `--port 8090` died at start: its MCP server couldn't bind 8081, and uvicorn calls `sys.exit()` when it can't bind, which ended the whole program with a long traceback.
+**Fix:** the brain now catches that, logs "AI tools (MCP) are off: port 8081 is in use …" and runs on without them (`/api/ai-calls` says `mcp: null`). A taken hub port now stops with one sentence instead of a traceback. Two brains on one computer: give the second `--port` and `--mcp-port`.
+
+### 2026-11-10 — The side view bent when the arm turned
+**What:** AI Control's side view measured each joint's distance from the URDF base origin, but the SO-101's pan axis sits 3.9 cm in front of it (and the arm 1.8 cm to the side), so at `shoulder_pan` 60° the drawing shrank by up to 2 cm.
+**Fix:** distances are measured along the arm's facing direction from the pan axis (`side_view_cm` in `hub/server.py`); a test turns the arm and checks the shape stays.
+
 ### 2026-11-10 — Gemini's free model takes 6–15 s per answer
 **What:** with the `backup` setup (`gemini-3.5-flash-lite`, free key) a two-word answer took ~6 s, and a question that needs a look-up (`project_status`) ~13 s: ~7 s to decide on the tool, ~6 s to answer. A check after 9 s looked like a hang.
 **Fix:** none needed in code (the page says "Looking up the current focus…" meanwhile). Expect it when demoing on the free key; the paid OpenAI `main` setup is usually faster. Test scripts wait 20 s+ for an answer.
