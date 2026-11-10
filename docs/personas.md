@@ -9,13 +9,16 @@ There are two:
 | `jarvis` | J.A.R.V.I.S. | the show persona: calm, precise, dry wit |
 
 ## Switching
-The persona is **not tied to a venue** (decision 2026-11-10): any venue can have any persona. The first of these that says one wins:
+The place has a default persona, and each venue can have its own (decisions 2026-11-10). The first of these that says one wins:
 1. `--persona jarvis` on `lab-os serve` (just this run);
 2. `LAB_OS_PERSONA=jarvis` in the shell or the place's `.env`;
-3. `persona: jarvis` in the place's `place.yaml` (the lab: `config/place.yaml`, `lab-assistant`);
-4. otherwise the plain `lab-assistant`.
+3. `persona: jarvis` in the venue's file (`config/venues/<venue>.yaml`). Every venue starts with `persona: default`, which means "the place's", until someone changes it;
+4. `persona: jarvis` in the place's `place.yaml` (the lab: `config/place.yaml`, `lab-assistant`);
+5. otherwise the plain `lab-assistant`.
 
-**Switching is a config edit + reload:** change `persona:` in `place.yaml` (or edit a persona file), then reload the hub page. No restart: the brain re-reads the files on every request. The status strip shows `Assistant: <name>`. An unknown or broken persona in the files falls back to `lab-assistant` with a warning in the brain's output, so the hub keeps working; a mistyped `--persona` stops the brain at start with the list of personas. An old `persona:` line in a venue file is ignored, with a warning.
+For example, to make visit days J.A.R.V.I.S.: `persona: jarvis` in `config/venues/visit-day.yaml`.
+
+**Switching is a config edit + reload:** change `persona:` in the venue's file or `place.yaml` (or edit a persona file), then reload the hub page. No restart: the brain re-reads the files on every request. The status strip shows `Assistant: <name>`. An unknown or broken persona in the files falls back to `lab-assistant` with a warning in the brain's output, so the hub keeps working; a mistyped `--persona` stops the brain at start with the list of personas.
 
 To try J.A.R.V.I.S. without editing anything: `uv run lab-os serve --persona jarvis`.
 

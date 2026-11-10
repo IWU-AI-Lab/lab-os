@@ -158,7 +158,7 @@ Polled every 3 s by the hub.
   "time_ms": 1794264745533
 }
 ```
-- `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA` or `place.yaml`; `docs/personas.md`), re-read every time; the designed hub draws `picture`.
+- `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
 - `ai`: the chat's AI setup (`docs/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected; `error` after a failed answer until the service answers again.

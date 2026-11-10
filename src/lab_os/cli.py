@@ -100,7 +100,7 @@ def main(argv: list[str] | None = None) -> None:
         internet=InternetCheck(),
         mcp_port=args.mcp_port or None,
         check_ai=True,
-        persona=lambda: current_persona(args.persona),
+        persona=lambda: current_persona(args.persona, venue.name),
     )
     if args.mcp_port and not args.arm.startswith("fake"):
         print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")

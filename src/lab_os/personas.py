@@ -1,8 +1,8 @@
 """Personas (personas/<id>.yaml): who the assistant is. Chosen by `--persona`, else
-$LAB_OS_PERSONA, else the place's `persona:` (place.yaml), else the plain `lab-assistant`; not tied
-to a venue. A persona changes the name on screen, how it talks (a short text file
-next to it), which AI setup answers (models.yaml), the picture, voice, lines and sounds. The theme
-(colors, fonts) stays the same for all.
+$LAB_OS_PERSONA, else the venue's `persona:` (`default` = the place's), else the place's
+`persona:` (place.yaml), else the plain `lab-assistant`. A persona changes the name on screen, how
+it talks (a short text file next to it), which AI setup answers (models.yaml), the picture, voice,
+lines and sounds. The theme (colors, fonts) stays the same for all.
 
 Must stay extensible: the loader checks the fields it knows, keeps unknown ones and warns about
 them (never crashes), so new fields can be added any time.
@@ -122,25 +122,30 @@ def load_persona(persona_id: str | None = None, path: Path | None = None) -> Per
     )
 
 
-def chosen_persona_id(override: str | None = None) -> str:
-    """`override` (--persona), else $LAB_OS_PERSONA, else the place's `persona:`, else the plain
-    one."""
+def chosen_persona_id(override: str | None = None, venue: str | None = None) -> str:
+    """`override` (--persona), else $LAB_OS_PERSONA, else the venue's `persona:` (unless
+    `default`), else the place's `persona:`, else the plain one."""
+    from lab_os.venues import load_venue
+
     if override:
         return override
     if os.environ.get("LAB_OS_PERSONA"):
         return os.environ["LAB_OS_PERSONA"]
     try:
+        if venue and (own := load_venue(venue).persona):
+            return own
         return config.load_place().persona or DEFAULT_PERSONA
     except (config.ConfigError, OSError, yaml.YAMLError) as e:
         _warn("%s; using the %s persona", e, DEFAULT_PERSONA)
         return DEFAULT_PERSONA
 
 
-def current_persona(override: str | None = None) -> Persona:
-    """The chosen persona, re-read from the files (switching = an edit + reload). A broken or
-    unknown persona falls back to the plain one, with a warning, so the hub keeps working."""
+def current_persona(override: str | None = None, venue: str | None = None) -> Persona:
+    """The chosen persona (`venue`: the venue's name), re-read from the files (switching = an edit
+    + reload). A broken or unknown persona falls back to the plain one, with a warning, so the hub
+    keeps working."""
     try:
-        return load_persona(chosen_persona_id(override))
+        return load_persona(chosen_persona_id(override, venue))
     except (config.ConfigError, OSError, yaml.YAMLError) as e:
         _warn("%s; using the plain persona", e)
         return default_persona()

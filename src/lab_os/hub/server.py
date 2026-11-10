@@ -297,7 +297,7 @@ def create_brain_app(
     server = create_mcp_server(app[TOOLS], ProjectTools(repo, venue))
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     place = place or config.load_place()
-    persona = persona or current_persona
+    persona = persona or (lambda: current_persona(venue=venue.name))
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
         assistant,
