@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — `move_to` said "arrived" 1.6 cm short of the target (real so101-white)
+**What:** blind cube test (cube "10 cm in front"), the AI driving the real `so101-white` through the MCP tools. Close to the base, straight-down picks are out of reach (refused down to ~16 cm at 180°); the nearest the IK offered was (10.9, 0, 2.1) cm at 172°. Asked for (11, 0, 2.1), the arm reported "arrived" at (12.6, 0.1, 2.5) at 166°: elbow and wrist short of the command, the arm folded near its limits. The gripper closed 2.7 cm past where the cube would be, and the blind AI couldn't tell.
+**Fix:** open. "Arrived" should compare the end position with the target and say "stopped short by X cm"; find out if it's load, a servo deadband, or the arm touching itself. Cameras (focus step 3) let the AI see the miss.
+
 ### 2026-11-10 — LeLab saves raw ttyACM names, and the white arm was its "leader"
 **What:** the training project's LeLab keeps its ports as `/dev/ttyACM0` (leader) and `/dev/ttyACM1` (follower). With only `so101-white` plugged in, the white arm was `ttyACM0`: LeLab started then would have treated it as the green leader. The numbers follow the plug-in order.
 **Fix:** the training launcher (`lab-os green`, `docs/green-launcher.md`) refuses unless exactly the two green arms are plugged in, LeLab's ports are those two, and they're the same way round as the last good start.
