@@ -18,8 +18,16 @@ import sys
 from collections.abc import Callable
 from pathlib import Path
 
-from lab_os import REPO_ROOT
-from lab_os.devices import BY_ID_DIR, Device, PortNotAllowed, Registry, load_registry, serial_port
+from lab_os import REPO_ROOT, config
+from lab_os.devices import (
+    BY_ID_DIR,
+    Device,
+    PortNotAllowed,
+    Registry,
+    default_device,
+    load_registry,
+    serial_port,
+)
 
 CALIBRATION_DIR = REPO_ROOT / "calibration"
 MODEL = "sts3215"
@@ -278,12 +286,18 @@ def main(argv: list[str] | None = None, ask: Ask = input, say: Say = print) -> i
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("command", choices=["setup-motors", "check", "calibrate"])
-    parser.add_argument("--arm", default="so101-white", help="device name in config/devices.yaml")
+    parser.add_argument(
+        "--arm", help="device name in devices.yaml (default: the place's only SO-101 follower)"
+    )
+    parser.add_argument("--config", help="this place's config folder (docs/places.md)")
     args = parser.parse_args(argv)
 
+    if args.config:
+        config.use(args.config)
     registry = load_registry()
     try:
-        device, port = guarded_port(args.arm, registry)
+        name = args.arm or default_device(("so101",), registry)
+        device, port = guarded_port(name, registry)
     except (KeyError, LookupError, PortNotAllowed) as e:
         say(f"Not opening anything: {e}")
         return 1

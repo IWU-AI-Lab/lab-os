@@ -1,9 +1,13 @@
-"""Robot registry (config/devices.yaml) and device-access safety checks.
+"""Robot registry (<place>/devices.yaml) and device-access safety checks.
 
 Every real robot driver must get its port through `serial_port()` (or at least pass it through
 `check_port_allowed()`), or its USB device through `find_usb_device()`, before opening it. That's
 what keeps so101-green closed. Devices are identified by USB ID + serial number, which is the same
 on Linux, Windows and macOS (decision 2026-10-27); OS paths are only resolved at run time.
+
+The registry is the place's devices.yaml (lab_os.config). The off-limits devices of the repo's own
+config/devices.yaml (the lab: so101-green, the training cameras) are added at every place, so
+switching to another config folder can never make them openable.
 """
 
 import os
@@ -13,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from lab_os import CONFIG_DIR
+from lab_os import config
 
 BY_ID_DIR = "/dev/serial/by-id/"
 
@@ -81,10 +85,9 @@ def check_usb_allowed(info: dict, registry: Registry | None = None) -> None:
         raise PortNotAllowed(f"USB device {info.get('path')!r} belongs to {owner}. Never open it.")
 
 
-def load_registry(path: Path | None = None) -> Registry:
-    path = path or CONFIG_DIR / "devices.yaml"
+def _read_devices(path: Path) -> dict[str, Device]:
     raw = yaml.safe_load(path.read_text()) or {}
-    devices = {
+    return {
         name: Device(
             name=name,
             kind=spec["kind"],
@@ -95,7 +98,42 @@ def load_registry(path: Path | None = None) -> Registry:
         )
         for name, spec in (raw.get("devices") or {}).items()
     }
+
+
+def load_registry(path: Path | None = None) -> Registry:
+    """The place's devices, plus the lab's off-limits ones (always: never weakened by a config)."""
+    path = path or config.place_path("devices.yaml")
+    if not path.is_file():
+        raise config.ConfigError(
+            f"{path.parent} has no devices.yaml: start one with `lab-os new-place {path.parent}`"
+        )
+    devices = _read_devices(path)
+    lab = config.DEFAULT_DIR / "devices.yaml"
+    if lab.is_file() and lab.resolve() != path.resolve():
+        for name, device in _read_devices(lab).items():
+            if not device.off_limits:
+                continue
+            mine = devices.get(name)
+            if mine and mine.off_limits and mine != device:
+                devices[f"{name} (repo config)"] = device  # both entries stay off limits
+            else:
+                devices[name] = device  # added, or replaces an entry that wasn't off limits
     return Registry(devices)
+
+
+def default_device(kinds: tuple[str, ...], registry: Registry | None = None) -> str:
+    """The name of the place's only usable device of these kinds (for command-line defaults), or
+    a LookupError that lists the choices."""
+    registry = registry or load_registry()
+    names = [
+        d.name
+        for d in registry.devices.values()
+        if d.kind in kinds and not d.off_limits and (d.ports or d.usb)
+    ]
+    if len(names) != 1:
+        found = ", ".join(names) or "none"
+        raise LookupError(f"which {'/'.join(kinds)} device? Name one (devices.yaml has: {found})")
+    return names[0]
 
 
 def check_port_allowed(port: str, registry: Registry | None = None) -> None:
@@ -123,11 +161,11 @@ def serial_port(name: str, registry: Registry | None = None) -> str:
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
-        raise KeyError(f"unknown device {name!r}; add it to config/devices.yaml")
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
     if len(device.ports) != 1:
-        raise LookupError(f"{name} needs exactly one port in config/devices.yaml")
+        raise LookupError(f"{name} needs exactly one port in devices.yaml")
     port = device.ports[0]
     check_port_allowed(port, registry)
     return port
@@ -153,7 +191,7 @@ def find_usb_device(
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
-        raise KeyError(f"unknown device {name!r}; add it to config/devices.yaml")
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
     if len(device.usb) != 1 or device.usb[0].product_id is None:

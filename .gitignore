@@ -1,5 +1,7 @@
-# Secrets
+# Secrets (any .env file, also copies like ".env copy"; only the .env.example files are kept)
 .env
+.env*
+!.env.example
 *.pem
 *.key
 secrets/

@@ -31,7 +31,7 @@ from pathlib import Path
 import yaml
 
 from lab_os import REPO_ROOT
-from lab_os.devices import find_usb_device
+from lab_os.devices import default_device, find_usb_device
 from lab_os.robots.base import JointLimit
 
 log = logging.getLogger(__name__)
@@ -449,13 +449,14 @@ class XArm:
         return self._dev
 
 
-def calibrate(name: str = "xarm1", seconds: float = 60.0) -> None:
+def calibrate(name: str | None = None, seconds: float = 60.0) -> None:
     """Measure joint limits BY HAND, read-only (no motion command is ever sent).
 
     Switch the arm on but don't press "Run": the servos are limp. Gently move each joint to the
     furthest safe point in both directions (stop before anything touches the table, the base or
     another part). Press Ctrl+C when done; the ranges are written to calibration/<name>/limits.yaml.
     """
+    name = name or default_device(("xarm1s",))
     arm = XArm(name=name, device_name=name)
     arm.connect()
     lo: dict[str, float] = {}
@@ -497,7 +498,8 @@ def main() -> None:
     if sys.argv[1:2] == ["calibrate"]:
         calibrate()
         return
-    arm = XArm()
+    name = default_device(("xarm1s",))
+    arm = XArm(name=name, device_name=name)
     arm.connect()
     try:
         print("raw positions:", arm.read_raw())

@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from lab_os import CONFIG_DIR
+from lab_os import config
 from lab_os.kinematics import IK_JOINTS, kinematics_for, solve_ik
 from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
@@ -68,9 +68,9 @@ class AiLimits:
         return cls(**{k: float(v) for k, v in venue.ai_tools.items() if k in known})
 
 
-def load_poses(path: Path = CONFIG_DIR / "poses.yaml") -> dict[str, dict[str, dict[str, float]]]:
-    """Named poses per arm model (config/poses.yaml)."""
-    raw = yaml.safe_load(path.read_text()) or {}
+def load_poses(path: Path | None = None) -> dict[str, dict[str, dict[str, float]]]:
+    """Named poses per arm model (poses.yaml: the place's own, else config/poses.yaml)."""
+    raw = yaml.safe_load((path or config.shared_path("poses.yaml")).read_text()) or {}
     return {
         model: {name: {j: float(v) for j, v in joints.items()} for name, joints in poses.items()}
         for model, poses in raw.items()

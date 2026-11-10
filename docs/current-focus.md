@@ -33,7 +33,7 @@ Roll call and robot connections over the network wait for the lab router (`ideas
     greeting: "All local systems are up."  # the plain line, used when there's no news
   sounds: default               # sound pack
   ```
-  **The greeting** (DESIGN.md → "Startup"): the brain says "Good morning / afternoon / evening." and then **one line of real news** when there is some (an alert, a device that dropped out, the budget running low, a step finished, a busy day, the calendar); otherwise the persona's `greeting` line. The news line is built by the brain from real facts, never by the persona. The chat's first message starts with the same line. **The startup title is not a persona line:** it is the lab's name, `hub.title` in the theme ("AI Comp Lab"), the same for every persona.
+  **The greeting** (DESIGN.md → "Startup"): the brain says "Good morning / afternoon / evening." and then **one line of real news** when there is some (an alert, a device that dropped out, the budget running low, a step finished, a busy day, the calendar); otherwise the persona's `greeting` line. The news line is built by the brain from real facts, never by the persona. The chat's first message starts with the same line. **The startup title is not a persona line:** it is the place's name, `name` in `place.yaml` ("AI Comp Lab"), the same for every persona.
 
   **Must stay extensible:** the loader checks the fields it knows, keeps unknown fields and **warns** about them (no crash), so new fields can be added any time. Two personas in v1: **`lab-assistant`** (default; plain name, simple circle, no character) and **`jarvis`** (the show persona). The persona changes picture, voice, lines and sounds; **the theme (colors, fonts) stays the same** for all personas.
 - **The hub's buttons come from config** (`hub.modules` in the theme), so a new module adds a button without changing the hub. No fake "coming soon" buttons ("only claim what's real").
@@ -56,7 +56,7 @@ Roll call and robot connections over the network wait for the lab router (`ideas
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable**: Linux, Windows, macOS (decision 2026-10-27). **Plain names** in code, show names in persona files (decision 2026-10-28).
 8. **The green arm and its training cameras stay off limits** (CLAUDE.md hard rules), including for the AI tools and camera code.
-9. **Nothing place-specific in code** (decision 2026-11-09): the lab's name, the domain, the device list, what's off limits, venues and personas live in config, so the builder can run lab-os at home and someone else in their own place. Another place = another config folder (e.g. `lab-os serve --config ~/my-lab-os`), kept outside the repo with its own `.env`. Example today: `hub.title` ("AI Comp Lab") sits in the theme, which is the same everywhere; it belongs in the place's config.
+9. **Nothing place-specific in code** (decision 2026-11-09): the lab's name, the domain, the device list, what's off limits, venues and personas live in config, so the builder can run lab-os at home and someone else in their own place. Another place = another config folder (e.g. `lab-os serve --config ~/my-lab-os`), kept outside the repo with its own `.env`. **Done 2026-11-09:** `--config` / `$LAB_OS_CONFIG`, `lab-os new-place`, the title moved from the theme to `config/place.yaml`, `--arm` picks from the place's device list, and the lab's off-limits devices stay refused at every place (`docs/places.md`).
 
 ## Steps (each one is a small, testable win)
 **Time box:** the semester ends 2026-12-15, finals the week before, so the reveal should happen by about **2026-12-04**, leaving a buffer. **Build order:** 1 (done) → 2 (Fable, by 2026-11-16) → 5 → 7 → then 3, 4, 6, 8 in whatever order the lab allows → 9 → 10. The code may go quickly; what takes calendar time is testing at the lab (the real arm, the Newline, cameras, microphones, the network), so plan lab days around the steps that need them.
@@ -110,7 +110,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - The plain pages have **the same parts as the concept** (status strip, module buttons, core, ask line, reply, panels, start screen) in separate, clearly named elements, so step 10 restyles them instead of rebuilding.
 - **All data comes from the brain's endpoints** (status, project, commits, assistant state, chat), never from the page, so the designed page reads the same endpoints.
 - The **assistant's state and loudness** are already sent to the page (step 5, 7); the picture only reads them.
-- The pages already read `/theme.json` for the few values they use (e.g. `hub.title`, `hub.modules`, `clock`), so the design's numbers slot in.
+- The pages already read `/theme.json` for the few values they use (e.g. `hub.modules`, `clock`), so the design's numbers slot in. The title is the place's name, from `/api/hub` (`place.yaml`).
 
 ### Step 8, concretely (screens)
 - **Screens have names:** each screen running the hub connects to the brain under a name given in its address (`/?screen=newline`, `/?screen=desk`), so a saved address or a kiosk autostart keeps it with no typing. The brain keeps the list of screens that are there.

@@ -1,0 +1,183 @@
+"""The place's config folder (rule 9): --config, place files vs. shared files, .env, off limits."""
+
+import os
+import re
+from pathlib import Path
+
+import pytest
+
+from lab_os import cli, config
+from lab_os.devices import PortNotAllowed, default_device, load_registry, serial_port
+from lab_os.theme import load_theme
+from lab_os.venues import load_venue
+
+SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
+
+
+@pytest.fixture
+def home(tmp_path):
+    """A second place, made with the starter, and switched to."""
+    folder = config.new_place(tmp_path / "my-lab-os")
+    config.use(folder)
+    return folder
+
+
+@pytest.fixture
+def no_run(monkeypatch):
+    started = []
+
+    def fake_run(coro):
+        started.append(coro)
+        coro.close()
+
+    monkeypatch.setattr("asyncio.run", fake_run)
+    return started
+
+
+def test_the_repo_config_is_the_lab():
+    assert config.is_default()
+    place = config.load_place()
+    assert place.name == "AI Comp Lab"
+    assert place.domain == "hub.indwesailab.com"
+    assert load_venue().name == "lab"
+
+
+def test_hub_title_left_the_theme():
+    assert "title" not in (load_theme().get("hub") or {})
+
+
+def test_nothing_place_specific_in_code():
+    """The lab's name and domain live in config/place.yaml, never in the code or the pages."""
+    for path in SRC.rglob("*"):
+        if path.suffix in {".py", ".js", ".html", ".css"} and "vendor" not in path.parts:
+            text = path.read_text()
+            for word in ("AI Comp Lab", "indwesailab"):
+                assert word not in text, f"{word!r} in {path.relative_to(SRC)}"
+
+
+def test_new_place_writes_a_starter(home):
+    for name in ("place.yaml", "devices.yaml", "venues/home.yaml", ".env.example"):
+        assert (home / name).is_file(), name
+    assert config.load_place().name == "My lab"
+    assert load_venue().name == "home"
+    assert load_venue().active_devices == ("fake-arm",)
+
+
+def test_new_place_never_overwrites(home):
+    with pytest.raises(config.ConfigError, match="already has a place.yaml"):
+        config.new_place(home)
+
+
+def test_place_files_never_come_from_the_lab(tmp_path):
+    config.use(tmp_path)
+    with pytest.raises(config.ConfigError, match="no place.yaml"):
+        config.load_place()
+    with pytest.raises(config.ConfigError, match="no devices.yaml"):
+        load_registry()
+    (tmp_path / "venues").mkdir()
+    with pytest.raises(config.ConfigError, match="no venue 'lab'"):
+        load_venue("lab")
+
+
+def test_shared_files_fall_back_to_the_repo(home):
+    assert config.shared_path("theme.yaml") == config.DEFAULT_DIR / "theme.yaml"
+    assert load_theme()["colors"]["primary"]
+    (home / "poses.yaml").write_text("so101: {}\n")
+    assert config.shared_path("poses.yaml") == home / "poses.yaml"
+
+
+def test_the_lab_off_limits_devices_stay_off_limits_at_every_place(home):
+    (home / "devices.yaml").write_text(
+        "devices:\n"
+        "  fake-arm: {kind: fake}\n"
+        "  so101-green: {kind: so101, ports: [/dev/serial/by-id/usb-1a86_x-if00]}\n"
+    )
+    reg = load_registry()
+    assert reg.devices["so101-green"].off_limits  # the home entry can't make it openable
+    assert reg.devices["training-cameras"].off_limits
+    assert "so101-white" not in reg.devices  # the lab's other devices don't come along
+    with pytest.raises(PortNotAllowed):
+        serial_port("so101-green", reg)
+
+
+def test_default_device_is_the_only_usable_one():
+    assert default_device(("so101",)) == "so101-white"  # green is off limits
+    assert default_device(("xarm1s",)) == "xarm1"  # xarm2 has no port or USB entry
+    with pytest.raises(LookupError, match="which camera"):
+        default_device(("camera",))
+
+
+def test_env_file(tmp_path, monkeypatch):
+    env = tmp_path / ".env"
+    env.write_text(
+        "# comment\n\nLAB_TEST_A=one\nexport LAB_TEST_B='two words'\nLAB_TEST_C=new\nnot a line\n"
+    )
+    monkeypatch.setenv("LAB_TEST_C", "already set")
+    for key in ("LAB_TEST_A", "LAB_TEST_B"):
+        monkeypatch.delenv(key, raising=False)
+    assert config.load_env(env) == ["LAB_TEST_A", "LAB_TEST_B"]
+    assert os.environ["LAB_TEST_A"] == "one"
+    assert os.environ["LAB_TEST_B"] == "two words"
+    assert os.environ["LAB_TEST_C"] == "already set"  # the real environment wins
+    for key in ("LAB_TEST_A", "LAB_TEST_B"):
+        monkeypatch.delenv(key)
+
+
+def test_the_place_env_file_is_in_its_folder(home, monkeypatch):
+    monkeypatch.undo()  # the real env_file(), not the tests' "nowhere"
+    config.use(home)
+    assert config.env_file() == home / ".env"
+
+
+def test_unknown_place_fields_are_kept_with_a_warning(home, caplog):
+    (home / "place.yaml").write_text("version: 1\nname: Garage\nfavourite_color: green\n")
+    place = config.load_place()
+    assert place.name == "Garage"
+    assert place.extra == {"favourite_color": "green"}
+    assert "favourite_color" in caplog.text
+
+
+def test_serve_with_another_config_folder(tmp_path, no_run, capsys):
+    folder = tmp_path / "home-config"
+    cli.main(["new-place", str(folder)])
+    assert "Wrote" in capsys.readouterr().out
+    cli.main(["serve", "--config", str(folder), "--quiet", "--mcp-port", "0"])
+    assert len(no_run) == 1
+    assert config.active_dir() == folder.resolve()
+
+
+def test_serve_refuses_a_missing_folder(tmp_path, no_run):
+    with pytest.raises(SystemExit, match="doesn't exist"):
+        cli.main(["serve", "--config", str(tmp_path / "nope"), "--quiet"])
+
+
+def test_arm_must_be_in_the_device_list(home, no_run, monkeypatch):
+    """Both refusals happen before any driver is made, so nothing real is ever opened here."""
+
+    def no_driver(*a, **kw):
+        raise AssertionError("a real driver was made")
+
+    monkeypatch.setattr("lab_os.robots.so101.SO101Arm", no_driver)
+    monkeypatch.setattr("lab_os.robots.xarm.XArm", no_driver)
+    at_home = ["serve", "--config", str(home), "--quiet"]
+    with pytest.raises(SystemExit, match="fake, fake-xarm1 or an arm from devices.yaml: none"):
+        cli.main([*at_home, "--arm", "so101-white"])  # the lab's arm isn't at this place
+    with pytest.raises(SystemExit, match="not an arm lab-os can drive"):
+        cli.main([*at_home, "--arm", "so101-green"])
+    with pytest.raises(SystemExit, match="not an arm lab-os can drive"):
+        cli.main(["serve", "--quiet", "--arm", "so101-green"])  # nor at the lab
+    assert no_run == []
+
+
+async def test_the_hub_title_is_the_place_name(aiohttp_client, home):
+    from lab_os.hub.server import create_brain_app
+    from lab_os.robots.fake import FakeArm
+    from lab_os.teleop.loop import InputState, TeleopLoop
+
+    arm = FakeArm()
+    arm.connect()
+    app = create_brain_app(TeleopLoop(arm=arm, inputs=InputState()), load_venue())
+    client = await aiohttp_client(app)
+    assert (await (await client.get("/api/hub")).json())["title"] == "My lab"
+    js = (SRC / "hub" / "web" / "hub.js").read_text()
+    assert re.search(r"cfg\?\.title", js) and "hubCfg.title" not in js

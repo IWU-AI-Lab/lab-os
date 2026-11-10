@@ -6,7 +6,8 @@ GET /hub/...             the hub's own files (src/lab_os/hub/web/)
 GET /api/status          venue, internet, AI, assistant state, the brain's clock, what's in use
 GET /api/project         the Current Project panel (docs/current-focus.md → Steps)
 GET /api/commits?days=N  commits per day for the last N days
-GET /api/hub             the module buttons (hub.modules that have a page) and the reset time
+GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
+                         a page) and the reset time
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
@@ -19,7 +20,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT
+from lab_os import REPO_ROOT, config
 from lab_os.hub.commits import commits_per_day
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
@@ -60,6 +61,7 @@ class Assistant:
 
 @dataclass
 class Brain:
+    place: config.Place
     venue: Venue
     internet: InternetCheck | None  # None = don't check (tests)
     assistant: Assistant
@@ -156,6 +158,7 @@ async def api_hub(request: web.Request) -> web.Response:
     theme = load_theme()  # re-read each time, like /theme.json: edit, then reload the page
     return web.json_response(
         {
+            "title": request.app[BRAIN].place.name,
             "modules": hub_modules(theme),
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
         }
@@ -189,11 +192,14 @@ def create_brain_app(
     focus_file: Path = FOCUS_FILE,
     repo: Path = REPO_ROOT,
     mcp_port: int | None = None,
+    place: config.Place | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
-    and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/)."""
+    and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
+    default = the active config folder's place.yaml."""
     app = create_app(loop, root_page=False)
-    app[BRAIN] = Brain(venue, internet, Assistant(), focus_file, repo)
+    place = place or config.load_place()
+    app[BRAIN] = Brain(place, venue, internet, Assistant(), focus_file, repo)
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     app[MCP] = McpHttp(create_mcp_server(app[TOOLS]), mcp_port) if mcp_port else None

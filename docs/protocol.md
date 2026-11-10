@@ -164,11 +164,12 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
 
 ### `/api/hub`
 ```json
-{"modules": [{"id": "teleop", "title": "Teleop", "page": "/teleop"},
+{"title": "AI Comp Lab",
+ "modules": [{"id": "teleop", "title": "Teleop", "page": "/teleop"},
              {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
  "reset_after_s": 180}
 ```
-`modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+`title`: the place's name (`name` in `place.yaml`, `docs/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
 
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.
