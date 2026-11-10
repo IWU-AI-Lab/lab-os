@@ -159,6 +159,22 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - **Done when:** the AI looks, then reaches: "pick up the red block" with no positions given in words.
 
 ### Step 7, concretely (voice on any screen)
+- **The route (prepared 2026-11-10, the builder's answers; not built yet):**
+  - **Swappable voice setups**, like the chat's: named voice setups in `config/models.yaml` (a service, a model, a key name, the price per minute, a `fallback`), and the persona's `voice:` picks one. Changing the voice route = editing config.
+  - **Both kinds of route, by job** (the builder, thinking out loud, not a hard rule): **the pipeline for everyday use**: speech-to-text → the same conversation manager as typing (persona, read tools, history, spend cap, states) → text-to-speech. Cheapest; about 2–3 s from releasing the button to the first spoken word. **A realtime service for demos or when speed matters:** faster and handles interruptions, but it's a separate path that doesn't reuse the chat (persona text, tools and spend logging need wiring on their own).
+  - **Prices checked 2026-11-10** (per minute of audio; a question ≈ 10 s heard + 10 s spoken):
+    | Route | Heard | Spoken | ≈ per question |
+    |---|---|---|---|
+    | Pipeline, OpenAI `gpt-4o-mini-transcribe` + `gpt-4o-mini-tts` | $0.003 | ~$0.015 | $0.003 (+ the chat model) |
+    | Pipeline, Gemini (free key) | $0 | $0 (`gemini-3.8-flash-lite-tts`) | $0, but Google may use the audio; rate limits |
+    | Pipeline, local (faster-whisper + Piper on the brain) | $0 | $0 | $0, offline, slower; the lab desktop's GPU is shared |
+    | Realtime, OpenAI `gpt-realtime-2.1-mini` | ~$0.006 | ~$0.024 | ~$0.007 (+ the conversation re-billed each turn) |
+    | Realtime, OpenAI `gpt-realtime-2.1` | ~$0.019 | ~$0.077 | ~$0.02: ~1,000 questions = the whole $20 budget |
+    | Realtime, Gemini Live | $0 free key ($0.005 / $0.018 paid) | | $0 free; same caveats as the free key |
+  - **Open, to settle before building:**
+    1. **Which key pays:** the professor's OpenAI key (the builder asks on Tuesday or Thursday), or the free Gemini key for visitors' voices (Google may use the audio).
+    2. **The secure address:** `hub.indwesailab.com` needs the professor's OK; the builder explains the purpose first. Until then, the brain's own screen on `localhost`.
+    3. **The microphone:** the Newline's built-in array, or a microphone on the brain's computer (the builder checks on Tuesday).
 - **Who does what:** the page only records and plays. It captures the microphone in the browser, streams the audio to the brain over the WebSocket, plays the reply, and reports the loudness to the assistant's picture. The brain talks to the voice service, so **API keys never leave the brain** and every screen works the same way.
 - **The microphone needs a "secure" page**: browsers give it only to pages on `https://` or `http://localhost`. Same rule for keeping the screen awake (Wake Lock), installing the hub as an app, and WebXR on the Quest. So the brain gets **a real address with a real certificate (decision 2026-11-09):**
   - The lab owns **`indwesailab.com`** (bought summer 2026 for a year, unused). Use a subdomain only, e.g. **`hub.indwesailab.com`**, pointing to the brain's address on the lab network. No public website; the main domain stays unused. **Check with the professor that this is fine.**
