@@ -32,6 +32,7 @@ from lab_os import REPO_ROOT, config
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.spend import SpendLog
+from lab_os.ai.tools import ChatTools
 from lab_os.hub.commits import commits_per_day
 from lab_os.hub.greeting import greeting
 from lab_os.hub.internet import InternetCheck
@@ -42,6 +43,7 @@ from lab_os.teleop.server import CONTROL, LOOP, create_app
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, create_mcp_server
+from lab_os.tools.project import ProjectTools
 from lab_os.tools.robot import RobotTools
 from lab_os.venues import Venue
 
@@ -271,6 +273,12 @@ def create_brain_app(
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml."""
     app = create_app(loop, root_page=False)
+    calls = CallLog.for_this_run() if mcp_port else CallLog()
+    app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
+    # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the
+    # hub's own chat (always, in-process)
+    server = create_mcp_server(app[TOOLS], ProjectTools(repo, venue))
+    app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     place = place or config.load_place()
     persona = persona or (lambda: persona_for_venue(venue.name))
     assistant = chat.assistant if chat else Assistant()
@@ -279,11 +287,9 @@ def create_brain_app(
         SpendLog(budget_usd=place.ai_budget_usd_month),
         place_name=place.name,
         persona=persona,
+        tools=ChatTools(server),
     )
     app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, persona, check_ai)
-    calls = CallLog.for_this_run() if mcp_port else CallLog()
-    app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
-    app[MCP] = McpHttp(create_mcp_server(app[TOOLS]), mcp_port) if mcp_port else None
     app.router.add_get("/", hub_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)

@@ -79,6 +79,7 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 #log-chat .msg.user { color: #aaa; }
 #log-chat .msg.user::before { content: "› "; }
 #log-chat .msg.error { color: #e0b0b0; }
+#log-chat .copy { display: block; margin-top: 0.4em; padding: 0.2em 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 4px; font-size: 0.85em; }
 .ask { display: flex; gap: 0.5em; align-items: center; padding: 0.8em 1.5em; border-top: 1px solid #333; }
 /* one plain color per assistant state; the reveal swaps in the real picture, which reads the same state */
 [data-state="idle"] { --orb: #8a8a8a; }

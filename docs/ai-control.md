@@ -1,6 +1,6 @@
 # AI control: an AI tool drives the arm through the brain
 
-The brain (`lab-os serve`) offers **robot tools** over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop, asks you first, and is logged. Today: the **fake arm**. The real `so101-white` comes later, with the builder present (SAFETY.md).
+The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop, asks you first, and is logged. Today: the **fake arm**. The real `so101-white` comes later, with the builder present (SAFETY.md).
 
 ## 1. Start the brain
 In a terminal, in the `lab-os` folder:
@@ -24,7 +24,7 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 
 ## 3. Permissions: every move asks
 The repo's `.claude/settings.json` sets this for everyone who opens the project:
-- **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click);
+- **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click). The project tools (below) are read only too and may be added here; until they are, Claude Code asks once per tool;
 - **always asks:** `move_joints`, `gripper`, `move_to`, `go_to_pose`. These are "ask" rules, so they ask even if someone allows them elsewhere. **Never allow-list the move tools.** Approve each move only after reading what it will do.
 
 ## 4. Try it
@@ -49,6 +49,16 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | `go_to_pose` | move | A named pose |
 | `stop` | always | Stop now and hold still, whoever has control |
 
+**Project tools** (read; the hub's own chat uses the same ones):
+| Tool | What it does |
+|---|---|
+| `project_status` | The current focus: every step, done or not, and the next one |
+| `list_docs` / `read_doc` / `search_docs` | The docs (one doc, or one section of it, e.g. `read_doc("ideas", "On hold")`), and a search. `docs/design/` is left out until the reveal |
+| `git_status` / `git_log` | Branch, changed files, recent commits (nothing is fetched) |
+| `list_devices` | The place's device list (off limits, active in the venue) |
+
+For example: "Use the lab-os tools: what's next, and what's on hold? Then draft a plan for the next step."
+
 Every move returns where the arm **really** ended up (joints, gripper %, position, tool angle), plus a `clipped` list saying what was limited.
 
 ## Safety rules (the brain clips and refuses; it never trusts the numbers it's given)
@@ -67,6 +77,6 @@ Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1
 
 ## Later
 - **The real arm:** `uv run --extra so101 lab-os serve --arm so101-white`, only with the builder present. The brain then prints that AI tools can move a real arm. First moves small, watching, hand near STOP. The `rest` pose is computed, not yet checked on the real arm.
-- Cameras (focus step 3), read tools for the project (step 6), access from other computers with a token (after this focus).
+- Cameras (focus step 3), access from other computers with a token (after this focus).
 
 Code: `src/lab_os/tools/robot.py` (the tools and their rules), `tools/mcp_server.py` (MCP), `tools/calllog.py`; tests in `tests/test_robot_tools.py`.

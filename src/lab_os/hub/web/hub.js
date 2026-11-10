@@ -352,10 +352,29 @@ function renderLog() {
       const div = document.createElement("div");
       div.className = `msg ${m.role}`;
       div.textContent = m.content;
+      if (m.role === "assistant" && navigator.clipboard) div.append(copyButton(m.content));
       return div;
     }),
   );
   log.scrollTop = log.scrollHeight;
+}
+
+// for drafted prompts: copy an answer to paste into Claude Code or Codex (needs localhost/https)
+function copyButton(text) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "copy";
+  b.textContent = "Copy";
+  b.addEventListener("click", async () => {
+    const prompt = text.includes("Prompt:") ? text.slice(text.indexOf("Prompt:") + 7).trim() : text;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      b.textContent = "Copied";
+    } catch {
+      b.textContent = "Can't copy here";
+    }
+  });
+  return b;
 }
 
 async function ask(text) {
@@ -395,8 +414,22 @@ async function ask(text) {
   renderSpend(await getJSON("/api/spend")); // what that answer cost
 }
 
+// what the assistant is reading while it looks something up (the brain's read tools)
+const TOOL_WORDS = {
+  project_status: "the current focus",
+  list_docs: "the docs",
+  read_doc: "a doc",
+  search_docs: "the docs",
+  git_status: "git",
+  git_log: "the git history",
+  list_devices: "the devices",
+  arm_status: "the arm",
+  list_poses: "the arm's poses",
+};
+
 function onChatEvent(ev, answer) {
   if (ev.type === "state") setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
+  else if (ev.type === "tool") $("#state-word").textContent = `looking up: ${TOOL_WORDS[ev.name] || ev.name}`;
   else if (ev.type === "text") {
     if (!answer.content) S.chat.push(answer);
     answer.content += ev.text;

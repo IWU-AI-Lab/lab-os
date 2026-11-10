@@ -123,6 +123,19 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 | `go_to_pose` | `name`, `arm?` | move |
 | `stop` | `arm?` | always allowed |
 
+**Project tools (read, step 6):**
+| Tool | Arguments | Returns |
+|---|---|---|
+| `project_status` | — | the current focus: `focus`, `step`, `of`, `next`, `steps` (`n`, `title`, `done`, `done_on`) |
+| `list_docs` | — | `docs`: `name`, `file`, `title` (docs/**, README, CHANGELOG, SAFETY, CLAUDE; never `docs/design/`) |
+| `read_doc` | `name`, `section?` | `text` (≤ 12,000 characters; `truncated` + `sections` when cut off) |
+| `search_docs` | `text` | `hits`: `doc`, `line`, `heading`, `text` (≤ 30) |
+| `git_status` | — | `branch` (with ahead/behind as of the last fetch), `changed`, `last_commit` |
+| `git_log` | `count?` (15, ≤ 50), `path?` | `commits`: `hash`, `date`, `author`, `subject` |
+| `list_devices` | — | the place's devices: `name`, `kind`, `off_limits`, `active_in_venue`, `notes` |
+
+Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`.
+
 Moves return `{"result": "arrived" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`. Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
 ## HTTP endpoints (the hub)
@@ -186,11 +199,12 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
 - `POST /api/chat` with `{"text": "…"}` (at most 2000 characters) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
   ```
   {"type": "state", "state": "thinking"}
+  {"type": "tool", "name": "project_status"}     (the assistant looks something up; 0–4 per turn)
   {"type": "state", "state": "speaking"}
   {"type": "text", "text": "Next is "}          (pieces of the answer, in order)
   {"type": "text", "text": "step 5."}
   {"type": "state", "state": "idle"}
-  {"type": "done", "setup": "main", "cost_usd": 0.000164}
+  {"type": "done", "setup": "main", "cost_usd": 0.000164, "tools": 1}
   ```
   or `{"type": "error", "message": "<a full sentence for the screen>"}` (no key, budget used up, the service refused or didn't answer, "I'm still answering the last question."). One turn at a time.
 - `POST /api/chat/clear` → `{"ok": true}`: forget the conversation.
