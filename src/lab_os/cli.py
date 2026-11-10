@@ -20,6 +20,7 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 def _banner(port: int, host: str, mcp_port: int) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
+        f"Designed: http://localhost:{port}/design   (the reveal, preview; docs/hub.md)",
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Perf:     http://localhost:{port}/perf",
@@ -43,7 +44,7 @@ def main(argv: list[str] | None = None) -> None:
         "--host",
         default="127.0.0.1",
         help="address to listen on (default: this computer only). 0.0.0.0 lets other screens on "
-        "the network open the hub; only allowed with a fake arm",
+        "the network open the hub; with a real arm they only watch (and can STOP)",
     )
     s.add_argument(
         "--mcp-port",
@@ -79,11 +80,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Wrote {folder}. Edit place.yaml (the name), then: lab-os serve --config {folder}")
         return
 
-    if args.host not in LOCAL_HOSTS and not args.arm.startswith("fake"):
-        raise SystemExit(
-            f"--host {args.host} would let anyone on the network drive {args.arm}; "
-            "real arms are served on this computer only (leave out --host)"
-        )
+    # a real arm on the network: other screens watch (and can STOP), only this computer drives
+    local_control_only = args.host not in LOCAL_HOSTS and not args.arm.startswith("fake")
     args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
     use_config(args)
@@ -101,11 +99,14 @@ def main(argv: list[str] | None = None) -> None:
         mcp_port=args.mcp_port or None,
         check_ai=True,
         persona=lambda: current_persona(args.persona, venue.name),
+        local_control_only=local_control_only,
     )
     if args.mcp_port and not args.arm.startswith("fake"):
         print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
     if args.host not in LOCAL_HOSTS:
         print(f"listening on {args.host}: other computers on the network can open the hub")
+    if local_control_only:
+        print(f"Other screens are view-only for {args.arm} (STOP works); drive it from here.")
     try:
         with contextlib.suppress(KeyboardInterrupt):
             banner = _banner(args.port, args.host, args.mcp_port)

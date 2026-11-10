@@ -28,7 +28,22 @@ def test_lab_os_serve_starts(no_run):
     assert no_run == ["serve"]
 
 
-def test_real_arms_are_never_served_to_the_network(no_run):
-    with pytest.raises(SystemExit, match="this computer only"):
-        cli.main(["serve", "--host", "0.0.0.0", "--arm", "so101-white"])
-    assert no_run == []
+def test_a_real_arm_on_the_network_is_driven_from_this_computer_only(no_run, monkeypatch):
+    """--host 0.0.0.0 with a real arm: other screens may open the hub, but only watch the arm
+    (local_control_only); with the fake arm, any screen may drive it."""
+    from lab_os.robots.fake import FakeArm
+    from lab_os.teleop.loop import InputState, TeleopLoop
+
+    seen = []
+    real = cli.create_brain_app
+    monkeypatch.setattr(
+        cli,
+        "create_brain_app",
+        lambda *a, **kw: seen.append(kw["local_control_only"]) or real(*a, **kw),
+    )
+    arm = FakeArm()  # stands in for so101-white: no hardware in tests
+    monkeypatch.setattr(cli, "make_loop", lambda args: TeleopLoop(arm=arm, inputs=InputState()))
+    cli.main(["serve", "--host", "0.0.0.0", "--arm", "so101-white"])
+    cli.main(["serve", "--host", "0.0.0.0"])
+    cli.main(["serve", "--arm", "so101-white"])
+    assert seen == [True, False, False] and no_run == ["serve"] * 3

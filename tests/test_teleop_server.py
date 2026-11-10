@@ -223,3 +223,44 @@ async def test_teleop_input_is_refused_while_the_ai_tools_move(aiohttp_client):
     await ws.send_json({"type": "stop"})  # STOP from a page still wins
     assert await wait_for(lambda: not loop.motion_active)
     await ws.close()
+
+
+async def test_other_computers_only_watch_a_real_arm(aiohttp_client, monkeypatch):
+    """local_control_only (a real arm served to the network): a page from another computer is a
+    watcher: its input never reaches the arm, it's told why, and its STOP still works."""
+    import lab_os.teleop.server as srv
+
+    app, loop = make_app(local_control_only=True)
+    client = await aiohttp_client(app)
+    monkeypatch.setattr(srv, "is_local", lambda request: False)  # the test client is localhost
+    ws = await client.ws_connect("/ws")
+    told = await next_of(ws, "error")
+    assert "view only" in told["message"]
+    await ws.send_json(FRAME)
+    await asyncio.sleep(0.05)
+    assert loop.inputs.latest is None and app[srv.CONTROL]["ws"] is None
+    await ws.send_json({"type": "stop"})
+    assert await wait_for(lambda: loop.frozen)
+    await ws.close()
+
+    monkeypatch.setattr(srv, "is_local", lambda request: True)  # this computer still drives
+    ws = await client.ws_connect("/ws")
+    await ws.send_json(FRAME)
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    await ws.close()
+
+
+def test_what_counts_as_this_computer():
+    from types import SimpleNamespace
+
+    from lab_os.teleop.server import is_local
+
+    for addr, local in [
+        ("127.0.0.1", True),
+        ("::1", True),
+        ("::ffff:127.0.0.1", True),
+        ("10.0.0.7", False),
+        ("192.168.1.20", False),
+        (None, False),
+    ]:
+        assert is_local(SimpleNamespace(remote=addr)) is local, addr

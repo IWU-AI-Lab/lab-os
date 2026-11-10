@@ -13,6 +13,10 @@ Only one input page drives at a time ("has control"): the first page to send inp
 is free. Others are ignored until the driver releases control (session_end or disconnect); it's
 handed over, never grabbed. While the AI tools move the arm (lab_os.tools), they have control and
 all teleop input is ignored. Any page, monitors included, can send `stop`; it also ends an AI move.
+
+`local_control_only` (the brain sets it for a real arm served to the network): input pages from
+other computers are watchers, so another screen can show the hub and the arm but only STOP it.
+Control stays with this computer (and the Quest over `adb reverse`, which arrives as localhost).
 """
 
 import asyncio
@@ -44,6 +48,14 @@ INPUTS = web.AppKey("inputs", set)
 OUTBOX = web.AppKey("outbox", asyncio.Queue)
 # The one input WebSocket that currently drives the arm, or None. A dict so handlers can mutate it.
 CONTROL = web.AppKey("control", dict)
+LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
+LOOPBACK = ("127.0.0.1", "::1")
+
+
+def is_local(request: web.Request) -> bool:
+    """The page runs on this computer (or reaches it through adb reverse)."""
+    remote = request.remote or ""
+    return remote in LOOPBACK or remote.startswith("::ffff:127.")
 
 
 async def _page(name: str) -> web.FileResponse:
@@ -122,6 +134,12 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     ws = web.WebSocketResponse(heartbeat=5.0)
     await ws.prepare(request)
     is_input = request.query.get("role", "input") == "input"
+    if is_input and app[LOCAL_CONTROL_ONLY] and not is_local(request):
+        is_input = False  # another screen: it watches (and can STOP), it never drives
+        await ws.send_json(
+            {"type": "error", "message": "view only: the arm is driven from the brain's computer"}
+        )
+        log.info("input page from %s connected view-only", request.remote)
     if is_input and not app[ACCEPT_INPUT]:
         await ws.send_json({"type": "error", "message": "replay running; live input disabled"})
         await ws.close()
@@ -205,8 +223,10 @@ def create_app(
     recorder: Recorder | None = None,
     accept_input: bool = True,
     root_page: bool = True,
+    local_control_only: bool = False,
 ) -> web.Application:
-    """The teleop server. `root_page=False` leaves `/` free (the brain serves the hub there)."""
+    """The teleop server. `root_page=False` leaves `/` free (the brain serves the hub there).
+    `local_control_only`: only pages on this computer may drive (see the module docstring)."""
     app = web.Application()
     app[LOOP] = loop
     app[RECORDER] = recorder
@@ -215,6 +235,7 @@ def create_app(
     app[INPUTS] = set()
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
+    app[LOCAL_CONTROL_ONLY] = local_control_only
     if root_page:
         app.router.add_get("/", index)
     app.router.add_get("/teleop", index)
