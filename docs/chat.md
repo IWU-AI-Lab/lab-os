@@ -31,7 +31,9 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 - The **AI Spend** panel shows the month's total against the budget. A venue with `public: true` hides it (a hallway screen).
 
 ## What it knows
-The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press). Step 6 adds read tools (docs, git, devices).
+The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
+
+**It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is never served (the reveal is a surprise).
 
 ## Privacy and the public screen
 Anyone at the screen can type. The conversation clears when the hub goes back to the start screen (after ~3 minutes with nobody there). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.

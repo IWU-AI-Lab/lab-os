@@ -1,9 +1,11 @@
-"""The brain's MCP server: the robot tools for AI tools (Claude Code, Codex, Claude Desktop).
+"""The brain's MCP server: the robot tools and the project helper's read tools for AI tools
+(Claude Code, Codex, Claude Desktop). The hub's own chat uses its read tools too (lab_os.ai.tools).
 
 Listens on this computer only (127.0.0.1), on its own port next to the hub (default 8081, path
 /mcp), in the brain's event loop, so the tools drive the same teleop loop as the pages. How to
-connect: docs/ai-control.md. Permission tiers (current-focus.md): arm_status and list_poses are
-read; stop is always allowed; move_joints, gripper, move_to and go_to_pose are move (never
+connect: docs/ai-control.md. Permission tiers (current-focus.md): arm_status, list_poses and the
+project tools (project_status, list_docs, read_doc, search_docs, git_status, git_log, list_devices)
+are read; stop is always allowed; move_joints, gripper, move_to and go_to_pose are move (never
 allow-list them: each one should ask).
 """
 
@@ -15,6 +17,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
+from lab_os.tools.project import NotFound, ProjectTools
 from lab_os.tools.robot import Refused, RobotTools
 
 log = logging.getLogger(__name__)
@@ -31,6 +34,10 @@ max_joint_change_deg per joint or max_move_cm (move_to) and says when it went on
 call again to continue. Every move returns where the arm really ended up: check it before the next
 move. Refusals say why; don't retry a refusal unchanged. If a move result says it was stopped,
 don't move again until the user says so. The user approves each move.
+
+Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
+(one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
+of guessing about the project.
 """
 
 READ = ToolAnnotations(read_only_hint=True, destructive_hint=False, open_world_hint=False)
@@ -38,8 +45,10 @@ MOVE = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_h
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True)
 
 
-def create_mcp_server(tools: RobotTools) -> MCPServer:
+def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) -> MCPServer:
     server = MCPServer(name="lab-os", instructions=INSTRUCTIONS)
+    if project:
+        add_project_tools(server, project, tools.calls)
 
     async def run(tool: str, **args) -> dict:
         args = {k: v for k, v in args.items() if v is not None}
@@ -105,6 +114,64 @@ def create_mcp_server(tools: RobotTools) -> MCPServer:
         return await run("stop", arm=arm)
 
     return server
+
+
+def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
+    """The project helper's read tools (step 6). Each call is logged, with the result's size."""
+
+    def run(tool: str, **args) -> dict:
+        args = {k: v for k, v in args.items() if v is not None}
+        try:
+            result = getattr(project, tool)(**args)
+        except NotFound as e:
+            calls.write(tool, args, "refused", str(e))
+            raise ToolError(f"Not found: {e}") from e
+        calls.write(tool, args, "ok", f"{len(str(result))} characters")
+        return result
+
+    @server.tool(annotations=READ)
+    def project_status() -> dict:
+        """The current focus (docs/current-focus.md): its name, every step with done or not (and
+        when), the step that's next. Start here for "what's next?" or "where are we?"."""
+        return run("project_status")
+
+    @server.tool(annotations=READ)
+    def list_docs() -> dict:
+        """The project's docs: name, file, title. Includes current-focus (what's being worked on),
+        ideas (the backlog, incl. "On hold"), lab-jarvis-log (plan, decisions, devices), GOTCHAS
+        (surprises and fixes), protocol, places, chat, personas, hub, ai-control, CHANGELOG."""
+        return run("list_docs")
+
+    @server.tool(annotations=READ)
+    def read_doc(name: str, section: str | None = None) -> dict:
+        """Read one doc by name (e.g. "current-focus", "ideas", "GOTCHAS"), or only the section
+        under the first heading containing `section` (e.g. "On hold", "Step 7"). Long docs are
+        cut off at 12,000 characters with a list of their sections: then ask for a section."""
+        return run("read_doc", name=name, section=section)
+
+    @server.tool(annotations=READ)
+    def search_docs(text: str) -> dict:
+        """Lines in the docs containing `text` (any case), with the doc, line number and heading.
+        At most 30 hits."""
+        return run("search_docs", text=text)
+
+    @server.tool(annotations=READ)
+    def git_status() -> dict:
+        """The repository: branch (and ahead/behind its remote as of the last fetch), changed
+        files, the last commit. Nothing is fetched."""
+        return run("git_status")
+
+    @server.tool(annotations=READ)
+    def git_log(count: int = 15, path: str | None = None) -> dict:
+        """Recent commits on the current branch, newest first (hash, date, author, subject); at
+        most 50. `path`: only commits touching this file or folder."""
+        return run("git_log", count=count, path=path)
+
+    @server.tool(annotations=READ)
+    def list_devices() -> dict:
+        """The place's devices (config): name, kind, off limits, active in this venue, notes.
+        Whether a device is switched on isn't known yet."""
+        return run("list_devices")
 
 
 class _Uvicorn(uvicorn.Server):

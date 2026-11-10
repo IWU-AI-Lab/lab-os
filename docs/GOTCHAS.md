@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — Gemini refuses a tool round without its thought signature
+**What:** through Gemini's OpenAI-compatible address, the first request with tools worked (the model asked for `project_status`), but sending the tool's result back failed with HTTP 400 "Function call is missing a thought_signature in functionCall parts". Gemini attaches `"extra_content": {"google": {"thought_signature": "…"}}` to each streamed tool call (and no `index`), and wants it back on the assistant message's `tool_calls`. OpenAI sends no such field. Google's thought-signature page only covers its own Interactions API.
+**Fix:** the client keeps any `extra_content` of a tool call as is (`ToolCall.extra`) and the chat sends it back (`ai/chat.py`). A test's fake service sends one like Gemini.
+
 ### 2026-11-09 — Gemini's free key: gemini-3.8-flash overloaded, flash-lite answers
 **What:** with the builder's free Gemini key, `gemini-3.8-flash` answered HTTP 503 "This model is currently experiencing high demand", then on retry sent nothing for 30 s. Listing the models (the brain's connection check) worked, so the status said "connected" while answers failed. `gemini-3.5-flash-lite` answered at once through the same OpenAI-compatible address, with token counts.
 **Fix:** `backup` uses `gemini-3.5-flash-lite`. A 5xx now shows "… is busy or having trouble right now". The connection check only proves the address and key, not that the model has capacity.

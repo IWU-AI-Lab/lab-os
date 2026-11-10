@@ -30,12 +30,21 @@ class Usage:
     tokens_cached: int = 0
     estimated: bool = False  # the service didn't report usage: counted ~4 characters per token
 
+    def __add__(self, other: "Usage") -> "Usage":
+        return Usage(
+            self.tokens_in + other.tokens_in,
+            self.tokens_out + other.tokens_out,
+            self.tokens_cached + other.tokens_cached,
+            self.estimated or other.estimated,
+        )
+
 
 @dataclass
 class ToolCall:
     id: str
     name: str
     arguments: str = ""  # JSON text, as the model wrote it
+    extra: dict | None = None  # `extra_content` as sent (Gemini's thought_signature): sent back
 
 
 @dataclass
@@ -130,6 +139,8 @@ async def stream_chat(
                         )
                         call.name += fn.get("name") or ""
                         call.arguments += fn.get("arguments") or ""
+                        if tc.get("extra_content"):
+                            call.extra = tc["extra_content"]
                     if choice.get("finish_reason"):
                         reply.finish_reason = choice["finish_reason"]
     except AiError:
