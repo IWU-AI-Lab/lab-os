@@ -34,3 +34,26 @@ def commits_per_day(days: int = 14, repo: Path = REPO_ROOT, today: date | None =
             counts[line] += 1
     per_day = [{"date": d, "count": n} for d, n in counts.items()]
     return {"available": True, "days": days, "total": sum(counts.values()), "per_day": per_day}
+
+
+def recent_commits(count: int = 8, repo: Path = REPO_ROOT) -> list[dict]:
+    """The latest `count` commits (all branches, no merges), newest first: hash, date, subject.
+    Empty when git or the repo is missing."""
+    cmd = [
+        "git",
+        "-C",
+        str(repo),
+        "log",
+        "--branches",
+        "--remotes",
+        "--no-merges",
+        f"--max-count={count}",
+        "--format=%h%x09%cd%x09%s",
+        "--date=format-local:%Y-%m-%d",
+    ]
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=True).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    rows = [line.split("\t", 2) for line in out.splitlines() if line.count("\t") >= 2]
+    return [{"hash": h, "date": d, "subject": s} for h, d, s in rows]

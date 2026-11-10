@@ -3,6 +3,10 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-10
+- The designed hub, previewed at **`/design`** (focus step 10 started early): the approved concept on the brain's real data (`src/lab_os/hub/web/design.html`): startup with real checks and the brain's greeting, one tap = full screen + start, panels and details pages from real facts, the real chat, teleop/monitor inside it, an Arm view from the real joints, back to the start screen after the reset time. Fonts bundled in `src/lab_os/web/vendor/fonts/` (OFL). `hub.look` in the theme picks what `/` shows (`plain` for now); `/plain` and `/design` always work. `startup.style` is now `hyperspace`.
+- New endpoints `/api/arm` (joints, held, control) and `/api/devices` (the place's devices, the brain's arm linked); `/api/commits` also lists the latest 8 commits.
+- `lab-os serve --host 0.0.0.0` now works with a real arm: other screens are view-only (their STOP works; their teleop input is ignored with "view only"); only the brain's computer drives.
+- Docs: the real-arm walkthrough for AI tools (`docs/ai-control.md` → 5), full screen without a tap (`docs/hub.md`), the secure address deferred (current-focus step 7). Steps 4–6 marked done.
 - A venue can have its own persona again, as that venue's default: `persona:` in the venue file (`default` = the place's, which every venue starts with). Order: `--persona` → `$LAB_OS_PERSONA` → venue → `place.yaml` → `lab-assistant`.
 - `lab-os serve` no longer prints teleop's live status line (it flooded narrow terminals); `--status-line` turns it on. The line is now cut to the terminal's width and only redrawn when it changes.
 - The hub's chat is kept for a while: saved after every answer and read back when the brain starts; the reset or start press puts it aside, and **Bring back the last conversation** swaps it in. Deleted after `chat_keep_minutes` (place.yaml, 30; 0 = off). `/api/chat/restore`; `previous` in `/api/chat` and `/api/chat/start`. Tests no longer write to the repo's `logs/`.

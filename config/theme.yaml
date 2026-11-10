@@ -6,29 +6,29 @@
 # _s seconds. "Used by" notes say where a token is read today; "(planned)" = for the hub, not read yet.
 
 colors:
-  background: "#05080b"  # near-black behind everything. Used by: (pages still use style.css for now)
-  surface: "#0b161c"     # panel fill, drawn see-through (glow.panel_fill). (planned)
-  line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. (planned)
-  text: "#d4eef5"        # main text. Used by: (pages still use style.css for now)
-  text_dim: "#6d8c96"    # labels, secondary text. (planned)
+  background: "#05080b"  # near-black behind everything. Used by: the designed hub (other pages still use style.css)
+  surface: "#0b161c"     # panel fill, drawn see-through (glow.panel_fill). Used by: the designed hub
+  line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. Used by: the designed hub
+  text: "#d4eef5"        # main text. Used by: the designed hub (other pages still use style.css)
+  text_dim: "#6d8c96"    # labels, secondary text. Used by: the designed hub
   primary: "#29d4ff"     # cyan, the main color; change this to recolor (surface/line/hot/text are cyan-tinted). Used by: robot joints in the 3D views, controller pointer
-  hot: "#eafcff"         # white-hot core of the brightest things only. (planned)
+  hot: "#eafcff"         # white-hot core of the brightest things only. Used by: the designed hub
   accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views
-  danger: "#ff2436"      # aggressive red: critical, a person must act (error, stop). (planned)
-  offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. (planned)
+  danger: "#ff2436"      # aggressive red: critical, a person must act (error, stop). Used by: the designed hub
+  offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. Used by: the designed hub
   ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line
   frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views
 
 font:                    # one font per role; every font in `bundled` ships with the code, so swap freely
   bundled: [Orbitron, Oxanium, Chakra Petch, Rajdhani, Inter, JetBrains Mono, DSEG7, DSEG14, Doto, Share Tech Mono]
-  display: "Orbitron, 'Chakra Petch', system-ui, sans-serif"  # titles only, CAPS. (planned)
+  display: "Orbitron, 'Chakra Petch', system-ui, sans-serif"  # titles only, CAPS. Used by: the designed hub
   display_weight: 700
   family: "'Chakra Petch', system-ui, sans-serif"   # interface + chat. Used by: headset status panel
   family_weight: 500
-  lines: "Inter, system-ui, sans-serif"             # typed-out lines, lighter secondary text. (planned)
+  lines: "Inter, system-ui, sans-serif"             # typed-out lines, lighter secondary text. Used by: the designed hub
   lines_weight: 300      # light only; heavier looks bloated
-  digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. (planned)
-  mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. (planned)
+  digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. Used by: the designed hub
+  mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. Used by: the designed hub
   base_size_px: 20       # body text on the 32" monitor. Used by: (pages still use style.css for now)
   scale_with_screen: true  # hub sizes follow the screen (the smaller of width/height decides), so the core keeps its share. (planned)
   label_spacing_em: 0.12 # extra letter spacing for CAPS labels and titles. (planned)
@@ -62,14 +62,14 @@ glow:                    # a sharp line + two soft halos; only active things glo
   panel_fill: 0.08       # how see-through panel fills are (0 = invisible)
   back_layer: 0.35       # brightness of the far layer (the network, faint circuits)
 
-network:                 # the far background: drifting dots linked when close. (planned)
+network:                 # the far background: drifting dots linked when close. (planned; the designed hub reads some)
   dots_per_mpx: 90       # dots per million screen pixels (~190 on a 1080p screen)
   link_px: 140           # dots closer than this get a line; closer = brighter
   drift_px_s: 10         # drift speed
   push_radius_px: 170    # mouse / finger pushes dots away within this distance
   fire_every_s: [2, 6]   # random pause between pulses running along links (faster while thinking)
 
-motion:                  # (planned)
+motion:                  # (planned; the designed hub reads some)
   quick_ms: 120          # button reacts
   normal_ms: 300
   panel_ms: 600          # panel unfolds
@@ -87,10 +87,13 @@ motion:                  # (planned)
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned) except where "Used by" says otherwise
+  look: plain            # plain | design: which hub `/` shows. design = the approved concept made real (the
+                         # reveal, current-focus.md step 10); /design and /plain always show each. Used by: the brain
                          # The top-left title and the startup title are the place's name: `name` in place.yaml, not here.
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub
-                         # (ids without a page yet, like arm, get no button: MODULES in src/lab_os/hub/server.py).
+                         # (ids without a page get no button in the plain hub: MODULES in src/lab_os/hub/server.py;
+                         # the designed hub draws `arm` itself, a side view from the real joints).
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.
   reset_after_s: 180     # nobody touched it this long: back to the start screen (never while something is in use).
                          # A venue profile can set its own reset_after_s. Used by: the hub
@@ -108,8 +111,8 @@ hub:                     # (planned) except where "Used by" says otherwise
 
 clock: 24h               # 24h | 12h (AM/PM shown small in the interface font). Used by: the hub
 
-startup:                 # (planned)
-  style: assemble        # assemble | hyperspace
+startup:                 # (planned; the designed hub reads some)
+  style: hyperspace      # hyperspace | assemble (decision 2026-11-09). Used by: the designed hub
   max_s: 8               # any input skips straight to the hub
   unlock_s: 1.35         # the ignition's unlock (bolts, ring, burst, sound) finishes before the startup begins
   hyperspace:            # a 3D star field on one smooth speed curve, then an impact frame, a flash and a long brake
@@ -119,7 +122,7 @@ startup:                 # (planned)
     impact_frame: true   # ~80 ms freeze, black lines on white, right before the flash (never red)
     brake_s: 2.6         # after the flash: a long ease-out; the network starts white-hot and dims as it settles
 
-quality:                 # what each level keeps. minimal = the lightweight mode. (planned)
+quality:                 # what each level keeps. minimal = the lightweight mode. (planned; the designed hub reads some)
   default: full
   maximal: { idle: true, glow: true, blur: true, particles: true, network: dense, extra_rings: true, frame_details: true, background_text: true }
   full: { idle: true, glow: true, blur: true, particles: true, network: interactive }

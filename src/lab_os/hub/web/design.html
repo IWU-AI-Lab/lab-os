@@ -1,0 +1,2701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/web/vendor/fonts/fonts.css">
+<style>
+/* The designed hub (current-focus.md step 10, the reveal): docs/design/hub-concept.html made real.
+   Same look, motion and sound as the approved concept; the concept's controls and made-up data are gone.
+   Every fact comes from the brain (/api/...), the numbers from /theme.json, the fonts from
+   /web/vendor/fonts/ (offline). Served at /design, and at / when the theme says hub.look: design. */
+
+/* Layout: full-screen hub. Far layer = network canvas + verses; frame; middle = panels around the core;
+   front = reticle, alerts, module pages. Tokens mirror config/theme.yaml on the design branch.
+   Sizes are in rem, and 1 rem follows the screen, so everything scales together (the core included). */
+:root {
+  color-scheme: dark;
+  --bg: #05080b;
+  --surface: #0b161c;
+  --line: #1f3d48;
+  --text: #d4eef5;
+  --text-dim: #6d8c96;
+  --primary: #29d4ff;
+  --hot: #eafcff;
+  --accent: #ff9a2e;
+  --danger: #ff2436;
+  --offline: #56636a;
+  --frozen: #7a1d00;
+  --frozen-text: #b8604a;
+  --f-title: "Orbitron", system-ui, sans-serif;
+  --f-ui: "Chakra Petch", system-ui, sans-serif;
+  --f-lines: "Inter", system-ui, sans-serif;
+  --w-lines: 300;
+  --f-digits: "DSEG7", "JetBrains Mono", ui-monospace, monospace;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --arrive: cubic-bezier(0.16, 1, 0.3, 1);
+}
+html { font-size: clamp(11px, min(0.95vw, 1.7vh), 26px); }
+@media (orientation: portrait) { html { font-size: clamp(12px, min(3.3vw, 1.9vh), 26px); } }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  --c: var(--primary);
+  margin: 0; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font: 500 1rem/1.45 var(--f-ui);
+}
+body[data-mood="room"][data-alert="warning"] { --c: var(--accent); }
+body[data-mood="room"][data-alert="critical"] { --c: var(--danger); }
+body[data-alert="warning"] .alertable { --c: var(--accent); }
+body[data-alert="critical"] .alertable { --c: var(--danger); }
+.ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+#net { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* far-layer verses (maximal) */
+#verses { position: fixed; inset: 0; z-index: 1; pointer-events: none; transition: opacity 1s; }
+#verses .v { position: absolute; max-width: 34ch; font: 300 0.85rem/1.6 var(--f-lines); color: var(--text); opacity: 0.17; transition: opacity 2.5s; }
+#verses .v cite { display: block; margin-top: 4px; font: 500 0.6rem/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; font-style: normal; color: var(--c); }
+#verses .v.out { opacity: 0; }
+
+/* frame: cut corners, tabs and notches; extra ticks and sliders in maximal */
+#frame { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; transition: opacity 1s; }
+#frame .edge { fill: none; stroke: var(--line); stroke-width: 1; }
+#frame .hi { fill: none; stroke: var(--c); stroke-width: 2; filter: drop-shadow(0 0 3px var(--c)); }
+#frame .tick { stroke: var(--line); stroke-width: 1; }
+#frame .slider { fill: var(--c); }
+#frame .draw { transition: stroke-dashoffset 1.4s var(--arrive); }
+#frame .orn { transition: opacity 0.8s 0.6s; }
+.pre-frame #frame .orn { opacity: 0; transition: none; }
+
+/* the hub grid. Columns and rows are symmetric, so the core sits exactly in the middle of the screen. */
+#hub {
+  --edge-h: 5.4rem;
+  --mod-w: 11rem;
+  --orb: min(54vh, 32vw);
+  position: relative; z-index: 2; height: 100%;
+  display: grid; gap: 1rem 1.4rem;
+  padding-block: 2.2rem;
+  padding-left: max(2.6rem, env(safe-area-inset-left, 0px));
+  padding-right: max(2.6rem, env(safe-area-inset-right, 0px));
+  transition: transform 0.7s var(--arrive), opacity 0.7s, filter 0.7s;
+}
+body[data-mods="0"] #hub { --mod-w: 0px; }
+body[data-layout="launcher"] #hub {
+  grid-template-columns: minmax(0, 1fr) var(--mod-w) var(--orb) var(--mod-w) minmax(0, 1fr);
+  grid-template-rows: var(--edge-h) minmax(0, 1fr) var(--edge-h);
+  grid-template-areas: "strip strip strip strip strip" "left ml core mr right" "log log log log log";
+}
+body[data-layout="panels"] #hub {
+  --orb: min(48vh, 30vw);
+  grid-template-columns: minmax(12rem, 0.9fr) var(--orb) minmax(17rem, 1.25fr);
+  grid-template-rows: var(--edge-h) minmax(0, 1fr) var(--edge-h);
+  grid-template-areas: "strip strip strip" "mods core chat" "log log arm";
+}
+#traces { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: visible; }
+#traces .base { fill: none; stroke: var(--line); stroke-width: 1; }
+#traces .end { fill: var(--line); }
+#traces .pulse { fill: var(--hot); }
+
+/* panels unfold from their top-left corner (no transform, so positions stay measurable) */
+.panel { transition: opacity 0.6s var(--arrive), clip-path 0.8s var(--arrive); clip-path: inset(-20px -20px -20px -20px); }
+.panel.hold { opacity: 0; clip-path: inset(0 100% 100% 0); }
+.cut {
+  --cut: 0.7rem;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: color-mix(in srgb, var(--c) 32%, transparent); padding: 1px;
+}
+.cut > .in {
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: color-mix(in srgb, var(--surface) 86%, transparent); height: 100%;
+}
+
+/* status strip: real facts only */
+.strip { grid-area: strip; align-self: start; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.6rem; }
+.brand { font: 700 1.2rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); margin-right: auto; text-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
+.fact { display: flex; align-items: center; gap: 0.45rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text); }
+.fact .ico { color: var(--c); font-size: 0.9rem; }
+.fact.off, .fact.off .ico { color: var(--offline); }
+.clock { font-family: var(--f-digits); font-size: 1.05rem; color: var(--c); letter-spacing: 0.04em; }
+.ampm { font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.12em; color: var(--c); margin-left: 0.3rem; }
+
+/* module buttons: built from the module list (hub.modules), split left/right of the core */
+#mods { display: contents; }
+.mcol { display: flex; flex-direction: column; justify-content: center; gap: 1.1rem; min-width: 0; }
+.mcol.l { grid-area: ml; } .mcol.r { grid-area: mr; }
+body[data-layout="panels"] #mods { grid-area: mods; display: flex; flex-direction: column; justify-content: center; gap: 1.1rem; }
+body[data-layout="panels"] .mcol { display: contents; }
+.mod { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mod .in { display: grid; grid-template-columns: 3rem 1fr; align-items: center; gap: 0.6rem; padding: 0.6rem 0.9rem 0.6rem 0.5rem; }
+.mod .mico { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mod svg { width: 3rem; height: 3rem; color: var(--c); overflow: visible; }
+.mod .name { font: 600 1.05rem/1.1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.mod:hover .cut, .mod:focus-visible .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
+.mod:hover .name, .mod:focus-visible .name { color: var(--hot); }
+.mod:focus-visible { outline: none; }
+.mod { position: relative; }
+body:is(.q-full, .q-maximal) .mod::before, body:is(.q-full, .q-maximal) .mod::after { content: ""; position: absolute; width: 0.7rem; height: 0.7rem; border: 1px solid color-mix(in srgb, var(--c) 70%, transparent); pointer-events: none; transition: inset 0.3s var(--arrive); }
+body:is(.q-full, .q-maximal) .mod::before { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
+body:is(.q-full, .q-maximal) .mod::after { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
+body:is(.q-full, .q-maximal) .mod:hover::before { top: -8px; right: -8px; }
+body:is(.q-full, .q-maximal) .mod:hover::after { bottom: -8px; left: -8px; }
+.mod:hover svg, .mod:focus-visible svg { filter: drop-shadow(0 0 5px var(--c)); }
+
+/* the core: the assistant's picture. Tapping it opens the chat. */
+.core { grid-area: core; position: relative; display: grid; place-items: center; min-height: 0; min-width: 0; cursor: pointer; }
+body[data-layout="panels"] .core { cursor: default; }
+#orb { width: min(100%, var(--orb)); aspect-ratio: 1; color: var(--c); overflow: visible; transition: color 0.5s; }
+#orb .glow { filter: drop-shadow(0 0 4px var(--c)) drop-shadow(0 0 14px color-mix(in srgb, var(--c) 40%, transparent)); }
+#orb .ring { fill: none; stroke: currentColor; }
+#orb .rg { opacity: 0; scale: var(--from, 1.4); rotate: var(--spin0, 0deg); transition: opacity 0.35s, scale 0.8s var(--arrive), rotate 1.1s var(--arrive); }
+#orb .rg.on { opacity: var(--op, 1); scale: 1; rotate: 0deg; }
+#orb .rg.hit { filter: brightness(2) drop-shadow(0 0 4px var(--hot)); }
+#orb .lockwave { fill: none; stroke: var(--hot); stroke-width: 1.5; opacity: 0; pointer-events: none; animation: lockwave 0.7s ease-out 1 both; }
+@keyframes lockwave { from { opacity: 0.9; scale: 1; stroke-width: 2.5; } to { opacity: 0; scale: 1.35; stroke-width: 0.3; } }
+#flare { opacity: 0; pointer-events: none; }
+#flare.go { animation: flare 1.1s cubic-bezier(0.16, 1, 0.3, 1) 1; }
+@keyframes flare { 0% { opacity: 0; scale: 0.05 1; } 10% { opacity: 1; scale: 1.1 1.6; } 100% { opacity: 0; scale: 1.7 0.5; } }
+body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; }
+#core-dot { transform-origin: 0 0; }
+[data-state="offline"] { --c: var(--offline); }
+[data-state="error"] { --c: var(--danger); }
+#ask-btn { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2); left: 50%; transform: translate(-50%, 0.6rem); padding: 0; border: 0; background: none; color: var(--c); cursor: pointer; }
+/* ask from the core: type here (or anywhere) and the answer appears under the core; the history button opens the conversation */
+#ask-btn { cursor: default; }
+#ask-btn .in { display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem; font-size: 1.15rem; }
+#quick-form { display: flex; margin: 0; }
+#quick { all: unset; display: block; height: 2rem; line-height: 2rem; width: 10rem; font: var(--w-lines) 0.9rem/1.4 var(--f-lines); color: var(--text); caret-color: var(--c); transition: width 0.4s var(--arrive); }
+#quick::placeholder { color: var(--text-dim); }
+#quick:focus, #quick:not(:placeholder-shown) { width: min(24rem, 60vw); }
+#ask-btn:focus-within .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
+#open-chat { display: flex; align-items: center; gap: 0.25rem; min-width: 2.2rem; min-height: 2rem; justify-content: center; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
+#open-chat b { font: 0.7rem/1 var(--f-digits); color: var(--c); }
+#open-chat:hover, #open-chat:focus-visible { color: var(--hot); outline: none; }
+/* the latest answer, under the core: typed out, then fades after a while; tap it to see the whole conversation */
+#reply { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(34rem, 80vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
+#reply.on { opacity: 1; pointer-events: auto; cursor: pointer; }
+#reply .q { font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); margin-bottom: 0.35rem; }
+#reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
+#reply .a .code { font: 400 0.85em var(--f-mono); color: var(--c); }
+body[data-layout="panels"] #ask-btn { display: none; }
+#errmsg { position: absolute; top: calc(50% + min(var(--orb), 100%) * 0.2); left: 50%; transform: translateX(-50%); width: min(92%, 21rem); display: none; }
+#errmsg b { display: block; font: 600 0.95rem/1.3 var(--f-ui); color: var(--text); }
+#errmsg span { display: block; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); margin-top: 0.2rem; }
+[data-state="error"] #errmsg { display: block; }
+#errmsg .in { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.7rem; align-items: center; padding: 0.55rem 0.8rem; font: 500 0.85rem/1.35 var(--f-ui); }
+#errmsg .ico { width: 1.6rem; height: 1.6rem; color: var(--danger); }
+
+/* the core's dock: while a module is open the core moves here, so it stays visible and alive */
+#orb-dock { position: fixed; z-index: 7; pointer-events: none; display: none; }
+#orb-dock #orb { width: 100%; }
+body[data-mod] #orb-dock { display: block; }
+body[data-mod="chat"] #orb-dock { left: 9vw; top: 50%; width: min(58vh, 34vw); translate: 0 -50%; }
+body[data-mod]:not([data-mod="chat"]) #orb-dock { right: calc(5vw + 1.4rem); bottom: calc(5vh + 1.4rem); width: min(19vh, 10rem); }
+
+/* boot-only elements */
+#boot-title-wrap { position: fixed; left: 0; right: 0; top: 11vh; text-align: center; z-index: 7; pointer-events: none; }
+#boot-title { display: inline-block; transform-origin: 0 0; font: 700 clamp(26px, 4vw, 58px)/1 var(--f-title); text-transform: uppercase; color: var(--hot); letter-spacing: 0.7em; opacity: 0; white-space: nowrap; text-shadow: 0 0 14px var(--c), 0 0 40px color-mix(in srgb, var(--c) 40%, transparent); transition: letter-spacing 1.2s var(--arrive), opacity 0.4s; }
+#boot-title.on { letter-spacing: 0.16em; opacity: 1; }
+#boot-greet { position: fixed; left: 0; right: 0; top: calc(11vh + clamp(26px, 4vw, 58px) + 1.4rem); text-align: center; z-index: 7; pointer-events: none; min-height: 1.4em;
+  padding: 0 16px; font: 500 clamp(15px, 1.25vw, 26px)/1.4 var(--f-title); letter-spacing: 0.1em; color: var(--text); text-shadow: 0 0 12px var(--bg); transition: opacity 0.6s, translate 0.8s var(--leave); }
+#boot-greet.leave { opacity: 0; translate: 0 -0.8rem; }
+#boot-greet.typing::after { height: 0.9em; }
+#bootlines { position: fixed; left: 50%; bottom: 7vh; transform: translateX(-50%); width: min(90vw, 24rem); z-index: 7; font: var(--w-lines) 0.85rem/1.65 var(--f-lines); color: var(--text); transition: opacity 0.8s, transform 1s var(--arrive); pointer-events: none; }
+#bootlines div { position: relative; display: flex; justify-content: space-between; gap: 0.7rem; white-space: nowrap; animation: rowin 0.4s var(--arrive) both; }
+#bootlines div::after { content: ""; position: absolute; top: 15%; bottom: 15%; width: 2px; background: var(--hot); box-shadow: 0 0 8px var(--c), 0 0 2px var(--hot); animation: rowscan 0.45s var(--arrive) both; pointer-events: none; }
+#bootlines .lead { flex: 1; align-self: center; height: 0; margin-top: 0.15em; border-bottom: 1px dotted color-mix(in srgb, var(--c) 50%, transparent); transform: scaleX(0); transform-origin: left; transition: transform 0.3s var(--arrive); }
+#bootlines .led .lead { transform: none; }
+#bootlines .v.pop { animation: vpop 0.6s ease-out 1; }
+/* corner brackets around the checks */
+#bootlines::before, #bootlines::after { content: ""; position: absolute; width: 0.8rem; height: 0.8rem; border: 0 solid color-mix(in srgb, var(--c) 70%, transparent); transition: opacity 0.4s, inset 0.6s var(--arrive); opacity: 0; }
+#bootlines::before { left: -1.4rem; top: -1rem; border-width: 1px 0 0 1px; }
+#bootlines::after { right: -1.4rem; bottom: -1rem; border-width: 0 1px 1px 0; }
+#bootlines:not(:empty)::before, #bootlines:not(:empty)::after { opacity: 1; }
+#bootlines:not(:empty)::before { left: -0.8rem; top: -0.6rem; }
+#bootlines:not(:empty)::after { right: -0.8rem; bottom: -0.6rem; }
+@keyframes rowin { from { clip-path: inset(0 100% 0 0); translate: -10px 0; } to { clip-path: inset(0 -20px 0 0); translate: 0 0; } }
+@keyframes rowscan { from { left: 0; opacity: 1; } to { left: 100%; opacity: 0; } }
+@keyframes vpop { 0% { color: var(--hot); text-shadow: 0 0 10px var(--c), 0 0 2px var(--hot); } 100% { text-shadow: none; } }
+#bootlines .k { display: flex; align-items: center; gap: 0.6rem; }
+#bootlines .k .ico { color: var(--c); }
+#bootlines .v { color: var(--c); }
+#bootlines .v.no { color: var(--offline); }
+#flash { position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0; }
+#flash.crt { animation: crt 0.75s var(--arrive) 1; }
+#flash.white { animation: whiteflash 0.9s ease-out 1; }
+/* the hyperspace flash and impact frame are drawn on their own canvas: a full-screen CSS layer fading over
+   the busy network glitched (parts of it didn't draw). Impact frame: dark lines on white, never red. */
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9; pointer-events: none; }
+#shock { position: fixed; z-index: 1; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid var(--c); opacity: 0; pointer-events: none; }
+#shock.go { animation: shock 1.6s var(--arrive) 1; }
+
+/* chat: you on the right in a broken-edged box, the assistant on the left. No name labels. */
+.chat { grid-area: chat; min-height: 0; display: flex; flex-direction: column; }
+body[data-layout="launcher"] #hub > .chat { display: none; }
+.chat .in { display: flex; flex-direction: column; min-height: 0; padding: 1rem 1.1rem 0.8rem; gap: 0.8rem; }
+#log-chat { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.msg { max-width: 86%; }
+.msg .body { font: 500 1rem/1.5 var(--f-ui); overflow-wrap: anywhere; }
+.msg .body .code { font: 400 0.82em var(--f-mono); color: var(--c); }
+.msg.me { align-self: flex-end; }
+.msg.me .body {
+  padding: 0.55rem 0.8rem;
+  background:
+    linear-gradient(var(--c), var(--c)) left top / 0.8rem 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) left top / 1px 0.8rem no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 0.8rem 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 1px 0.8rem no-repeat,
+    linear-gradient(var(--line), var(--line)) 30% top / 30% 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) 75% bottom / 35% 1px no-repeat,
+    linear-gradient(var(--line), var(--line)) right 40% / 1px 30% no-repeat,
+    color-mix(in srgb, var(--c) 7%, transparent);
+}
+.msg.ai { display: grid; grid-template-columns: 1.1rem 1fr; gap: 0.6rem; }
+.msg.ai > .ico { color: var(--c); margin-top: 0.25rem; }
+.msg.ai .body { border-left: 1px solid var(--line); padding-left: 0.8rem; }
+.typing::after { content: ""; display: inline-block; width: 0.55em; height: 1em; margin-left: 2px; background: var(--c); vertical-align: -0.15em; animation: blink 1s steps(1) infinite; }
+.ask { margin: 0; display: flex; align-items: center; gap: 0.6rem; border-top: 1px solid var(--line); padding-top: 0.7rem; }
+.ask span { color: var(--c); font: 700 0.9rem/1 var(--f-ui); }
+#ask { all: unset; flex: 1; font: 500 0.95rem/1.4 var(--f-ui); color: var(--text); caret-color: var(--c); }
+#ask::placeholder { color: var(--text-dim); }
+
+/* typed log */
+.log { grid-area: log; align-self: end; font: var(--w-lines) 0.78rem/1.7 var(--f-lines); color: var(--text-dim); min-width: 0; }
+.log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 1.2s; }
+.log .t { font-family: var(--f-digits); font-size: 0.68rem; color: var(--c); margin-right: 0.8rem; opacity: 0.8; }
+.log .now { color: var(--text); }
+
+/* arm readouts (panels layout) */
+.arm { grid-area: arm; align-self: end; }
+body[data-layout="launcher"] .arm { display: none; }
+.arm .in { padding: 0.6rem 0.9rem; }
+.arm-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.arm-head .name { font: 600 0.8rem/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.arm-head .word { display: flex; align-items: center; gap: 0.35rem; font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--c); }
+.joints { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3rem 0.9rem; }
+.j b { display: block; font: var(--w-lines) 0.62rem/1.2 var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.j span { display: block; font: 0.95rem/1.2 var(--f-digits); color: var(--hot); white-space: pre; }
+.j i { display: block; height: 2px; background: var(--line); margin-top: 3px; position: relative; }
+.j i::after { content: ""; position: absolute; top: -1px; width: 4px; height: 4px; left: var(--p, 50%); background: var(--c); }
+body[data-alert="held"] .arm { --c: var(--frozen-text); }
+body[data-alert="held"] .arm .cut { background: color-mix(in srgb, var(--frozen) 90%, transparent); }
+body[data-alert="held"] .arm .j span { color: var(--frozen-text); }
+
+/* launcher side panels: a value and an icon, not a sentence */
+.side { display: flex; flex-direction: column; gap: 1.9rem; align-self: center; min-width: 0; }
+/* room between the callouts and the module buttons, so the two kinds never touch */
+.side.left { padding-right: 1.8rem; } .side.right { padding-left: 1.8rem; }
+body[data-layout="panels"] .side { display: none; }
+.side.left { grid-area: left; } .side.right { grid-area: right; }
+.side .in { padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.head { display: flex; align-items: center; gap: 0.5rem; color: var(--c); font-size: 1rem; }
+.head .n { font: 0.8rem/1 var(--f-digits); color: var(--text-dim); }
+.head .grow { margin-left: auto; }
+/* each panel says what it is in a few words: icon + small CAPS title; numbers carry their unit */
+.cap { font: 500 0.66rem/1 var(--f-ui); letter-spacing: var(--label-spacing, 0.12em); text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+.head .n.grow, .head .meta { margin-left: auto; }
+/* words stay in the interface font; the digit font is for numbers only */
+.meta { font: var(--w-lines) 0.7rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+.meta b { font: 600 0.8rem/1 var(--f-ui); color: var(--c); }
+.steps { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }
+.steps span { height: 5px; background: var(--line); }
+.steps span.now { background: linear-gradient(90deg, var(--c) 60%, var(--line) 60%); animation: pulse 2.4s ease-in-out infinite; }
+.thin .k { font: 500 0.6rem/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); margin-right: 0.2rem; }
+/* callout panels: the title sits on a line, plain words; the content sits under it on a see-through fill.
+   No icon + CAPS title + big number tiles: that's the stock dashboard look. */
+.side .cut, .side .cut > .in { background: none; clip-path: none; padding: 0; }
+.side .cut > .in { position: relative; isolation: isolate; padding: 0 1.15rem 1.05rem; gap: 0.6rem; }
+/* the fill starts just under the line and is a touch brighter there, like light falling from the line */
+.side .in::before { content: ""; position: absolute; inset: calc(1.75rem + 3px) 0 0 0; z-index: -1;
+  background: linear-gradient(color-mix(in srgb, var(--c) 7%, transparent), transparent 2.5rem), color-mix(in srgb, var(--surface) 80%, transparent);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%); }
+.side .head { position: relative; height: 1.75rem; margin: 0 -1.15rem 0.55rem; padding: 0; align-items: flex-end; border-bottom: 1px solid color-mix(in srgb, var(--c) 55%, transparent); }
+.side .head::after { content: ""; position: absolute; bottom: -3px; width: 5px; height: 5px; background: var(--c); }
+.side.left .head::after { right: -3px; }
+.side.right .head::after { left: -3px; }
+.side .cap { font: 500 0.95rem/1 var(--f-ui); letter-spacing: 0.03em; text-transform: none; color: var(--c); }
+/* the title tab: open at the bottom (the line is its floor), the corner facing the core cut, a faint fill */
+.side .cap { --tab: color-mix(in srgb, var(--c) 55%, transparent); display: inline-flex; align-items: center; height: 1.6rem; padding: 0 0.85rem 0 0.7rem;
+  border: 1px solid var(--tab); border-bottom: 0; background-origin: border-box;
+  background: linear-gradient(to bottom left, transparent calc(50% - 0.7px), var(--tab) 50%, transparent calc(50% + 0.7px)) right top / 0.6rem 0.6rem no-repeat,
+    linear-gradient(color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 4%, transparent));
+  clip-path: polygon(0 0, calc(100% - 0.6rem) 0, 100% 0.6rem, 100% 100%, 0 100%); }
+.side.right .cap { padding: 0 0.7rem 0 0.85rem; clip-path: polygon(0.6rem 0, 100% 0, 100% 100%, 0 100%, 0 0.6rem);
+  background: linear-gradient(to bottom right, transparent calc(50% - 0.7px), var(--tab) 50%, transparent calc(50% + 0.7px)) left top / 0.6rem 0.6rem no-repeat,
+    linear-gradient(color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 4%, transparent)); }
+/* full and maximal: a bright notch on the tab's top edge */
+body:is(.q-full, .q-maximal) .side.left .cap { border-top-color: transparent; background-image: linear-gradient(var(--c), var(--c)), linear-gradient(var(--tab), var(--tab)),
+    linear-gradient(to bottom left, transparent calc(50% - 0.7px), var(--tab) 50%, transparent calc(50% + 0.7px)), linear-gradient(color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 4%, transparent));
+  background-size: 1rem 2px, 100% 1px, 0.6rem 0.6rem, auto; background-position: left top, left top, right top, 0 0; background-repeat: no-repeat; }
+body:is(.q-full, .q-maximal) .side.right .cap { border-top-color: transparent; background-image: linear-gradient(var(--c), var(--c)), linear-gradient(var(--tab), var(--tab)),
+    linear-gradient(to bottom right, transparent calc(50% - 0.7px), var(--tab) 50%, transparent calc(50% + 0.7px)), linear-gradient(color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 4%, transparent));
+  background-size: 1rem 2px, 100% 1px, 0.6rem 0.6rem, auto; background-position: right top, left top, left top, 0 0; background-repeat: no-repeat; }
+.side.right .head { flex-direction: row-reverse; }
+/* a callout opens its details full-screen: tap anywhere on it (not on its own controls), or the open mark by the tab */
+.side .panel[data-detail] { cursor: pointer; }
+.side .open { align-self: center; display: grid; place-items: center; width: 1.9rem; height: 1.6rem; margin: 0 0.25rem; padding: 0; border: 0; background: none; color: var(--text-dim); font-size: 0.95rem; cursor: pointer; transition: color 0.15s; }
+.side .panel[data-detail]:hover .cap, .side .panel[data-detail]:focus-within .cap { --tab: var(--c); color: var(--hot); }
+.side .panel[data-detail]:hover .open, .side .open:focus-visible { color: var(--hot); outline: none; }
+.side .panel[data-detail]:hover .head { border-bottom-color: var(--c); }
+/* full and maximal: designed details on the line (a bright lead-in, ticks by the end node; maximal adds a hatch block) */
+body:is(.q-full, .q-maximal) .side .head::before { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 6px; pointer-events: none;
+  background: linear-gradient(var(--c), var(--c)) var(--lead, left) bottom / 2.2rem 2px no-repeat,
+    repeating-linear-gradient(90deg, var(--c) 0 1px, transparent 1px 5px) var(--tick, right 0.9rem) bottom 0 / 1.6rem 5px no-repeat; }
+body.q-maximal .side .head::before { background: linear-gradient(var(--c), var(--c)) var(--lead, left) bottom / 2.2rem 2px no-repeat,
+    repeating-linear-gradient(90deg, var(--c) 0 1px, transparent 1px 5px) var(--tick, right 0.9rem) bottom 0 / 1.6rem 5px no-repeat,
+    repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 60%, transparent) 0 1px, transparent 1px 4px) var(--hatch, left 58%) bottom 2px / 1.4rem 4px no-repeat; }
+.side.right .head { --lead: right; --tick: left 0.9rem; --hatch: left 42%; }
+.side .big { font: 600 1.1rem/1.25 var(--f-ui); }
+.prog { display: flex; align-items: center; gap: 0.8rem; }
+.prog .steps { flex: 1; }
+.stepn { font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+.next { display: flex; align-items: center; gap: 0.65rem; font: 500 0.98rem/1.3 var(--f-ui); color: var(--text); margin-top: 0.15rem; }
+.next .k { font: 600 0.82rem/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
+/* a pixel double chevron between "Next" and the step; light runs through it now and then */
+.next .chev { width: 0.95rem; height: 0.7rem; flex: none; color: var(--c); shape-rendering: crispEdges; overflow: visible; }
+.next .chev rect { fill: currentColor; opacity: 0.45; animation: chevrun 3.2s steps(1) infinite; animation-delay: calc(var(--i) * 0.12s); }
+@keyframes chevrun { 0%, 70% { opacity: 0.45; } 74%, 82% { opacity: 1; } }
+.row2 { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; font: var(--w-lines) 0.78rem/1.3 var(--f-lines); color: var(--text-dim); }
+.row2 .k { color: var(--c); }
+.row2 .tot { font: 1.3rem/1 var(--f-digits); color: var(--hot); margin-right: 0.2rem; }
+#devcount b { font: 600 0.85rem/1 var(--f-ui); color: var(--c); }
+.range { display: flex; gap: 2px; }
+.range button { font: 500 0.7rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.2rem 0.4rem; cursor: pointer; }
+.range button[aria-pressed="true"] { color: var(--bg); background: var(--c); border-color: var(--c); }
+.axis { display: flex; justify-content: space-between; font: var(--w-lines) 0.6rem/1 var(--f-lines); color: var(--text-dim); margin-top: -0.2rem; }
+.big { font: 600 0.95rem/1.25 var(--f-ui); }
+.thin { display: flex; align-items: center; gap: 0.35rem; font: var(--w-lines) 0.75rem/1.4 var(--f-lines); color: var(--text-dim); }
+.thin .ico { color: var(--c); flex: none; }
+.money { font: 1.35rem/1 var(--f-digits); color: var(--hot); white-space: pre; }
+.money small { font: var(--w-lines) 0.55em/1 var(--f-lines); color: var(--text-dim); margin-left: 0.5rem; }
+.meter { height: 6px; background: var(--line); position: relative; }
+.meter::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); min-width: 2px; background: var(--c); }
+#spark { width: 100%; height: 3.4rem; overflow: visible; color: var(--c); }
+#spark text { font: 10px var(--f-mono); fill: var(--text-dim); }
+#devgraph { width: 100%; height: 7.2rem; overflow: visible; transition: height 0.5s var(--arrive), opacity 0.4s; }
+#devgraph text { font: 300 9px var(--f-lines); fill: var(--text-dim); }
+#devgraph .on { stroke: var(--c); }
+#devgraph .offl { stroke: var(--offline); stroke-dasharray: 2 4; }
+.devices[data-view="hive"] #devgraph { height: auto; }
+#devgraph .node { cursor: pointer; outline: none; }
+#devgraph .node:hover .hx, #devgraph .node:focus-visible .hx, #devgraph .node:hover circle, #devgraph .node:focus-visible circle { stroke: var(--hot); stroke-width: 2; }
+#devgraph .hx.on { fill: var(--c); fill-opacity: 0.75; stroke: var(--c); }
+#devgraph .hx.off { fill: transparent; stroke: var(--offline); }
+#devgraph .hx.lock { fill: url(#hatch); stroke: var(--text-dim); stroke-dasharray: 2 2; }
+#devgraph .grp { color: var(--text-dim); }
+#devgraph .beat { animation: beat 5s ease-in-out infinite; }
+@keyframes beat { 0%, 86%, 100% { fill-opacity: 0.75; } 92% { fill-opacity: 1; stroke: var(--hot); } }
+body.q-minimal #devgraph .beat { animation: none; }
+#devlist { display: none; max-height: 16rem; overflow-y: auto; }
+#devlist table { width: 100%; border-collapse: collapse; font: 0.88rem/1.2 var(--f-ui); }
+#devlist thead th { font: 500 0.68rem/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.3rem 0.3rem; }
+#devlist thead th .ico, #devlist td .ico { font-size: 1rem; }
+#devlist tr.g th { font: 500 0.68rem/1 var(--f-ui); letter-spacing: 0.08em; color: var(--text-dim); text-align: left; padding: 0.55rem 0.3rem 0.2rem; border-bottom: 1px solid var(--line); }
+#devlist td { padding: 0.3rem; vertical-align: middle; }
+#devlist td:first-child { width: 1.2rem; color: var(--text-dim); }
+#devlist td small { display: block; font: var(--w-lines) 0.7rem/1.2 var(--f-lines); color: var(--text-dim); }
+#devlist tr[data-dev] { cursor: pointer; outline: none; }
+#devlist tr[data-dev]:hover, #devlist tr[data-dev]:focus-visible { background: color-mix(in srgb, var(--c) 12%, transparent); }
+#devlist .st { color: var(--offline); }
+#devlist .st.ok { color: var(--c); filter: drop-shadow(0 0 3px var(--c)); }
+.devices[data-open="1"] #devgraph { display: none; }
+.devices[data-open="1"] #devlist { display: block; overflow-y: auto; }
+.devmore .ico { rotate: 180deg; }
+.devices[data-open="1"] .devmore .ico { rotate: 0deg; }
+/* beside the count, on the right: a framed button sized to its words, still big enough for a finger */
+.devices .row2 { align-items: center; }
+.devmore { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; min-height: 2.3rem; padding: 0 0.6rem 0 0.8rem; white-space: nowrap;
+  font: 500 0.82rem/1 var(--f-ui); letter-spacing: 0.04em; color: var(--c); background: color-mix(in srgb, var(--c) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%); }
+.devmore .ico { font-size: 1.1rem; transition: rotate 0.3s var(--arrive); }
+.devmore:hover, .devmore:focus-visible { color: var(--hot); background: color-mix(in srgb, var(--c) 16%, transparent); border-color: var(--c); outline: none; }
+/* the list scrolls inside a capped height; a fade at the bottom shows there's more */
+.devwrap { position: relative; }
+.devices:not([data-open="1"]) .devwrap::after { display: none; }
+.devwrap.more::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3rem; pointer-events: none;
+  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 92%, transparent)); }
+#devlist { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--c) 55%, transparent) transparent; padding-right: 0.3rem; }
+#devlist::-webkit-scrollbar { width: 6px; }
+#devlist::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--c) 55%, transparent); }
+/* statuses are words with a dot: they read as facts, not as buttons */
+/* the name takes the space that's left and shortens with "…"; status columns never wrap */
+#devlist td:nth-child(2) { width: 100%; max-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#devlist td:nth-child(n+3), #devlist th { white-space: nowrap; }
+#devlist .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
+#devlist .sw i { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; flex: none; }
+#devlist .sw.ok { color: var(--text); }
+#devlist .sw.ok i { background: var(--c); border-color: var(--c); box-shadow: 0 0 6px var(--c); }
+#devlist .sw.lock { color: var(--accent); }
+#devlist .sw.lock .ico { font-size: 0.85rem; }
+/* the device card's action: a real (framed) button, big enough to press */
+#devcard .act { margin-top: 0.4rem; min-height: 2.4rem; font: 500 0.85rem/1 var(--f-ui); color: var(--c); background: color-mix(in srgb, var(--c) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); cursor: pointer; }
+#devcard .act:hover, #devcard .act:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+#devcard .act:disabled { color: var(--offline); border-color: var(--line); background: none; cursor: default; }
+#devcard .act.busy { animation: pulse 0.8s ease-in-out infinite; }
+/* one device's details, next to where it was tapped */
+#devcard { position: fixed; z-index: 8; width: min(17rem, calc(100vw - 32px)); }
+#devcard[hidden] { display: none; }
+#devcard .cut { background: color-mix(in srgb, var(--c) 55%, transparent); }
+#devcard .in { background: rgba(5, 8, 11, 0.94); padding: 0.75rem 0.9rem; display: grid; gap: 0.35rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+#devcard .t { display: flex; align-items: center; gap: 0.5rem; font: 600 1rem/1.2 var(--f-ui); color: var(--text); }
+#devcard .t .ico { color: var(--c); font-size: 1.2rem; }
+#devcard .t button { margin-left: auto; background: none; border: 0; color: var(--text-dim); font: 1.1rem/1 var(--f-ui); cursor: pointer; }
+#devcard .row { display: flex; align-items: center; gap: 0.45rem; }
+#devcard .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--offline); flex: none; }
+#devcard .row.on .dot { background: var(--c); box-shadow: 0 0 6px var(--c); }
+#devcard .row.on { color: var(--text); }
+#devcard .row.lock { color: var(--text); }
+#devcard .row.lock .ico { color: var(--accent); flex: none; }
+#devcard dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.8rem; margin: 0.2rem 0 0; font-size: 0.75rem; }
+#devcard dt { color: var(--text-dim); }
+#devcard dd { margin: 0; color: var(--text); font-family: var(--f-mono); font-size: 0.72rem; }
+#devgraph .hx.net { fill: transparent; stroke: var(--c); }
+#devlist small { color: var(--text-dim); margin-left: 0.3rem; }
+#devcard .ex { font-size: 0.68rem; opacity: 0.7; }
+
+/* alert toast */
+#toast { position: absolute; top: 1%; left: 50%; transform: translate(-50%, -8px); width: min(92%, 24rem); opacity: 0; transition: opacity 0.4s, transform 0.5s var(--arrive); pointer-events: none; z-index: 3; }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#toast .in { display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.8rem; align-items: center; padding: 0.55rem 0.9rem 0.55rem 0.7rem; }
+#toast .ico { width: 2.2rem; height: 2.2rem; color: var(--c); filter: drop-shadow(0 0 5px var(--c)); stroke-width: 1.8; }
+#toast .msg-t { font: 500 0.9rem/1.35 var(--f-ui); }
+body[data-alert="warning"] #toast { animation: warnpulse 2s ease-in-out infinite; }
+body[data-alert="critical"] #toast { animation: critpulse 0.667s ease-in-out infinite; }
+#edge { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; box-shadow: inset 0 0 110px 14px var(--danger), inset 0 0 18px 2px var(--danger); }
+body[data-mood="room"][data-alert="critical"] #edge { animation: edgepulse 0.667s ease-in-out infinite; }
+body.q-minimal[data-mood="room"][data-alert="critical"] #edge { opacity: 0.55; }
+body.jolt #hub { animation: jolt 0.42s steps(2) 1; }
+
+/* reticle (idle event) */
+#reticle { position: fixed; z-index: 4; pointer-events: none; opacity: 0; color: var(--c); transition: all 0.55s var(--arrive); }
+#reticle i { position: absolute; width: 14px; height: 14px; border: 0 solid currentColor; }
+#reticle i:nth-child(1) { left: 0; top: 0; border-left-width: 2px; border-top-width: 2px; }
+#reticle i:nth-child(2) { right: 0; top: 0; border-right-width: 2px; border-top-width: 2px; }
+#reticle i:nth-child(3) { left: 0; bottom: 0; border-left-width: 2px; border-bottom-width: 2px; }
+#reticle i:nth-child(4) { right: 0; bottom: 0; border-right-width: 2px; border-bottom-width: 2px; }
+
+/* module page, unfolds from its button */
+#module { position: fixed; inset: 0; z-index: 6; pointer-events: none; clip-path: inset(50% 50% 50% 50%); transition: clip-path 0.7s var(--arrive); visibility: hidden; }
+#module.open { pointer-events: auto; visibility: visible; }
+#module.closing { pointer-events: none; }
+#module > .cut { position: absolute; inset: 5vh 5vw; --cut: 1.2rem; }
+#module > .cut > .in { position: relative; }
+body[data-mod="chat"] #module > .cut > .in { background: color-mix(in srgb, var(--bg) 90%, transparent); }
+#mod-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mod-slot { position: absolute; inset: 3.6rem 6% 1.4rem; display: flex; pointer-events: none; }
+body[data-mod="chat"] #mod-slot { left: calc(9vw + min(58vh, 34vw) - 5vw + 3vw); right: 4%; }
+#mod-slot > * { pointer-events: auto; }
+#mod-slot .chat { flex: 1; width: 100%; max-width: 50rem; margin: 0 auto; }
+#mod-slot .chat.panel { opacity: 1; clip-path: none; }
+#mod-empty { position: absolute; inset: 0; display: none; place-items: center; color: var(--line); font-size: 7rem; }
+#mod-empty .ico { stroke-width: 0.6; }
+body[data-mod="empty"] #mod-empty { display: grid; }
+#module .tab { position: absolute; left: 1.7rem; top: 1.1rem; display: flex; align-items: center; gap: 0.7rem; font: 700 1.1rem/1 var(--f-title); letter-spacing: 0.18em; color: var(--hot); text-transform: uppercase; }
+#module .tab .ico { color: var(--c); font-size: 1.25rem; }
+#module .back { position: absolute; right: 1.2rem; top: 0.8rem; display: flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; font-size: 1.3rem; color: var(--text); background: transparent; border: 1px solid var(--line); padding: 0; cursor: pointer; }
+#module .back:hover, #module .back:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
+body.folded #hub { transform: scale(0.93); opacity: 0.12; filter: blur(2px); }
+
+/* details: a callout opened full-screen. Same callout shapes, more room: the whole story behind the panel */
+#mod-slot .detail { flex: 1; width: 100%; max-width: 66rem; margin: 0 auto; overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 2rem 3.2rem; align-content: start; padding: 1.2rem 0.4rem 1rem; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--c) 55%, transparent) transparent; }
+#mod-slot .detail.wide { grid-template-columns: minmax(0, 1fr); }
+.detail .d-big { font: 600 1.6rem/1.2 var(--f-ui); color: var(--hot); }
+.detail p { margin: 0.6rem 0 0; font: var(--w-lines) 0.95rem/1.55 var(--f-lines); color: var(--text-dim); }
+.detail p b { color: var(--text); font-weight: 500; }
+.detail .d-num { display: flex; align-items: baseline; gap: 0.6rem; margin-top: 1.4rem; font: 3.2rem/1 var(--f-digits); color: var(--hot); }
+.detail .d-num small { font: var(--w-lines) 1rem/1 var(--f-lines); color: var(--text-dim); }
+.detail .d-line { height: 1.75rem; display: flex; align-items: flex-end; border-bottom: 1px solid color-mix(in srgb, var(--c) 55%, transparent); margin-bottom: 0.9rem; font: 500 1rem/1 var(--f-ui); color: var(--c); padding-bottom: 0.35rem; }
+.d-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+.d-steps li { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 0.8rem; align-items: center; padding: 0.55rem 0.8rem 0.55rem 0.6rem; border-left: 2px solid var(--line); }
+.d-steps .n { font: 1.1rem/1 var(--f-digits); color: var(--text-dim); text-align: right; }
+.d-steps b { display: block; font: 500 1rem/1.25 var(--f-ui); color: var(--text); }
+.d-steps small { display: block; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+.d-steps .w { font: 600 0.72rem/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); }
+.d-steps li.now { border-left-color: var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%); }
+.d-steps li.now .n { color: var(--hot); }
+.d-steps li.later b { color: var(--text-dim); font-weight: 400; }
+.d-chart { width: 100%; height: auto; overflow: visible; color: var(--c); }
+.d-chart text { font: 300 11px var(--f-lines); fill: var(--text-dim); }
+.d-chart .num { font: 11px var(--f-digits); fill: var(--hot); }
+.d-stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.4rem; margin-top: 1.2rem; }
+.d-stats div { font: var(--w-lines) 0.85rem/1.3 var(--f-lines); color: var(--text-dim); }
+.d-stats b { display: block; font: 1.7rem/1.1 var(--f-digits); color: var(--hot); margin-bottom: 0.2rem; }
+.d-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+.d-list li { display: grid; grid-template-columns: 4.2rem 1fr; gap: 0.8rem; font: 500 0.92rem/1.35 var(--f-ui); color: var(--text); }
+.d-list li span { font: var(--w-lines) 0.8rem/1.6 var(--f-lines); color: var(--text-dim); }
+.d-table { width: 100%; border-collapse: collapse; font: 0.92rem/1.25 var(--f-ui); }
+.d-table th { font: 500 0.72rem/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.6rem 0.5rem; white-space: nowrap; }
+.d-table td { padding: 0.5rem 0.6rem; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); vertical-align: middle; }
+.d-table td.num { font-family: var(--f-digits); color: var(--hot); white-space: pre; }
+.d-table tr.g th { padding-top: 1.1rem; letter-spacing: 0.08em; border-bottom: 1px solid var(--line); }
+.d-table td.mono { font: 0.82rem var(--f-mono); color: var(--text-dim); white-space: nowrap; }
+.d-table td small { display: block; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); }
+.d-table tr[data-dev] { cursor: pointer; }
+.d-table tr[data-dev]:hover { background: color-mix(in srgb, var(--c) 10%, transparent); }
+.detail .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
+.detail .sw i { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; flex: none; }
+.detail .sw.ok { color: var(--text); }
+.detail .sw.ok i { background: var(--c); border-color: var(--c); box-shadow: 0 0 6px var(--c); }
+.detail .sw.lock { color: var(--accent); }
+.detail .meter { height: 8px; margin-top: 1rem; }
+@media (orientation: portrait) { #mod-slot .detail { grid-template-columns: minmax(0, 1fr); } }
+
+/* sleep */
+body.sleep #hub > *:not(.core) { opacity: 0.06; transition: opacity 2s; }
+body.sleep .mod, body.sleep #ask-btn { opacity: 0.06; transition: opacity 2s; }
+body.sleep #toast, body.sleep #verses { opacity: 0; }
+body.sleep #frame { opacity: 0.3; }
+
+/* ignition: safe to start, any input */
+/* the waiting screen is see-through: the star field behind it is where the hyperspace lines will grow from */
+body.waiting #hub, body.waiting #frame, body.waiting #verses, body.waiting #edge, body.waiting #reticle { visibility: hidden; }
+#ignite { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: transparent; cursor: pointer; transition: opacity 0.4s; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#ignite.gone { opacity: 0; pointer-events: none; }
+#ignite.unlock { pointer-events: none; }
+/* the unlock (~1.35 s, then the jump): a wind-up, the bolts pull back one by one, the heavy ring turns and
+   opens, the inner ring collapses, the core swells and bursts. Slow-in, slow-out curves give it weight. */
+#ignite.unlock #ign-orb { animation: windup 1.45s cubic-bezier(0.45, 0, 0.25, 1) both; }
+@keyframes windup { 0% { scale: 1; } 14% { scale: 0.9; } 32% { scale: 1; } 100% { scale: 1.04; } }
+#ign-orb .bolt { opacity: 0.8; transition: translate 0.34s cubic-bezier(0.55, 0, 0.2, 1) calc(0.2s + var(--i) * 60ms), opacity 0.35s calc(0.45s + var(--i) * 60ms); }
+#ignite.unlock #ign-orb .bolt { translate: 20px 0; opacity: 0; }
+#ign-orb .turn { transition: rotate 0.75s cubic-bezier(0.65, 0, 0.25, 1) 0.55s, scale 0.45s cubic-bezier(0.7, 0, 0.84, 0) 1.15s, opacity 0.35s 1.25s; }
+#ignite.unlock #ign-orb .turn { rotate: 150deg; scale: 1.7; opacity: 0; }
+#ign-orb .shut { transition: scale 0.4s cubic-bezier(0.7, 0, 0.84, 0) 1s, opacity 0.3s 1.15s; }
+#ignite.unlock #ign-orb .shut { scale: 0.25; opacity: 0; }
+#ign-orb .core-g { transition: scale 0.5s cubic-bezier(0.16, 1, 0.3, 1) 1.15s, opacity 0.45s 1.3s; }
+#ignite.unlock #ign-orb .core-g { scale: 2.4; opacity: 0; }
+#ign-orb .burst { fill: none; stroke: var(--hot); opacity: 0; }
+#ignite.unlock #ign-orb .burst { animation: burst 0.8s ease-out 1.2s both; }
+@keyframes burst { from { opacity: 1; scale: 1; stroke-width: 3; } to { opacity: 0; scale: 6; stroke-width: 0.4; } }
+#ignite .stack > *, #ignite .ign-foot { transition: opacity 0.35s, translate 0.5s cubic-bezier(0.7, 0, 0.84, 0); }
+#ignite.unlock .stack > *, #ignite.unlock .ign-foot { opacity: 0; translate: 0 14px; }
+#ignite.unlock #ign-icons { transition-delay: 0.05s; } #ignite.unlock .safe { transition-delay: 0.1s; }
+/* the small core sits exactly in the middle of the screen, where the jump's lines start and the real core lands */
+#ign-orb { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: min(8rem, 22vh); height: min(8rem, 22vh); color: var(--primary); overflow: visible; }
+#ignite .stack { position: absolute; left: 16px; right: 16px; top: calc(50% + min(6.5rem, 17vh)); display: flex; flex-direction: column; align-items: center; gap: 1.5rem; text-align: center; }
+#ign-orb .spin { animation: spin 14s linear infinite; transform-origin: 0 0; }
+#ign-orb .spin2 { animation: spin 22s linear infinite reverse; transform-origin: 0 0; }
+#ign-orb .pulse { animation: breathe 2.6s ease-in-out infinite; transform-origin: 0 0; }
+#ign-what { margin: 0; font: 600 clamp(20px, 1.6rem, 34px)/1.2 var(--f-ui); letter-spacing: 0.06em; color: var(--hot); text-wrap: balance; }
+#ign-icons { display: flex; gap: 1.3rem; justify-content: center; color: var(--primary); font-size: 1.8rem; }
+#ign-icons .ico { stroke-width: 1.3; }
+.safe { display: flex; align-items: center; gap: 0.7rem; margin: 0; max-width: 46ch; font: 300 clamp(15px, 0.95rem, 22px)/1.45 var(--f-lines); color: var(--text); text-align: left; }
+.safe .ico { flex: none; font-size: 1.5rem; color: var(--primary); }
+.ign-foot { position: absolute; bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; justify-content: center; gap: 1.6rem; font: 300 0.8rem/1 var(--f-lines); color: var(--text-dim); }
+.ign-foot .clock { font-size: 0.85rem; }
+
+/* concept controls (not part of the design) */
+
+/* quality */
+body.q-reduced #orb .glow { filter: drop-shadow(0 0 4px var(--c)); }
+body.q-minimal #orb .glow, body.q-minimal .mod svg, body.q-minimal #frame .hi, body.q-minimal #toast .ico { filter: none !important; }
+body.q-minimal .brand, body.q-minimal #boot-title { text-shadow: none; }
+body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation: none !important; }
+
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes pulse { 50% { opacity: 0.45; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes breathe { 50% { transform: scale(1.25); opacity: 0.7; } }
+@keyframes warnpulse { 50% { filter: brightness(1.35); } }
+@keyframes critpulse { 50% { filter: brightness(1.7); } }
+@keyframes edgepulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+@keyframes jolt { 0% { transform: translate(-7px, 2px); } 50% { transform: translate(5px, -3px); } 100% { transform: none; } }
+@keyframes crt {
+  0% { opacity: 1; background: linear-gradient(transparent calc(50% - 1px), var(--hot) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)); }
+  35% { opacity: 1; background: linear-gradient(transparent 30%, color-mix(in srgb, var(--primary) 50%, transparent) 50%, transparent 70%); }
+  100% { opacity: 0; background: linear-gradient(transparent 0%, color-mix(in srgb, var(--primary) 10%, transparent) 50%, transparent 100%); }
+}
+@keyframes whiteflash { 0% { opacity: 0.85; background: var(--hot); } 100% { opacity: 0; background: var(--hot); } }
+@keyframes shock { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(260); } }
+
+/* portrait screens (phones, a tablet on its side, a tall kiosk): the core on top, buttons in a row
+   under it, the facts in two columns below; the page scrolls if it has to */
+@media (orientation: portrait) {
+  body { overflow-y: auto; }
+  body[data-layout] #hub {
+    --orb: min(74vw, 40vh);
+    height: auto; min-height: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto var(--orb) auto auto auto auto;
+    grid-template-areas: "strip strip" "core core" "mods mods" "chat chat" "left right" "log log";
+    padding: 1.4rem max(16px, env(safe-area-inset-left, 0px)) 1.4rem max(16px, env(safe-area-inset-right, 0px));
+  }
+  body[data-layout] #mods { grid-area: mods; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+  body[data-layout] .mcol { display: contents; }
+  .mod { width: 6.4rem; }
+  .mod .in { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 0.2rem; padding: 0.5rem 0.3rem; }
+  .mod .name { font-size: 0.8rem; }
+  body[data-layout="panels"] .side { display: flex; }
+  body[data-layout="panels"] #hub > .chat { height: 22rem; }
+  body[data-layout] .arm { display: none; }
+  .log { align-self: start; }
+  .log div:nth-last-child(n+3) { display: none; }
+  body[data-mod="chat"] #orb-dock { left: 50%; top: calc(5vh + 3.8rem); width: min(30vh, 56vw); translate: -50% 0; }
+  body[data-mod="chat"] #mod-slot { left: 4%; right: 4%; top: calc(3.8rem + min(30vh, 56vw) + 1rem); }
+}
+
+/* ---------- the real hub's additions (not in the concept) ---------- */
+.panel.gone { display: none !important; }
+.steps span.done { background: color-mix(in srgb, var(--c) 55%, var(--line)); }
+#mod-slot iframe { flex: 1; width: 100%; height: 100%; border: 1px solid var(--line); background: var(--bg); }
+#reply .a .look { color: var(--text-dim); font: var(--w-lines) 0.85rem/1.4 var(--f-lines); }
+#log-chat .msg.err .body { color: var(--danger); }
+#log-chat .copy { display: block; margin-top: 0.5rem; font: 500 0.75rem/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); padding: 0.35rem 0.6rem; cursor: pointer; }
+#log-chat .copy:hover, #log-chat .copy:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
+#restore-chat { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 5; font: 500 0.8rem/1 var(--f-ui); color: var(--text-dim); background: color-mix(in srgb, var(--bg) 80%, transparent); border: 1px solid var(--line); padding: 0.55rem 0.9rem; cursor: pointer; }
+#restore-chat:hover, #restore-chat:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+#restore-chat[hidden] { display: none; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.2-3.6 3.8-5.4 7-5.4s5.8 1.8 7 5.4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5M12 3.5C9.4 5.9 8.2 8.7 8.2 12s1.2 6.1 3.8 8.5"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/><circle cx="12" cy="12" r="1.2"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.2 22 20.5H2z"/><path d="M12 9.5v5.2M12 17.4v.4"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V5a1.5 1.5 0 0 1 3 0v6M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 4-2.5 6.5-6 6.5-2.6 0-4.2-1.4-5.4-3.6L4 14a1.5 1.5 0 0 1 2.6-1.5L8 14.5"/></symbol>
+    <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12"/><path d="M9 20h6M12 16.5V20M6.5 13l3.5-3.5 3 3 4.5-4.5"/></symbol>
+    <symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12l1.5-2.2M18.5 12l2.4.6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-4 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-test" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z" stroke-dasharray="2.5 2.5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z"/><path d="m8.6 12.2 2.4 2.4 4.6-4.8"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="1"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M7 14h10"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="7" y="3.5" width="10" height="17" rx="5"/><path d="M12 3.5V9"/></symbol>
+    <symbol id="i-touch" viewBox="0 0 24 24"><path d="M10 13V5.5a1.5 1.5 0 0 1 3 0V11l4.2.9a2 2 0 0 1 1.6 2.3L18 19.5H10.5L7 15.2a1.4 1.4 0 0 1 2.1-1.9z"/><path d="M6.5 6.5a4.5 4.5 0 0 1 10 0"/></symbol>
+    <symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 7h10a4.5 4.5 0 0 1 4.3 5.8l-1.1 3.8a2.3 2.3 0 0 1-3.8 1L14.5 16h-5l-1.9 1.6a2.3 2.3 0 0 1-3.8-1l-1.1-3.8A4.5 4.5 0 0 1 7 7z"/><path d="M7 10.5v3M5.5 12h3M16 11h.1M18 13h.1"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2.1 0 2.9 5.8 1.6 5.8 4.3 0 1.3-1.3 2.1-3 2.1-1.3 0-2.4-.5-2.9-1.5M12 6v1.8M12 16.3V18"/></symbol>
+    <symbol id="i-commit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M2 12h6.5M15.5 12H22"/></symbol>
+    <symbol id="i-net" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.6"/><circle cx="4.5" cy="5" r="1.8"/><circle cx="19.5" cy="5" r="1.8"/><circle cx="4.5" cy="19" r="1.8"/><circle cx="19.5" cy="19" r="1.8"/><path d="m6 6.4 4 3.8M18 6.4l-4 3.8M6 17.6l4-3.8M18 17.6l-4-3.8"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8h4l1.5-2.5h7L17 8h4v11H3z"/><circle cx="12" cy="13.2" r="3.6"/></symbol>
+    <symbol id="i-pi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M6 5v-2M9 5v-2M12 5v-2M15 5v-2M18 5v-2"/><rect x="8" y="9.5" width="6" height="5"/><path d="M17 10h1.5M17 14h1.5"/></symbol>
+    <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="13" height="10"/><path d="M6.5 19h5M9 14.5V19"/><rect x="17.5" y="4.5" width="4" height="14.5"/><path d="M19.5 7.5v.1"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/></symbol>
+    <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3.5v8"/><path d="M7.2 6.5a7 7 0 1 0 9.6 0"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+    <symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></symbol>
+    <symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 9.5c0-1.4 1.1-2.5 2.5-2.5h13c1.4 0 2.5 1.1 2.5 2.5v5c0 1.4-1.1 2.5-2.5 2.5h-3.2l-1.6-2.2a2 2 0 0 0-3.4 0L8.7 17H5.5A2.5 2.5 0 0 1 3 14.5z"/></symbol>
+    <symbol id="i-leader" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12v3.5M17 14h3"/></symbol>
+    <pattern id="hatchP" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" fill="currentColor"/></pattern>
+  </defs>
+</svg>
+
+<canvas id="net" aria-hidden="true"></canvas>
+<div id="verses" aria-hidden="true"></div>
+<svg id="frame" aria-hidden="true"></svg>
+<div id="shock" aria-hidden="true"></div>
+<div id="edge" aria-hidden="true"></div>
+
+<main id="hub">
+  <svg id="traces" aria-hidden="true"></svg>
+
+  <header class="strip panel">
+    <div class="brand" id="brand"></div>
+    <div class="fact" id="f-venue" title="Venue"><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
+    <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
+    <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>checking</span></div>
+    <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
+    <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
+  </header>
+
+  <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
+  <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
+
+  <section class="core alertable" data-state="idle" aria-label="Assistant: open the chat">
+    <svg id="orb" viewBox="-132 -132 264 264" aria-hidden="true">
+      <defs>
+        <radialGradient id="coreG">
+          <stop offset="0" style="stop-color: var(--hot)"/>
+          <stop offset="0.35" style="stop-color: var(--hot); stop-opacity: 0.9"/>
+          <stop offset="0.6" style="stop-color: var(--c); stop-opacity: 0.55"/>
+          <stop offset="1" style="stop-color: var(--c); stop-opacity: 0"/>
+        </radialGradient>
+        <linearGradient id="flareH"><stop offset="0" style="stop-color: var(--c); stop-opacity: 0"/><stop offset="0.5" style="stop-color: var(--hot)"/><stop offset="1" style="stop-color: var(--c); stop-opacity: 0"/></linearGradient>
+        <linearGradient id="flareV" x2="0" y2="1"><stop offset="0" style="stop-color: var(--c); stop-opacity: 0"/><stop offset="0.5" style="stop-color: var(--hot); stop-opacity: 0.8"/><stop offset="1" style="stop-color: var(--c); stop-opacity: 0"/></linearGradient>
+      </defs>
+      <g id="r-bars" class="rg mx" style="--op:.55"></g>
+      <g id="r-cross" class="rg mx" style="--op:.6"></g>
+      <g id="r-ticks" class="rg" style="--op:.5"></g>
+      <g id="r-seg" class="rg"><circle class="ring" r="84" stroke-width="2" stroke-dasharray="30 6 4 6"/></g>
+      <g id="r-sat" class="rg mx" style="--op:.75"><circle class="ring" r="77" stroke-width="0.8" stroke-dasharray="0.5 3"/><circle r="2.2" cx="77" cy="0" fill="currentColor"/></g>
+      <g id="r-arcs" class="rg glow"></g>
+      <g id="r-tri" class="rg mx" style="--op:.8"></g>
+      <g id="r-thin" class="rg" style="--op:.45"><circle class="ring" r="58" stroke-width="1" stroke-dasharray="1 4"/></g>
+      <path id="ripple" class="ring glow rg" stroke-width="1.5"/>
+      <g id="core-dot"><circle r="34" fill="url(#coreG)"/></g>
+      <g id="flare"><rect x="-160" y="-1.2" width="320" height="2.4" fill="url(#flareH)"/><rect x="-1" y="-70" width="2" height="140" fill="url(#flareV)"/></g>
+    </svg>
+    <span class="sr" id="state-word" aria-live="polite">idle</span>
+    <div id="ask-btn" class="panel"><div class="cut"><div class="in">
+      <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
+      <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
+      <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation"><svg class="ico"><use href="#i-hist"/></svg><b id="chat-n"></b></button>
+    </div></div></div>
+    <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
+    <!-- a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes) -->
+    <button id="restore-chat" type="button" hidden></button>
+    <div id="toast" class="alertable" role="status"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div class="msg-t" id="toast-msg"></div></div></div></div>
+    <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>No answer</b><span></span></div></div></div></div>
+  </section>
+
+  <section class="chat panel" aria-label="Chat">
+    <div class="cut" style="height:100%"><div class="in">
+      <div id="log-chat" aria-live="polite"></div>
+      <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"></form>
+    </div></div>
+  </section>
+
+  <aside class="side left">
+    <div class="panel" data-detail="project" title="From docs/current-focus.md"><div class="cut"><div class="in">
+      <div class="head"><span class="cap">Current Project</span><button class="open" type="button" aria-label="Current Project details"><svg class="ico"><use href="#i-open"/></svg></button></div>
+      <div class="big"></div>
+      <div class="prog"><div class="steps" id="steps" aria-hidden="true"></div><span class="stepn"></span></div>
+      <div class="next"><span class="k">Next</span><svg class="chev" viewBox="0 0 7 5" aria-hidden="true"><rect x="0.1" y="0.1" width="0.8" height="0.8" style="--i:0"/><rect x="1.1" y="1.1" width="0.8" height="0.8" style="--i:1"/><rect x="2.1" y="2.1" width="0.8" height="0.8" style="--i:2"/><rect x="1.1" y="3.1" width="0.8" height="0.8" style="--i:1"/><rect x="0.1" y="4.1" width="0.8" height="0.8" style="--i:0"/><rect x="4.1" y="0.1" width="0.8" height="0.8" style="--i:4"/><rect x="5.1" y="1.1" width="0.8" height="0.8" style="--i:5"/><rect x="6.1" y="2.1" width="0.8" height="0.8" style="--i:6"/><rect x="5.1" y="3.1" width="0.8" height="0.8" style="--i:5"/><rect x="4.1" y="4.1" width="0.8" height="0.8" style="--i:4"/></svg><span></span></div>
+    </div></div></div>
+    <div class="panel" data-detail="spend" title="What the AI service has cost this month"><div class="cut"><div class="in">
+      <div class="head"><span class="cap">AI Spend</span><button class="open" type="button" aria-label="AI Spend details"><svg class="ico"><use href="#i-open"/></svg></button></div>
+      <div class="row2"><span class="money" id="money"></span><span>this month</span></div>
+      <div class="meter" style="--fill:0%"></div>
+    </div></div></div>
+  </aside>
+
+  <aside class="side right">
+    <div class="panel" data-detail="commits" title="Commits per day on all branches"><div class="cut"><div class="in">
+      <div class="head"><span class="cap">Commits</span><button class="open" type="button" aria-label="Commits details"><svg class="ico"><use href="#i-open"/></svg></button></div>
+      <div class="row2"><span><b class="tot" id="commit-total"></b> commits</span><span class="range" id="range" role="group" aria-label="How many days"></span></div>
+      <svg id="spark" aria-label="Commits per day"></svg>
+      <div class="axis"><span id="ax0"></span><span id="ax1"></span></div>
+    </div></div></div>
+    <div class="panel devices" data-detail="devices" data-view="graph"><div class="cut"><div class="in">
+      <div class="head"><span class="cap">Devices</span><button class="open" type="button" aria-label="Devices details"><svg class="ico"><use href="#i-open"/></svg></button></div>
+      <div class="row2"><span id="devcount"></span><button class="devmore" id="devtoggle" type="button" aria-expanded="false"><span id="devmore-t">List all</span><svg class="ico"><use href="#i-chev"/></svg></button></div>
+      <svg id="devgraph" preserveAspectRatio="xMidYMid meet" aria-label="Devices: tap one for details"></svg>
+      <div class="devwrap"><div id="devlist"></div></div>
+    </div></div></div>
+  </aside>
+
+  <section class="log panel" id="typelog" aria-label="Recent activity"></section>
+
+  <section class="arm panel alertable" aria-label="The arm's joints">
+    <div class="cut"><div class="in">
+      <div class="arm-head"><div class="name"></div><div class="word" id="arm-word"></div></div>
+      <div class="joints" id="joints"></div>
+    </div></div>
+  </section>
+</main>
+
+<div id="boot-title-wrap" aria-hidden="true"><span id="boot-title"></span></div>
+<div id="boot-greet" aria-live="polite"></div>
+<div id="bootlines" aria-live="polite"></div>
+<div id="reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<div id="module" role="dialog" aria-modal="true" aria-labelledby="mod-title">
+  <div class="cut"><div class="in">
+    <canvas id="mod-canvas"></canvas>
+    <div id="mod-empty" aria-hidden="true"><svg class="ico"><use href="#i-test"/></svg></div>
+    <div id="mod-slot"></div>
+    <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title"></span></div>
+    <button class="back" id="mod-back" type="button" aria-label="Back to the hub"><svg class="ico"><use href="#i-back"/></svg></button>
+  </div></div>
+</div>
+<div id="orb-dock" aria-hidden="true"></div>
+
+<div id="flash" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="devcard" role="dialog" aria-label="Device details" hidden><div class="cut"><div class="in"></div></div></div>
+
+<div id="ignite" role="button" tabindex="0" aria-label="Start the hub">
+    <svg id="ign-orb" viewBox="-70 -70 140 140" aria-hidden="true">
+      <g class="turn"><g class="spin"><circle r="62" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="34 8 6 8"/></g></g>
+      <g class="shut"><g class="spin2"><circle r="52" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1 4" opacity="0.7"/></g></g>
+      <g class="bolts"><g transform="rotate(22.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:0"/></g><g transform="rotate(67.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:1"/></g><g transform="rotate(112.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:2"/></g><g transform="rotate(157.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:3"/></g><g transform="rotate(202.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:4"/></g><g transform="rotate(247.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:5"/></g><g transform="rotate(292.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:6"/></g><g transform="rotate(337.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:7"/></g></g>
+      <g class="core-g"><g class="pulse"><circle r="12" fill="currentColor" opacity="0.9"/><circle r="22" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/></g></g>
+      <circle class="burst" r="14"/>
+    </svg>
+  <div class="stack">
+    <p id="ign-what">Press any key to start</p>
+    <div id="ign-icons" aria-hidden="true"></div>
+    <p class="safe"><svg class="ico"><use href="#i-shield"/></svg><span>Safe to start. This only opens the hub; no robot moves.</span></p>
+  </div>
+  <div class="ign-foot"><span id="ign-venue"></span><span><span class="clock" id="ign-clock"></span><span class="ampm" id="ign-ampm"></span></span></div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const body = document.body;
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const TAU = Math.PI * 2;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const reducedOS = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const params = new URLSearchParams(location.search);  // ?quality=maximal, ?startup=assemble, ?sound=0, ?full=0
+const S = {
+  state: "idle", alert: "none", mood: "room", title: "", layout: "launcher", startup: "hyperspace", clock24: true,
+  quality: reducedOS ? "minimal" : "full",
+  sound: params.get("sound") !== "0", booting: false, booted: false, sleeping: false, moduleOpen: null,
+  lastInput: performance.now(), sleepGuard: 0, readyAt: 0, loud: 0, reveal: 1e9, igniteAt: 0, spinBoost: 1,
+  orbC: { x: innerWidth / 2, y: innerHeight / 2 }, hyper: null,
+  modules: [], impact: true,
+  // all from the brain: /theme.json, /api/hub, /api/status, /api/arm, /api/project, /api/spend, /api/commits, /api/devices
+  themeOk: false, status: null, arm: null, project: null, spend: null, recent: [], page: {}, clockOffset: 0,
+  chat: [], asking: false, greet: null, greetP: null, readyP: null, errorUntil: 0,
+  sleepAfterMs: 300_000, resetAfterMs: 180_000, startGuardUntil: 0, resetting: false,
+};
+body.dataset.alert = "none"; body.dataset.mood = "room"; body.dataset.layout = S.layout;
+const portrait = () => innerHeight > innerWidth;
+body.classList.add("q-" + S.quality, "pre-frame");
+
+/* ---------- sound (generated, WebAudio) ---------- */
+let ac = null, master = null;
+function audio() {
+  if (!ac) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ac = new AC(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination);
+  }
+  if (ac.state === "suspended") ac.resume();
+  return ac;
+}
+function tone({ f = 440, f2 = 0, type = "sine", dur = 0.15, vol = 0.1, attack = 0.005, delay = 0, lp = 0 }) {
+  if (!S.sound || !ac) return;
+  const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  let node = o;
+  if (lp) { const fl = ac.createBiquadFilter(); fl.type = "lowpass"; fl.frequency.value = lp; o.connect(fl); node = fl; }
+  node.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+function whoosh({ dur = 1.5, vol = 0.12, from = 150, to = 1400, attack = 0.7, delay = 0 }) {
+  if (!S.sound || !ac) return;
+  const t = ac.currentTime + delay, len = Math.floor(ac.sampleRate * dur);
+  const buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const fl = ac.createBiquadFilter(); fl.type = "lowpass";
+  fl.frequency.setValueAtTime(from, t); fl.frequency.exponentialRampToValueAtTime(to, t + dur * 0.85);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(master); src.start(t);
+}
+const SFX = {
+  ignition() { tone({ f: 40, f2: 90, dur: 1.9, vol: 0.45, attack: 0.5 }); whoosh({}); tone({ f: 2400, f2: 800, dur: 0.25, vol: 0.03 }); },
+  lock(i) { tone({ f: 520 * Math.pow(1.122, i), type: "triangle", dur: 0.09, vol: 0.05 }); tone({ f: 1800, type: "triangle", dur: 0.02, vol: 0.03 }); },
+  unlock() {
+    // follows the unlock: a low breath on the wind-up, a clack per bolt, a heavy thunk and a slow servo groan as the
+    // ring turns, a latch clank as it opens, then the chime with the burst
+    tone({ f: 70, f2: 50, dur: 0.35, vol: 0.18, attack: 0.08 });
+    for (let i = 0; i < 8; i++) { const t = 0.2 + i * 0.06; whoosh({ dur: 0.05, vol: 0.07, from: 4200, to: 2400, attack: 0.003, delay: t }); tone({ f: 1400 - i * 70, f2: 600, type: "square", dur: 0.03, vol: 0.015, lp: 3200, delay: t }); }
+    tone({ f: 95, f2: 34, dur: 0.8, vol: 0.42, attack: 0.006, delay: 0.55 }); whoosh({ dur: 0.3, vol: 0.06, from: 900, to: 200, attack: 0.005, delay: 0.55 });
+    tone({ f: 140, f2: 420, type: "sawtooth", dur: 0.75, vol: 0.035, attack: 0.2, lp: 1100, delay: 0.58 });
+    whoosh({ dur: 0.12, vol: 0.12, from: 2600, to: 900, attack: 0.004, delay: 1.15 }); tone({ f: 220, f2: 160, type: "triangle", dur: 0.25, vol: 0.08, delay: 1.15 });
+    tone({ f: 1319, type: "triangle", dur: 0.8, vol: 0.035, delay: 1.22 }); tone({ f: 1976, type: "triangle", dur: 0.9, vol: 0.025, delay: 1.28 });
+  },
+  sweep() { tone({ f: 160, f2: 1300, type: "triangle", dur: 0.9, vol: 0.06, attack: 0.35, lp: 2600 }); },
+  shock() { tone({ f: 90, f2: 40, dur: 1.1, vol: 0.3, attack: 0.01 }); whoosh({ dur: 1.2, vol: 0.08, from: 3000, to: 200, attack: 0.02 }); },
+  tick() { tone({ f: 2300, type: "triangle", dur: 0.025, vol: 0.018 }); },
+  line() { tone({ f: 880, dur: 0.2, vol: 0.05 }); },
+  decode() { tone({ f: rand(1200, 2400), type: "square", dur: 0.02, vol: 0.012, lp: 3000 }); },
+  title() { for (let i = 0; i < 3; i++) tone({ f: [523, 659, 784][i], dur: 1.4, vol: 0.035, attack: 0.08, delay: i * 0.05 }); },
+  land() { tone({ f: 300, f2: 120, type: "triangle", dur: 0.5, vol: 0.06, lp: 1200 }); whoosh({ dur: 0.7, vol: 0.05, from: 2000, to: 300, attack: 0.05 }); },
+  hyper() {
+    // follows the star speed: a hum that rises steadily with it, then the sustained roar at full speed
+    if (!S.sound || !ac) return;
+    const t = ac.currentTime, rp = HYPER.ramp / 1000, hd = HYPER.hold / 1000, end = t + rp + hd;
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = "sawtooth"; fl.type = "lowpass";
+    o.frequency.setValueAtTime(40, t); o.frequency.exponentialRampToValueAtTime(140, t + rp); o.frequency.exponentialRampToValueAtTime(220, end);
+    fl.frequency.setValueAtTime(220, t); fl.frequency.exponentialRampToValueAtTime(2200, t + rp); fl.frequency.exponentialRampToValueAtTime(3500, end);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + rp); g.gain.linearRampToValueAtTime(0.15, end); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.15);
+    o.connect(fl); fl.connect(g); g.connect(master); o.start(t); o.stop(end + 0.2);
+    whoosh({ dur: rp + hd, vol: 0.2, from: 200, to: 7000, attack: rp, delay: 0 });
+  },
+  arrive() { const d = HYPER.brake / 1000; tone({ f: 70, f2: 32, dur: d, vol: 0.4, attack: 0.01 }); whoosh({ dur: d, vol: 0.12, from: 5000, to: 160, attack: 0.01 }); },
+  blip() { tone({ f: 900, f2: 1350, dur: 0.08, vol: 0.07 }); },
+  open() { tone({ f: 300, f2: 900, type: "triangle", dur: 0.45, vol: 0.06, attack: 0.1, lp: 2000 }); whoosh({ dur: 0.6, vol: 0.05, from: 400, to: 3000, attack: 0.25 }); },
+  close() { tone({ f: 900, f2: 300, type: "triangle", dur: 0.35, vol: 0.05, lp: 2000 }); },
+  listen() { tone({ f: 523, dur: 0.12, vol: 0.07 }); tone({ f: 784, dur: 0.2, vol: 0.07, delay: 0.1 }); },
+  done() { tone({ f: 784, dur: 0.12, vol: 0.06 }); tone({ f: 523, dur: 0.2, vol: 0.06, delay: 0.1 }); },
+  relock() { tone({ f: 1600, type: "triangle", dur: 0.03, vol: 0.05 }); tone({ f: 2100, type: "triangle", dur: 0.03, vol: 0.05, delay: 0.07 }); },
+  shimmer() { for (let i = 0; i < 4; i++) tone({ f: rand(1900, 3400), dur: 1.2, vol: 0.012, attack: 0.3, delay: i * 0.06 }); },
+  warning() { tone({ f: 660, f2: 630, type: "triangle", dur: 0.22, vol: 0.09 }); tone({ f: 495, f2: 470, type: "triangle", dur: 0.32, vol: 0.09, delay: 0.24 }); },
+  critical() { tone({ f: 196, type: "sawtooth", dur: 0.17, vol: 0.11, lp: 1000 }); tone({ f: 165, type: "sawtooth", dur: 0.2, vol: 0.11, lp: 1000, delay: 0.21 }); },
+  error() { tone({ f: 330, f2: 220, type: "triangle", dur: 0.4, vol: 0.08 }); },
+};
+
+/* ---------- colors and number formats ---------- */
+let mainRGB = [41, 212, 255], lineRGB = [31, 61, 72];
+function hexToRgb(h) { h = h.trim().replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); }
+function readColors() {
+  const cs = getComputedStyle(body), c = cs.getPropertyValue("--c").trim();
+  mainRGB = hexToRgb(c.startsWith("#") ? c : cs.getPropertyValue("--primary"));
+  lineRGB = hexToRgb(cs.getPropertyValue("--line"));
+  if (S.quality === "minimal") drawStillGrid();
+}
+const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+// fixed-width numbers: a sign slot and padded digits, so values don't shift.
+// DSEG fonts use "!" as a digit-wide blank; other digit fonts use the figure space.
+function padChar() { return /DSEG/.test(getComputedStyle(document.documentElement).getPropertyValue("--f-digits")) ? "!" : " "; }
+let PAD = "!";
+function fmt(v, intDigits = 3, dec = 1) {
+  const [i, f] = Math.abs(v).toFixed(dec).split(".");
+  return (v < 0 ? "-" : PAD) + PAD.repeat(Math.max(0, intDigits - i.length)) + i + (dec ? "." + f : "");
+}
+function clockText() {
+  const d = new Date(Date.now() + S.clockOffset), p = (n) => String(n).padStart(2, "0");
+  if (S.clock24) return [`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`, ""];
+  const h = d.getHours() % 12 || 12;
+  return [`${p(h)}:${p(d.getMinutes())}:${p(d.getSeconds())}`, d.getHours() < 12 ? "AM" : "PM"];
+}
+function setMoney() {
+  const s = S.spend;
+  if (!s?.available) return;
+  $("#money").innerHTML = `${usd(s.spent_usd)}${s.budget_usd ? `<small>of ${usd(s.budget_usd, 0)}</small>` : ""}`;
+  const fill = s.budget_usd ? Math.min(100, (100 * s.spent_usd) / s.budget_usd) : 0;
+  $('.panel[data-detail="spend"] .meter').style.setProperty("--fill", `${fill}%`);
+}
+
+/* ---------- far layer: the network ---------- */
+const cv = $("#net"), cx = cv.getContext("2d");
+let W = 0, H = 0, dots = [], fires = [], rain = [], stars = [];
+const pointer = { x: -1e4, y: -1e4 };
+const NET = { link: 140, push: 170 };
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fxc.width = cv.width; fxc.height = cv.height; fxx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  seedNetwork(); buildFrame(); layoutTraces();
+  if (S.quality === "minimal") drawStillGrid();
+}
+function seedNetwork() {
+  const per = S.quality === "reduced" ? 45 : S.quality === "maximal" ? 120 : 90;
+  const n = Math.max(40, Math.round((W * H) / 1e6 * per));
+  dots = Array.from({ length: n }, () => {
+    const a = rand(0, TAU), v = rand(4, 14), x = rand(0, W), y = rand(0, H);
+    return { x, y, rx: x, ry: y, bvx: Math.cos(a) * v, bvy: Math.sin(a) * v, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vis: 1 };
+  });
+  fires = []; rain = [];
+  const edge = Math.max(26, W * 0.03), cols = S.quality === "maximal" ? 5 : 3;
+  for (const side of [0, 1]) for (let i = 0; i < cols; i++) {
+    const x = side ? W - 26 - i * (edge / 3) : 26 + i * (edge / 3);
+    rain.push({ x, y: rand(-H, H), speed: rand(30, 60), len: Math.floor(rand(6, 16)) });
+  }
+}
+function drawStillGrid() {
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = rgba(lineRGB, 0.9);
+  for (let y = 16; y < H; y += 32) for (let x = 16; x < W; x += 32) cx.fillRect(x, y, 1.2, 1.2);
+}
+// pulses fire along links; "in" walks toward the assistant (thinking), "out" walks away (speaking)
+function pickNext(d, mode) {
+  let best = null, bestScore = -Infinity;
+  for (const o of dots) {
+    if (o === d || !o.vis) continue;
+    const dx = o.x - d.x, dy = o.y - d.y;
+    if (dx * dx + dy * dy > NET.link * NET.link) continue;
+    const toOrb = Math.hypot(o.x - S.orbC.x, o.y - S.orbC.y);
+    const score = mode === "in" ? -toOrb + rand(0, 60) : mode === "out" ? toOrb + rand(0, 60) : rand(0, 1);
+    if (score > bestScore) { bestScore = score; best = o; }
+  }
+  return best;
+}
+function startFire(mode) {
+  let d = null, bestScore = -Infinity;
+  for (let k = 0; k < 14; k++) {
+    const c = dots[Math.floor(Math.random() * dots.length)];
+    if (!c || !c.vis) continue;
+    const toOrb = Math.hypot(c.x - S.orbC.x, c.y - S.orbC.y);
+    const score = mode === "in" ? toOrb : mode === "out" ? -toOrb : Math.random();
+    if (score > bestScore) { bestScore = score; d = c; }
+  }
+  if (!d) return;
+  const total = Math.floor(rand(3, mode ? 7 : 5)), b = pickNext(d, mode);
+  if (b) fires.push({ a: d, b, t: 0, idx: 0, total, mode });
+}
+let nextFire = 0;
+function stepNetwork(dt, now) {
+  cx.clearRect(0, 0, W, H);
+  if (!S.booted && !S.booting) { drawStars(dt, now, "wait"); return; }
+  if (S.hyper && S.hyper.phase === "jump") { drawStars(dt, now, "jump"); return; }
+  // assemble without hyperspace: the waiting stars fade while some of them glide into place as the network's dots
+  const morph = S.morph ? clamp((now - S.morph.t0) / 1600, 0, 1) : 1, mo = 1 - Math.pow(1 - morph, 3);
+  if (morph < 1) drawStars(dt, now, "wait", 1 - mo); else if (S.morph) { S.morph = null; stars = []; }
+  const L = NET.link, L2 = L * L, R = NET.push, R2 = R * R, ox = W / 2, oy = H / 2;
+  // hyperspace arrival: a hard brake (fast at first, settling slowly), so streaks start long and shrink to dots
+  // a long ease-out (a rollercoaster coming to a halt); the network starts white-hot and dims as it settles
+  const arriving = S.hyper && S.hyper.phase === "arrive" ? clamp((now - S.hyper.t0) / HYPER.brake, 0, 1) : 1;
+  const brake = (k) => 1 - Math.pow(1 - k, 3.2), ease = brake(arriving), back = brake(Math.max(0, arriving - 0.06));
+  const heat = arriving < 1 ? Math.pow(1 - arriving, 1.6) : 0, netRGB = heat ? mainRGB.map((c, i) => Math.round(c + ([234, 252, 255][i] - c) * heat)) : mainRGB;
+  for (const d of dots) {
+    const dx = d.x - pointer.x, dy = d.y - pointer.y, dd = dx * dx + dy * dy;
+    if (dd < R2 && dd > 1) { const dist = Math.sqrt(dd), f = (1 - dist / R) * 260 * dt; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+    d.vx += (d.bvx - d.vx) * Math.min(1, dt * 1.2); d.vy += (d.bvy - d.vy) * Math.min(1, dt * 1.2);
+    d.x += d.vx * dt; d.y += d.vy * dt;
+    if (d.x < -20) d.x = W + 20; else if (d.x > W + 20) d.x = -20;
+    if (d.y < -20) d.y = H + 20; else if (d.y > H + 20) d.y = -20;
+    d.rx = ox + (d.x - ox) * ease; d.ry = oy + (d.y - oy) * ease;
+    if (morph < 1) { d.rx = d.fx + (d.rx - d.fx) * mo; d.ry = d.fy + (d.ry - d.fy) * mo; }
+    d.vis = clamp((S.reveal - Math.hypot(d.x - ox, d.y - oy)) / 120, 0, 1);
+  }
+  const bright = S.sleeping ? 0.6 : 1;
+  cx.lineWidth = 1;
+  if (arriving < 1) {
+    // hyperspace arrival: dots streak in from the center to their places
+    const ta = 0.85 * (1 - arriving * 0.75);
+    for (const d of dots) {
+      const tx = ox + (d.x - ox) * back, ty = oy + (d.y - oy) * back;
+      if (Math.abs(d.rx - tx) + Math.abs(d.ry - ty) < 1) continue;
+      const g = cx.createLinearGradient(tx, ty, d.rx, d.ry);
+      g.addColorStop(0, rgba(netRGB, 0)); g.addColorStop(1, rgba(netRGB, ta));
+      cx.strokeStyle = g; cx.beginPath(); cx.moveTo(tx, ty); cx.lineTo(d.rx, d.ry); cx.stroke();
+    }
+  }
+  for (let i = 0; i < dots.length; i++) {
+    const a = dots[i];
+    if (!a.vis) continue;
+    for (let j = i + 1; j < dots.length; j++) {
+      // while the stars glide into place, links follow where the dots are drawn, so they form as dots meet
+      const b = dots[j], dx = morph < 1 ? a.rx - b.rx : a.x - b.x, dy = morph < 1 ? a.ry - b.ry : a.y - b.y, dd = dx * dx + dy * dy;
+      if (dd < L2) {
+        const al = (1 - Math.sqrt(dd) / L) * (0.32 + heat * 0.6) * bright * Math.min(a.vis, b.vis) * Math.max(ease, heat) * mo * mo;
+        if (al < 0.01) continue;
+        cx.strokeStyle = rgba(netRGB, al);
+        cx.beginPath(); cx.moveTo(a.rx, a.ry); cx.lineTo(b.rx, b.ry); cx.stroke();
+      }
+    }
+  }
+  for (const d of dots) {
+    if (!d.vis) continue;
+    cx.fillStyle = rgba(netRGB, (0.55 + heat * 0.45) * d.vis * bright);
+    const ds = 2 + heat * 1.5; cx.fillRect(d.rx - ds / 2, d.ry - ds / 2, ds, ds);
+  }
+  if (S.quality !== "reduced" && S.booted) {
+    const mode = S.state === "thinking" ? "in" : S.state === "speaking" ? "out" : null;
+    if (now > nextFire) {
+      startFire(mode);
+      const gap = mode === "in" ? rand(200, 420) : mode === "out" ? rand(120, 300) / (0.3 + S.loud) : S.alert === "critical" && S.mood === "room" ? rand(500, 1200) : rand(2000, 6000);
+      nextFire = now + gap;
+    }
+    for (const f of fires) {
+      f.t += dt * 1.7;
+      const head = Math.min(1, f.t), tail = clamp(f.t - 0.75, 0, 1);
+      const hx = f.a.rx + (f.b.rx - f.a.rx) * head, hy = f.a.ry + (f.b.ry - f.a.ry) * head;
+      const tx = f.a.rx + (f.b.rx - f.a.rx) * tail, ty = f.a.ry + (f.b.ry - f.a.ry) * tail;
+      if (Math.abs(hx - tx) + Math.abs(hy - ty) > 0.5) {
+        // the trail fades from bright at the dot to nothing behind it
+        const g = cx.createLinearGradient(tx, ty, hx, hy);
+        g.addColorStop(0, rgba(mainRGB, 0)); g.addColorStop(1, rgba(mainRGB, 0.85));
+        cx.strokeStyle = g; cx.lineWidth = 1.4;
+        cx.beginPath(); cx.moveTo(tx, ty); cx.lineTo(hx, hy); cx.stroke();
+        cx.lineWidth = 1;
+      }
+      // the dot fades in at the start of its run and out at the end
+      const prog = clamp((f.idx + head) / f.total, 0, 1), alpha = Math.sin(Math.PI * prog);
+      if (f.t <= 1) {
+        cx.fillStyle = `rgba(234,252,255,${(0.95 * alpha).toFixed(3)})`;
+        cx.shadowColor = rgba(mainRGB, alpha); cx.shadowBlur = 10;
+        cx.beginPath(); cx.arc(hx, hy, 2.2, 0, TAU); cx.fill();
+        cx.shadowBlur = 0;
+      }
+      if (f.t >= 1 && !f.passed) {
+        f.passed = true;
+        if (f.idx + 1 < f.total) { const nb = pickNext(f.b, f.mode); if (nb) fires.push({ a: f.b, b: nb, t: 0, idx: f.idx + 1, total: f.total, mode: f.mode }); }
+      }
+    }
+    fires = fires.filter((f) => f.t < 1.75);
+  }
+  if ((S.quality === "full" || S.quality === "maximal") && S.booted && !S.sleeping) {
+    for (const r of rain) {
+      r.y += r.speed * dt;
+      if (r.y - r.len * 9 > H) { r.y = rand(-200, 0); r.speed = rand(30, 60); }
+      for (let k = 0; k < r.len; k++) {
+        const y = r.y - k * 9;
+        if (y < 0 || y > H) continue;
+        cx.fillStyle = rgba(mainRGB, (k === 0 ? 0.8 : 0.35) * (1 - k / r.len));
+        cx.fillRect(r.x, y, 2, 2);
+      }
+    }
+  }
+}
+// hyperspace: a 3D star field. The waiting screen shows it barely drifting, so the lines have stars to grow
+// from. Then one smooth speed curve (no fast-slow-fast). Ramp: stars drift outward, trails stretching and
+// brightening, the speed building gently (slow in). Hold: full speed, complete lines reaching the edges.
+// The trails are motion blur, exaggerated: their length grows faster than the speed, so the lines get long
+// while each star still moves only a little per frame and keeps its place. Then the impact frame, flash and brake.
+const HYPER = { ramp: 2000, hold: 700, brake: 2600, stars: 3000, drift: 0.03 };
+HYPER.total = HYPER.ramp + HYPER.hold;
+const Z_NEAR = 0.02, Z_FAR = 3;
+const starF = () => Math.min(W, H) * 0.55;
+function newStar(far) {
+  // a random spot on the screen (and a little past it) at a random depth, so the edges fill as evenly as the
+  // middle; recycled stars start far away and fade in, so some lines appear out of nowhere
+  // a third gather around the middle (a bell curve), so the place you look at isn't empty
+  const z = far ? rand(Z_FAR * 0.7, Z_FAR) : rand(0.3, Z_FAR), f = z / starF(), mid = Math.random() < 0.3;
+  const spot = () => (mid ? (Math.random() + Math.random() + Math.random() - 1.5) * 0.2 : rand(-0.56, 0.56));
+  return { x: spot() * W * f, y: spot() * H * f, z, w: rand(0.3, 1), ph: rand(0, TAU), age: 0 };
+}
+function seedStars(shown) { stars = Array.from({ length: HYPER.stars }, () => Object.assign(newStar(false), { age: shown ? 1 : 0 })); }
+// 0 at the start, 1 at full speed: a low power, so it builds steadily rather than all at once
+const hyperK = (ms) => Math.pow(clamp(ms / HYPER.ramp, 0, 1), 1.5);
+const LV = 24, SEG = 12;  // brightness steps and pieces per line: a gradient drawn in batches, so thousands stay cheap
+let lastLines = [];       // the last jump frame's lines, for the impact frame
+function drawStars(dt, now, mode, fade = 1) {
+  if (!stars.length) seedStars(mode === "wait");
+  const jump = mode === "jump", ms = jump ? now - S.hyper.t0 : 0, k = jump ? hyperK(ms) : 0, F = starF();
+  const p = jump ? clamp(ms / HYPER.ramp, 0, 1) : 0;
+  // speed is exponential: the dots barely crawl at first, then race. The trails lead: they stretch steadily
+  // from the start, so the lines grow long while the dots are still slow (anticipation), then the speed catches up
+  const rush = (Math.exp(4.2 * p) - 1) / (Math.exp(4.2) - 1);
+  const speed = HYPER.drift + 2.4 * rush;                         // z units per second; the waiting drift is the start
+  const trail = jump ? 0.002 + 3.5 * p * p : 0.0015;  // blur length in z: a dot at first, a full line at the end
+  const hold = jump ? clamp((ms - HYPER.ramp) / HYPER.hold, 0, 1) : 0;
+  const shake = rush * rush * 3 + hold * 2, ox = W / 2 + rand(-shake, shake), oy = H / 2 + rand(-shake, shake);
+  if (k > 0) {
+    // the whole view brightens and turns faintly blue as the speed builds
+    const glow = 0.15 * k, g = cx.createRadialGradient(ox, oy, 0, ox, oy, Math.hypot(W, H) * 0.6);
+    g.addColorStop(0, rgba(mainRGB, glow)); g.addColorStop(1, rgba(mainRGB, glow * 0.35));
+    cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+  }
+  const bright = (0.7 + 0.5 * Math.pow(p, 1.2)) * fade, width = 0.8 + 1.3 * k, M = 40;
+  const lines = Array.from({ length: 2 * LV }, () => []), points = Array.from({ length: 2 * LV }, () => []);
+  if (jump) lastLines = [];
+  for (const s of stars) {
+    s.z -= speed * dt; s.age = Math.min(1, s.age + dt / 0.6);
+    const zt = Math.min(Z_FAR, s.z + trail), x1 = ox + (s.x / zt) * F, y1 = oy + (s.y / zt) * F;
+    // a star leaves when its tail leaves the screen, so lines sweep all the way out past the edges
+    if (s.z < Z_NEAR || x1 < -M || x1 > W + M || y1 < -M || y1 > H + M) { Object.assign(s, newStar(true)); continue; }
+    const x2 = ox + (s.x / s.z) * F, y2 = oy + (s.y / s.z) * F, dx = x2 - x1, dy = y2 - y1, len = Math.abs(dx) + Math.abs(dy);
+    const near = clamp(1.25 - s.z / Z_FAR, 0.15, 1), twinkle = jump ? 1 : 0.8 + 0.2 * Math.sin(now * 0.0016 + s.ph);
+    const a = bright * near * (0.55 + 0.45 * s.w) * s.age * twinkle, wide = s.w > 0.75 ? 1 : 0;
+    if (len > 3) {
+      // faint tail to bright head: short pieces, each in its brightness batch, so it reads as one gradient
+      const n = Math.min(SEG, 1 + Math.floor(len / 18));
+      for (let i = 0; i < n; i++) {
+        const t0 = i / n, t1 = (i + 1) / n, f = Math.pow(t1, 1.8), lv = Math.min(LV - 1, Math.round(a * f * (LV - 1)));
+        if (lv) lines[wide * LV + lv].push(x1 + dx * t0, y1 + dy * t0, x1 + dx * t1, y1 + dy * t1);
+      }
+      if (jump) lastLines.push(x1, y1, x2, y2, wide);
+    }
+    // the star itself: a dot while its line is short
+    const lv = Math.min(LV - 1, Math.round(a * clamp(1 - len / 40, 0, 1) * (LV - 1)));
+    if (lv) points[wide * LV + lv].push(x2, y2);
+  }
+  // brighter pieces are also whiter (more so at speed), so color and brightness change together along a line
+  const white = 0.3 + 0.7 * k;
+  lines.forEach((pts, i) => {
+    if (!pts.length) return;
+    const lv = i % LV, wide = Math.floor(i / LV), t = lv / (LV - 1), m = t * t * white;
+    cx.strokeStyle = rgba(mainRGB.map((c, j) => Math.round(c + ([225, 248, 255][j] - c) * m)), t.toFixed(3));
+    cx.lineWidth = (wide ? 1.8 : 1) * width;
+    cx.beginPath();
+    for (let j = 0; j < pts.length; j += 4) { cx.moveTo(pts[j], pts[j + 1]); cx.lineTo(pts[j + 2], pts[j + 3]); }
+    cx.stroke();
+  });
+  points.forEach((pts, i) => {
+    if (!pts.length) return;
+    const lv = i % LV, wide = Math.floor(i / LV), r = (wide ? 1.9 : 1.2) * width;
+    cx.fillStyle = `rgba(225,248,255,${(lv / (LV - 1)).toFixed(3)})`;
+    cx.beginPath();
+    for (let j = 0; j < pts.length; j += 2) cx.rect(pts[j] - r / 2, pts[j + 1] - r / 2, r, r);
+    cx.fill();
+  });
+  cx.lineWidth = 1;
+}
+// the flash and the impact frame, on their own canvas above everything
+const fxc = $("#fx"), fxx = fxc.getContext("2d");
+function flashFx(kind) { S.fx = { kind, t0: performance.now() }; }
+function drawFx(now) {
+  if (!S.fx) return;
+  fxx.clearRect(0, 0, W, H);
+  if (S.fx.kind === "impact") {
+    // the last streaks, frozen: dark lines on white
+    fxx.fillStyle = "#eafcff"; fxx.fillRect(0, 0, W, H);
+    fxx.strokeStyle = "rgba(5,8,11,0.85)"; fxx.lineCap = "round";
+    for (const wide of [0, 1]) {
+      fxx.lineWidth = wide ? 3.6 : 2; fxx.beginPath();
+      for (let j = 0; j < lastLines.length; j += 5) if (lastLines[j + 4] === wide) { fxx.moveTo(lastLines[j], lastLines[j + 1]); fxx.lineTo(lastLines[j + 2], lastLines[j + 3]); }
+      fxx.stroke();
+    }
+    return;
+  }
+  // white flash: a burst of light from the core that clears from the edges first (an even fade reads as gray fog)
+  const k = (now - S.fx.t0) / 900;
+  if (k >= 1) { S.fx = null; return; }
+  const mid = 0.9 * Math.pow(1 - k, 1.6), edge = 0.85 * Math.pow(1 - k, 4), R = Math.hypot(W, H) / 2;
+  const g = fxx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, R);
+  g.addColorStop(0, `rgba(234,252,255,${mid.toFixed(3)})`); g.addColorStop(0.35, `rgba(200,240,255,${((mid + edge) / 2).toFixed(3)})`);
+  g.addColorStop(1, `rgba(${mainRGB.join(",")},${edge.toFixed(3)})`);
+  fxx.fillStyle = g; fxx.fillRect(0, 0, W, H);
+}
+
+/* ---------- frame: cut corners, tabs, notches ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+let frameSliders = [];
+function buildFrame() {
+  const svg = $("#frame"); svg.innerHTML = "";
+  const i = 14, w = W - 2 * i, h = H - 2 * i, c = 24, x0 = i, y0 = i, x1 = i + w, y1 = i + h;
+  const ta = x0 + w * 0.38, tb = x0 + w * 0.62, na = y0 + h * 0.42, nb = y0 + h * 0.58;
+  const d = `M ${x0 + c} ${y0} H ${ta} L ${ta + 7} ${y0 + 7} H ${tb - 7} L ${tb} ${y0} H ${x1 - c} L ${x1} ${y0 + c}
+    V ${na} L ${x1 - 6} ${na + 6} V ${nb - 6} L ${x1} ${nb} V ${y1 - c} L ${x1 - c} ${y1}
+    H ${tb} L ${tb - 7} ${y1 - 7} H ${ta + 7} L ${ta} ${y1} H ${x0 + c} L ${x0} ${y1 - c}
+    V ${nb} L ${x0 + 6} ${nb - 6} V ${na + 6} L ${x0} ${na} V ${y0 + c} Z`;
+  const edge = el("path", { d, class: "edge draw" }, svg);
+  const len = edge.getTotalLength();
+  edge.style.strokeDasharray = len; edge.style.strokeDashoffset = body.classList.contains("pre-frame") ? len : 0;
+  const orn = el("g", { class: "orn" }, svg);
+  const L = 46;
+  [`M ${x0} ${y0 + c + L} V ${y0 + c} L ${x0 + c} ${y0} H ${x0 + c + L}`, `M ${x1 - c - L} ${y0} H ${x1 - c} L ${x1} ${y0 + c} V ${y0 + c + L}`,
+   `M ${x1} ${y1 - c - L} V ${y1 - c} L ${x1 - c} ${y1} H ${x1 - c - L}`, `M ${x0 + c + L} ${y1} H ${x0 + c} L ${x0} ${y1 - c} V ${y1 - c - L}`,
+   `M ${ta} ${y0} L ${ta + 7} ${y0 + 7} H ${tb - 7} L ${tb} ${y0}`, `M ${ta} ${y1} L ${ta + 7} ${y1 - 7} H ${tb - 7} L ${tb} ${y1}`,
+   `M ${x1} ${na} L ${x1 - 6} ${na + 6} V ${nb - 6} L ${x1} ${nb}`, `M ${x0} ${na} L ${x0 + 6} ${na + 6} V ${nb - 6} L ${x0} ${nb}`]
+    .forEach((p) => el("path", { d: p, class: "hi" }, orn));
+  // maximal: ruler ticks along the long edges, hatched blocks, sliding markers
+  const mx = el("g", { class: "orn mx" }, svg);
+  for (const [a, b] of [[x0 + c + L + 20, ta - 20], [tb + 20, x1 - c - L - 20]]) {
+    for (let x = a, k = 0; x < b; x += 10, k++) {
+      const long = k % 5 === 0;
+      el("line", { x1: x, y1: y0 + 3, x2: x, y2: y0 + (long ? 10 : 6), class: "tick" }, mx);
+      el("line", { x1: x, y1: y1 - 3, x2: x, y2: y1 - (long ? 10 : 6), class: "tick" }, mx);
+    }
+  }
+  const hatch = el("g", { style: "color: var(--c); opacity: .45" }, mx);
+  el("rect", { x: x1 - c - L - 90, y: y0 + 12, width: 70, height: 7, fill: "url(#hatchP)" }, hatch);
+  el("rect", { x: x0 + c + L + 20, y: y1 - 19, width: 70, height: 7, fill: "url(#hatchP)" }, hatch);
+  frameSliders = [
+    { node: el("path", { d: "M 0 -5 L 7 0 L 0 5 Z", class: "slider" }, mx), x: x0 + 3, a: y0 + c + L + 30, b: na - 30, dir: 1, speed: 0.07 },
+    { node: el("path", { d: "M 0 -5 L -7 0 L 0 5 Z", class: "slider" }, mx), x: x1 - 3, a: nb + 30, b: y1 - c - L - 30, dir: -1, speed: 0.05 },
+  ];
+  frameSliders.forEach((s) => s.node.setAttribute("transform", `translate(${s.x} ${s.a})`));
+}
+function stepFrame(now) {
+  for (const s of frameSliders) {
+    const k = 0.5 + 0.5 * Math.sin((now / 1000) * s.speed * TAU * s.dir);
+    s.node.setAttribute("transform", `translate(${s.x} ${s.a + (s.b - s.a) * k})`);
+  }
+}
+function drawFrame() { const e = $("#frame .edge"); if (e) e.style.strokeDashoffset = 0; body.classList.remove("pre-frame"); }
+
+/* ---------- the assistant ---------- */
+(function buildOrb() {
+  const ticks = $("#r-ticks");
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * TAU, long = i % 6 === 0, r1 = long ? 92 : 96, r2 = 101;
+    el("line", { x1: Math.cos(a) * r1, y1: Math.sin(a) * r1, x2: Math.cos(a) * r2, y2: Math.sin(a) * r2, stroke: "currentColor", "stroke-width": long ? 1.6 : 0.8 }, ticks);
+  }
+  const bars = $("#r-bars");
+  for (let i = 0; i < 96; i++) {
+    const a = (i / 96) * TAU;
+    el("line", { x1: Math.cos(a) * 118, y1: Math.sin(a) * 118, x2: Math.cos(a) * 121, y2: Math.sin(a) * 121, stroke: "currentColor", "stroke-width": 1.4, "data-a": a }, bars);
+  }
+  const cross = $("#r-cross");
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * TAU + Math.PI / 4;
+    for (const [r1, r2] of [[104, 114], [124, 130]]) el("line", { x1: Math.cos(a) * r1, y1: Math.sin(a) * r1, x2: Math.cos(a) * r2, y2: Math.sin(a) * r2, stroke: "currentColor", "stroke-width": 1 }, cross);
+  }
+  const arcs = $("#r-arcs");
+  for (let i = 0; i < 3; i++) {
+    const a0 = (i / 3) * TAU, a1 = a0 + TAU * 0.19, r = 70;
+    el("path", { d: `M ${Math.cos(a0) * r} ${Math.sin(a0) * r} A ${r} ${r} 0 0 1 ${Math.cos(a1) * r} ${Math.sin(a1) * r}`, class: "ring", "stroke-width": 4 }, arcs);
+  }
+  const tri = $("#r-tri");
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * TAU + Math.PI / 6, r = 64, tip = 58;
+    const p = (ang, rad) => `${Math.cos(ang) * rad} ${Math.sin(ang) * rad}`;
+    el("path", { d: `M ${p(a, tip)} L ${p(a - 0.06, r + 2)} L ${p(a + 0.06, r + 2)} Z`, fill: "currentColor" }, tri);
+  }
+})();
+const RING_ORDER = ["r-thin", "r-arcs", "r-seg", "r-sat", "r-tri", "r-ticks", "r-cross", "r-bars", "ripple"];
+const rings = {
+  ticks: { el: $("#r-ticks"), a: 0, v: 360 / 70, cur: 360 / 70 },
+  seg: { el: $("#r-seg"), a: 0, v: -360 / 40, cur: -360 / 40 },
+  arcs: { el: $("#r-arcs"), a: 0, v: 360 / 25, cur: 360 / 25 },
+  thin: { el: $("#r-thin"), a: 0, v: -360 / 55, cur: -360 / 55 },
+  sat: { el: $("#r-sat"), a: 0, v: 360 / 12, cur: 360 / 12 },
+  tri: { el: $("#r-tri"), a: 0, v: -360 / 90, cur: -360 / 90 },
+  cross: { el: $("#r-cross"), a: 0, v: 360 / 160, cur: 360 / 160 },
+};
+const STATE_MULT = {
+  idle: { m: 1, scale: 1, breathe: 5 },
+  listening: { m: 0.5, scale: 0.9, breathe: 2 },
+  thinking: { m: 5, scale: 1, breathe: 1.2 },
+  speaking: { m: 1.4, scale: 1, breathe: 0 },
+  offline: { m: 0, scale: 1, breathe: 0 },
+  error: { m: 0, scale: 1, breathe: 0 },
+};
+let scaleNow = 1, relockTarget = null;
+const barEls = [...document.querySelectorAll("#r-bars line")];
+function stepOrb(dt, now) {
+  const m = STATE_MULT[S.state];
+  S.spinBoost += (1 - S.spinBoost) * Math.min(1, dt * 1.3);
+  for (const k in rings) {
+    const r = rings[k], target = r.v * m.m * (k === "arcs" && S.state === "thinking" ? 2 : 1) * S.spinBoost;
+    r.cur += (target - r.cur) * Math.min(1, dt * 1.5);
+    r.a = (r.a + r.cur * dt) % 360;
+  }
+  if (relockTarget) {
+    const r = rings.ticks, diff = ((relockTarget.to - r.a + 540) % 360) - 180;
+    r.a += diff * Math.min(1, dt * 10);
+    if (Math.abs(diff) < 0.3) relockTarget = null;
+  }
+  scaleNow += (m.scale - scaleNow) * Math.min(1, dt * 4);
+  for (const k of ["ticks", "thin", "sat", "cross"]) rings[k].el.setAttribute("transform", `rotate(${rings[k].a})`);
+  rings.tri.el.setAttribute("transform", `rotate(${rings.tri.a}) scale(${scaleNow})`);
+  rings.seg.el.setAttribute("transform", `rotate(${rings.seg.a}) scale(${scaleNow})`);
+  rings.arcs.el.setAttribute("transform", `rotate(${rings.arcs.a}) scale(${scaleNow})`);
+  // breathing / loudness
+  let s = 1, op = 1;
+  if (S.state === "speaking") {
+    if (!S.nextSyl || now > S.nextSyl) { S.loudTarget = Math.random() < 0.15 ? 0 : rand(0.25, 1); S.nextSyl = now + rand(70, 160); }
+    S.loud += ((S.loudTarget || 0) - S.loud) * Math.min(1, dt * 14);
+    s = 1 + S.loud * 0.16;
+  } else {
+    S.loud += (0 - S.loud) * Math.min(1, dt * 6);
+    if (m.breathe) s = 1 + 0.07 * Math.sin((now / 1000) * (TAU / m.breathe));
+    if (S.state === "offline") { s = 0.88; op = 0.45; }
+  }
+  const ig = S.igniteAt ? clamp((now - S.igniteAt) / 800, 0, 1) : 0, ige = 1 - Math.pow(1 - ig, 3);
+  const cd = $("#core-dot");
+  const igb = ig >= 1 ? 1 : 1 + 3.2 * Math.pow(ig - 1, 3) + 2.2 * Math.pow(ig - 1, 2);  // overshoots, then settles
+  cd.style.transform = `scale(${s * Math.max(0.05, igb)})`; cd.style.opacity = op * ige;
+  // speaking ripple: a circular sound wave
+  const pts = [], n = 120, t = now / 1000;
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * TAU, r = 46 + S.loud * 7 * (0.6 * Math.sin(a * 6 + t * 9) + 0.4 * Math.sin(a * 11 - t * 6));
+    pts.push(`${(Math.cos(a) * r).toFixed(2)},${(Math.sin(a) * r).toFixed(2)}`);
+  }
+  $("#ripple").setAttribute("d", "M" + pts.join("L") + "Z");
+  // maximal: the outer bar ring follows the voice, or drifts gently
+  if (S.quality === "maximal") {
+    barEls.forEach((b, i) => {
+      const a = +b.dataset.a, base = S.state === "speaking" ? S.loud * (0.5 + 0.5 * Math.sin(a * 5 + t * 7 + i)) * 10 : 1.5 + 1.5 * Math.sin(a * 3 + t * 0.8);
+      const len = S.state === "offline" || S.state === "error" ? 1 : Math.max(0.5, base);
+      b.setAttribute("x2", Math.cos(a) * (118 + len)); b.setAttribute("y2", Math.sin(a) * (118 + len));
+    });
+  }
+  // module button rings
+  document.querySelectorAll(".mring").forEach((g, i) => {
+    const hovered = g.closest(".mod").matches(":hover, :focus-visible");
+    g._a = ((g._a || 0) + dt * (hovered ? 220 : 9) * (i % 2 ? -1 : 1)) % 360;
+    g.setAttribute("transform", `rotate(${g._a})`);
+  });
+}
+function stepOrbStill() {
+  for (const k in rings) rings[k].el.removeAttribute("transform");
+  const cd = $("#core-dot");
+  cd.style.transform = ""; cd.style.opacity = S.state === "offline" ? 0.45 : 1;
+  $("#ripple").setAttribute("d", "M46,0 A46,46 0 1 1 -46,0 A46,46 0 1 1 46,0Z");
+}
+// where each ring flies in from (scale) and how far it's turned; the sizes of the rings for their flash of light
+const RING_FROM = { "r-thin": [0.35, -200], "r-arcs": [1.9, 170], "r-seg": [0.5, -120], "r-sat": [1.7, 240], "r-tri": [0.2, 180], "r-ticks": [1.5, -90], "r-cross": [2.3, 45], "r-bars": [1.3, 0], ripple: [0.5, 0] };
+const RING_R = { "r-thin": 58, "r-arcs": 70, "r-seg": 84, "r-sat": 77, "r-tri": 64, "r-ticks": 101, "r-cross": 127, "r-bars": 120, ripple: 46 };
+function ringsOn(on) {
+  RING_ORDER.forEach((id) => {
+    const g = $("#" + id), [sc, rot] = RING_FROM[id];
+    g.style.setProperty("--from", sc); g.style.setProperty("--spin0", rot + "deg");
+    g.classList.toggle("on", on);
+  });
+}
+function lockRing(id) {
+  const g = $("#" + id);
+  g.classList.add("on", "hit"); setTimeout(() => g.classList.remove("hit"), 260);
+  if (g.classList.contains("mx") && S.quality !== "maximal") return;
+  // the tick and bar rings sweep around like a radar instead of appearing at once
+  if (id === "r-ticks" || id === "r-bars") {
+    const ls = [...g.children];
+    ls.forEach((l, i) => { l.style.transition = "none"; l.style.opacity = 0; });
+    g.getBoundingClientRect();
+    ls.forEach((l, i) => { l.style.transition = `opacity 0.15s ${Math.round((i / ls.length) * 450)}ms`; l.style.opacity = ""; });
+  }
+  const w = el("circle", { r: RING_R[id], class: "lockwave" }, $("#orb"));
+  setTimeout(() => w.remove(), 800);
+}
+function lockOn() {
+  // corner brackets close in on where the core will settle, hold, and let go
+  if (S.quality === "minimal") return;
+  const ret = $("#reticle"), size = parseFloat(getComputedStyle($("#orb")).width) * 1.3 * 0.82, x = innerWidth / 2 - size / 2, y = innerHeight / 2 - size / 2, big = size * 0.6;
+  ret.style.transition = "none";
+  Object.assign(ret.style, { left: x - big + "px", top: y - big + "px", width: size + 2 * big + "px", height: size + 2 * big + "px", opacity: 0 });
+  ret.getBoundingClientRect(); ret.style.transition = "";
+  Object.assign(ret.style, { left: x + "px", top: y + "px", width: size + "px", height: size + "px", opacity: 1 });
+  setTimeout(() => (ret.style.opacity = 0), 1500);
+}
+function setState(st) {
+  const prev = S.state;
+  S.state = st;
+  $(".core").dataset.state = st; $("#orb-dock").dataset.state = st;
+  $("#state-word").textContent = st;
+  if (st === "listening" && prev !== "listening") SFX.listen();
+  if (st === "idle" && prev === "speaking") SFX.done();
+  if (st === "error" && prev !== "error") SFX.error();
+  if (st === "thinking" || st === "speaking") nextFire = 0;
+  requestAnimationFrame(readColors);
+}
+
+/* ---------- traces: from the assistant to each panel, ending exactly on its edge ---------- */
+let traces = [], tracePulses = [];
+function route(c, rr, R) {
+  let ax, ay, horiz;
+  if (R.r < c.x - rr * 0.3) { ax = R.r; ay = clamp(c.y, R.t + 14, R.b - 14); horiz = true; }
+  else if (R.l > c.x + rr * 0.3) { ax = R.l; ay = clamp(c.y, R.t + 14, R.b - 14); horiz = true; }
+  else if (R.b < c.y) { ay = R.b; ax = clamp(c.x, R.l + 14, R.r - 14); horiz = false; }
+  else { ay = R.t; ax = clamp(c.x, R.l + 14, R.r - 14); horiz = false; }
+  const ang = Math.atan2(ay - c.y, ax - c.x), sx = c.x + Math.cos(ang) * rr, sy = c.y + Math.sin(ang) * rr;
+  const dx = Math.abs(ax - sx), dy = Math.abs(ay - sy), gx = Math.sign(ax - sx) || 1, gy = Math.sign(ay - sy) || 1, lead = 14;
+  let d;
+  if (horiz) {
+    if (dy <= dx - lead) d = `M ${sx} ${sy} H ${ax - gx * (lead + dy)} L ${ax - gx * lead} ${ay} H ${ax}`;
+    else d = `M ${sx} ${sy} V ${ay - gy * Math.max(0, dx - lead)} L ${ax - gx * lead} ${ay} H ${ax}`;
+  } else {
+    if (dx <= dy - lead) d = `M ${sx} ${sy} V ${ay - gy * (lead + dx)} L ${ax} ${ay - gy * lead} V ${ay}`;
+    else d = `M ${sx} ${sy} H ${ax - gx * Math.max(0, dy - lead)} L ${ax} ${ay - gy * lead} V ${ay}`;
+  }
+  return { d, ax, ay, sx, sy };
+}
+function layoutTraces() {
+  const svg = $("#traces"), hub = $("#hub");
+  svg.innerHTML = ""; traces = []; tracePulses = [];
+  const hb = hub.getBoundingClientRect(), cb = $(".core").getBoundingClientRect();
+  const c = { x: cb.left + cb.width / 2 - hb.left, y: cb.top + cb.height / 2 - hb.top };
+  const ob = $("#orb"), obr = ob.getBoundingClientRect();
+  S.orbC = { x: obr.left + obr.width / 2, y: obr.top + obr.height / 2 };
+  if (portrait() || body.classList.contains("folded")) return;
+  const rr = (ob.clientWidth || obr.width) * 0.4;
+  const nodes = [...document.querySelectorAll("#mods .mod"), ...document.querySelectorAll(S.layout === "launcher" ? ".log, .strip" : "#hub > .chat, .log, .arm, .strip")];
+  for (const n of nodes) {
+    const r = n.getBoundingClientRect(); if (!r.width) continue;
+    const R = { l: r.left - hb.left, r: r.right - hb.left, t: r.top - hb.top, b: r.bottom - hb.top };
+    const { d, ax, ay, sx, sy } = route(c, rr, R);
+    const p = el("path", { d, class: "base" }, svg), len = p.getTotalLength();
+    p.style.strokeDasharray = len; p.style.strokeDashoffset = S.booted ? 0 : len;
+    p.style.transition = "stroke-dashoffset 1.1s cubic-bezier(0.16,1,0.3,1)";
+    const e1 = el("circle", { cx: ax, cy: ay, r: 2.5, class: "end" }, svg), e0 = el("circle", { cx: sx, cy: sy, r: 1.6, class: "end" }, svg);
+    if (!S.booted) { e1.style.opacity = 0; e0.style.opacity = 0; }
+    const dot = el("circle", { r: 2.4, cx: -50, cy: -50, class: "pulse" }, svg); dot.style.opacity = 0;
+    traces.push({ p, len, dot, ends: [e0, e1] });
+  }
+}
+function showTraces() { traces.forEach((t) => { t.p.style.strokeDashoffset = 0; t.ends.forEach((e) => (e.style.opacity = 1)); }); }
+function drawTraces() {
+  traces.forEach((t, i) => setTimeout(() => { t.p.style.strokeDashoffset = 0; t.ends.forEach((e) => { e.style.transition = "opacity .4s .9s"; e.style.opacity = 1; }); }, i * 60));
+}
+function pulseTrace(t, inward = true, speed = 260) { tracePulses.push({ t, pos: inward ? t.len : 0, dir: inward ? -1 : 1, speed }); }
+function stepTraces(dt) {
+  for (const tp of tracePulses) {
+    tp.pos += tp.dir * tp.speed * dt;
+    const pt = tp.t.p.getPointAtLength(clamp(tp.pos, 0, tp.t.len));
+    tp.t.dot.setAttribute("cx", pt.x); tp.t.dot.setAttribute("cy", pt.y);
+    tp.t.dot.style.opacity = 1; tp.t.dot.style.filter = "drop-shadow(0 0 4px var(--c))";
+  }
+  tracePulses = tracePulses.filter((tp) => { const done = tp.pos < 0 || tp.pos > tp.t.len; if (done) tp.t.dot.style.opacity = 0; return !done; });
+}
+
+/* ---------- typed log: real project lines (the latest commits, the current step) ---------- */
+let LOG_LINES = [];
+function buildLogLines() {
+  const lines = S.recent.map((c) => `git ${c.hash} ${c.subject}`);
+  const p = S.project;
+  if (p?.available) {
+    const now = p.steps.find((s) => !s.done), done = [...p.steps].reverse().find((s) => s.done);
+    if (now) lines.splice(1, 0, `focus  Step ${now.n}: ${now.title}`);
+    if (done) lines.splice(4, 0, `focus  Step ${done.n} done: ${done.title}`);
+  }
+  LOG_LINES = lines;
+}
+let logIdx = 0, typingBusy = false;
+async function typeLogLine() {
+  if (typingBusy || S.sleeping || !LOG_LINES.length) return;
+  typingBusy = true;
+  const box = $("#typelog");
+  box.querySelectorAll(".now").forEach((n) => n.classList.remove("now"));
+  const row = document.createElement("div");
+  row.className = "now";
+  const [ct, ap] = clockText();
+  row.innerHTML = `<span class="t">${ct}</span>${ap ? `<span class="ampm" style="margin:0 12px 0 -8px">${ap}</span>` : ""}<span class="x"></span>`;
+  box.appendChild(row);
+  while (box.children.length > 4) box.firstElementChild.remove();
+  [...box.children].forEach((r, i, all) => (r.style.opacity = (0.35 + 0.65 * (i + 1) / all.length).toFixed(2)));
+  const text = LOG_LINES[logIdx++ % LOG_LINES.length], x = row.querySelector(".x");
+  if (S.quality === "minimal") x.textContent = text;
+  else { x.classList.add("typing"); for (let i = 1; i <= text.length; i++) { x.textContent = text.slice(0, i); await wait(22); } x.classList.remove("typing"); }
+  typingBusy = false;
+}
+
+/* ---------- maximal: Bible verses type out in the far layer (KJV, public domain) ---------- */
+const VERSES = [
+  ["The heavens declare the glory of God; and the firmament sheweth his handywork.", "Psalm 19:1"],
+  ["Trust in the LORD with all thine heart; and lean not unto thine own understanding.", "Proverbs 3:5"],
+  ["And God said, Let there be light: and there was light.", "Genesis 1:3"],
+  ["Thy word is a lamp unto my feet, and a light unto my path.", "Psalm 119:105"],
+  ["For the LORD giveth wisdom: out of his mouth cometh knowledge and understanding.", "Proverbs 2:6"],
+  ["And the light shineth in darkness; and the darkness comprehended it not.", "John 1:5"],
+  ["I will praise thee; for I am fearfully and wonderfully made: marvellous are thy works.", "Psalm 139:14"],
+  ["And whatsoever ye do, do it heartily, as to the Lord, and not unto men.", "Colossians 3:23"],
+  ["If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not.", "James 1:5"],
+  ["Commit thy works unto the LORD, and thy thoughts shall be established.", "Proverbs 16:3"],
+];
+const VERSE_SLOTS = [[0.05, 0.15], [0.66, 0.12], [0.04, 0.62], [0.6, 0.7], [0.36, 0.86], [0.72, 0.42]];
+let verseIdx = Math.floor(Math.random() * VERSES.length), lastSlot = -1, verseBusy = false;
+async function typeVerse() {
+  if (verseBusy || S.quality !== "maximal" || S.sleeping || S.moduleOpen) return;
+  verseBusy = true;
+  let slot; do { slot = Math.floor(Math.random() * VERSE_SLOTS.length); } while (slot === lastSlot);
+  lastSlot = slot;
+  const [txt, ref] = VERSES[verseIdx++ % VERSES.length];
+  const v = document.createElement("div");
+  v.className = "v";
+  v.style.left = VERSE_SLOTS[slot][0] * 100 + "%"; v.style.top = VERSE_SLOTS[slot][1] * 100 + "%";
+  v.innerHTML = `<span class="x typing"></span><cite></cite>`;
+  $("#verses").appendChild(v);
+  const x = v.querySelector(".x");
+  for (let i = 1; i <= txt.length; i++) { x.textContent = txt.slice(0, i); await wait(34); }
+  x.classList.remove("typing");
+  v.querySelector("cite").textContent = ref;
+  verseBusy = false;
+  setTimeout(() => { v.classList.add("out"); setTimeout(() => v.remove(), 2600); }, 9000);
+}
+
+/* ---------- the arm's readouts: real joints (/api/arm, 4 times a second), eased between readings ---------- */
+const JOINTS = [["shoulder_pan"], ["shoulder_lift"], ["elbow_flex"], ["wrist_flex"], ["wrist_roll"], ["gripper"]];
+const jointVals = JOINTS.map(() => 0);
+$("#joints").innerHTML = JOINTS.map(([n]) => `<div class="j"><b>${n}</b><span>0.0</span><i></i></div>`).join("");
+const jointEls = [...document.querySelectorAll(".j")];
+function stepArm(now, dt = 0.016) {
+  const target = S.arm?.joints;
+  JOINTS.forEach(([name], i) => {
+    if (target && name in target) jointVals[i] += (target[name] - jointVals[i]) * Math.min(1, dt * 10);
+    const v = jointVals[i];
+    jointEls[i].querySelector("span").textContent = fmt(v);
+    jointEls[i].querySelector("i").style.setProperty("--p", `${clamp(50 + (v / 120) * 50, 0, 96)}%`);
+  });
+}
+let armWord = "";
+function renderArm() {
+  const a = S.arm;
+  $(".arm .name").textContent = a?.name || "arm";
+  const [ico, w] = !a ? ["i-warn", "brain not reachable"] : !a.connected ? ["i-warn", "not answering"]
+    : a.control === "ai" ? ["i-chip", "AI moving"] : a.control === "teleop" ? (a.held ? ["i-pause", "held"] : [null, "following"])
+    : [null, "free"];
+  const html = (ico ? `<svg class="ico"><use href="#${ico}"/></svg>` : "") + w;
+  if (html !== armWord) { armWord = html; $("#arm-word").innerHTML = html; }
+}
+
+/* ---------- launcher side panels: real project facts ---------- */
+let COMMITS = [], COMMITS_END = new Date(), COMMIT_RANGES = [7, 14, 30], commitDays = 14;  // per day, oldest first (/api/commits?days=30)
+const dayName = (n) => new Date(COMMITS_END - n * 864e5).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+function drawSpark(days) {
+  commitDays = days;
+  const counts = COMMITS.slice(-days), sp = $("#spark"), max = Math.max(1, ...counts), w = 220, h = 54;
+  sp.innerHTML = ""; sp.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  $("#commit-total").textContent = counts.reduce((a, b) => a + b, 0);
+  $("#ax0").textContent = dayName(days - 1); $("#ax1").textContent = "today";
+  el("line", { x1: 0, y1: h, x2: w, y2: h, stroke: "var(--line)" }, sp);
+  counts.forEach((n, i) => {
+    const step = w / counts.length, bw = Math.max(1.5, step - (days > 20 ? 2 : 4)), x = i * step + (step - bw) / 2, bh = Math.max(1, (n / max) * (h - 14));
+    el("rect", { x, y: h - bh, width: bw, height: bh, fill: n === max ? "var(--hot)" : "currentColor", opacity: n === max ? 1 : 0.6 }, sp);
+    if (n === max) { const lt = el("text", { x: x + bw / 2, y: h - bh - 4, "text-anchor": "middle" }, sp); lt.textContent = String(n); }
+  });
+  $("#range").innerHTML = COMMIT_RANGES.map((d) => `<button type="button" aria-pressed="${d === days}" data-d="${d}">${d}d</button>`).join("");
+  $("#range").querySelectorAll("button").forEach((btn) => btn.addEventListener("click", (e) => { e.stopPropagation(); drawSpark(+btn.dataset.d); SFX.blip(); }));
+}
+const panelOf = (id) => $(`.side .panel[data-detail="${id}"]`);
+function renderProject() {
+  const p = S.project, panel = panelOf("project");
+  panel.classList.toggle("gone", !p?.available);
+  if (!p?.available) return;
+  panel.querySelector(".big").textContent = p.focus || "";
+  const steps = $("#steps");
+  steps.style.gridTemplateColumns = `repeat(${p.steps.length}, 1fr)`;
+  steps.innerHTML = p.steps.map((s) => `<span class="${s.done ? "done" : s.n === p.step ? "now" : ""}"></span>`).join("");
+  panel.querySelector(".stepn").textContent = `Step ${p.step} of ${p.of}`;
+  panel.querySelector(".next > span:last-child").textContent = p.next || "all steps done";
+}
+function renderSpend() {
+  const s = S.spend, panel = panelOf("spend");
+  panel.classList.toggle("gone", !s?.available);  // a public venue hides spend
+  setMoney();
+}
+function renderCommits(c) {
+  panelOf("commits").classList.toggle("gone", !c?.available);
+  if (c?.available) drawSpark(COMMIT_RANGES.includes(commitDays) ? commitDays : COMMIT_RANGES[0]);
+}
+
+/* ---------- devices: a star around the brain for a few, a hive grouped by kind for many; tap one for details ---------- */
+const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], camera: ["i-cam", "Cameras"], pc: ["i-pc", "Computers"], pi: ["i-pi", "Raspberry Pis"] };
+// the place's devices (devices.yaml, from /api/devices). `brain` = linked: the arm this brain drives. Whether
+// a device is switched on isn't known until the roll call (the lab router), so `on` stays unknown (never
+// guessed). `lock` = off limits (another project's): shown, never opened.
+let LAB = [];
+const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
+function setDevices(list) {
+  LAB = list.map((d) => ({
+    name: d.name, kind: KIND_OF[d.kind] || "pc", brain: !!d.linked, on: d.linked ? true : undefined,
+    lock: d.off_limits ? "another project's (never opened)" : "", use: d.notes || d.kind,
+  }));
+  renderDevices();
+}
+// columns the device table can show; hub.device_columns picks which, in order
+const word = (ok, yes, no) => `<span class="sw${ok ? " ok" : ""}"><i></i>${ok ? yes : no}</span>`;
+const COLUMNS = {
+  id: { head: "Device", title: "Sticker on the device, and its lab-os name", cell: (d) => (d.sticker ? `${d.sticker}<small>${d.name}</small>` : d.name) },
+  on: { head: "Power", title: "On (plugged in, or answers on the network); not known until the roll call", cell: (d) => (d.lock ? `<span class="sw lock"><svg class="ico"><use href="#i-lock"/></svg>Locked</span>` : d.on === undefined ? `<span class="sw">not known</span>` : word(d.on, "On", "Off")) },
+  linked: { head: "Linked", title: "Linked to the brain (talking to it)", cell: (d) => (d.lock ? "" : word(d.brain, "Yes", "No")) },
+  use: { head: "Use", title: "What it's used for", cell: (d) => d.use },
+  host: { head: "Computer name", title: "The computer's own name", cell: (d) => d.host || "" },
+  ip: { head: "IP", title: "IP address (hidden on public screens)", cell: (d) => d.ip || "" },
+};
+let DEVICE_COLUMNS = ["id", "on", "linked"];
+const deviceList = () => LAB;
+let GRAPH_MAX = 8;
+function nodeFor(d, parent) {
+  const g = el("g", { class: "node", tabindex: 0, role: "button", "aria-label": d.name }, parent);
+  g.addEventListener("click", (e) => { e.stopPropagation(); showDevice(d, g); });
+  g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showDevice(d, g); } });
+  return g;
+}
+function renderDevices() {
+  const devs = deviceList(), g = $("#devgraph"), n = devs.length, hive = n > GRAPH_MAX;
+  const panel = $(".devices"); panel.dataset.view = hive ? "hive" : "graph";
+  g.innerHTML = `<defs><pattern id="hatch" width="3" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0v3" stroke="var(--text-dim)" stroke-width="1"/></pattern></defs>`;
+  const w = 220;
+  if (!hive) {
+    const named = n <= 6, h = named ? 128 : 112, c = [w / 2, h / 2], rx = 84, ry = h / 2 - (named ? 22 : 12);
+    g.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    devs.forEach((d, i) => {
+      // spread around an ellipse, starting top-left, so 1 to 8 devices all look intentional
+      const a = -Math.PI * 0.8 + (i / Math.max(n, 2)) * TAU * (n <= 2 ? 0.5 : 1), x = c[0] + Math.cos(a) * rx, y = c[1] + Math.sin(a) * ry;
+      el("line", { x1: c[0], y1: c[1], x2: x, y2: y, class: d.brain ? "on" : "offl", "stroke-width": 1 }, g);
+      const node = nodeFor(d, g);
+      el("circle", { cx: x, cy: y, r: 9, fill: "transparent", stroke: "none" }, node);  // a bigger tap target
+      el("circle", { cx: x, cy: y, r: 4, fill: d.brain ? "var(--c)" : d.lock ? "url(#hatch)" : "none", stroke: d.brain || d.on ? "var(--c)" : d.lock ? "var(--text-dim)" : "var(--offline)" }, node);
+      if (named) { const tx = el("text", { x, y: y + (y < c[1] ? -9 : 15), "text-anchor": x < 40 ? "start" : x > 180 ? "end" : "middle" }, node); tx.textContent = d.name; }
+      if (d.brain && S.quality !== "minimal") {
+        const p = el("circle", { r: 2, fill: "var(--hot)" }, g);
+        el("animateMotion", { dur: "2.4s", repeatCount: "indefinite", path: `M ${c[0]} ${c[1]} L ${x} ${y}` }, p);
+      }
+    });
+    el("path", { d: `M ${c[0]} ${c[1] - 12} l 10.4 6 v 12 l -10.4 6 l -10.4 -6 v -12 Z`, fill: "rgba(5,8,11,1)", stroke: "var(--c)", "stroke-width": 1.5 }, g);
+  } else {
+    // one row per kind: icon, online count, then a hexagon per device (wraps if a kind has many)
+    const r = 6, dx = r * 2.05, per = Math.floor((w - 44) / dx), rowH = 17;
+    let y = 10;
+    for (const [kind, [ico]] of Object.entries(KINDS)) {
+      const list = devs.filter((d) => d.kind === kind);
+      if (!list.length) continue;
+      el("use", { href: `#${ico}`, x: 0, y: y - 7, width: 14, height: 14, class: "grp", fill: "none", stroke: "currentColor", "stroke-width": 1.1 }, g);
+      const ct = el("text", { x: 17, y: y + 3.5 }, g);  // linked/total ct.textContent = `${list.filter((d) => d.brain).length}/${list.length}`;
+      list.forEach((d, i) => {
+        const x = 44 + (i % per) * dx + r, yy = y + Math.floor(i / per) * rowH;
+        const node = nodeFor(d, g);
+        const st = d.lock ? "lock" : d.brain ? "on" : d.on ? "net" : "off";
+        const hx = el("path", { d: `M ${x} ${yy - r} l ${r * 0.866} ${r / 2} v ${r} l ${-r * 0.866} ${r / 2} l ${-r * 0.866} ${-r / 2} v ${-r} Z`, class: `hx ${st}` }, node);
+        if (d.brain) { hx.classList.add("beat"); hx.style.animationDelay = `${-(i * 1.7 + kind.length) % 5}s`; }
+      });
+      y += Math.ceil(list.length / per) * rowH + 3;
+    }
+    g.setAttribute("viewBox", `0 0 ${w} ${y - 4}`);
+  }
+  // the expanded list: a table grouped by kind; the columns come from one list, so adding information is one word
+  const cols = DEVICE_COLUMNS.map((k) => [k, COLUMNS[k]]);
+  $("#devlist").innerHTML = `<table><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>` + Object.entries(KINDS).map(([kind, [ico, label]]) => {
+    const list = devs.filter((d) => d.kind === kind);
+    if (!list.length) return "";
+    return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}</th></tr>` + list.map((d) => `<tr tabindex="0" data-dev="${d.name}"><td><svg class="ico"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  }).join("") + "</table>";
+  $("#devlist").querySelectorAll("tr[data-dev]").forEach((tr) => {
+    const open = (e) => { e.stopPropagation(); showDevice(devs.find((d) => d.name === tr.dataset.dev), tr); };
+    tr.addEventListener("click", open); tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && open(e));
+  });
+  const conn = devs.filter((d) => d.brain).length;
+  $("#devcount").innerHTML = `<b>${conn}</b> of ${n} linked`;
+}
+function showDevice(d, from) {
+  // first: which device this is (the sticker on it, its name); then the two statuses; then the rest
+  const card = $("#devcard"), [ico] = KINDS[d.kind], usb = d.kind === "arm" || d.kind === "camera";
+  const dot = (ok, yes, no) => `<div class="row${ok ? " on" : ""}"><span class="dot"></span>${ok ? yes : no}</div>`;
+  const power = d.on === undefined ? `<div class="row"><span class="dot"></span>Power: not known until the roll call</div>`
+    : dot(d.on, usb ? "Plugged in" : "On the network", usb ? "Not plugged in" : "Off, or not on the network");
+  const status = d.lock
+    ? `<div class="row lock"><svg class="ico"><use href="#i-lock"/></svg>Locked: ${esc(d.lock)}</div><div>The hub shows it but never opens its ports.</div>`
+    : power + dot(d.brain, "Linked to the brain", "Not linked");
+  card.querySelector(".in").innerHTML = `<div class="t"><svg class="ico"><use href="#${ico}"/></svg>${esc(d.name)}<button type="button" aria-label="Close">×</button></div>
+    <div>${esc(d.use)}</div>${status}`;
+  card.hidden = false;
+  // beside what was tapped, kept on screen
+  const b = from.getBoundingClientRect(), pb = (from.closest(".panel") || from).getBoundingClientRect(), cw = card.offsetWidth, ch = card.offsetHeight;
+  let x = pb.left - cw - 12; if (x < 16) x = Math.min(innerWidth - cw - 16, b.right + 14);
+  card.style.left = `${x}px`; card.style.top = `${clamp(b.top + b.height / 2 - ch / 2, 16, innerHeight - ch - 16)}px`;
+  card.querySelector("button").addEventListener("click", hideDevice);
+  SFX.blip();
+}
+function hideDevice() { $("#devcard").hidden = true; }
+document.addEventListener("click", (e) => { if (!e.target.closest("#devcard")) hideDevice(); });
+renderDevices();
+// open or close the list without moving anything above it: the column's top is pinned where it was, the
+// list grows downward, and its height is capped so it stops above the bottom row (then it scrolls)
+function setDevOpen(open) {
+  const p = $(".devices"), side = $(".side.right"), top0 = side.getBoundingClientRect().top;
+  side.style.alignSelf = ""; side.style.marginTop = "";
+  p.dataset.open = open ? "1" : ""; $("#devtoggle").setAttribute("aria-expanded", open);
+  $("#devmore-t").textContent = open ? "Show map" : "List all";
+  if (!open) $(".devwrap").classList.remove("more");
+  if (open) {
+    side.style.alignSelf = "start";
+    side.style.marginTop = `${top0 - side.getBoundingClientRect().top}px`;
+    listFits();
+  }
+  requestAnimationFrame(() => { layoutTraces(); showTraces(); });
+}
+function listFits() {
+  const list = $("#devlist");
+  if (!list.offsetParent) return;
+  list.style.maxHeight = "";
+  const floor = $(".log").getBoundingClientRect().top - 16, below = 24;
+  list.style.maxHeight = `${Math.max(140, Math.min(list.scrollHeight, floor - list.getBoundingClientRect().top - below))}px`;
+  moreFade();
+}
+function moreFade() { const l = $("#devlist"); l.parentElement.classList.toggle("more", $(".devices").dataset.open === "1" && l.scrollTop + l.clientHeight < l.scrollHeight - 2); }
+$("#devlist").addEventListener("scroll", moreFade);
+addEventListener("resize", () => { if ($(".devices").dataset.open === "1") setDevOpen(false); });
+$("#devtoggle").addEventListener("click", (e) => {
+  e.stopPropagation();
+  setDevOpen($(".devices").dataset.open !== "1");
+  SFX.blip(); hideDevice();
+});
+
+/* ---------- alerts ---------- */
+let critTimer = null;
+function setAlert(a, msg = "") {
+  const prev = S.alert;
+  S.alert = a; body.dataset.alert = a;
+  clearInterval(critTimer);
+  const word = { held: ["i-pause", "held"], critical: ["i-warn", "stopped"], warning: ["i-warn", "waiting"], none: [null, "following"] }[a];
+  $("#arm-word").innerHTML = (word[0] ? `<svg class="ico"><use href="#${word[0]}"/></svg>` : "") + word[1];
+  const toast = $("#toast");
+  if (a === "warning") { $("#toast-msg").textContent = msg; toast.classList.add("on"); SFX.warning(); }
+  else if (a === "critical") {
+    $("#toast-msg").textContent = msg;
+    toast.classList.add("on");
+    if (S.quality !== "minimal") { body.classList.add("jolt"); setTimeout(() => body.classList.remove("jolt"), 450); }
+    SFX.critical(); critTimer = setInterval(SFX.critical, 667);
+  } else toast.classList.remove("on");
+  if (prev !== a) requestAnimationFrame(readColors);
+}
+
+/* ---------- chat: the brain's conversation (/api/chat), answers streamed in ---------- */
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function richText(s) {
+  const ticks = (s.match(/`/g) || []).length;  // mid-stream: close an open `code` span
+  return esc(ticks % 2 ? s + "`" : s)
+    .replace(/`([^`]+)`/g, '<span class="code">$1</span>')
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/\n/g, "<br>");
+}
+function addMsg(me) {
+  const m = document.createElement("div");
+  m.className = "msg " + (me ? "me" : "ai");
+  m.innerHTML = me ? `<div class="body"></div>` : `<svg class="ico" aria-label="Assistant"><use href="#i-hex"/></svg><div class="body"></div>`;
+  $("#log-chat").appendChild(m);
+  return m.querySelector(".body");
+}
+// a drafted prompt (the project helper): copy it to paste into Claude Code or Codex (needs localhost or https)
+function copyButton(text) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy the prompt";
+  b.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const prompt = text.slice(text.indexOf("Prompt:") + 7).trim();
+    try { await navigator.clipboard.writeText(prompt); b.textContent = "Copied"; } catch { b.textContent = "Can't copy on this screen"; }
+  });
+  return b;
+}
+function renderChat() {
+  $("#chat-n").textContent = S.chat.filter((m) => m.role === "user").length || "";
+  $("#log-chat").innerHTML = "";
+  for (const m of S.chat) {
+    const b = addMsg(m.role === "user");
+    if (m.role === "user") b.textContent = m.content; else b.innerHTML = richText(m.content);
+    if (m.role === "error") b.parentElement.classList.add("err");
+    if (m.role === "assistant" && navigator.clipboard && m.content.includes("Prompt:")) b.append(copyButton(m.content));
+  }
+  $("#log-chat").scrollTop = 1e9;
+}
+// a turn that went wrong: the brain's own full sentence, shown at the core for a while
+function showError(msg) {
+  $("#errmsg b").textContent = "No answer";
+  $("#errmsg span").textContent = msg;
+  S.errorUntil = performance.now() + 9000;
+  setState("error");
+}
+// what the assistant is reading while it looks something up (the brain's read tools)
+const TOOL_WORDS = {
+  project_status: "the current focus", list_docs: "the docs", read_doc: "a doc", search_docs: "the docs",
+  git_status: "git", git_log: "the git history", list_devices: "the devices", arm_status: "the arm", list_poses: "the arm's poses",
+};
+// one way in for questions, from the chat page or from the core
+let replyTimer = null;
+async function ask(q, fromCore) {
+  q = (q || "").trim();
+  if (!q || S.asking) return;
+  S.asking = true;
+  S.chat.push({ role: "user", content: q });
+  renderChat();
+  const r = $("#reply"), a = r.querySelector(".a"), answer = { role: "assistant", content: "" };
+  if (fromCore) { clearTimeout(replyTimer); r.querySelector(".q").textContent = q; a.innerHTML = ""; r.classList.add("on"); }
+  setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
+  let live = null;  // the answer's bubble in the conversation
+  const onEvent = (ev) => {
+    if (ev.type === "state") setState(ev.state);
+    else if (ev.type === "tool") {
+      if (!answer.content && fromCore) a.innerHTML = `<span class="look">Looking up ${esc(TOOL_WORDS[ev.name] || ev.name)}…</span>`;
+      if (traces.length) pulseTrace(traces[Math.floor(Math.random() * traces.length)], true, 320);
+    } else if (ev.type === "text") {
+      if (!answer.content) { S.chat.push(answer); live = addMsg(false); }
+      answer.content += ev.text;
+      const html = richText(answer.content);
+      live.innerHTML = html; $("#log-chat").scrollTop = 1e9;
+      if (fromCore) { a.innerHTML = html; a.scrollTop = 1e9; }
+    } else if (ev.type === "error") {
+      S.chat.push({ role: "error", content: ev.message });
+      showError(ev.message);
+    }
+  };
+  try {
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q }) });
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body.getReader(), decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) if (line.trim()) onEvent(JSON.parse(line));
+    }
+  } catch (e) {
+    console.warn(`hub: chat failed (${e.message})`);
+    onEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." });
+  }
+  S.asking = false;
+  renderChat();
+  if (S.state === "thinking" || S.state === "speaking") setState("idle");
+  if (fromCore) replyTimer = setTimeout(() => r.classList.remove("on"), 14000);
+  S.lastInput = performance.now();
+  getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
+}
+$("#ask-form").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#ask").value.trim(); $("#ask").value = ""; ask(q, false); });
+$("#quick-form").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#quick").value.trim(); $("#quick").value = ""; ask(q, true); });
+$("#quick").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); $("#quick").blur(); } });
+$("#quick").addEventListener("focus", () => { if (S.state === "idle" && !S.asking) setState("listening"); });
+$("#quick").addEventListener("blur", () => { if (S.state === "listening" && !S.asking) setState("idle"); });
+$("#open-chat").addEventListener("click", (e) => { e.stopPropagation(); SFX.blip(); openChat(); });
+$("#reply").addEventListener("click", (e) => { e.stopPropagation(); clearTimeout(replyTimer); $("#reply").classList.remove("on"); openChat(); });
+$("#ask").addEventListener("focus", () => { if (S.state === "idle" && !S.asking) setState("listening"); });
+$("#ask").addEventListener("blur", () => { if (S.state === "listening" && !S.asking) setState("idle"); });
+
+// a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes): "Bring back"
+// swaps it in (and the current one aside, so a second press swaps back)
+function showRestore(prev) {
+  const b = $("#restore-chat");
+  b.hidden = !prev;
+  if (!prev) return;
+  const at = new Date(prev.saved_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), n = prev.questions;
+  b.textContent = `Bring back the last conversation (${n} question${n === 1 ? "" : "s"}, ${at})`;
+}
+$("#restore-chat").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  if (S.asking) return;
+  const res = await fetch("/api/chat/restore", { method: "POST" }).catch(() => null);
+  const back = res?.ok ? await res.json() : null;
+  if (back?.ok) { S.chat = back.messages.map((m) => ({ role: m.role, content: m.content })); renderChat(); SFX.blip(); }
+  showRestore(back?.previous);
+});
+
+/* ---------- idle events ---------- */
+let nextEvent = 0;
+function idleEvent() {
+  const kind = ["relock", "scan", "trace"][Math.floor(Math.random() * 3)], withSound = Math.random() < 0.35;
+  if (kind === "relock") { relockTarget = { to: Math.round((rings.ticks.a + 30) / 30) * 30 }; if (withSound) SFX.relock(); }
+  if (kind === "trace" && traces.length) { pulseTrace(traces[Math.floor(Math.random() * traces.length)], Math.random() < 0.6, 180); if (withSound) SFX.shimmer(); }
+  if (kind === "scan") {
+    const targets = [...document.querySelectorAll(S.layout === "launcher" ? ".side .panel, .log, .strip, #mods .mod" : "#mods .mod, #hub > .chat, .arm, .log, .strip")];
+    const n = targets[Math.floor(Math.random() * targets.length)];
+    if (!n) return;
+    const r = n.getBoundingClientRect();
+    if (!r.width) return;
+    const ret = $("#reticle");
+    ret.style.transition = "none";
+    Object.assign(ret.style, { left: r.left - 40 + "px", top: r.top - 40 + "px", width: r.width + 80 + "px", height: r.height + 80 + "px", opacity: 0 });
+    ret.getBoundingClientRect();
+    ret.style.transition = "";
+    Object.assign(ret.style, { left: r.left - 6 + "px", top: r.top - 6 + "px", width: r.width + 12 + "px", height: r.height + 12 + "px", opacity: 1 });
+    if (withSound) SFX.relock();
+    setTimeout(() => (ret.style.opacity = 0), 1100);
+  }
+}
+
+/* ---------- modules: buttons come from the module list; pages unfold from their button ---------- */
+const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
+// every module the hub knows; the venue's list (hub.modules) picks which ones and their order.
+// Chat isn't in the list: it belongs to the core and is always there. "test" ones only try the layout.
+// every module the hub knows: id -> [title, icon, kind]. The theme's hub.modules picks which ones and
+// their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it);
+// "side" = the arm's side view, drawn here from its real joints. Chat isn't one: it belongs to the core.
+const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], arm: ["Arm", "i-arm", "side"] };
+const CHAT = ["Chat", "i-chat", "chat"];
+function buildMring(g) {
+  el("circle", { r: 22, fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "14 5 2 5", opacity: 0.8 }, g);
+  el("circle", { r: 27, fill: "none", stroke: "currentColor", "stroke-width": 0.6, "stroke-dasharray": "1 3", opacity: 0.5 }, g);
+}
+function renderMods() {
+  const l = $("#mods .l"), r = $("#mods .r");
+  l.innerHTML = ""; r.innerHTML = "";
+  S.modules.forEach((id, i) => {
+    const [title, ico] = MODULES[id], b = document.createElement("button");
+    b.className = "mod panel" + (S.booted ? "" : " hold"); b.type = "button"; b.dataset.module = id;
+    b.innerHTML = `<div class="cut"><div class="in"><svg viewBox="-30 -30 60 60" aria-hidden="true"><g class="mring"></g><use href="#${ico}" x="-11" y="-11" width="22" height="22" class="mico"/></svg><div class="name">${title}</div></div></div>`;
+    // alternate left and right of the core so the hub stays balanced (panels layout: one column)
+    (i % 2 && S.layout === "launcher" ? r : l).appendChild(b);
+    buildMring(b.querySelector(".mring"));
+    b.addEventListener("click", () => { SFX.blip(); openModule(b); });
+  });
+  body.dataset.mods = S.modules.length;
+}
+// the core never disappears: while a module is open it flies to the dock (beside the chat, or small in the corner)
+let modFrom = null, orbHome = null;
+function flipOrb(orb, from) {
+  const b = orb.getBoundingClientRect();
+  if (!from.width || !b.width) return;
+  orb.style.transition = "none";
+  orb.style.transform = `translate(${from.left + from.width / 2 - b.left - b.width / 2}px, ${from.top + from.height / 2 - b.top - b.height / 2}px) scale(${from.width / b.width})`;
+  orb.getBoundingClientRect();
+  orb.style.transition = "transform 0.75s cubic-bezier(0.16,1,0.3,1), color 0.5s";
+  orb.style.transform = "";
+}
+function openModule(btn) {
+  if (S.moduleOpen) return;
+  const [title, ico, kind] = btn.dataset.module ? MODULES[btn.dataset.module] : btn.dataset.detail ? DETAILS[btn.dataset.detail] : CHAT;
+  S.moduleOpen = kind;
+  const r = btn.getBoundingClientRect(), m = $("#module");
+  modFrom = `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)`;
+  $("#mod-title").textContent = title;
+  $("#mod-ico use").setAttribute("href", "#" + ico);
+  if (kind === "chat") $("#mod-slot").appendChild($(".chat"));
+  if (kind === "detail") showDetail(btn.dataset.detail);
+  if (kind === "page") openPage(btn.dataset.module);
+  modCv.style.display = kind === "holo" || kind === "side" ? "" : "none";
+  body.dataset.mod = kind;
+  const orb = $("#orb");
+  orbHome = orb.getBoundingClientRect();
+  $("#orb-dock").appendChild(orb);
+  flipOrb(orb, orbHome);
+  setTimeout(() => { const o = orb.getBoundingClientRect(); S.orbC = { x: o.left + o.width / 2, y: o.top + o.height / 2 }; }, 800);
+  m.style.transition = "none"; m.style.clipPath = modFrom; m.style.opacity = ""; m.classList.remove("closing"); m.classList.add("open");
+  m.getBoundingClientRect();
+  m.style.transition = ""; m.style.clipPath = "inset(0 0 0 0)";
+  body.classList.add("folded");
+  SFX.open();
+  setTimeout(() => (kind === "chat" ? $("#ask") : $("#mod-back")).focus(), 320);
+}
+function closeModule() {
+  if (!S.moduleOpen) return;
+  const m = $("#module"), orb = $("#orb"), d = orb.getBoundingClientRect();
+  // the page shrinks back toward its button and fades at once: a cropped page never lingers over the hub
+  m.classList.add("closing");
+  // removing the page closes its connection at once: the arm freezes (dead-man) and control is free
+  $("#mod-slot iframe")?.remove();
+  m.style.transition = "clip-path 0.4s cubic-bezier(0.7,0,0.84,0), opacity 0.22s ease-in";
+  m.style.clipPath = modFrom; m.style.opacity = 0;
+  body.classList.remove("folded");
+  SFX.close();
+  // fly the core home first, then put it back in the hub
+  if (orbHome && d.width) {
+    orb.style.transition = "transform 0.7s cubic-bezier(0.16,1,0.3,1)";
+    orb.style.transform = `translate(${orbHome.left + orbHome.width / 2 - d.left - d.width / 2}px, ${orbHome.top + orbHome.height / 2 - d.top - d.height / 2}px) scale(${orbHome.width / d.width})`;
+  }
+  setTimeout(() => {
+    m.classList.remove("open");
+    orb.style.transition = "none"; orb.style.transform = "";
+    $(".core").insertBefore(orb, $(".core").firstChild);
+    delete body.dataset.mod;
+    if (S.moduleOpen === "chat") $("#hub").insertBefore($(".chat"), $(".side.left"));
+    $("#mod-slot .detail")?.remove();
+    S.moduleOpen = null;
+    layoutTraces(); showTraces();
+  }, 700);
+}
+function openChat() {
+  if (S.layout === "panels") { $("#ask").focus(); return; }
+  openModule($(".core"));
+}
+$(".core").addEventListener("click", (e) => {
+  if (!S.booted || performance.now() < S.readyAt || e.target.closest("#toast, #errmsg, #ask-btn, #reply")) return;
+  SFX.blip(); openChat();
+});
+$("#mod-back").addEventListener("click", closeModule);
+// callouts open their details like module buttons; their own controls (range, list, devices) keep working
+document.querySelectorAll(".side .panel[data-detail]").forEach((p) => {
+  const go = () => { if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule(p); };
+  p.addEventListener("click", (e) => { if (!e.target.closest(".range, .devmore, #devlist, #devgraph .node")) go(); });
+  p.querySelector(".open").addEventListener("click", (e) => { e.stopPropagation(); go(); });
+});
+const DETAILS = { project: ["Current Project", "i-next", "detail"], spend: ["AI Spend", "i-coin", "detail"], commits: ["Commits", "i-commit", "detail"], devices: ["Devices", "i-net", "detail"] };
+// every details page reads the same real facts as its callout
+function showDetail(id) {
+  const slot = $("#mod-slot");
+  let html = "";
+  if (id === "project") {
+    const p = S.project?.available ? S.project : { steps: [] }, done = p.steps.filter((s) => s.done).length;
+    html = `<div class="detail"><div><div class="d-line">The goal</div><div class="d-big">${esc(p.focus || "")}</div>
+      <p>From <b>docs/current-focus.md</b>: what the project works on now, in small steps that each work on their own.</p>
+      <div class="d-num">${done}<small>of ${p.steps.length} steps done</small></div>
+      ${p.next ? `<p>Now: <b>step ${p.step}, ${esc(p.next)}</b>.</p>` : ""}</div>
+      <div><div class="d-line">Steps</div><ol class="d-steps">${p.steps.map((s) => {
+        const now = !s.done && s.n === p.step;
+        return `<li class="${now ? "now" : s.done ? "" : "later"}"><span class="n">${s.n}</span><div><b>${esc(s.title)}</b><small>${s.done ? `done ${s.done_on || ""}` : ""}</small></div><span class="w">${now ? "Now" : s.done ? "Done" : ""}</span></li>`;
+      }).join("")}</ol></div></div>`;
+  } else if (id === "spend") {
+    // the month so far against an even pace to the budget: on track while the dot stays under the dashes
+    const s = S.spend || {}, B = s.budget_usd, spent = s.spent_usd || 0, now = new Date();
+    const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), today = now.getDate();
+    const w = 600, h = 170, top = Math.max(B || 0, spent, 0.01), x = (d) => (d / dim) * w, y = (v) => h - (v / top) * (h - 20);
+    const rows = Object.entries(s.by_setup || {}).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${usd(v, 4)}</td></tr>`).join("")
+      || `<tr><td colspan="2">No chats yet this month</td></tr>`;
+    html = `<div class="detail"><div><div class="d-line">This month</div><div class="d-num">${usd(spent)}<small>${B ? `of ${usd(B, 0)}` : "no budget set"}</small></div>
+      <div class="meter" style="--fill:${B ? Math.min(100, (100 * spent) / B) : 0}%"></div>
+      <p><b>${s.chats || 0} answer${s.chats === 1 ? "" : "s"}</b> so far this month; each one logs what it cost.</p>
+      ${B ? `<p>Budget: <b>${usd(B, 0)} a month</b>. At the budget the chat pauses and says why. It resets on the 1st.</p>` : ""}</div>
+      <div><div class="d-line">Spent so far${B ? `, against an even pace to ${usd(B, 0)}` : ""}</div>
+      <svg class="d-chart" viewBox="0 0 ${w} ${h + 22}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--line)"/>
+        ${B ? `<line x1="0" y1="${y(0)}" x2="${w}" y2="${y(B)}" stroke="var(--text-dim)" stroke-dasharray="4 5"/><text x="${w - 4}" y="${y(B) - 6}" text-anchor="end">${usd(B, 0)}</text>` : ""}
+        <circle cx="${x(today)}" cy="${y(spent)}" r="4" fill="var(--hot)"/>
+        <text x="0" y="${h + 18}">1st</text><text x="${x(today)}" y="${h + 18}" text-anchor="middle">today</text><text x="${w}" y="${h + 18}" text-anchor="end">${dim}th</text></svg>
+      <div class="d-line" style="margin-top:1.6rem">By AI setup</div>
+      <table class="d-table"><thead><tr><th>Setup</th><th>This month</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  } else if (id === "commits") {
+    const C = COMMITS.length ? COMMITS : [0], w = 640, h = 170, n = C.length, step = w / n, max = Math.max(1, ...C);
+    const total = C.reduce((a, b) => a + b, 0), active = C.filter(Boolean).length, top = C.indexOf(Math.max(...C));
+    const bars = C.map((c, i) => { const bh = Math.max(1, (c / max) * (h - 18)), bx = i * step + 3; return `<rect x="${bx}" y="${h - bh}" width="${Math.max(1, step - 6)}" height="${bh}" fill="${c === max ? "var(--hot)" : "currentColor"}" opacity="${c ? (c === max ? 1 : 0.7) : 0.25}"/>${c ? `<text class="num" x="${bx + (step - 6) / 2}" y="${h - bh - 5}" text-anchor="middle">${c}</text>` : ""}`; }).join("");
+    const ticks = [n - 1, Math.round((n - 1) * 0.75), Math.round((n - 1) * 0.5), Math.round((n - 1) * 0.25), 0].map((k) => `<text x="${(n - 1 - k) * step + step / 2}" y="${h + 18}" text-anchor="middle">${k ? dayName(k) : "today"}</text>`).join("");
+    const recent = S.recent.map((c) => { const [yy, mm, dd] = c.date.split("-").map(Number); return `<li><span>${new Date(yy, mm - 1, dd).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>${esc(c.subject)}</li>`; }).join("");
+    html = `<div class="detail wide"><div><div class="d-line">Commits per day, last ${n} days, all branches</div><svg class="d-chart" viewBox="0 0 ${w} ${h + 22}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--line)"/>${bars}${ticks}</svg>
+      <div class="d-stats"><div><b>${total}</b>commits</div><div><b>${active}</b>days with commits</div><div><b>${Math.max(...C)}</b>on ${dayName(n - 1 - top)}, the busiest day</div></div></div>
+      <div><div class="d-line">Latest</div><ul class="d-list">${recent}</ul></div></div>`;
+  } else if (id === "devices") {
+    const devs = deviceList(), cols = ["id", "on", "linked", "use"].map((k) => [k, COLUMNS[k]]);
+    const rows = Object.entries(KINDS).map(([kind, [ico, label]]) => {
+      const list = devs.filter((d) => d.kind === kind);
+      if (!list.length) return "";
+      return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}<span style="float:right">${list.filter((d) => d.brain).length} of ${list.length} linked</span></th></tr>` + list.map((d) => `<tr data-dev="${esc(d.name)}"><td><svg class="ico" style="color:var(--c)"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    }).join("");
+    html = `<div class="detail wide"><div><div class="d-line">${devs.filter((d) => d.brain).length} of ${devs.length} linked to the brain · from devices.yaml; power comes with the roll call</div>
+      <table class="d-table"><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>${rows}</table></div></div>`;
+  }
+  slot.insertAdjacentHTML("beforeend", html);
+  slot.querySelectorAll(".detail tr[data-dev]").forEach((tr) => tr.addEventListener("click", (e) => { e.stopPropagation(); showDevice(deviceList().find((d) => d.name === tr.dataset.dev), tr); }));
+}
+function labelColumn(h, items, labelX, fontLines, fontDigits, narrow) {
+  items.forEach(([p, ji], k) => {
+    mcx.strokeStyle = rgba(mainRGB, 1); mcx.lineWidth = 1.5; mcx.fillStyle = "rgba(5,8,11,1)";
+    mcx.beginPath();
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU + Math.PI / 6; mcx[i ? "lineTo" : "moveTo"](p.x + Math.cos(a) * 8, p.y + Math.sin(a) * 8); }
+    mcx.closePath(); mcx.fill(); mcx.stroke();
+    const ly = h * 0.2 + k * Math.min(72, h * 0.13);
+    mcx.strokeStyle = rgba(mainRGB, 0.5); mcx.lineWidth = 1;
+    mcx.beginPath(); mcx.moveTo(p.x + 9, p.y); mcx.lineTo(labelX - 40, ly); mcx.lineTo(labelX - 8, ly); mcx.stroke();
+    mcx.fillStyle = rgba(mainRGB, 1); mcx.fillRect(labelX - 10, ly - 2, 4, 4);
+    mcx.fillStyle = "#6d8c96"; mcx.font = `300 ${narrow ? 11 : 13}px ${fontLines}`;
+    mcx.fillText(JOINTS[ji][0], labelX, ly - 6);
+    mcx.fillStyle = "#eafcff"; mcx.font = `${narrow ? 16 : 22}px ${fontDigits}`;
+    mcx.fillText(fmt(jointVals[ji]), labelX, ly + 20);
+  });
+}
+function drawModule(now) {
+  if (S.moduleOpen !== "holo" && S.moduleOpen !== "side") return;
+  const box = modCv.parentElement.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  if (modCv.width !== Math.round(box.width * dpr)) { modCv.width = Math.round(box.width * dpr); modCv.height = Math.round(box.height * dpr); }
+  const w = box.width, h = box.height, narrow = w < 640;
+  mcx.setTransform(dpr, 0, 0, dpr, 0, 0); mcx.clearRect(0, 0, w, h);
+  const cs = getComputedStyle(document.documentElement), fontLines = cs.getPropertyValue("--f-lines"), fontDigits = cs.getPropertyValue("--f-digits");
+  const deg = Math.PI / 180, [pan, lift, elbow, wrist, , grip] = jointVals;
+  const labelX = narrow ? w * 0.62 : w * 0.7;
+  const glow = S.quality === "minimal" ? 0 : 10;
+  if (S.moduleOpen === "holo") {
+    // a rotating wireframe "hologram" of the arm over a polar floor grid
+    const cx0 = narrow ? w * 0.34 : w * 0.38, cy0 = h * 0.72, sc = Math.min(w, h) * (narrow ? 0.17 : 0.2);
+    const yaw = S.quality === "minimal" ? 0.6 : (now / 1000) * 0.3, pitch = 0.32;
+    const proj = (x, y, z) => {
+      const x1 = x * Math.cos(yaw) - z * Math.sin(yaw), z1 = x * Math.sin(yaw) + z * Math.cos(yaw);
+      const y2 = y * Math.cos(pitch) - z1 * Math.sin(pitch), z2 = y * Math.sin(pitch) + z1 * Math.cos(pitch), f = 4 / (4 + z2);
+      return { x: cx0 + x1 * sc * f, y: cy0 - y2 * sc * f };
+    };
+    mcx.strokeStyle = rgba(lineRGB, 1); mcx.lineWidth = 1;
+    for (const r of [0.6, 1.2, 1.8, 2.4]) { mcx.beginPath(); for (let i = 0; i <= 48; i++) { const a = (i / 48) * TAU, p = proj(Math.cos(a) * r, 0, Math.sin(a) * r); mcx[i ? "lineTo" : "moveTo"](p.x, p.y); } mcx.stroke(); }
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU, p0 = proj(0, 0, 0), p1 = proj(Math.cos(a) * 2.4, 0, Math.sin(a) * 2.4); mcx.beginPath(); mcx.moveTo(p0.x, p0.y); mcx.lineTo(p1.x, p1.y); mcx.stroke(); }
+    const plane = (r, y) => proj(r * Math.cos(pan * deg), y, r * Math.sin(pan * deg));
+    const j0 = { r: 0, y: 0.45 }, a1 = lift * deg, j1 = { r: Math.sin(a1) * 1.3, y: j0.y + Math.cos(a1) * 1.3 };
+    const a2 = a1 + elbow * deg, j2 = { r: j1.r + Math.sin(a2) * 1.2, y: j1.y + Math.cos(a2) * 1.2 };
+    const a3 = a2 + wrist * deg, j3 = { r: j2.r + Math.sin(a3) * 0.45, y: j2.y + Math.cos(a3) * 0.45 };
+    const P = [proj(0, 0, 0), plane(j0.r, j0.y), plane(j1.r, j1.y), plane(j2.r, j2.y), plane(j3.r, j3.y)];
+    const flick = S.quality === "minimal" ? 1 : 0.88 + Math.random() * 0.12;
+    mcx.strokeStyle = rgba(mainRGB, 0.9 * flick); mcx.lineWidth = 3; mcx.shadowColor = rgba(mainRGB, 0.8); mcx.shadowBlur = glow;
+    mcx.beginPath(); P.forEach((p, i) => mcx[i ? "lineTo" : "moveTo"](p.x, p.y)); mcx.stroke();
+    for (const s of [-1, 1]) {
+      const ga = a3 + s * (0.15 + grip / 60), tip = plane(j3.r + Math.sin(ga) * 0.3, j3.y + Math.cos(ga) * 0.3);
+      mcx.beginPath(); mcx.moveTo(P[4].x, P[4].y); mcx.lineTo(tip.x, tip.y); mcx.stroke();
+    }
+    mcx.shadowBlur = 0;
+    mcx.lineWidth = 1; mcx.strokeStyle = rgba(mainRGB, 0.5);
+    for (const y of [0, 0.45]) { mcx.beginPath(); for (let i = 0; i <= 32; i++) { const a = (i / 32) * TAU, p = proj(Math.cos(a) * 0.3, y, Math.sin(a) * 0.3); mcx[i ? "lineTo" : "moveTo"](p.x, p.y); } mcx.stroke(); }
+    if (S.quality !== "minimal") { mcx.fillStyle = "rgba(5,8,11,0.25)"; for (let y = (now / 40) % 4; y < h; y += 4) mcx.fillRect(0, y, labelX - 60, 1.5); }
+    labelColumn(h, [[P[1], 0], [P[2], 1], [P[3], 2], [P[4], 3]], labelX, fontLines, fontDigits, narrow);
+  } else {
+    // side view with callouts
+    const bx = narrow ? w * 0.35 : w * 0.36, by = h * 0.8, unit = Math.min(w, h) * (narrow ? 0.2 : 0.22);
+    mcx.strokeStyle = rgba(lineRGB, 1); mcx.lineWidth = 1;
+    mcx.beginPath(); mcx.moveTo(w * 0.06, by); mcx.lineTo(w * 0.94, by); mcx.stroke();
+    for (let x = w * 0.06; x < w * 0.94; x += 24) { mcx.beginPath(); mcx.moveTo(x, by); mcx.lineTo(x, by + 5); mcx.stroke(); }
+    mcx.setLineDash([2, 6]); mcx.beginPath(); mcx.arc(bx, by - unit * 0.5, unit * 2.6, Math.PI, TAU); mcx.stroke(); mcx.setLineDash([]);
+    const p0 = { x: bx, y: by - unit * 0.5 };
+    const b1 = -Math.PI / 2 + lift * deg, p1 = { x: p0.x + Math.cos(b1) * unit * 1.3, y: p0.y + Math.sin(b1) * unit * 1.3 };
+    const b2 = b1 + elbow * deg, p2 = { x: p1.x + Math.cos(b2) * unit * 1.2, y: p1.y + Math.sin(b2) * unit * 1.2 };
+    const b3 = b2 + wrist * deg, p3 = { x: p2.x + Math.cos(b3) * unit * 0.45, y: p2.y + Math.sin(b3) * unit * 0.45 };
+    mcx.strokeStyle = rgba(mainRGB, 0.9); mcx.lineWidth = 3; mcx.shadowColor = rgba(mainRGB, 0.8); mcx.shadowBlur = glow;
+    mcx.beginPath(); mcx.moveTo(bx - unit * 0.35, by); mcx.lineTo(bx + unit * 0.35, by); mcx.moveTo(bx, by); mcx.lineTo(p0.x, p0.y);
+    mcx.lineTo(p1.x, p1.y); mcx.lineTo(p2.x, p2.y); mcx.lineTo(p3.x, p3.y); mcx.stroke();
+    const g = (grip / 40) * 0.6 + 0.15;
+    for (const s of [-1, 1]) { const ga = b3 + s * g; mcx.beginPath(); mcx.moveTo(p3.x, p3.y); mcx.lineTo(p3.x + Math.cos(ga) * unit * 0.28, p3.y + Math.sin(ga) * unit * 0.28); mcx.stroke(); }
+    mcx.shadowBlur = 0;
+    labelColumn(h, [[p0, 1], [p1, 2], [p2, 3], [p3, 5]], labelX, fontLines, fontDigits, narrow);
+  }
+}
+
+/* ---------- startup ---------- */
+let skip = false;
+const pause = (ms) => (skip ? Promise.resolve() : wait(ms));
+function greeting() { const h = new Date().getHours(); return h < 5 ? "Good evening" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
+async function typeInto(node, text, perChar = 16) {
+  for (let i = 1; i <= text.length; i++) {
+    if (skip) { node.textContent = text; return; }
+    node.textContent = text.slice(0, i);
+    if (i % 3 === 0) SFX.tick();
+    await wait(perChar);
+  }
+}
+async function decodeTitle() {
+  const t = $("#boot-title"), target = S.title, glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/#";
+  t.classList.add("on");
+  for (let f = 0; f <= 24; f++) {
+    if (skip) break;
+    const done = Math.floor((f / 24) * target.length);
+    t.textContent = target.split("").map((ch, i) => (i < done || ch === " " ? ch : glyphs[Math.floor(Math.random() * glyphs.length)])).join("");
+    SFX.decode();
+    await wait(34);
+  }
+  t.textContent = target;
+  SFX.title();
+}
+function zoomOrb(from, to, ms) {
+  // the core arrives big and settles into the middle with the same long ease-out as the network
+  centerOrb(from);
+  requestAnimationFrame(() => { const orb = $("#orb"); orb.style.transition = `transform ${ms}ms cubic-bezier(0.2, 0.9, 0.25, 1)`; orb.style.transform = orb.style.transform.replace(/scale\([^)]*\)/, `scale(${to})`); setTimeout(() => (orb.style.transition = ""), ms); });
+}
+function centerOrb(scale) {
+  // place the assistant in the middle of the screen, bigger, for the startup
+  const orb = $("#orb"), cb = $(".core").getBoundingClientRect();
+  const dx = innerWidth / 2 - (cb.left + cb.width / 2), dy = innerHeight / 2 - (cb.top + cb.height / 2);
+  orb.style.transition = "none"; orb.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+  orb.getBoundingClientRect(); orb.style.transition = "";
+}
+// the greeting: "Good evening." + one line of real news, built by the brain from real facts (/api/chat/start,
+// sent on the start press); the persona's own line when there's no news. Never invented here.
+const GREET_LINE = () => S.greet?.text || `${greeting()}.`;
+const CHECK_ICONS = { Theme: "i-hex", Sound: "i-chip", Display: "i-screen", Internet: "i-globe", AI: "i-chip", Assistant: "i-user", Arm: "i-arm" };
+async function boot() {
+  if (S.readyP) await Promise.race([S.readyP, wait(1500)]);
+  S.booting = true; S.booted = false; skip = false;
+  S.igniteAt = 0; S.reveal = 0; S.spinBoost = 12; S.hyper = null; S.morph = null;
+  setAlert("none"); setState("idle");
+  $("#log-chat").innerHTML = ""; $("#typelog").innerHTML = ""; $("#verses").innerHTML = "";
+  document.querySelectorAll(".panel").forEach((p) => { p.style.transitionDelay = ""; p.classList.add("hold"); });
+  body.classList.add("pre-frame"); buildFrame();
+  ringsOn(false);
+  layoutTraces();
+  const bl = $("#bootlines"); bl.innerHTML = ""; bl.style.transition = "none"; bl.style.opacity = 1; bl.style.transform = "translateX(-50%)"; bl.getBoundingClientRect(); bl.style.transition = "";
+  const bt = $("#boot-title"); bt.classList.remove("on"); bt.style.transition = ""; bt.style.transform = ""; bt.textContent = S.title; $("#boot-title-wrap").style.display = "";
+  $(".brand").style.opacity = 0;
+  $("#boot-greet").textContent = ""; $("#boot-greet").className = "";
+  centerOrb(1.3);
+  const hyper = S.startup === "hyperspace" && S.quality !== "minimal";
+  if (hyper) {
+    // hyperspace jump: stars stream out, a flash, then everything arrives
+    SFX.hyper();
+    S.hyper = { phase: "jump", t0: performance.now() };
+    await pause(HYPER.total);
+    if (skip) return finishBoot();
+    if (S.impact) {
+      // impact frame: the last streaks, frozen and inverted for a few frames, right before the flash
+      flashFx("impact"); await pause(80);
+    }
+    zoomOrb(2.8, 1.3, HYPER.brake);
+    flashFx("white");
+    SFX.arrive();
+    S.hyper = { phase: "arrive", t0: performance.now() };
+    S.reveal = 1e9;
+    drawFrame();
+  } else {
+    // assemble: a CRT line opens the screen, then the frame draws itself; the waiting stars become the network
+    if (stars.length) {
+      const F = starF();
+      dots.forEach((d, i) => { const st = stars[i % stars.length]; d.fx = W / 2 + (st.x / st.z) * F; d.fy = H / 2 + (st.y / st.z) * F; });
+      S.morph = { t0: performance.now() }; S.reveal = 1e9;
+    }
+    $("#flash").classList.remove("crt"); void $("#flash").offsetWidth; $("#flash").classList.add("crt");
+    SFX.ignition();
+    await pause(380);
+    if (skip) return finishBoot();
+    drawFrame();
+    await pause(300);
+  }
+  if (skip) return finishBoot();
+  // rings lock on one by one: each flies in from its own side and turn, flashes as it locks and sends out a ring of light
+  lockOn();
+  for (let i = 0; i < RING_ORDER.length; i++) {
+    lockRing(RING_ORDER[i]);
+    SFX.lock(i);
+    await pause(hyper ? 75 : 110);
+    if (skip) return finishBoot();
+  }
+  // the core ignites with a lens flare
+  S.igniteAt = performance.now(); SFX.sweep();
+  const fl = $("#flare"); fl.classList.remove("go"); void fl.getBoundingClientRect(); fl.classList.add("go");
+  fl.addEventListener("animationend", () => fl.classList.remove("go"), { once: true });  // or it replays whenever the core moves
+  if (!hyper) {
+    await pause(350);
+    if (skip) return finishBoot();
+    // a shockwave from the core reveals the network
+    $("#shock").classList.remove("go"); void $("#shock").offsetWidth; $("#shock").classList.add("go");
+    SFX.shock();
+    const t0 = performance.now(), maxR = Math.hypot(W, H);
+    (function grow(t) { const k = clamp((t - t0) / 1500, 0, 1); S.reveal = Math.max(S.reveal, maxR * (1 - Math.pow(1 - k, 3))); if (k < 1 && !S.booted) requestAnimationFrame(grow); })(t0);
+  }
+  // real checks only: each line reads something that just happened or the brain just reported
+  const st = S.status, ai = st?.ai;
+  const checks = [
+    ["Theme", S.themeOk ? "loaded" : "defaults", S.themeOk], ["Sound", S.sound && ac ? "unlocked" : "muted", !!(S.sound && ac)],
+    ["Display", `${screen.width}×${screen.height}`, true],
+    ["Internet", st?.internet === true ? "online" : st?.internet === false ? "offline" : "checking", st?.internet === true],
+    ["AI", !ai ? "brain not reachable" : ai.paused ? "paused" : ai.connected ? ai.setup : "not connected", !!ai?.connected && !ai.paused],
+    ["Assistant", st?.persona?.display_name || "unknown", !!st],
+    ["Arm", S.arm?.connected ? S.arm.name : "not answering", !!S.arm?.connected],
+  ];
+  // the checks type out while the title decodes above them
+  const typeChecks = (async () => {
+    for (const [k, v, ok] of checks) {
+      const row = document.createElement("div");
+      row.innerHTML = `<span class="k"><svg class="ico"><use href="#${CHECK_ICONS[k]}"/></svg><span></span></span><i class="lead"></i><span class="v${ok ? "" : " no"}"></span>`;
+      bl.appendChild(row);
+      await pause(70);
+      await typeInto(row.querySelector(".k span"), k, hyper ? 10 : 16);
+      row.classList.add("led"); await pause(90);
+      await typeInto(row.querySelector(".v"), v, hyper ? 10 : 16);
+      if (skip) return;
+      row.querySelector(".v").classList.add("pop");
+      SFX.line();
+      await pause(40);
+    }
+  })();
+  await pause(hyper ? 650 : 900);
+  if (skip) return finishBoot();
+  await decodeTitle();
+  if (skip) return finishBoot();
+  // then the greeting (the persona's line), typed under the title while the last checks finish
+  const gr = $("#boot-greet");
+  await Promise.race([S.greetP, wait(1500)]);
+  gr.classList.add("typing");
+  await typeInto(gr, GREET_LINE(), 22);
+  gr.classList.remove("typing");
+  await typeChecks;
+  if (skip) return finishBoot();
+  await pause(800);
+  finishBoot();
+}
+function flyToPlace(instant) {
+  // the startup's pieces travel to their places on the hub
+  const bt = $("#boot-title"), brand = $(".brand"), bl = $("#bootlines"), orb = $("#orb");
+  const dur = 1000;
+  orb.style.transition = instant ? "none" : `transform ${dur}ms cubic-bezier(0.16,1,0.3,1)`;
+  orb.style.transform = "";
+  if (!instant && bt.classList.contains("on")) {
+    bt.style.transition = "none";
+    const b = brand.getBoundingClientRect(), t = bt.getBoundingClientRect();
+    const s = parseFloat(getComputedStyle(brand).fontSize) / parseFloat(getComputedStyle(bt).fontSize);
+    bt.getBoundingClientRect();
+    bt.style.transition = `transform ${dur}ms cubic-bezier(0.16,1,0.3,1)`;
+    bt.style.transform = `translate(${b.left - t.left}px, ${b.top - t.top}px) scale(${s})`;
+    setTimeout(() => { brand.style.opacity = ""; $("#boot-title-wrap").style.display = "none"; }, dur);
+    const sr = $(".strip").getBoundingClientRect(), br = bl.getBoundingClientRect();
+    bl.style.transform = `translate(calc(-50% + ${sr.right - 220 - (br.left + br.width / 2)}px), ${sr.top - br.top}px) scale(0.4)`;
+    bl.style.opacity = 0;
+  } else { brand.style.opacity = ""; $("#boot-title-wrap").style.display = "none"; bl.style.opacity = 0; }
+}
+function finishBoot() {
+  if (S.booted) return;
+  skip = true;
+  const instant = !$("#boot-title").classList.contains("on");
+  S.booting = false; S.booted = true;
+  if (!S.igniteAt) S.igniteAt = performance.now();
+  S.hyper = null; if (!S.morph) stars = [];
+  drawFrame(); ringsOn(true);
+  if (S.reveal < 2000) { const t0 = performance.now(), maxR = Math.hypot(W, H), r0 = S.reveal; (function grow(t) { const k = clamp((t - t0) / 900, 0, 1); S.reveal = r0 + (maxR - r0) * (1 - Math.pow(1 - k, 3)); if (k < 1) requestAnimationFrame(grow); })(t0); }
+  flyToPlace(instant);
+  $("#boot-greet").classList.add("leave");
+  S.readyAt = performance.now() + 1200;
+  if (!instant) SFX.land();
+  // panels unfold one after another, spreading out from the assistant; circuits grow toward them
+  setTimeout(() => {
+    layoutTraces(); drawTraces();
+    const oc = S.orbC;
+    document.querySelectorAll(".panel").forEach((p) => {
+      const r = p.getBoundingClientRect(), d = Math.hypot(r.left + r.width / 2 - oc.x, r.top + r.height / 2 - oc.y);
+      p.style.transitionDelay = `${Math.round(d / 2.4)}ms`;
+      p.classList.remove("hold");
+    });
+    setTimeout(() => document.querySelectorAll(".panel").forEach((p) => (p.style.transitionDelay = "")), 1700);
+  }, instant ? 0 : 450);
+  setTimeout(async () => {
+    $("#bootlines").innerHTML = "";
+    typeLogLine();
+    // the greeting waits in the conversation as its first message (the brain put it there); the core glows once
+    await Promise.race([S.greetP, wait(2000)]);
+    if (S.asking) return;
+    if (S.greet && !S.chat.some((m) => m.role === "user")) S.chat = [{ role: "assistant", content: S.greet.text }];
+    renderChat(); showRestore(S.greet?.previous);
+    setState("speaking"); await wait(1200); if (S.state === "speaking" && !S.asking) setState("idle");
+  }, 1500);
+  S.lastInput = performance.now();
+}
+
+/* ---------- ignition: safe to start, any input ---------- */
+const hasTouch = navigator.maxTouchPoints > 0, hasMouse = matchMedia("(any-pointer: fine)").matches;
+let hasPad = false;
+function ignitionText() {
+  const parts = [];
+  if (hasTouch) parts.push("touch");
+  if (hasMouse) parts.push("click");
+  if (hasMouse || !hasTouch) parts.push("press any key");
+  if (hasPad) parts.push("press any button");
+  const s = parts.length > 1 ? parts.slice(0, -1).join(", ") + " or " + parts[parts.length - 1] : parts[0];
+  $("#ign-what").textContent = s[0].toUpperCase() + s.slice(1) + " to start";
+  const icons = [hasTouch && "i-touch", hasMouse && "i-mouse", (hasMouse || !hasTouch) && "i-key", hasPad && "i-pad"].filter(Boolean);
+  $("#ign-icons").innerHTML = icons.map((i) => `<svg class="ico"><use href="#${i}"/></svg>`).join("");
+}
+ignitionText();
+addEventListener("gamepadconnected", () => { hasPad = true; ignitionText(); });
+const UNLOCK_MS = 1350;  // the unlock finishes before the startup begins
+function ignite() {
+  const ig = $("#ignite");
+  if (!ig || ig.classList.contains("unlock") || performance.now() < S.startGuardUntil) return;
+  goFull();
+  audio(); SFX.unlock();
+  S.greetP = startChat();
+  ig.classList.add("unlock");
+  setTimeout(() => ig.classList.add("gone"), UNLOCK_MS + 100);
+  setTimeout(() => ig.remove(), UNLOCK_MS + 700);
+  setTimeout(() => body.classList.remove("waiting"), UNLOCK_MS + (S.startup === "hyperspace" ? 700 : 360));
+  resize();
+  PAD = padChar(); setMoney();
+  setTimeout(boot, S.quality === "minimal" ? 0 : UNLOCK_MS);
+}
+$("#ignite").addEventListener("click", ignite);
+function pollPads() {
+  if (!$("#ignite") || !navigator.getGamepads) return;
+  for (const p of navigator.getGamepads()) if (p && p.buttons.some((b) => b.pressed)) { ignite(); return; }
+}
+
+/* ---------- input, typing-to-chat, sleep ---------- */
+addEventListener("keydown", (e) => {
+  S.lastInput = performance.now();
+  if (S.sleeping) wake();
+  if ($("#ignite")) { e.preventDefault(); ignite(); return; }
+  if (S.booting && !S.booted) { finishBoot(); return; }
+  if (e.key === "Escape" && S.moduleOpen) { closeModule(); return; }
+  // just start typing: the ask line under the core catches the letter (the conversation page stays closed)
+  const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || (document.activeElement.tagName === "BUTTON" && e.key === " ");
+  if (S.booted && !inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !S.moduleOpen) {
+    e.preventDefault();
+    if (S.layout === "launcher") { $("#quick").focus(); $("#quick").value += e.key; }
+    else { $("#ask").focus(); $("#ask").value += e.key; }
+  }
+});
+function onPointer(e) {
+  pointer.x = e.clientX; pointer.y = e.clientY;
+  S.lastInput = performance.now();
+  if (S.sleeping && performance.now() > S.sleepGuard) wake();
+}
+addEventListener("pointermove", onPointer);
+addEventListener("pointerdown", (e) => { onPointer(e); if (S.booting && !S.booted) finishBoot(); });
+document.addEventListener("pointerout", (e) => { if (!e.relatedTarget) pointer.x = pointer.y = -1e4; });
+function sleep() { if (!S.booted || S.moduleOpen) return; S.sleeping = true; body.classList.add("sleep"); }
+function wake() { S.sleeping = false; body.classList.remove("sleep"); relockTarget = { to: Math.round((rings.ticks.a + 30) / 30) * 30 }; SFX.relock(); }
+
+/* ---------- the brain: theme numbers, real facts, polling, back to the start screen ---------- */
+async function getJSON(url) {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.warn(`hub: ${url} failed (${e.message})`);
+    return null;
+  }
+}
+function usd(n, dec = 2) { return "$" + Number(n || 0).toFixed(dec); }
+function aiText(ai) {
+  if (ai.paused) return "AI paused";
+  const name = ai.where ? `${ai.setup} (${ai.where})` : ai.setup;
+  return ai.connected === true ? `AI: ${name}` : ai.connected === false ? "AI not connected" : `AI: ${name}, checking`;
+}
+// /theme.json (config/theme.yaml): the numbers win over the concept's built-in ones
+function applyTheme(t) {
+  const root = document.documentElement.style, c = t.colors || {}, f = t.font || {};
+  const vars = {
+    bg: c.background, surface: c.surface, line: c.line, text: c.text, "text-dim": c.text_dim, primary: c.primary, hot: c.hot,
+    accent: c.accent, danger: c.danger, offline: c.offline, frozen: c.frozen,
+    "f-title": f.display, "f-ui": f.family, "f-lines": f.lines, "w-lines": f.lines_weight, "f-digits": f.digits, "f-mono": f.mono,
+    arrive: t.motion?.arrive,
+  };
+  for (const [k, v] of Object.entries(vars)) if (v != null && v !== "") root.setProperty(`--${k}`, String(v));
+  const hub = t.hub || {}, hy = t.startup?.hyperspace || {}, net = t.network || {};
+  S.clock24 = t.clock !== "12h";
+  S.startup = params.get("startup") || t.startup?.style || S.startup;
+  S.impact = hy.impact_frame !== false;
+  if (hy.ramp_s) HYPER.ramp = hy.ramp_s * 1000;
+  if (hy.hold_s) HYPER.hold = hy.hold_s * 1000;
+  if (hy.brake_s) HYPER.brake = hy.brake_s * 1000;
+  if (hy.stars) HYPER.stars = hy.stars;
+  HYPER.total = HYPER.ramp + HYPER.hold;
+  if (net.link_px) NET.link = net.link_px;
+  if (net.push_radius_px) NET.push = net.push_radius_px;
+  if (t.motion?.idle?.sleep_after_s) S.sleepAfterMs = t.motion.idle.sleep_after_s * 1000;
+  if (hub.commits_days?.length) COMMIT_RANGES = hub.commits_days;
+  if (hub.device_columns?.length) DEVICE_COLUMNS = hub.device_columns.filter((k) => COLUMNS[k]);
+  if (hub.devices_graph_max) GRAPH_MAX = hub.devices_graph_max;
+  setQuality(params.get("quality") || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
+  requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
+}
+function setQuality(q) {
+  if (!["maximal", "full", "reduced", "minimal"].includes(q) || q === S.quality) return;
+  body.classList.remove("q-" + S.quality);
+  S.quality = q;
+  body.classList.add("q-" + q);
+  seedNetwork();
+  if (q === "minimal") drawStillGrid();
+  if (q !== "maximal") $("#verses").innerHTML = "";
+}
+// the buttons: the theme's hub.modules, in order; a page module only if the brain has its page (/api/hub)
+function setModules(themeIds, pages) {
+  for (const m of pages) { S.page[m.id] = m.page; MODULES[m.id] = [m.title, MODULES[m.id]?.[1] || "i-test", "page"]; }
+  const ids = themeIds || pages.map((m) => m.id);
+  S.modules = ids.filter((id) => S.page[id] || MODULES[id]?.[2] === "side");
+  renderMods();
+  requestAnimationFrame(() => { layoutTraces(); if (S.booted) showTraces(); });
+}
+async function init() {
+  const [t, hub] = await Promise.all([getJSON("/theme.json"), getJSON("/api/hub")]);
+  S.themeOk = !!t;
+  if (t) applyTheme(t);
+  S.title = hub?.title || "Hub";  // the place's name (place.yaml)
+  document.title = S.title;
+  $("#brand").textContent = S.title; $("#boot-title").textContent = S.title;
+  if (hub?.reset_after_s) S.resetAfterMs = hub.reset_after_s * 1000;
+  setModules(t?.hub?.modules, hub?.modules || []);
+  await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
+}
+function setFact(id, text, off) { const f = $(id); f.querySelector("span").textContent = text; f.classList.toggle("off", !!off); }
+let noteShown = null;
+function showNote(msg) {  // a calm sentence at the top of the core (e.g. why the chat is paused)
+  msg = msg || null;
+  if (msg === noteShown) return;
+  noteShown = msg;
+  if (msg) $("#toast-msg").textContent = msg;
+  $("#toast").classList.toggle("on", !!msg);
+}
+async function pollStatus() {
+  const st = await getJSON("/api/status");
+  S.status = st;
+  if (!st) {
+    setFact("#f-net", "brain not reachable", true); setFact("#f-ai", "AI not connected", true);
+    if (!S.asking) setState("offline");
+    return st;
+  }
+  S.clockOffset = st.time_ms - Date.now();
+  setFact("#f-venue", st.venue); setFact("#f-persona", st.persona.display_name);
+  const iv = $("#ign-venue"); if (iv) iv.textContent = st.venue;
+  setFact("#f-net", st.internet === true ? "online" : st.internet === false ? "offline" : "checking", st.internet !== true);
+  setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
+  showNote(st.ai.paused);
+  if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil && S.state !== st.assistant.state) setState(st.assistant.state);
+  return st;
+}
+let armBusy = false;
+async function pollArm() {
+  if (armBusy) return;
+  armBusy = true;
+  S.arm = await getJSON("/api/arm");
+  armBusy = false;
+  renderArm();
+}
+async function refreshFacts() {
+  const [p, s, c, d] = await Promise.all([getJSON("/api/project"), getJSON("/api/spend"), getJSON("/api/commits?days=30"), getJSON("/api/devices")]);
+  S.project = p; S.spend = s;
+  if (c?.available && c.per_day.length) {
+    COMMITS = c.per_day.map((x) => x.count);
+    const [y, m, dd] = c.per_day.at(-1).date.split("-").map(Number);
+    COMMITS_END = new Date(y, m - 1, dd);
+    S.recent = c.recent || [];
+  }
+  renderProject(); renderSpend(); renderCommits(c);
+  if (d) setDevices(d.devices);
+  buildLogLines();
+  requestAnimationFrame(() => { layoutTraces(); if (S.booted) showTraces(); });
+}
+async function loadChat() {  // after a reload: the conversation the brain still has
+  const c = await getJSON("/api/chat");
+  if (!c) return;
+  S.chat = c.messages.map((m) => ({ role: m.role, content: m.content }));
+  renderChat(); showRestore(c.previous);
+}
+// the start press: a fresh conversation whose first message is the greeting
+async function startChat() {
+  const res = await fetch("/api/chat/start", { method: "POST" }).catch(() => null);
+  S.greet = res?.ok ? await res.json() : null;
+  return S.greet;
+}
+// full screen on the start press (browsers allow it only from a press; plain http works too). Esc then reaches
+// the page (Back) and the screen stays awake where the browser allows it (localhost or https).
+function goFull() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement && document.fullscreenEnabled && params.get("full") !== "0") {
+    el.requestFullscreen({ navigationUI: "hide" })
+      .then(() => navigator.keyboard?.lock?.(["Escape"]).catch(() => {}))
+      .catch((e) => console.warn(`hub: no full screen (${e.message})`));
+  }
+  navigator.wakeLock?.request("screen").catch(() => {});
+}
+// module pages (teleop, monitor) open inside the hub: no page load, so full screen stays
+function openPage(id) {
+  const frame = document.createElement("iframe");
+  frame.src = S.page[id]; frame.title = MODULES[id][0]; frame.allow = "xr-spatial-tracking; fullscreen";
+  frame.addEventListener("load", () => watchFrame(frame));
+  $("#mod-slot").appendChild(frame);
+}
+// the page is on the same brain, so the hub hears its keys and taps: they count as input (no reset while
+// someone uses it), and Esc there means Back too (in desktop control the first Esc only leaves it)
+function watchFrame(frame) {
+  try {
+    const w = frame.contentWindow, note = () => (S.lastInput = performance.now());
+    for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"]) w.addEventListener(ev, note, { passive: true, capture: true });
+    w.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (w.document.pointerLockElement) { w.document.exitPointerLock(); return; }
+      e.preventDefault(); closeModule();
+    });
+  } catch (e) {
+    console.warn(`hub: can't watch the module page (${e.message}); use the Back button`);
+  }
+}
+// nobody there for hub.reset_after_s (never while something is in use): back to the start screen, with a
+// fresh conversation for the next visitor (the last one is kept for a while: "Bring back")
+const IGNITE_HTML = $("#ignite").outerHTML;
+async function checkReset() {
+  if (!S.booted || S.resetting || performance.now() - S.lastInput < S.resetAfterMs) return;
+  S.resetting = true;
+  const st = await pollStatus();
+  S.resetting = false;
+  if (st && st.in_use.length) return;
+  if (performance.now() - S.lastInput >= S.resetAfterMs) toStart("nobody there");
+}
+function toStart(why) {
+  console.info(`hub: back to the start screen (${why})`);
+  if (S.moduleOpen) closeModule();
+  hideDevice();
+  fetch("/api/chat/clear", { method: "POST" }).catch(() => {});
+  S.chat = []; renderChat();
+  $("#reply").classList.remove("on");
+  S.booted = false; S.booting = false; S.sleeping = false; body.classList.remove("sleep");
+  setState("idle");
+  body.insertAdjacentHTML("beforeend", IGNITE_HTML);
+  body.classList.add("waiting");
+  $("#ignite").addEventListener("click", ignite);
+  ignitionText();
+  if (S.status) $("#ign-venue").textContent = S.status.venue;
+  S.startGuardUntil = performance.now() + 600;
+}
+
+/* ---------- main loop ---------- */
+let last = performance.now(), lastClock = 0, lastLog = 0, lastVerse = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (now - lastClock > 250) {
+    const [t, ap] = clockText();
+    for (const [c, a] of [["#clock", "#ampm"], ["#ign-clock", "#ign-ampm"]]) { const n = $(c); if (n) { n.textContent = t; $(a).textContent = ap; } }
+    lastClock = now;
+  }
+  pollPads();
+  stepArm(now, dt);
+  drawFx(now);
+  if (S.quality !== "minimal") { stepNetwork(dt, now); stepOrb(dt, now); stepTraces(dt); if (S.quality === "maximal") stepFrame(now); }
+  else stepOrbStill();
+  if (S.booted) {
+    if (now - lastLog > 4200) { lastLog = now; typeLogLine(); }
+    if (now - lastVerse > 11000) { lastVerse = now; typeVerse(); }
+    if (S.quality !== "minimal" && now > nextEvent) { if (nextEvent) idleEvent(); nextEvent = now + rand(8000, 20000); }
+    if (!S.sleeping && !S.moduleOpen && now - S.lastInput > S.sleepAfterMs) sleep();
+  }
+  if (S.moduleOpen) drawModule(now);
+  requestAnimationFrame(frame);
+}
+addEventListener("resize", () => { resize(); if (S.booted) { drawFrame(); showTraces(); } if (S.moduleOpen) { const o = $("#orb").getBoundingClientRect(); S.orbC = { x: o.left + o.width / 2, y: o.top + o.height / 2 }; } });
+resize();
+readColors();
+setMoney();
+document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); if (S.booted) { layoutTraces(); showTraces(); } });
+// start: the theme and the brain's facts load while the start screen waits
+if ($("#ignite")) body.classList.add("waiting");
+S.readyP = init();
+setInterval(pollStatus, 3000);
+setInterval(() => { if (S.booted && !S.sleeping) pollArm(); }, 250);
+setInterval(() => { if (S.booted) refreshFacts(); }, 60_000);
+setInterval(checkReset, 1000);
+// #skip: jump straight to the finished hub (for screenshots and quick looks)
+if (location.hash === "#skip") {
+  $("#ignite").remove(); body.classList.remove("waiting"); S.igniteAt = 1; S.reveal = 1e9;
+  document.querySelectorAll(".panel").forEach((p) => p.classList.add("hold"));
+  S.greetP = startChat();
+  finishBoot();
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
