@@ -68,6 +68,7 @@ In the project's `.claude/settings.json` (permission rules):
   - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR now and then (after the current task branch merges, since it was started from `xarm-driver`).
 - Long-lived branches (`planning`, `design`): GitHub's auto-delete removes them after each merge. Recreate from the planning folder: `git fetch && git merge --ff-only origin/main && git push -u origin planning`.
 - Create another folder when needed: `git worktree add ../lab-os-<name> -b <branch>`; list them: `git worktree list`.
+- **Parallel coding sessions (2026-11-09):** one folder + branch per step (run `uv sync` in each new folder). Only run steps in parallel that don't share files (e.g. typed chat vs. MCP read tools vs. cameras; not chat vs. screens, which both change the hub page). Each session only edits its own step's lines in `docs/current-focus.md`, and merges `main` into its branch and runs the full tests before its PR. Remove a folder when its branch is merged: `git worktree remove ../lab-os-<name>`.
 
 ## Working away from the lab
 **Most of the system is plain software and can be built anywhere** — your own laptop at home.
