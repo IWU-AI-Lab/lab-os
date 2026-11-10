@@ -1,5 +1,6 @@
 // The plain hub (current-focus.md step 1). Parts and names follow docs/design/hub-concept.html.
-// All data comes from the brain's endpoints (/api/...); the few theme values come from /theme.json.
+// All data comes from the brain's endpoints (/api/...), including the title (the place's name);
+// the few theme values come from /theme.json.
 //
 // Two taps (browsers allow full screen and sound only after a press):
 //   tap 1 = full screen (+ unlock sound), skipped when already full screen or impossible;
@@ -356,11 +357,11 @@ function renderRange() {
 
 /* ---------- boot ---------- */
 async function boot() {
-  const title = hubCfg.title || "Hub";
-  document.title = title;
-  $("#brand").textContent = title;
   renderRange();
   const cfg = await getJSON("/api/hub");
+  const title = cfg?.title || "Hub"; // the place's name (place.yaml), not a theme value
+  document.title = title;
+  $("#brand").textContent = title;
   S.modules = cfg?.modules || [];
   if (cfg?.reset_after_s) S.resetAfterMs = cfg.reset_after_s * 1000;
   renderMods();

@@ -87,7 +87,7 @@ motion:                  # (planned)
     sleep_after_s: 300         # nobody using it: dim to network + breathing assistant
 
 hub:                     # (planned) except where "Used by" says otherwise
-  title: "AI Comp Lab"   # top-left title and the startup title: the lab's name, not the project's code name. Used by: the hub
+                         # The top-left title and the startup title are the place's name: `name` in place.yaml, not here.
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, arm]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub
                          # (ids without a page yet, like arm, get no button: MODULES in src/lab_os/hub/server.py).

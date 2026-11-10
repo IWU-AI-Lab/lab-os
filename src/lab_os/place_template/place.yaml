@@ -1,0 +1,5 @@
+# This place: what the brain shows and uses here (docs/places.md). Edit freely.
+version: 1
+name: "My lab"     # the hub's title and the startup title (the same for every persona)
+venue: home        # the venue (venues/<name>.yaml) used when --venue / $LAB_OS_VENUE don't say
+# domain: hub.example.com   # (planned, step 7) the brain's address name; leave out if none

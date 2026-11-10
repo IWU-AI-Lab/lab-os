@@ -1,0 +1,147 @@
+"""The place's config folder (current-focus.md rule 9: nothing place-specific in code).
+
+A *place* is where a brain runs: the lab, someone's home. Everything about it lives in one folder:
+
+- **place files**, only ever read from the place's own folder: `place.yaml` (the place's name,
+  its domain, the default venue), `devices.yaml` (what's there, what's off limits), `venues/`;
+- **shared files**, read from the place's folder if it has them, else from the repo's `config/`:
+  `theme.yaml`, `poses.yaml` and later `models.yaml`, `personas/`;
+- its own **`.env`** with the API keys (the repo's `.env` for the repo's `config/`).
+
+The repo's `config/` is the lab's place and also the shared defaults. Pick another one with
+`lab-os serve --config ~/my-lab-os` (or `$LAB_OS_CONFIG`); `lab-os new-place ~/my-lab-os` writes a
+starter. Setup: docs/places.md.
+"""
+
+import logging
+import os
+import shutil
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
+
+from lab_os import CONFIG_DIR, REPO_ROOT
+
+log = logging.getLogger(__name__)
+
+DEFAULT_DIR = CONFIG_DIR
+TEMPLATE_DIR = Path(__file__).parent / "place_template"
+PLACE_FILES = ("place.yaml", "devices.yaml", "venues")
+
+_active: Path | None = None
+
+
+class ConfigError(RuntimeError):
+    """The place's config folder is missing something it needs. The message says what to do."""
+
+
+def use(path: str | Path | None) -> Path:
+    """Make `path` the place for this run (None: $LAB_OS_CONFIG, else the repo's config/) and load
+    its `.env`. Returns the folder."""
+    global _active
+    folder = Path(path).expanduser().resolve() if path else None
+    if folder and not folder.is_dir():
+        raise ConfigError(f"config folder {folder} doesn't exist (lab-os new-place {path})")
+    _active = folder
+    found = load_env(env_file())
+    if found:
+        log.info("config %s: read %s from %s", active_dir(), ", ".join(found), env_file())
+    return active_dir()
+
+
+def active_dir() -> Path:
+    """The place's folder: set by `use()`, else $LAB_OS_CONFIG, else the repo's config/."""
+    if _active:
+        return _active
+    env = os.environ.get("LAB_OS_CONFIG")
+    return Path(env).expanduser().resolve() if env else DEFAULT_DIR
+
+
+def is_default() -> bool:
+    """Is this the repo's own config/ (the lab)?"""
+    return active_dir().resolve() == DEFAULT_DIR.resolve()
+
+
+def place_path(name: str) -> Path:
+    """A place file (place.yaml, devices.yaml, venues/...): from the place's own folder only, so a
+    home brain never borrows the lab's name, devices or venues."""
+    return active_dir() / name
+
+
+def shared_path(name: str) -> Path:
+    """A shared file (theme.yaml, poses.yaml, models.yaml, personas/...): the place's own copy if
+    it has one, else the repo's config/."""
+    own = active_dir() / name
+    return own if own.exists() else DEFAULT_DIR / name
+
+
+def env_file() -> Path:
+    """The place's .env: next to its config files, or the repo's .env for the repo's config/."""
+    return REPO_ROOT / ".env" if is_default() else active_dir() / ".env"
+
+
+def load_env(path: Path) -> list[str]:
+    """Read KEY=value lines into os.environ (variables already set win). Returns the names read.
+    Blank lines, `# comments` and an `export ` prefix are fine; quotes around a value go."""
+    if not path.is_file():
+        return []
+    names = []
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.removeprefix("export ").split("=", 1)
+        key, value = key.strip(), value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+            value = value[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = value
+            names.append(key)
+    return names
+
+
+@dataclass(frozen=True)
+class Place:
+    """place.yaml: what makes this place this place."""
+
+    name: str  # shown as the hub's title and the startup title (the same for every persona)
+    venue: str | None = None  # the venue used when neither --venue nor $LAB_OS_VENUE says
+    domain: str | None = None  # the brain's address name (planned: step 7's certificate)
+    extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
+
+
+PLACE_FIELDS = {"version", "name", "venue", "domain"}
+
+
+def load_place(path: Path | None = None) -> Place:
+    path = path or place_path("place.yaml")
+    if not path.is_file():
+        raise ConfigError(
+            f"{path.parent} has no place.yaml: start one with `lab-os new-place {path.parent}`"
+        )
+    raw = yaml.safe_load(path.read_text()) or {}
+    extra = {k: v for k, v in raw.items() if k not in PLACE_FIELDS}
+    for key in extra:
+        log.warning("%s: unknown field %r (kept, not used)", path, key)
+    if not raw.get("name"):
+        raise ConfigError(f'{path}: `name` is missing (the place\'s name, e.g. "My lab")')
+    return Place(
+        name=str(raw["name"]), venue=raw.get("venue"), domain=raw.get("domain"), extra=extra
+    )
+
+
+def new_place(folder: str | Path) -> Path:
+    """Write the starter files (place.yaml, devices.yaml with the fake arm, venues/home.yaml,
+    .env.example) into `folder`. Never overwrites: refuses if the folder has a place.yaml."""
+    folder = Path(folder).expanduser().resolve()
+    if (folder / "place.yaml").exists():
+        raise ConfigError(f"{folder} already has a place.yaml; nothing written")
+    folder.mkdir(parents=True, exist_ok=True)
+    for src in TEMPLATE_DIR.rglob("*"):
+        if src.is_file() and "__pycache__" not in src.parts:
+            dest = folder / src.relative_to(TEMPLATE_DIR)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if not dest.exists():
+                shutil.copyfile(src, dest)
+    return folder

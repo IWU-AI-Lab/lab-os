@@ -1,0 +1,7 @@
+# This place: the AI lab (docs/places.md). Another place (a home) has its own folder with its own
+# place.yaml, devices.yaml, venues/ and .env: lab-os serve --config <folder>.
+version: 1
+name: "AI Comp Lab"   # the hub's title and the startup title: the lab's name, not the project's
+                      # code name (docs/design/DESIGN.md). The same for every persona.
+venue: lab            # the venue used when --venue / $LAB_OS_VENUE don't say
+domain: hub.indwesailab.com   # (planned, step 7: the certificate; step 8: only this place updates the name)

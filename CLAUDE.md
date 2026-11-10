@@ -47,6 +47,7 @@ uv run ruff format .         # format
 uv run lab-os serve          # the brain: hub at http://localhost:8080/ + fake arm (docs/hub.md),
                              # robot tools for AI at http://127.0.0.1:8081/mcp (docs/ai-control.md)
 uv run lab-os-teleop serve   # teleop on its own: XR page + fake arm (docs/quest-setup.md)
+uv run lab-os serve --config ~/my-lab-os   # another place's config folder (docs/places.md)
 ```
 Message format between clients and the brain: `docs/protocol.md`. Keep it updated when adding message types. The JARVIS core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
 

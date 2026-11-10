@@ -68,7 +68,7 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 - **The screen frame** isn't a plain rectangle: cut corners, a raised tab in the middle of the top and bottom edges, notches on the sides, bright brackets on the corners and tabs.
 
 ## Hub layout
-**The title** in the top-left corner is the lab's name (`hub.title`, "AI Comp Lab" for now), not the project's code name: people in the hallway should read where they are. The startup decodes the same text.
+**The title** in the top-left corner is the lab's name (`name` in the place's `place.yaml`, "AI Comp Lab" for now; moved out of the theme 2026-11-09, since the theme is the same at every place), not the project's code name: people in the hallway should read where they are. The startup decodes the same text.
 
 **The core** is the assistant's picture: the rings around a glowing center. It sits **exactly in the middle of the screen** (the layout is symmetric around it), and the startup and hyperspace jump are centered on it.
 

@@ -12,6 +12,7 @@ board drop moves), reporting first-motion delay and where it stopped; (2) a 2 s 
 import argparse
 import time
 
+from lab_os.devices import default_device
 from lab_os.robots.xarm import SERVO_IDS, XArm
 
 MAX_DEGREES = 10.0  # hard cap for this test
@@ -60,7 +61,8 @@ def main() -> None:
     if input("Arm clamped, area clear, power plug in reach? Type 'yes': ") != "yes":
         raise SystemExit("aborted")
 
-    arm = XArm(allow_motion=True)
+    name = default_device(("xarm1s",))
+    arm = XArm(name=name, device_name=name, allow_motion=True)
     arm.connect()
     joint, step = args.joint, args.degrees
     start = None

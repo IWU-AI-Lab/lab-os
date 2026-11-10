@@ -1,0 +1,5 @@
+# Venue profile: working at home. Decides which devices are active and how cautious to be.
+name: home
+active_devices: [fake-arm]   # add your own arm's name here (devices.yaml) to drive it
+motion_allowed: true
+max_speed_scale: 0.3   # fraction of each arm's max speed

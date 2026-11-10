@@ -19,6 +19,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from lab_os.devices import default_device
 from lab_os.robots.base import JointLimit
 from lab_os.robots.fake import SO101_JOINTS, so101_limits
 from lab_os.robots.so101_setup import CALIBRATION_DIR, guarded_port
@@ -233,7 +234,7 @@ def main() -> None:
     (joint positions + reads/second, or --watch: live until Ctrl+C; nothing is written to the
     motors)."""
     args = [a for a in sys.argv[1:] if a != "--watch"]
-    arm = SO101Arm(name=args[0] if args else "so101-white")
+    arm = SO101Arm(name=args[0] if args else default_device(("so101",)))
     arm.connect()
     if "--watch" in sys.argv:
         try:

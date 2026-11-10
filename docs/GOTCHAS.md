@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — A test that drives the CLI with a real arm's name can reach the real driver
+**What:** a new test switched to a home config folder, then called `cli.main(["serve", "--arm", "so101-white"])` expecting "not at this place". But `serve` without `--config` switches back to the repo's `config/` (the lab), where `so101-white` is active, so it built the real `SO101Arm` and tried its port. On the Mac the port wasn't there (LookupError); on the lab desktop with the arm plugged in it would have opened it.
+**Fix:** CLI tests pass `--config` explicitly, and tests that name a real arm replace the drivers (`SO101Arm`, `XArm`) with one that fails the test if it's ever made (`tests/test_config.py`).
+
 ### 2026-11-09 — `mcp` 2.x: FastMCP is now MCPServer, and plain exceptions lose their message
 **What:** `uv add mcp` installed 2.3.0, where `mcp.server.fastmcp.FastMCP` (in most examples online) is gone: it's `mcp.server.mcpserver.MCPServer`. A tool that raises an ordinary exception reaches the AI only as "Error executing tool …", without the reason. Also, its `run_streamable_http_async()` starts uvicorn, which takes over Ctrl+C.
 **Fix:** pinned `mcp>=2.3,<3`. Refusals are raised as `mcp.server.mcpserver.exceptions.ToolError("Refused: …")`, which keeps the text. The brain runs uvicorn itself with signal capture switched off (`tools/mcp_server.py`), so Ctrl+C still stops the whole brain.

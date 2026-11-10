@@ -1,0 +1,17 @@
+# The devices at this place (docs/places.md). The software arm is always there.
+# Real serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap).
+# off_limits: true -> lab-os refuses to open it. The lab's off-limits devices (lab-os's own
+# config/devices.yaml) are refused at every place too.
+
+devices:
+  fake-arm:
+    kind: fake
+    notes: Software-only arm.
+    ports: []
+
+  # my-arm:                    # an SO-101 of your own (then: lab-os serve --arm my-arm)
+  #   kind: so101
+  #   ports:
+  #     - /dev/serial/by-id/usb-1a86_USB_Single_Serial_XXXXXXXXXX-if00
+  #   usb:
+  #     - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "XXXXXXXXXX"}

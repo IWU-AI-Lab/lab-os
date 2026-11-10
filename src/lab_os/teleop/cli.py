@@ -10,6 +10,8 @@ from pathlib import Path
 
 from aiohttp import web
 
+from lab_os import config
+from lab_os.devices import load_registry
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
@@ -68,6 +70,10 @@ def _make_printer():
     return on_tick
 
 
+SOFTWARE_ARMS = ("fake", "fake-xarm1")  # built in, at every place
+DRIVERS = {"so101": "SO-101 (LeRobot: uv sync --extra so101)", "xarm1s": "xArm 1S (USB HID)"}
+
+
 def _make_arm(name: str, venue) -> Arm:
     if name == "fake":
         return FakeArm()
@@ -79,11 +85,22 @@ def _make_arm(name: str, venue) -> Arm:
         return FakeArm(
             name="fake-xarm1", model=x.model, limits=x.limits, joints=home | {"gripper": 30.0}
         )
+    device = load_registry().devices.get(name)
+    if device is None or device.off_limits or device.kind not in DRIVERS:
+        usable = [
+            d.name
+            for d in load_registry().devices.values()
+            if d.kind in DRIVERS and not d.off_limits
+        ]
+        raise SystemExit(
+            f"--arm {name}: not an arm lab-os can drive here. Choose {', '.join(SOFTWARE_ARMS)} "
+            f"or an arm from devices.yaml: {', '.join(usable) or 'none listed'}"
+        )
     if name not in venue.active_devices:
-        raise SystemExit(f"{name} is not active in venue {venue.name!r} (config/venues/)")
+        raise SystemExit(f"{name} is not active in venue {venue.name!r} (venues/)")
     if not venue.motion_allowed:
         raise SystemExit(f"venue {venue.name!r} doesn't allow motion")
-    if name == "so101-white":
+    if device.kind == "so101":
         from lab_os.robots.so101 import SO101Arm
 
         return SO101Arm(name=name, allow_motion=True)
@@ -92,9 +109,23 @@ def _make_arm(name: str, venue) -> Arm:
     return XArm(name=name, device_name=name, allow_motion=True)
 
 
+def use_config(args) -> None:
+    """Switch to the place in --config (loads its .env); a clear message instead of a traceback."""
+    try:
+        folder = config.use(args.config)
+        config.load_place()
+    except config.ConfigError as e:
+        raise SystemExit(str(e)) from None
+    if not config.is_default():
+        print(f"config: {folder}")
+
+
 def make_loop(args) -> TeleopLoop:
     """The teleop loop for the arm, venue and speed in `args` (see `add_arm_args`)."""
-    venue = load_venue(args.venue)
+    try:
+        venue = load_venue(args.venue)
+    except config.ConfigError as e:
+        raise SystemExit(str(e)) from None
     speed = min(args.speed, venue.max_speed_scale) if args.speed else venue.max_speed_scale
     arm = _make_arm(args.arm, venue)
     arm.connect()
@@ -149,15 +180,21 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
 
 
 def add_arm_args(parser: argparse.ArgumentParser) -> None:
-    """--venue, --quiet, --arm, --speed: shared by `lab-os-teleop` and `lab-os serve`."""
-    parser.add_argument("--venue", help="venue profile (default: $LAB_OS_VENUE or 'lab')")
+    """--config, --venue, --quiet, --arm, --speed: shared by `lab-os-teleop` and `lab-os serve`."""
+    parser.add_argument(
+        "--config",
+        help="this place's config folder (default: $LAB_OS_CONFIG, else lab-os's own config/); "
+        "docs/places.md",
+    )
+    parser.add_argument(
+        "--venue", help="venue profile (default: $LAB_OS_VENUE, else `venue` in place.yaml)"
+    )
     parser.add_argument("--quiet", action="store_true", help="don't print the live status line")
     parser.add_argument(
         "--arm",
         default="fake",
-        choices=["fake", "fake-xarm1", "xarm1", "so101-white"],
-        help="which arm to drive: fake (software SO-101), fake-xarm1 (software xArm), xarm1 or "
-        "so101-white (real; so101-white needs `uv sync --extra so101` and a calibration)",
+        help="which arm to drive: fake (software SO-101), fake-xarm1 (software xArm), or a real "
+        "arm's name from devices.yaml (an SO-101 needs `uv sync --extra so101` and a calibration)",
     )
     parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
@@ -180,6 +217,7 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
+    use_config(args)
     loop = make_loop(args)
 
     if args.command == "serve":
