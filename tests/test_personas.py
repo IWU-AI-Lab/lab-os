@@ -82,22 +82,25 @@ def test_unknown_persona_says_which_exist():
         load_persona("nobody")
 
 
-def test_the_place_picks_the_persona_not_the_venue(monkeypatch):
-    assert current_persona().id == "lab-assistant"  # config/place.yaml
-    monkeypatch.setenv("LAB_OS_VENUE", "visit-day")
-    assert current_persona().id == "lab-assistant"  # a venue doesn't change it
+def test_who_picks_the_persona(monkeypatch):
+    """--persona, else $LAB_OS_PERSONA, else the venue's (`default`: the place's), else the
+    place's."""
+    assert current_persona(venue="lab").id == "lab-assistant"  # lab.yaml: default → place.yaml
+    assert (
+        current_persona(venue="visit-day").id == "lab-assistant"
+    )  # same, until someone changes it
     monkeypatch.setenv("LAB_OS_PERSONA", "jarvis")
-    assert current_persona().id == "jarvis"
-    assert current_persona("lab-assistant").id == "lab-assistant"  # --persona wins
+    assert current_persona(venue="lab").id == "jarvis"
+    assert current_persona("lab-assistant", "lab").id == "lab-assistant"  # --persona wins
 
 
-def test_an_old_venue_persona_line_is_ignored_with_a_warning(home, caplog):
+def test_a_venue_can_have_its_own_persona(home):
     venue = home / "venues" / "home.yaml"
-    venue.write_text(venue.read_text() + "persona: jarvis\n")
-    with caplog.at_level(logging.WARNING):
-        load_venue("home")
-    assert "`persona:` is ignored" in caplog.text
-    assert current_persona().id == "lab-assistant"
+    assert "persona: default" in venue.read_text()  # the starter: the place's persona
+    assert load_venue("home").persona is None
+    venue.write_text(venue.read_text().replace("persona: default", "persona: jarvis"))
+    assert current_persona(venue="home").id == "jarvis"  # re-read: an edit + reload
+    assert current_persona().id == "lab-assistant"  # without a venue: the place's
 
 
 def test_a_place_can_have_its_own_persona_and_a_bad_pick_falls_back(home, caplog):
