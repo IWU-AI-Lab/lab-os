@@ -1,7 +1,7 @@
 """Venue profiles (config/venues/<name>.yaml): which devices are active, how cautious to be."""
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
@@ -16,6 +16,7 @@ class Venue:
     motion_allowed: bool
     max_speed_scale: float
     reset_after_s: float | None = None  # hub: back to the start screen; None = the theme's value
+    ai_tools: dict = field(default_factory=dict)  # limits for the AI tools (lab_os.tools.robot)
 
 
 def load_venue(name: str | None = None, config_dir: Path = CONFIG_DIR) -> Venue:
@@ -28,4 +29,5 @@ def load_venue(name: str | None = None, config_dir: Path = CONFIG_DIR) -> Venue:
         motion_allowed=bool(raw.get("motion_allowed", False)),
         max_speed_scale=float(raw.get("max_speed_scale", 0.3)),
         reset_after_s=float(raw["reset_after_s"]) if raw.get("reset_after_s") else None,
+        ai_tools=dict(raw.get("ai_tools") or {}),
     )
