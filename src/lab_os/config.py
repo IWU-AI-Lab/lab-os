@@ -76,6 +76,12 @@ def shared_path(name: str) -> Path:
     return own if own.exists() else DEFAULT_DIR / name
 
 
+def logs_dir() -> Path:
+    """Where this place's logs go (AI spend, ...): the repo's logs/ for the repo's config/, else
+    <folder>/logs, so a home brain's spend never counts against the lab's budget."""
+    return REPO_ROOT / "logs" if is_default() else active_dir() / "logs"
+
+
 def env_file() -> Path:
     """The place's .env: next to its config files, or the repo's .env for the repo's config/."""
     return REPO_ROOT / ".env" if is_default() else active_dir() / ".env"
@@ -108,10 +114,12 @@ class Place:
     name: str  # shown as the hub's title and the startup title (the same for every persona)
     venue: str | None = None  # the venue used when neither --venue nor $LAB_OS_VENUE says
     domain: str | None = None  # the brain's address name (planned: step 7's certificate)
+    ai_budget_usd_month: float | None = None  # the hub's chat pauses when this month's AI spend
+    # reaches it; None = no cap (fine for a local model, not for a paid key)
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
-PLACE_FIELDS = {"version", "name", "venue", "domain"}
+PLACE_FIELDS = {"version", "name", "venue", "domain", "ai_budget_usd_month"}
 
 
 def load_place(path: Path | None = None) -> Place:
@@ -126,8 +134,13 @@ def load_place(path: Path | None = None) -> Place:
         log.warning("%s: unknown field %r (kept, not used)", path, key)
     if not raw.get("name"):
         raise ConfigError(f'{path}: `name` is missing (the place\'s name, e.g. "My lab")')
+    budget = raw.get("ai_budget_usd_month")
     return Place(
-        name=str(raw["name"]), venue=raw.get("venue"), domain=raw.get("domain"), extra=extra
+        name=str(raw["name"]),
+        venue=raw.get("venue"),
+        domain=raw.get("domain"),
+        ai_budget_usd_month=float(budget) if budget is not None else None,
+        extra=extra,
     )
 
 

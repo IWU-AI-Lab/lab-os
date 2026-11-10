@@ -24,7 +24,9 @@ Browsers allow full screen and sound only after a press, so:
 
 Leaving full screen (a swipe, holding Esc, a reload) brings back the start screen with tap 1. Modules open **inside** the hub (no page load, which would leave full screen); **Back** or **Esc** returns. In Chrome and Edge, Esc means Back without leaving full screen (Keyboard Lock API; holding Esc still leaves). In teleop's desktop control, the first Esc leaves desktop control and the next one is Back.
 
-**Back to the start screen** after `hub.reset_after_s` (theme, 180 s; a venue profile can set its own `reset_after_s`) with no input on the hub or the open module. It stays full screen, so the next person only needs tap 2. Never while something is in use: today, while any teleop page (the hub's or the Quest's) has the arm.
+**Back to the start screen** after `hub.reset_after_s` (theme, 180 s; a venue profile can set its own `reset_after_s`) with no input on the hub or the open module. It stays full screen, so the next person only needs tap 2. It also clears the conversation. Never while something is in use: while any teleop page (the hub's or the Quest's) has the arm, an AI tool moves it, or a chat answer is streaming.
+
+**The chat:** type anywhere on the hub (it lands in "Ask anything" under the circle) and press Enter; **History** opens the whole conversation. Keys, AI setups and the budget: `docs/chat.md`.
 
 ## Other screens (the Newline, a hallway desktop)
 `lab-os serve` listens on this computer only. Ways to show the hub on another screen:

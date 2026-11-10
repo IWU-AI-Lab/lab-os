@@ -26,6 +26,8 @@ const S = {
   status: null, // last /api/status (null = brain not reachable)
   clockOffset: 0, // brain clock − this screen's clock, ms
   days: null, // commits range
+  chat: [], // the conversation on screen: {role: "user" | "assistant" | "error", content}
+  asking: false, // a turn is streaming
 };
 
 /* ---------- talking to the brain ---------- */
@@ -138,12 +140,13 @@ function start() {
   $("#hub").hidden = false;
   noteInput();
   refreshFacts();
+  quick.focus();
 }
 
 function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   closeModule();
-  // typed chat (step 5) also clears the conversation from the screen here
+  clearChat(); // the next visitor shouldn't see the last one's questions
   S.screen = "start";
   body.classList.add("waiting");
   $("#hub").hidden = true;
@@ -230,6 +233,11 @@ function watchFrame(frame) {
 }
 
 function onEsc(e, doc) {
+  if (!$("#chat").hidden) {
+    e.preventDefault();
+    closeChat();
+    return;
+  }
   if (!S.module) return;
   // In desktop control the first Esc only leaves it (the teleop page's own Esc); the next is Back.
   if (doc.pointerLockElement) {
@@ -264,8 +272,9 @@ function renderStatus(st) {
   net.textContent =
     st.internet === true ? "Internet: online" : st.internet === false ? "Internet: offline" : "Internet: checking…";
   net.classList.toggle("off", st.internet !== true);
-  ai.textContent = st.ai.connected ? "AI connected" : "AI not connected";
-  ai.classList.toggle("off", !st.ai.connected);
+  ai.textContent = aiText(st.ai);
+  ai.classList.toggle("off", st.ai.connected !== true || !!st.ai.paused);
+  showPaused(st.ai.paused);
   setAssistant(st.assistant.state, st.assistant.loudness);
   checkStillFull();
 }
@@ -297,11 +306,176 @@ function tick() {
   checkReset();
 }
 
-/* ---------- panels: Current Project, Commits ---------- */
+function aiText(ai) {
+  if (ai.paused) return "AI: paused";
+  const name = ai.where ? `${ai.setup} (${ai.where})` : ai.setup;
+  if (ai.connected === true) return `AI: ${name}`;
+  if (ai.connected === false) return "AI not connected";
+  return `AI: ${name}, not checked yet`;
+}
+
+/* ---------- typed chat: ask line, the answer under the core, the conversation page ---------- */
+const quick = $("#quick");
+
+function showError(text) {
+  $("#errmsg").textContent = text || "";
+  $("#errmsg").hidden = !text;
+}
+let pausedShown = null;
+function showPaused(why) {
+  // the chat's own full sentence while it's paused (no key, budget used up); cleared when it isn't
+  why = why || null;
+  if (why === pausedShown) return;
+  if (why || $("#errmsg").textContent === pausedShown) showError(why);
+  pausedShown = why;
+}
+
+function renderLog() {
+  $("#chat-n").textContent = S.chat.filter((m) => m.role === "user").length || "";
+  if ($("#chat").hidden) return;
+  const log = $("#log-chat");
+  log.replaceChildren(
+    ...S.chat.map((m) => {
+      const div = document.createElement("div");
+      div.className = `msg ${m.role}`;
+      div.textContent = m.content;
+      return div;
+    }),
+  );
+  log.scrollTop = log.scrollHeight;
+}
+
+async function ask(text) {
+  text = text.trim();
+  if (!text || S.asking) return;
+  S.asking = true;
+  showError(null);
+  const answer = { role: "assistant", content: "" };
+  S.chat.push({ role: "user", content: text });
+  $("#reply .q").textContent = text;
+  $("#reply .a").textContent = "";
+  renderLog();
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) if (line.trim()) onChatEvent(JSON.parse(line), answer);
+    }
+  } catch (e) {
+    onChatEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." }, answer);
+    console.warn(`hub: chat failed (${e.message})`);
+  }
+  S.asking = false;
+  noteInput();
+  renderSpend(await getJSON("/api/spend")); // what that answer cost
+}
+
+function onChatEvent(ev, answer) {
+  if (ev.type === "state") setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
+  else if (ev.type === "text") {
+    if (!answer.content) S.chat.push(answer);
+    answer.content += ev.text;
+    $("#reply .a").textContent = answer.content;
+    $("#reply .a").scrollTop = $("#reply .a").scrollHeight;
+    renderLog();
+  } else if (ev.type === "error") {
+    showError(ev.message);
+    S.chat.push({ role: "error", content: ev.message });
+    renderLog();
+  }
+}
+
+function clearChat() {
+  S.chat = [];
+  $("#reply .q").textContent = "";
+  $("#reply .a").textContent = "";
+  quick.value = "";
+  $("#ask").value = "";
+  showError(pausedShown);
+  closeChat();
+  renderLog();
+  fetch("/api/chat/clear", { method: "POST" }).catch(() => {});
+}
+
+function openChat() {
+  $("#chat").hidden = false;
+  renderLog();
+  $("#ask").focus();
+}
+function closeChat() {
+  if ($("#chat").hidden) return;
+  $("#chat").hidden = true;
+  if (S.screen === "hub") quick.focus();
+}
+
+$("#quick-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  ask(quick.value);
+  quick.value = "";
+});
+$("#ask-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  ask($("#ask").value);
+  $("#ask").value = "";
+});
+$("#open-chat").addEventListener("click", openChat);
+$("#chat-back").addEventListener("click", closeChat);
+$("#reply").addEventListener("click", openChat); // tap the answer to see the whole conversation
+
+// typing anywhere on the hub lands in the ask line (theme: hub.type_to_chat)
+document.addEventListener("keydown", (e) => {
+  if (S.screen !== "hub" || S.module || !$("#chat").hidden || hubCfg.type_to_chat === false) return;
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest?.("input, textarea, button, [contenteditable]")) return;
+  quick.focus(); // the key's character then goes into the ask line
+});
+
+async function loadChat() {
+  // after a reload: the conversation the brain still has (cleared by the reset)
+  const c = await getJSON("/api/chat");
+  if (!c) return;
+  S.chat = c.messages.map((m) => ({ role: m.role, content: m.content }));
+  const lastQ = [...S.chat].reverse().find((m) => m.role === "user");
+  const lastA = S.chat.at(-1)?.role === "assistant" ? S.chat.at(-1) : null;
+  $("#reply .q").textContent = lastQ?.content || "";
+  $("#reply .a").textContent = lastA?.content || "";
+  renderLog();
+}
+
+/* ---------- panels: Current Project, AI Spend, Commits ---------- */
 async function refreshFacts() {
-  const [project, commits] = await Promise.all([getJSON("/api/project"), getJSON(`/api/commits?days=${S.days}`)]);
+  const [project, spend, commits] = await Promise.all([
+    getJSON("/api/project"),
+    getJSON("/api/spend"),
+    getJSON(`/api/commits?days=${S.days}`),
+  ]);
   renderProject(project);
+  renderSpend(spend);
   renderCommits(commits);
+}
+
+const usd = (n) => `$${n.toFixed(2)}`;
+function renderSpend(s) {
+  $("#s-panel").hidden = !s?.available; // hidden on a public venue
+  if (!s?.available) return;
+  $("#money").textContent = usd(s.spent_usd);
+  const budget = s.budget_usd;
+  $("#meter").hidden = !budget;
+  if (budget) $("#meter-fill").style.setProperty("--fill", Math.min(1, s.spent_usd / budget));
+  const chats = `${s.chats} chat${s.chats === 1 ? "" : "s"}`;
+  $("#s-budget").textContent = budget ? `of ${usd(budget)} budget · ${chats}` : `no budget set · ${chats}`;
 }
 
 function renderProject(p) {
@@ -366,7 +540,7 @@ async function boot() {
   if (cfg?.reset_after_s) S.resetAfterMs = cfg.reset_after_s * 1000;
   renderMods();
   renderStart();
-  await pollStatus();
+  await Promise.all([pollStatus(), loadChat()]);
   tick();
   setInterval(tick, 250);
   setInterval(pollStatus, 3000);

@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — OpenAI's gpt-6-luna: tools on Chat Completions only with `reasoning_effort: none`
+**What:** per OpenAI's model page, `gpt-6-luna` supports function calling on Chat Completions only when `reasoning_effort` is `none` (the Responses API has no such limit). It also defaults to `medium` reasoning, which is slower and bills reasoning tokens as output. Gemini's OpenAI-compatible address wants `max_tokens`, OpenAI's newer models `max_completion_tokens`.
+**Fix:** each setup in `config/models.yaml` carries its own `options` (sent as they are): `main` has `reasoning_effort: none` + `max_completion_tokens`, `backup` has `max_tokens`.
+
+### 2026-11-09 — llama.cpp's server and the hub both default to port 8080
+**What:** `llama-server` (the `local` setup's alternative to Ollama) listens on 8080 by default, which is `lab-os serve`'s hub port; whichever starts second fails.
+**Fix:** start llama.cpp with `--port 8082` and use `http://127.0.0.1:8082/v1` in `models.yaml` (Ollama's 11434 doesn't clash).
+
 ### 2026-11-09 — A test that drives the CLI with a real arm's name can reach the real driver
 **What:** a new test switched to a home config folder, then called `cli.main(["serve", "--arm", "so101-white"])` expecting "not at this place". But `serve` without `--config` switches back to the repo's `config/` (the lab), where `so101-white` is active, so it built the real `SO101Arm` and tried its port. On the Mac the port wasn't there (LookupError); on the lab desktop with the arm plugged in it would have opened it.
 **Fix:** CLI tests pass `--config` explicitly, and tests that name a real arm replace the drivers (`SO101Arm`, `XArm`) with one that fails the test if it's ever made (`tests/test_config.py`).

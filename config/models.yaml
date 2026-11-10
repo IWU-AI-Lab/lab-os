@@ -1,0 +1,44 @@
+# AI setups: which AI service answers, through the OpenAI-style chat interface (docs/chat.md).
+# Setups differ only by address, model name and key name, so switching is a config edit + restart.
+# No keys here: `key_env` names the variable in .env that holds the key (none = no key needed).
+# A persona picks a setup by name (`model: main`); a place can have its own models.yaml.
+#
+# Prices: US dollars per 1 million tokens (input / cached input / output), checked 2026-11-09.
+# They only feed the spend log and the monthly budget (place.yaml → ai_budget_usd_month), so
+# keep them current: https://developers.openai.com/api/docs/pricing, https://ai.google.dev/pricing
+version: 1
+
+setups:
+  main:
+    where: OpenAI
+    base_url: https://api.openai.com/v1
+    model: gpt-6-luna          # OpenAI's small, fast model (Chat Completions, streaming, tools)
+    key_env: OPENAI_API_KEY
+    price_per_mtok: {input: 0.10, cached_input: 0.01, output: 0.50}
+    options:                   # added to every request as is
+      reasoning_effort: none   # quick answers; also needed for tools on Chat Completions (step 6)
+      max_completion_tokens: 800
+    fallback: backup           # no OPENAI_API_KEY in .env → use this setup instead
+
+  backup:
+    where: Gemini, free key
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    model: gemini-3.8-flash
+    key_env: GEMINI_API_KEY
+    # Free tier: $0 (Google may use free-tier chats to improve its products). A paid key costs
+    # 0.75 / 3.75 until 2026-12-31, then 1.50 / 7.50: put those here if the key is ever paid.
+    price_per_mtok: {input: 0, cached_input: 0, output: 0}
+    options:
+      max_tokens: 800
+
+  local:
+    where: On this computer, no internet
+    # Ollama (`ollama serve`, then `ollama pull qwen3:4b`). llama.cpp's server works too, but its
+    # default port 8080 is the hub's: start it with --port 8082 and use http://127.0.0.1:8082/v1.
+    # Careful on the lab desktop: its GPU is shared with the training project.
+    base_url: http://127.0.0.1:11434/v1
+    model: qwen3:4b
+    key_env: none
+    price_per_mtok: {input: 0, cached_input: 0, output: 0}
+    options:
+      max_tokens: 800

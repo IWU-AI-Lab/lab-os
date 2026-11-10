@@ -29,7 +29,13 @@
   <section class="core" data-state="offline" aria-label="Assistant">
     <div id="orb" aria-hidden="true"></div>
     <span id="state-word" aria-live="polite"></span>
-    <!-- the ask line (#ask-btn) and the reply (#reply) arrive with typed chat (step 5) -->
+    <!-- ask from the core: type here (or anywhere on the hub); the answer appears under it -->
+    <div id="ask-btn" class="panel">
+      <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
+      <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation">History <b id="chat-n"></b></button>
+    </div>
+    <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
+    <div id="errmsg" role="alert" hidden></div>
   </section>
 
   <aside class="side left">
@@ -39,7 +45,12 @@
       <div class="prog"><span class="stepn" id="p-step"></span></div>
       <div class="next"><span class="k">Next:</span> <span id="p-next"></span></div>
     </div>
-    <!-- AI Spend arrives with typed chat (step 5) -->
+    <div class="panel" data-detail="spend" id="s-panel" hidden>
+      <div class="head"><span class="cap">AI Spend</span></div>
+      <div class="row2"><span class="money" id="money"></span><span>this month</span></div>
+      <div class="meter" id="meter" hidden><i id="meter-fill"></i></div>
+      <div class="budget" id="s-budget"></div>
+    </div>
   </aside>
 
   <aside class="side right">
@@ -63,6 +74,15 @@
   </div>
   <div id="mod-slot"></div>
 </div>
+<!-- the whole conversation (History): opens over the hub, Back/Esc closes it -->
+<section class="chat panel" id="chat" aria-label="Chat" hidden>
+  <div class="bar">
+    <button class="back" id="chat-back" type="button" aria-label="Back to the hub">‹ Back <span class="key">Esc</span></button>
+    <div class="tab">Conversation</div>
+  </div>
+  <div id="log-chat" aria-live="polite"></div>
+  <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"></form>
+</section>
 <!-- while a module is open, the assistant's picture sits here (the core never disappears) -->
 <div id="orb-dock" data-state="offline" aria-hidden="true"></div>
 

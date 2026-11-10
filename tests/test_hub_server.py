@@ -48,7 +48,8 @@ async def test_status(aiohttp_client):
     st = await (await client.get("/api/status")).json()
     assert st["venue"] == "test-venue"
     assert st["internet"] is None  # not checked in tests
-    assert st["ai"] == {"connected": False}
+    assert st["ai"]["connected"] is None  # not checked in tests
+    assert "OPENAI_API_KEY" in st["ai"]["paused"]  # tests never read a .env
     assert st["assistant"]["state"] == "offline"
     assert st["arm"] == {"name": "fake-arm", "control": "free"}
     assert st["in_use"] == []

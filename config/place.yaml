@@ -4,4 +4,5 @@ version: 1
 name: "AI Comp Lab"   # the hub's title and the startup title: the lab's name, not the project's
                       # code name (docs/design/DESIGN.md). The same for every persona.
 venue: lab            # the venue used when --venue / $LAB_OS_VENUE don't say
+ai_budget_usd_month: 20   # the hub's chat pauses when this month's AI spend reaches it (docs/chat.md)
 domain: hub.indwesailab.com   # (planned, step 7: the certificate; step 8: only this place updates the name)
