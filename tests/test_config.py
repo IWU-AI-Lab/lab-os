@@ -164,6 +164,14 @@ def test_serve_with_another_config_folder(tmp_path, no_run, capsys):
     assert config.active_dir() == folder.resolve()
 
 
+def test_serve_refuses_an_unknown_persona(home, no_run):
+    at_home = ["serve", "--config", str(home), "--quiet", "--mcp-port", "0"]
+    with pytest.raises(SystemExit, match="no persona 'jarvsi'"):
+        cli.main([*at_home, "--persona", "jarvsi"])
+    cli.main([*at_home, "--persona", "jarvis"])
+    assert len(no_run) == 1
+
+
 def test_serve_refuses_a_missing_folder(tmp_path, no_run):
     with pytest.raises(SystemExit, match="doesn't exist"):
         cli.main(["serve", "--config", str(tmp_path / "nope"), "--quiet"])

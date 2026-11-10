@@ -9,6 +9,7 @@ import logging
 from lab_os import config
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import create_brain_app
+from lab_os.personas import current_persona, load_persona
 from lab_os.teleop.cli import add_arm_args, make_loop, serve, use_config
 from lab_os.tools.mcp_server import DEFAULT_PORT as MCP_PORT
 from lab_os.venues import load_venue
@@ -51,6 +52,11 @@ def main(argv: list[str] | None = None) -> None:
         help=f"port of the robot tools for AI tools (MCP, on 127.0.0.1 only; default {MCP_PORT}; "
         "0 = off)",
     )
+    s.add_argument(
+        "--persona",
+        help="who the assistant is (personas/<id>.yaml: lab-assistant, jarvis, …; default: "
+        "$LAB_OS_PERSONA, else `persona` in place.yaml, else lab-assistant)",
+    )
     add_arm_args(s)
     n = sub.add_parser(
         "new-place",
@@ -76,8 +82,18 @@ def main(argv: list[str] | None = None) -> None:
     use_config(args)
     loop = make_loop(args)  # stops with a message if the venue or arm doesn't fit this place
     venue = load_venue(args.venue)
+    if args.persona:
+        try:
+            load_persona(args.persona)  # a typo stops here, not silently as the plain one
+        except config.ConfigError as e:
+            raise SystemExit(str(e)) from None
     app = create_brain_app(
-        loop, venue, internet=InternetCheck(), mcp_port=args.mcp_port or None, check_ai=True
+        loop,
+        venue,
+        internet=InternetCheck(),
+        mcp_port=args.mcp_port or None,
+        check_ai=True,
+        persona=lambda: current_persona(args.persona),
     )
     if args.mcp_port and not args.arm.startswith("fake"):
         print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
