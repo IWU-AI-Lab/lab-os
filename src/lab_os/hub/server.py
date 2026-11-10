@@ -1,11 +1,15 @@
 """The brain's web server (`lab-os serve`): the hub page, with the teleop pages inside it.
 
 GET /                    the hub: start screen, status strip, module buttons, assistant, panels
+                         (plain, or the designed one when the theme says hub.look: design)
+GET /plain, /design      each look by name (the design = the reveal, docs/design/DESIGN.md)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
 GET /api/status          venue, internet, AI, assistant state, the brain's clock, what's in use
 GET /api/project         the Current Project panel (docs/current-focus.md → Steps)
-GET /api/commits?days=N  commits per day for the last N days
+GET /api/commits?days=N  commits per day for the last N days, and the latest few commits
+GET /api/arm             the arm now: name, joints (degrees), held still, who has control
+GET /api/devices         the place's devices (devices.yaml): kind, off limits, linked to the brain
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
@@ -35,7 +39,7 @@ from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
-from lab_os.hub.commits import commits_per_day
+from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
@@ -50,6 +54,7 @@ from lab_os.tools.robot import RobotTools
 from lab_os.venues import Venue
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
+LOOKS = {"plain": "index.html", "design": "design.html"}  # theme hub.look picks the one at /
 
 # Every module the hub knows: id → (button title, page). The theme's hub.modules picks which ones
 # get a button and in what order; ids without a page here get no button (only claim what's real).
@@ -73,6 +78,7 @@ class Brain:
     repo: Path
     chat: Conversation
     persona: Callable[[], Persona]  # the chosen persona, re-read each time (edit + reload)
+    project: ProjectTools  # the read tools' device list, docs, git (shared with the MCP server)
     check_ai: bool = False  # check the AI service in the background (off in tests)
 
 
@@ -118,7 +124,19 @@ async def _file(request: web.Request, name: str) -> web.FileResponse:
 
 
 async def hub_page(request: web.Request) -> web.FileResponse:
-    return await _file(request, "index.html")
+    look = str((load_theme().get("hub") or {}).get("look") or "plain")
+    if look not in LOOKS:
+        log.warning("theme hub.look: %r isn't one of %s; showing plain", look, ", ".join(LOOKS))
+        look = "plain"
+    return await _file(request, LOOKS[look])
+
+
+async def plain_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, LOOKS["plain"])
+
+
+async def design_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, LOOKS["design"])
 
 
 async def perf_page(request: web.Request) -> web.FileResponse:
@@ -150,6 +168,43 @@ async def api_status(request: web.Request) -> web.Response:
     )
 
 
+async def api_arm(request: web.Request) -> web.Response:
+    """The arm's joints for the hub's readouts (the driver rate-limits real reads)."""
+    app = request.app
+    loop: TeleopLoop = app[LOOP]
+    out = {"name": loop.arm.name, "model": getattr(loop.arm, "model", "unknown")}
+    try:
+        joints = {j: round(v, 1) for j, v in loop.arm.read_joints().items()}
+    except Exception as e:  # the arm stopped answering: say so, don't fail the page
+        return web.json_response(out | {"connected": False, "problem": str(e)})
+    control = (
+        "ai" if loop.motion_active else "teleop" if app[CONTROL].get("ws") is not None else "free"
+    )
+    return web.json_response(
+        out | {"connected": True, "joints": joints, "held": loop.frozen, "control": control}
+    )
+
+
+async def api_devices(request: web.Request) -> web.Response:
+    """The place's devices, from config only: whether one is switched on isn't known until the
+    roll call (lab router). `linked` = the arm this brain drives. Off-limits ones are listed,
+    never opened."""
+    brain = request.app[BRAIN]
+    arm = request.app[LOOP].arm.name
+    try:
+        devices = brain.project.list_devices()["devices"]
+    except (config.ConfigError, OSError) as e:
+        log.warning("devices: %s", e)
+        devices = []
+    for d in devices:
+        d["linked"] = d["name"] == arm
+    if not any(d["linked"] for d in devices):
+        devices.append(
+            {"name": arm, "kind": "arm", "off_limits": False, "linked": True, "notes": ""}
+        )
+    return web.json_response({"devices": devices, "arm": arm})
+
+
 async def api_project(request: web.Request) -> web.Response:
     return web.json_response(project_summary(request.app[BRAIN].focus_file))
 
@@ -160,8 +215,9 @@ async def api_commits(request: web.Request) -> web.Response:
     except ValueError:
         raise web.HTTPBadRequest(text="days must be a whole number") from None
     days = max(1, min(MAX_COMMIT_DAYS, days))
-    result = await asyncio.to_thread(commits_per_day, days, request.app[BRAIN].repo)
-    return web.json_response(result)
+    repo = request.app[BRAIN].repo
+    result = await asyncio.to_thread(commits_per_day, days, repo)
+    return web.json_response(result | {"recent": await asyncio.to_thread(recent_commits, 8, repo)})
 
 
 async def api_hub(request: web.Request) -> web.Response:
@@ -285,16 +341,19 @@ def create_brain_app(
     chat: Conversation | None = None,
     check_ai: bool = False,
     persona: Callable[[], Persona] | None = None,
+    local_control_only: bool = False,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
-    default = the active config folder's place.yaml."""
-    app = create_app(loop, root_page=False)
+    default = the active config folder's place.yaml. `local_control_only`: only pages on this
+    computer may drive the arm (a real arm served to the network)."""
+    app = create_app(loop, root_page=False, local_control_only=local_control_only)
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the
     # hub's own chat (always, in-process)
-    server = create_mcp_server(app[TOOLS], ProjectTools(repo, venue))
+    project = ProjectTools(repo, venue)
+    server = create_mcp_server(app[TOOLS], project)
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     place = place or config.load_place()
     persona = persona or (lambda: current_persona(venue=venue.name))
@@ -307,12 +366,18 @@ def create_brain_app(
         tools=ChatTools(server),
         store=_chat_store(place),
     )
-    app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, persona, check_ai)
+    app[BRAIN] = Brain(
+        place, venue, internet, assistant, focus_file, repo, chat, persona, project, check_ai
+    )
     app.router.add_get("/", hub_page)
+    app.router.add_get("/plain", plain_page)
+    app.router.add_get("/design", design_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
+    app.router.add_get("/api/arm", api_arm)
+    app.router.add_get("/api/devices", api_devices)
     app.router.add_get("/api/hub", api_hub)
     app.router.add_get("/api/greeting", api_greeting)
     app.router.add_post("/api/chat/start", api_chat_start)
