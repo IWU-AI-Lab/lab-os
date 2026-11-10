@@ -3,7 +3,16 @@ exactly the two green arms are plugged in the way LeLab expects. Fake folders, n
 
 import json
 
+import pytest
+
+from lab_os import green
 from lab_os.green import check, remember
+
+
+@pytest.fixture(autouse=True)
+def lelab_installed(monkeypatch):
+    monkeypatch.setattr(green, "_lelab", lambda: "/usr/local/bin/lelab")  # CI has no LeLab
+
 
 FOLLOWER = "usb-1a86_USB_Single_Serial_5B41531599-if00"  # which green is which: made up here
 LEADER = "usb-1a86_USB_Single_Serial_5B41533501-if00"
