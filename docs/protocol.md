@@ -7,6 +7,7 @@ Every message has a `type`. Unknown or malformed messages are ignored (logged), 
 ## Connection
 - `ws://<host>:8080/ws`: input clients (the XR page).
 - `ws://<host>:8080/ws?role=monitor`: watchers. They receive `status`; the only message they may send is `stop`, so a monitor can never drive the arm.
+- **A real arm served to the network** (`lab-os serve --host 0.0.0.0 --arm so101-white`): an input page from another computer is treated as a watcher (it's told once, `error` "view only: …"); only pages on the brain's computer (and the Quest through `adb reverse`, which arrives as that computer) can drive. Its `stop` still works.
 
 **One driver at a time.** Several input pages may be connected (desktop tab, Quest, emulator), but only the page that **has control** moves the arm. A page takes control by sending `xr_input` while control is free. Other pages' `xr_input` is ignored (they get one `error` "another page has control"), and their `session_end` changes nothing. Control is **handed over, not grabbed**: it's freed only when the driving page sends `session_end` or disconnects (both freeze the arm, dead-man). `stop` works from every page.
 
@@ -108,6 +109,7 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 ```json
 {"type": "error", "message": "replay running; live input disabled"}
 {"type": "error", "message": "another page has control"}
+{"type": "error", "message": "view only: the arm is driven from the brain's computer"}
 ```
 
 ## MCP tools (AI tools → the brain)
@@ -139,7 +141,7 @@ Unknown docs or sections are tool errors starting with `Not found:` that list wh
 Moves return `{"result": "arrived" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`. Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
 ## HTTP endpoints (the hub)
-Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET` (the chat also uses `POST`), never cached. The hub page reads only these and `/theme.json`, so the designed page (focus step 9) can read the same ones.
+Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET` (the chat also uses `POST`), never cached. The hub page reads only these and `/theme.json`, so the designed hub (`/design`, focus step 10) reads the same ones (plus `/api/arm` and `/api/devices`).
 
 ### `/api/status`
 Polled every 3 s by the hub.
@@ -177,9 +179,28 @@ The Current Project panel, from the Steps list in `docs/current-focus.md`.
 ### `/api/commits?days=14`
 Commits per day for the last `days` days (1–90; today included, oldest first), all local and remote branches, merges left out.
 ```json
-{"available": true, "days": 14, "total": 84, "per_day": [{"date": "2026-10-27", "count": 9}, "…"]}
+{"available": true, "days": 14, "total": 84, "per_day": [{"date": "2026-10-27", "count": 9}, "…"],
+ "recent": [{"hash": "1e73bd0", "date": "2026-11-10", "subject": "Personas: …"}, "…"]}
 ```
-`{"available": false, "days": 14}` when git or the repository is missing.
+`recent`: the latest 8 commits (same branches, no merges), newest first. `{"available": false, "days": 14, "recent": []}` when git or the repository is missing.
+
+### `/api/arm`
+The arm the brain drives, for the designed hub's readouts (polled 4 times a second while the hub is open; real arms rate-limit their reads).
+```json
+{"name": "fake-arm", "model": "so101", "connected": true,
+ "joints": {"shoulder_pan": 0.0, "shoulder_lift": -20.0, "elbow_flex": 40.0, "wrist_flex": 40.0, "wrist_roll": 0.0, "gripper": 30.0},
+ "held": true, "control": "free"}
+```
+`joints`: degrees, shared joint names. `held`: held still (dead-man; true whenever nothing drives it). `control`: `free`, `teleop` or `ai`. When the arm stops answering: `{"name": …, "model": …, "connected": false, "problem": "<why>"}`.
+
+### `/api/devices`
+The place's devices from `devices.yaml` (no ports, nothing opened or probed):
+```json
+{"arm": "fake-arm",
+ "devices": [{"name": "so101-green", "kind": "so101", "off_limits": true, "active_in_venue": false, "notes": "…", "linked": false},
+             {"name": "fake-arm", "kind": "fake", "off_limits": false, "active_in_venue": true, "notes": "…", "linked": true}]}
+```
+`linked`: the arm this brain drives. Whether a device is switched on isn't known until the roll call (lab router).
 
 ### `/api/hub`
 ```json

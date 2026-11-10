@@ -1,6 +1,10 @@
 # The hub
 
-The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. Plain on purpose until the reveal (`current-focus.md` step 10): it has the same parts and names as the approved concept (`docs/design/hub-concept.html`), without the concept's looks.
+The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. It comes in two looks:
+- **plain** (`/plain`, and `/` by default): simple on purpose, the same parts and names as the approved concept without its looks;
+- **designed** (`/design`): the approved concept (`docs/design/hub-concept.html`) made real, the reveal (`current-focus.md` step 10), previewed since 2026-11-10. Below: "The designed hub".
+
+`hub.look` in `config/theme.yaml` (`plain` or `design`) picks which one `/` shows; flip it when the design should be what everyone sees.
 
 ## Start it
 ```bash
@@ -10,7 +14,8 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 
 | Address | What |
 |---|---|
-| `/` | the hub (add `#skip` to jump past the start screen, for a quick look) |
+| `/` | the hub, in the look `hub.look` picks (add `#skip` to jump past the start screen, for a quick look) |
+| `/design`, `/plain` | each look by name, whatever `hub.look` says |
 | `/teleop` | the teleop page (the Quest opens this one under `lab-os serve`; `lab-os-teleop` still serves it at `/`) |
 | `/monitor` | the arm monitor |
 | `/perf` | the performance test (below) |
@@ -28,17 +33,37 @@ Leaving full screen (a swipe, holding Esc, a reload) brings back the start scree
 
 **The chat:** type anywhere on the hub (it lands in "Ask anything" under the circle) and press Enter; **History** opens the whole conversation. Keys, AI setups and the budget: `docs/chat.md`.
 
+## The designed hub (`/design`)
+The concept's look, motion and sound on the brain's real facts: the title is the place's name, the strip shows the venue, persona, internet and AI setup, the panels show the current focus (with its steps), AI spend, commits (with the latest few) and the devices from `devices.yaml`, the typed log at the bottom shows the latest commits and the current step, the **Arm** button opens a side view drawn from the arm's real joints, and the chat is the real one (answers stream in under the core; **History** is the conversation). The startup is real too: the checks (theme, sound, display, internet, AI, assistant, arm) say what just happened, and the greeting is the brain's.
+- **One tap** starts it: full screen + the unlock + the startup (about 8 s; any input skips). Unlike the plain hub, leaving full screen doesn't bring back the start screen.
+- **Back to the start screen** after `hub.reset_after_s` with nobody there (never while something is in use), with a fresh conversation (the last one: "Bring back").
+- **Sleep:** after `motion.idle.sleep_after_s` (300 s) it dims to the network and the breathing core; any input wakes it. With the default reset time (180 s) the reset comes first, so sleep shows only where a venue sets a longer `reset_after_s`.
+- **In the address:** `?quality=maximal` (adds the far-layer verses; `full` is the theme's default, `reduced`, `minimal`), `?startup=assemble` (instead of `hyperspace`), `?sound=0`, `?full=0` (don't go full screen, for a laptop), `#skip`. E.g. `http://localhost:8080/design?quality=maximal`.
+- **Not real yet, so not shown:** whether a device is switched on (the roll call needs the lab router: the Power column says "not known"), voice, alerts (no real alert source yet), a module sent to another screen. The teleop and monitor pages inside it keep their own plain look for now.
+- **The code:** one file, `src/lab_os/hub/web/design.html`: the concept's CSS, SVG and JavaScript, with the made-up data replaced by the brain's endpoints and the concept controls removed. Fonts are bundled in `src/lab_os/web/vendor/fonts/` (offline).
+
+## Full screen without anyone tapping (kiosk-style)
+A page can go full screen only from a press (browsers' rule, on `http://` too). To skip even that, open the browser already full screen:
+- **A Linux or Windows desktop (Chrome/Chromium):** an app window, full screen, that closes like any window:
+  ```bash
+  google-chrome --app=http://localhost:8080/design --start-fullscreen
+  ```
+  (`chromium` instead of `google-chrome` on a Pi; another screen uses the brain's address instead of `localhost`). `--kiosk` instead of `--start-fullscreen` also hides the way out (Alt+F4 still closes it); keep it for screens nobody needs for anything else.
+- **The Newline (Android):** Chrome's menu → **Add to Home screen** gives an icon; on plain `http://` it opens as a normal tab (an installed full-screen app needs the secure address), so tap once for full screen. Test what the Newline allows: `ideas.md` → "Screens without browser bars".
+
 ## Other screens (the Newline, a hallway desktop)
 `lab-os serve` listens on this computer only. Ways to show the hub on another screen:
 - **The screen is this computer's display** (HDMI + USB touch): open `http://localhost:8080/`. Everything works.
-- **Over the network:** `uv run lab-os serve --host 0.0.0.0` (fake arm only; real arms refuse it) and open `http://<this computer's IP address>:8080/` on the screen. Not a secure page, so the Keyboard Lock doesn't work there: Esc leaves full screen, and the start screen then asks for tap 1 again. The real fix is the secure address in `current-focus.md` → "Step 7, concretely"; until then, its fallbacks (Chrome's flag, `adb reverse`) apply here too.
+- **Over the network:** `uv run lab-os serve --host 0.0.0.0` and open `http://<this computer's IP address>:8080/` (or `/design`) on the screen. Find the address with `hostname -I` (Linux; the first one) or `ipconfig getifaddr en0` (macOS). The screen must be able to reach this computer: some networks block devices from reaching each other (`network-setup-checklist.md` → "Networks before the router").
+  - **With a real arm** (`--arm so101-white`): other screens are **view-only**. They show the hub, the arm and the monitor, and their **STOP works**, but teleop input from them is ignored ("view only: the arm is driven from the brain's computer"). Driving stays with this computer: its own browser, the AI tools (MCP, this computer only), and the Quest over `adb reverse` (it arrives as this computer).
+  - **Not a secure page** (`http://` + an address): Esc leaves full screen (no Keyboard Lock), the screen may sleep (no Wake Lock), and Copy and voice don't work. Full screen itself works. The secure address (`current-focus.md` → "Step 7, concretely") is deferred (decision 2026-11-10); its fallbacks (Chrome's flag, `adb reverse`) apply here too.
 
 ## Performance test (`/perf`)
 Drifting dots linked when close, and star streaks speeding up from the middle, drawn the same way as the concept's network and hyperspace, in plain gray. It shows frames per second (last second, average over 10 s, slowest frame) and the canvas size. Settings (what to draw, dots per million pixels, stars, resolution) are in the address, e.g. `/perf?draw=net&density=90&stars=3000&res=2`, so each screen can be bookmarked. Run it full screen on each screen for a minute and note the average: 55–60 fps can carry `full` quality; lower ones `reduced` or `minimal` (DESIGN.md → "Quality levels").
 
 ## Where the code is
 - `src/lab_os/cli.py`: `lab-os serve`.
-- `src/lab_os/hub/`: `server.py` (pages, `/api/…` endpoints, the module list, the assistant's state), `project.py` (the Steps list), `commits.py` (`git log`), `internet.py` (background check).
-- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the hub), `perf.html`, `perf.js`.
+- `src/lab_os/hub/`: `server.py` (pages, `/api/…` endpoints, the module list, the assistant's state, the look), `project.py` (the Steps list), `commits.py` (`git log`: per day, the latest few), `internet.py` (background check).
+- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the plain hub), `design.html` (the designed hub, one file), `perf.html`, `perf.js`.
 - `src/lab_os/web/`: files every page shares (vendored libraries, `theme.js`).
 - Endpoints: `docs/protocol.md` → "HTTP endpoints".

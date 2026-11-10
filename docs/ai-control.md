@@ -1,6 +1,6 @@
 # AI control: an AI tool drives the arm through the brain
 
-The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop, asks you first, and is logged. Today: the **fake arm**. The real `so101-white` comes later, with the builder present (SAFETY.md).
+The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop, asks you first, and is logged. The **fake arm** first (done 2026-11-10: Fable 5.2 did the pretend-cube task with broadly the right moves), then the real `so101-white`, with the builder present (SAFETY.md): "5. On the real arm".
 
 ## 1. Start the brain
 In a terminal, in the `lab-os` folder:
@@ -69,6 +69,37 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control") and the pages show control "the AI tools". The hub doesn't reset to its start screen mid-move.
 - **Stopping:** `stop`, STOP on any page, or the tool call being cancelled mid-move all freeze the arm.
 
+## 5. On the real arm (`so101-white`, in the lab)
+Only with the builder at the arm, hand near STOP. Ask before the first real move (CLAUDE.md). The green arm (`so101-green`) is never touched: the brain refuses its ports.
+
+**Once, on the lab desktop** (the `so101` extra is LeRobot, ~5 GB; plain `uv sync` removes it again):
+```bash
+cd ~/lab-os && git pull && uv sync --extra so101
+ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …1599 and …3501 ones (green) alone
+```
+
+**Each time:**
+1. Clear the table around the arm; put the cube where you'll describe it (measure from the middle of the base: cm in front, cm to the left).
+2. Start the brain with the real arm, slowly:
+   ```bash
+   uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+   ```
+   It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/monitor** (or `/design` → Arm) to watch. To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
+3. In the Claude Code session (VS Code): `/mcp` → `lab-os` → reconnect (the brain restarted), `/model` → Fable 5.2.
+4. Small steps first, approving each one after reading it:
+   > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
+
+   > Go to the home pose.
+
+   > Move the gripper 3 cm lower, pointing straight down.
+
+   Then the step-2 task, with your real measurements:
+   > There's a cube 15 cm in front of the base and 5 cm to the left. Pick it up and put it down 10 cm to the left of where it was. Go slowly, one move at a time, and tell me before each move what you'll do.
+5. **Stop:** STOP on any page (or Esc on the teleop page) stops it at once; Ctrl+C in the brain's terminal stops the brain (the SO-101 then goes limp, so hold it if it's lifted). **Never "always allow"** a move tool.
+6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/current-focus.md` (step 2) what worked and what didn't.
+
+Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
+
 ## The log
 Every call (time, tool, arguments, outcome `ok` / `clipped` / `refused` / `stopped` / `error`, and the result) goes to `logs/ai-tools/<date>_<time>.jsonl`, one file per brain run (not in git). Use it to compare runs later.
 
@@ -76,7 +107,6 @@ Every call (time, tool, arguments, outcome `ok` / `clipped` / `refused` / `stopp
 Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, …). Make it ask before each move tool, as above.
 
 ## Later
-- **The real arm:** `uv run --extra so101 lab-os serve --arm so101-white`, only with the builder present. The brain then prints that AI tools can move a real arm. First moves small, watching, hand near STOP. The `rest` pose is computed, not yet checked on the real arm.
 - Cameras (focus step 3), access from other computers with a token (after this focus).
 
 Code: `src/lab_os/tools/robot.py` (the tools and their rules), `tools/mcp_server.py` (MCP), `tools/calllog.py`; tests in `tests/test_robot_tools.py`.

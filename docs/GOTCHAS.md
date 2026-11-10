@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — Gemini's free model takes 6–15 s per answer
+**What:** with the `backup` setup (`gemini-3.5-flash-lite`, free key) a two-word answer took ~6 s, and a question that needs a look-up (`project_status`) ~13 s: ~7 s to decide on the tool, ~6 s to answer. A check after 9 s looked like a hang.
+**Fix:** none needed in code (the page says "Looking up the current focus…" meanwhile). Expect it when demoing on the free key; the paid OpenAI `main` setup is usually faster. Test scripts wait 20 s+ for an answer.
+
+### 2026-11-10 — Steps "built and tested" still counted as not done
+**What:** the Current Project panel said "Step 1 of 10" although steps 4–6 were finished: the panel only counts a step as done when its line in `current-focus.md` says `(done YYYY-MM-DD)` right after the bold title; the status lines underneath don't count.
+**Fix:** marked 4–6 `(done 2026-11-10)`. When a step is finished, add the `(done …)` mark (step 1 waits for its Newline check).
+
+### 2026-11-10 — Headless Chrome refuses full screen from scripted clicks
+**What:** testing the hub with headless Chrome over the DevTools protocol, `requestFullscreen()` after a dispatched click fails with "not granted"; a real press on a real screen works.
+**Fix:** none; it's only the test setup. The hub logs it (`hub: no full screen`) and starts anyway.
+
 ### 2026-11-10 — The live status line floods a narrow terminal
 **What:** `lab-os serve` printed teleop's status line (`right: no controller | FROZEN | arm +0.0 -20.0 …`) 10 times a second, redrawn with `\r`. In a narrow terminal (VS Code's panel) the line wraps, and `\r` only goes back to the start of the last wrapped row, so every redraw added new lines: a constant stream.
 **Fix:** `lab-os serve` doesn't print it unless `--status-line` (the hub shows the state). When it's on (also `lab-os-teleop`), it's cut to the terminal's width, drawn only when it changes, and never written when the output isn't a terminal.
