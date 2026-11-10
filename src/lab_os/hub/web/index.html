@@ -38,6 +38,8 @@
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation">History <b id="chat-n"></b></button>
     </div>
+    <!-- a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes) -->
+    <button id="restore-chat" type="button" hidden>Bring back the last conversation</button>
     <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
     <div id="errmsg" role="alert" hidden></div>
   </section>

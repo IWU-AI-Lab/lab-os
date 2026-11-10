@@ -192,10 +192,10 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
 
 ### Greeting
 - `GET /api/greeting` → `{"hello": "Good evening.", "news": "Step 5, Typed chat, was finished today." | null, "source": "step" | "calendar" | "commits" | "persona", "text": "<hello + news, or hello + the persona's line>"}`.
-- `POST /api/chat/start` → the same, and the conversation starts fresh with `text` as the assistant's first message (the hub calls it on the start press).
+- `POST /api/chat/start` → the same plus `"previous"` (as in `GET /api/chat`), and the conversation starts fresh with `text` as the assistant's first message (the hub calls it on the start press). A conversation with a question in it is put aside first.
 
 ### Chat
-- `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}}`: the conversation the brain holds (one per brain; the hub's reset clears it).
+- `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}, "previous": {"questions": 2, "saved_at": <epoch seconds>} | null}`: the conversation the brain holds (one per brain; the hub's reset puts it aside) and the one put aside, if any (kept `chat_keep_minutes`, `docs/chat.md`).
 - `POST /api/chat` with `{"text": "…"}` (at most 2000 characters) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
   ```
   {"type": "state", "state": "thinking"}
@@ -207,7 +207,8 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
   {"type": "done", "setup": "main", "cost_usd": 0.000164, "tools": 1}
   ```
   or `{"type": "error", "message": "<a full sentence for the screen>"}` (no key, budget used up, the service refused or didn't answer, "I'm still answering the last question."). One turn at a time.
-- `POST /api/chat/clear` → `{"ok": true}`: forget the conversation.
+- `POST /api/chat/clear` → `{"ok": true}`: start over; the conversation is put aside (if it has a question).
+- `POST /api/chat/restore` → `{"ok": true | false, "messages": […], "previous": … | null}`: bring back the conversation put aside; the current one is put aside in its place (if it has a question), so a second call swaps back. `ok: false` when there's none (or a turn is running).
 
 ### `/api/spend`
 This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.

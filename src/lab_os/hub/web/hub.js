@@ -153,6 +153,7 @@ async function greet() {
   $("#boot-greet").textContent = g.text;
   if (!S.chat.some((m) => m.role === "user")) S.chat = [{ role: "assistant", content: g.text }];
   renderLog();
+  showRestore(g.previous);
 }
 
 function toStart(why) {
@@ -490,10 +491,35 @@ document.addEventListener("keydown", (e) => {
 });
 
 async function loadChat() {
-  // after a reload: the conversation the brain still has (cleared by the reset)
+  // after a reload: the conversation the brain still has (put aside by the reset)
   const c = await getJSON("/api/chat");
   if (!c) return;
-  S.chat = c.messages.map((m) => ({ role: m.role, content: m.content }));
+  showChat(c.messages);
+  showRestore(c.previous);
+}
+
+// A reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes):
+// "Bring back" swaps it in (and the current one aside, so a second press swaps back).
+function showRestore(prev) {
+  const b = $("#restore-chat");
+  b.hidden = !prev;
+  if (!prev) return;
+  const at = new Date(prev.saved_at * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const n = prev.questions;
+  b.textContent = `Bring back the last conversation (${n} question${n === 1 ? "" : "s"}, ${at})`;
+}
+
+async function restoreChat() {
+  if (S.asking) return;
+  const res = await fetch("/api/chat/restore", { method: "POST" }).catch(() => null);
+  const r = res?.ok ? await res.json() : null;
+  if (r?.ok) showChat(r.messages);
+  showRestore(r?.previous);
+}
+$("#restore-chat").addEventListener("click", restoreChat);
+
+function showChat(messages) {
+  S.chat = messages.map((m) => ({ role: m.role, content: m.content }));
   const lastQ = [...S.chat].reverse().find((m) => m.role === "user");
   const lastA = S.chat.at(-1)?.role === "assistant" ? S.chat.at(-1) : null;
   $("#reply .q").textContent = lastQ?.content || "";

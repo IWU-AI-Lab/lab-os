@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-10
+- The hub's chat is kept for a while: saved after every answer and read back when the brain starts; the reset or start press puts it aside, and **Bring back the last conversation** swaps it in. Deleted after `chat_keep_minutes` (place.yaml, 30; 0 = off). `/api/chat/restore`; `previous` in `/api/chat` and `/api/chat/start`. Tests no longer write to the repo's `logs/`.
 - Personas aren't tied to a venue any more: `persona:` moved from the venue profiles to `place.yaml`; `lab-os serve --persona <id>` and `$LAB_OS_PERSONA` override it. An old venue `persona:` line is ignored with a warning; a mistyped `--persona` stops at start.
 - Where the `.env` goes: `new-place` never copies a `.env` from the template; a missing `.env` is logged with its exact path, and the chat's "isn't set up" sentence names it (the key had been saved in `src/lab_os/place_template/.env`, see GOTCHAS).
 
