@@ -133,6 +133,9 @@ Polled every 3 s by the hub.
 ```json
 {
   "venue": "lab",
+  "persona": {"id": "lab-assistant", "display_name": "Lab Assistant",
+              "picture": {"type": "orb", "style": "plain", "color": "primary"},
+              "voice": "none", "sounds": "default"},
   "internet": true,
   "ai": {"setup": "main", "where": "OpenAI", "model": "gpt-6-luna", "connected": true,
          "paused": null, "problem": null, "busy": false},
@@ -142,6 +145,7 @@ Polled every 3 s by the hub.
   "time_ms": 1794264745533
 }
 ```
+- `persona`: the venue's persona (`docs/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
 - `ai`: the chat's AI setup (`docs/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected; `error` after a failed answer until the service answers again.
@@ -172,6 +176,10 @@ Commits per day for the last `days` days (1–90; today included, oldest first),
  "reset_after_s": 180}
 ```
 `title`: the place's name (`name` in `place.yaml`, `docs/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+
+### Greeting
+- `GET /api/greeting` → `{"hello": "Good evening.", "news": "Step 5, Typed chat, was finished today." | null, "source": "step" | "calendar" | "commits" | "persona", "text": "<hello + news, or hello + the persona's line>"}`.
+- `POST /api/chat/start` → the same, and the conversation starts fresh with `text` as the assistant's first message (the hub calls it on the start press).
 
 ### Chat
 - `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}}`: the conversation the brain holds (one per brain; the hub's reset clears it).

@@ -26,7 +26,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). Wi
 ## Repository map
 | Path | What |
 |---|---|
-| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `ai/` (the hub's chat: AI setups, client, conversation, spend), `tools/` (robot tools for AI, MCP server), `web/` (files all pages share: vendored three.js, `theme.js`), `cli.py` (`lab-os serve`), `venues.py` |
+| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `ai/` (the hub's chat: AI setups, client, conversation, spend), `tools/` (robot tools for AI, MCP server), `web/` (files all pages share: vendored three.js, `theme.js`), `cli.py` (`lab-os serve`), `venues.py`, `personas.py`, `config.py` (the place's config folder) |
 | `config/` | The lab's place (`docs/places.md`): `place.yaml` (the lab's name), `devices.yaml` (robot registry), `venues/` (lab, visit-day, …); shared by every place: `theme.yaml` (design tokens: colors, font), `poses.yaml`, `models.yaml` (AI setups, no keys), `personas/` |
 | `models/` | Robot models (SO-101 URDF + meshes) for the 3D view and, later, inverse kinematics |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
@@ -40,6 +40,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). Wi
 - `docs/hub.md`: running the hub, the two taps, other screens, the performance test
 - `docs/ai-control.md`: an AI tool (Claude Code, …) driving the arm through the brain's MCP tools
 - `docs/chat.md`: the hub's typed chat, AI setups (`config/models.yaml`), keys, spend and the budget
+- `docs/personas.md`: who the assistant is (lab-assistant, J.A.R.V.I.S.), switching, the greeting
 - `docs/places.md`: running lab-os at home or in another lab (`--config`, `lab-os new-place`)
 - `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
 - `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`

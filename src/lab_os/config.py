@@ -116,10 +116,11 @@ class Place:
     domain: str | None = None  # the brain's address name (planned: step 7's certificate)
     ai_budget_usd_month: float | None = None  # the hub's chat pauses when this month's AI spend
     # reaches it; None = no cap (fine for a local model, not for a paid key)
+    calendar: tuple = ()  # dates the greeting may mention: ({"date": "2026-12-15", "what": ...},)
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
-PLACE_FIELDS = {"version", "name", "venue", "domain", "ai_budget_usd_month"}
+PLACE_FIELDS = {"version", "name", "venue", "domain", "ai_budget_usd_month", "calendar"}
 
 
 def load_place(path: Path | None = None) -> Place:
@@ -140,6 +141,7 @@ def load_place(path: Path | None = None) -> Place:
         venue=raw.get("venue"),
         domain=raw.get("domain"),
         ai_budget_usd_month=float(budget) if budget is not None else None,
+        calendar=tuple(c for c in (raw.get("calendar") or []) if isinstance(c, dict)),
         extra=extra,
     )
 

@@ -23,10 +23,11 @@ setups:
   backup:
     where: Gemini, free key
     base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-    model: gemini-3.8-flash
+    model: gemini-3.5-flash-lite  # answers quickly on the free key; gemini-3.8-flash was
+    # overloaded there on 2026-11-09 (HTTP 503 "high demand", then no answer in 30 s)
     key_env: GEMINI_API_KEY
     # Free tier: $0 (Google may use free-tier chats to improve its products). A paid key costs
-    # 0.75 / 3.75 until 2026-12-31, then 1.50 / 7.50: put those here if the key is ever paid.
+    # 0.30 / 2.50 per 1M tokens: put those here if the key is ever paid.
     price_per_mtok: {input: 0, cached_input: 0, output: 0}
     options:
       max_tokens: 800

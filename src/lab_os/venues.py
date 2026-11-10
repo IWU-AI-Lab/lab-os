@@ -18,6 +18,7 @@ class Venue:
     reset_after_s: float | None = None  # hub: back to the start screen; None = the theme's value
     ai_tools: dict = field(default_factory=dict)  # limits for the AI tools (lab_os.tools.robot)
     public: bool = False  # a public screen: the hub hides internal details (AI spend, later IPs)
+    persona: str | None = None  # personas/<id>.yaml; None = the plain one (lab_os.personas)
 
 
 def venue_names(config_dir: Path | None = None) -> list[str]:
@@ -59,4 +60,5 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         reset_after_s=float(raw["reset_after_s"]) if raw.get("reset_after_s") else None,
         ai_tools=dict(raw.get("ai_tools") or {}),
         public=bool(raw.get("public", False)),
+        persona=raw.get("persona") or None,
     )

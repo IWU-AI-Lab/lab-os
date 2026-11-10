@@ -140,7 +140,19 @@ function start() {
   $("#hub").hidden = false;
   noteInput();
   refreshFacts();
+  greet();
   quick.focus();
+}
+
+// The start press: a fresh conversation whose first message is the greeting (built by the brain
+// from real facts, else the persona's line). Shown as plain text under the title until the reset.
+async function greet() {
+  const res = await fetch("/api/chat/start", { method: "POST" }).catch(() => null);
+  const g = res?.ok ? await res.json() : null;
+  if (!g || S.screen !== "hub") return;
+  $("#boot-greet").textContent = g.text;
+  if (!S.chat.some((m) => m.role === "user")) S.chat = [{ role: "assistant", content: g.text }];
+  renderLog();
 }
 
 function toStart(why) {
@@ -269,6 +281,7 @@ function renderStatus(st) {
   }
   S.clockOffset = st.time_ms - Date.now();
   for (const el of [$("#f-venue"), $("#ign-venue")]) el.textContent = `Venue: ${st.venue}`;
+  $("#f-persona").textContent = `Assistant: ${st.persona.display_name}`;
   net.textContent =
     st.internet === true ? "Internet: online" : st.internet === false ? "Internet: offline" : "Internet: checking…";
   net.classList.toggle("off", st.internet !== true);
@@ -399,6 +412,7 @@ function onChatEvent(ev, answer) {
 
 function clearChat() {
   S.chat = [];
+  $("#boot-greet").textContent = "";
   $("#reply .q").textContent = "";
   $("#reply .a").textContent = "";
   quick.value = "";
