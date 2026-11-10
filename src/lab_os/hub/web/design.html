@@ -873,7 +873,7 @@ const S = {
   // all from the brain: /theme.json, /api/hub, /api/status, /api/arm, /api/project, /api/spend, /api/commits, /api/devices
   themeOk: false, status: null, arm: null, project: null, spend: null, recent: [], page: {}, clockOffset: 0,
   chat: [], asking: false, greet: null, greetP: null, readyP: null, errorUntil: 0,
-  sleepAfterMs: 300_000, resetAfterMs: 180_000, startGuardUntil: 0, resetting: false,
+  sleepAfterMs: 900_000, resetAfterMs: 1_800_000, startGuardUntil: 0, resetting: false,
 };
 body.dataset.alert = "none"; body.dataset.mood = "room"; body.dataset.layout = S.layout;
 const portrait = () => innerHeight > innerWidth;
@@ -1170,7 +1170,10 @@ function newStar(far) {
   const spot = () => (mid ? (Math.random() + Math.random() + Math.random() - 1.5) * 0.2 : rand(-0.56, 0.56));
   return { x: spot() * W * f, y: spot() * H * f, z, w: rand(0.3, 1), ph: rand(0, TAU), age: 0 };
 }
-function seedStars(shown) { stars = Array.from({ length: HYPER.stars }, () => Object.assign(newStar(false), { age: shown ? 1 : 0 })); }
+// reduced detail starts with half the stars; a slow screen lowers starCap during a jump (drawStars)
+let starCap = Infinity, starDt = 0;
+const starCount = () => Math.min(starCap, S.quality === "reduced" ? HYPER.stars / 2 : HYPER.stars);
+function seedStars(shown) { stars = Array.from({ length: starCount() }, () => Object.assign(newStar(false), { age: shown ? 1 : 0 })); }
 // 0 at the start, 1 at full speed: a low power, so it builds steadily rather than all at once
 const hyperK = (ms) => Math.pow(clamp(ms / HYPER.ramp, 0, 1), 1.5);
 const LV = 24, SEG = 12;  // brightness steps and pieces per line: a gradient drawn in batches, so thousands stay cheap
@@ -1179,6 +1182,16 @@ function drawStars(dt, now, mode, fade = 1) {
   if (!stars.length) seedStars(mode === "wait");
   const jump = mode === "jump", ms = jump ? now - S.hyper.t0 : 0, k = jump ? hyperK(ms) : 0, F = starF();
   const p = jump ? clamp(ms / HYPER.ramp, 0, 1) : 0;
+  if (jump) {
+    // under ~40 frames a second (e.g. Firefox on Linux drawing the canvas without the graphics card):
+    // a fifth fewer stars until it keeps up, kept for the next jump. Lost while racing, so nobody notices.
+    starDt = (starDt || 1 / 60) * 0.85 + dt * 0.15;  // starts at 60 fps: one slow first frame is no reason
+    if (starDt > 0.025 && stars.length > 1000) {  // fewer than ~1000 thins it and saves little (the rest of the page costs too)
+      stars.length = starCap = Math.floor(stars.length * 0.8);
+      starDt = 0;
+      console.info(`hub: hyperspace too slow here, down to ${starCap} stars`);
+    }
+  }
   // speed is exponential: the dots barely crawl at first, then race. The trails lead: they stretch steadily
   // from the start, so the lines grow long while the dots are still slow (anticipation), then the speed catches up
   const rush = (Math.exp(4.2 * p) - 1) / (Math.exp(4.2) - 1);
@@ -1856,10 +1869,13 @@ function renderChat() {
   }
   $("#log-chat").scrollTop = 1e9;
 }
+function errBox(title, msg) {
+  $("#errmsg b").textContent = title;
+  $("#errmsg span").textContent = msg || "";
+}
 // a turn that went wrong: the brain's own full sentence, shown at the core for a while
 function showError(msg) {
-  $("#errmsg b").textContent = "No answer";
-  $("#errmsg span").textContent = msg;
+  errBox("No answer", msg);
   S.errorUntil = performance.now() + 9000;
   setState("error");
 }
@@ -2484,7 +2500,7 @@ addEventListener("keydown", (e) => {
   if (S.sleeping) wake();
   if ($("#ignite")) { e.preventDefault(); ignite(); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
-  if (e.key === "Escape" && S.moduleOpen) { closeModule(); return; }
+  if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
   // just start typing: the ask line under the core catches the letter (the conversation page stays closed)
   const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || (document.activeElement.tagName === "BUTTON" && e.key === " ");
   if (S.booted && !inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !S.moduleOpen) {
@@ -2620,7 +2636,11 @@ async function pollStatus() {
   setFact("#f-net", st.internet === true ? "online" : st.internet === false ? "offline" : "checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
   showNote(st.ai.paused);
-  if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil && S.state !== st.assistant.state) setState(st.assistant.state);
+  if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {
+    // the brain's error is a standing one (e.g. a refused key), not an unanswered question
+    if (st.assistant.state === "error") errBox("AI not connected", st.ai.problem);
+    if (S.state !== st.assistant.state) setState(st.assistant.state);
+  }
   return st;
 }
 let armBusy = false;
@@ -2668,6 +2688,23 @@ function goFull() {
   }
   navigator.wakeLock?.request("screen").catch(() => {});
 }
+// Esc meant Back, but a browser without the Keyboard Lock (Firefox; Chrome-family ones only on some setups)
+// also took it to leave full screen. Pages may go full screen only from a press, so the next tap or key
+// brings it back. Leaving on purpose (F11, Esc with nothing open) stays left.
+// (Browsers differ in which comes first, the Esc key or leaving full screen: either order works.)
+let refull = false, backEscAt = -1e9, fullLeftAt = -1e9;
+function backByEsc() {
+  backEscAt = performance.now();
+  if (!document.fullscreenElement && backEscAt - fullLeftAt < 800) refull = true;
+}
+document.addEventListener("fullscreenchange", () => {
+  if (document.fullscreenElement) { refull = false; return; }
+  fullLeftAt = performance.now();
+  refull = S.booted && fullLeftAt - backEscAt < 800;
+});
+for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, (e) => {
+  if (refull && e.key !== "Escape") { refull = false; goFull(); }
+}, true);
 // module pages (teleop, monitor) open inside the hub: no page load, so full screen stays
 function openPage(id) {
   const frame = document.createElement("iframe");
@@ -2684,7 +2721,7 @@ function watchFrame(frame) {
     w.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (w.document.pointerLockElement) { w.document.exitPointerLock(); return; }
-      e.preventDefault(); closeModule();
+      e.preventDefault(); backByEsc(); closeModule();
     });
   } catch (e) {
     console.warn(`hub: can't watch the module page (${e.message}); use the Back button`);
@@ -2736,6 +2773,7 @@ function toStart(why) {
   S.chat = []; renderChat();
   $("#reply").classList.remove("on");
   S.booted = false; S.booting = false; S.sleeping = false; body.classList.remove("sleep");
+  S.errorUntil = 0;
   setState("idle");
   body.insertAdjacentHTML("beforeend", IGNITE_HTML);
   body.classList.add("waiting");
