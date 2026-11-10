@@ -146,3 +146,16 @@ def test_no_web_file_loads_anything_from_the_internet():
         f"{f.relative_to(SRC)}: {m.group(0)}" for f in files for m in LOADS.finditer(f.read_text())
     ]
     assert not bad, bad
+
+
+async def test_status_says_in_use_while_the_ai_tools_move(aiohttp_client):
+    from lab_os.teleop.loop import Motion
+
+    app = make_app()
+    client = await aiohttp_client(app)
+    from lab_os.teleop.server import LOOP
+
+    app[LOOP].start_motion(Motion(path=[{"shoulder_pan": 45.0}], deg_per_s=1.0))
+    st = await (await client.get("/api/status")).json()
+    assert st["in_use"] == ["ai"] and st["arm"]["control"] == "ai"
+    app[LOOP].stop()
