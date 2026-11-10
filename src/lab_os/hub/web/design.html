@@ -724,6 +724,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
+      <button class="tool" id="xr-btn" type="button" title="The hub in VR" aria-label="The hub in VR" hidden><svg class="ico"><use href="#i-headset"/></svg></button>
       <button class="tool" id="sleep-btn" type="button" title="Back to the start screen" aria-label="Back to the start screen"><svg class="ico"><use href="#i-power"/></svg></button>
       <button class="tool" id="settings-btn" data-module="settings" type="button" title="Settings" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
     </div>
@@ -2021,7 +2022,7 @@ const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
 // every module the hub knows: id -> [title, icon, kind]. The theme's hub.modules picks which ones and
 // their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it).
 // Settings opens from the gear in the strip. Chat isn't one: it belongs to the core.
-const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], settings: ["Settings", "i-gear", "page"] };
+const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], training: ["Training", "i-leader", "page"], settings: ["Settings", "i-gear", "page"] };
 const CHAT = ["Chat", "i-chat", "chat"];
 function buildMring(g) {
   el("circle", { r: 22, fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "14 5 2 5", opacity: 0.8 }, g);
@@ -2728,6 +2729,9 @@ function watchFrame(frame) {
   }
 }
 // the strip's quiet tools: back to the start screen now, and settings (opens like a module)
+// the hub in VR (/xr): only where the browser can do immersive VR (the Quest's)
+navigator.xr?.isSessionSupported("immersive-vr").then((ok) => ($("#xr-btn").hidden = !ok)).catch(() => {});
+$("#xr-btn").addEventListener("click", (e) => { e.stopPropagation(); location.href = "/xr"; });
 $("#sleep-btn").addEventListener("click", (e) => { e.stopPropagation(); SFX.close(); toStart("the power button"); });
 $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
 // A module page full screen on another monitor of this computer (HDMI/DP): Chrome's Window Management

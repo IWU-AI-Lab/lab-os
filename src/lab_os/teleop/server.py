@@ -17,7 +17,8 @@ all teleop input is ignored. Any page, monitors included, can send `stop`; it al
 
 `local_control_only` (the brain sets it for a real arm served to the network): input pages from
 other computers are watchers, so another screen can show the hub and the arm but only STOP it.
-Control stays with this computer (and the Quest over `adb reverse`, which arrives as localhost).
+Control stays with this computer (and the Quest over `adb reverse`, which arrives as localhost),
+plus the addresses in `drive_from` (`lab-os serve --drive-from pi01`: the builder's own screens).
 """
 
 import asyncio
@@ -50,6 +51,7 @@ OUTBOX = web.AppKey("outbox", asyncio.Queue)
 # The one input WebSocket that currently drives the arm, or None. A dict so handlers can mutate it.
 CONTROL = web.AppKey("control", dict)
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
+DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
 LOOPBACK = ("127.0.0.1", "::1")
 
 
@@ -148,7 +150,8 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     ws = web.WebSocketResponse(heartbeat=5.0)
     await ws.prepare(request)
     is_input = request.query.get("role", "input") == "input"
-    if is_input and app[LOCAL_CONTROL_ONLY] and not is_local(request):
+    may_drive = is_local(request) or request.remote in app[DRIVE_FROM]
+    if is_input and app[LOCAL_CONTROL_ONLY] and not may_drive:
         is_input = False  # another screen: it watches (and can STOP), it never drives
         await ws.send_json(
             {"type": "error", "message": "view only: the arm is driven from the brain's computer"}
@@ -238,9 +241,11 @@ def create_app(
     accept_input: bool = True,
     root_page: bool = True,
     local_control_only: bool = False,
+    drive_from: frozenset[str] = frozenset(),
 ) -> web.Application:
     """The teleop server. `root_page=False` leaves `/` free (the brain serves the hub there).
-    `local_control_only`: only pages on this computer may drive (see the module docstring)."""
+    `local_control_only`: only pages on this computer (and from the addresses in `drive_from`)
+    may drive (see the module docstring)."""
     app = web.Application()
     app[LOOP] = loop
     app[RECORDER] = recorder
@@ -250,6 +255,7 @@ def create_app(
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
     app[LOCAL_CONTROL_ONLY] = local_control_only
+    app[DRIVE_FROM] = frozenset(drive_from)
     if root_page:
         app.router.add_get("/", index)
     app.router.add_get("/teleop", index)

@@ -94,7 +94,7 @@ async def test_commits(aiohttp_client):
 async def test_hub_config(aiohttp_client):
     client = await aiohttp_client(make_app())
     h = await (await client.get("/api/hub")).json()
-    assert [m["id"] for m in h["modules"]] == ["teleop", "monitor", "ai"]
+    assert [m["id"] for m in h["modules"]] == ["teleop", "monitor", "ai", "training"]
     assert h["modules"][0]["page"] == "/teleop"
     assert h["reset_after_s"] == 1800
 

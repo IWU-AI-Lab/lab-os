@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hub in VR</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <script type="importmap">
+    { "imports": { "three": "/web/vendor/three/three.module.js" } }
+  </script>
+  <style>
+    main.one { display: grid; gap: 1rem; max-width: 40rem; width: 100%; margin: 0 auto; padding: 1rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
+    .hint, #msg { font: var(--w-lines) 0.9rem/1.5 var(--f-lines); color: var(--text-dim); margin: 0.5rem 0 0; }
+  </style>
+</head>
+<!--
+  The hub, immersive, for the Quest's browser: the hyperspace jump happens around you (stars rush
+  past in 3D), then the network surrounds you and the core floats in front, with the place's name and
+  the brain's greeting. Same colors and timings as the designed hub (/theme.json); the core shows the
+  assistant's real state (/api/status). Watch-only: it drives nothing. Code: xr-hub.js.
+-->
+<body class="xr">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-headset"/></svg><span>Hub in VR</span></div>
+    <span class="place"></span>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="one">
+    <section class="card"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-headset"/></svg>The startup, around you</h2>
+      <p class="hint">Put the headset on and press a button below. Then pull the trigger (or pinch) to jump. Pull it again any time to jump again. Leave with the Quest's menu button.</p>
+      <div class="actions">
+        <button id="vr" class="btn primary" type="button" disabled>Checking…</button>
+        <button id="ar" class="btn" type="button" hidden>Enter AR (your room)</button>
+      </div>
+      <p id="msg" aria-live="polite"></p>
+    </div></section>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/xr-hub.js"></script>
+</body>
+</html>

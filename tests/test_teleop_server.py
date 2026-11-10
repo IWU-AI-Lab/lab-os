@@ -282,3 +282,22 @@ async def test_speed_control_stays_within_the_venue_cap(aiohttp_client):
     await asyncio.sleep(0.05)
     assert loop.speed_scale == 0.05  # watchers can only STOP
     assert loop.status()["max_speed_scale"] == 0.5
+
+
+async def test_listed_computers_may_drive_a_real_arm(aiohttp_client, monkeypatch):
+    """--drive-from: a listed address drives like this computer; others still only watch."""
+    import lab_os.teleop.server as srv
+
+    monkeypatch.setattr(srv, "is_local", lambda request: False)
+    app, loop = make_app(local_control_only=True, drive_from=frozenset({"127.0.0.1"}))
+    client = await aiohttp_client(app)  # the test client arrives as 127.0.0.1: "the Pi"
+    ws = await client.ws_connect("/ws")
+    await ws.send_json(FRAME)
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    await ws.close()
+
+    app, loop = make_app(local_control_only=True, drive_from=frozenset({"192.168.7.118"}))
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws")
+    assert "view only" in (await next_of(ws, "error"))["message"]
+    await ws.close()
