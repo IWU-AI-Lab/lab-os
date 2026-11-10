@@ -16,7 +16,10 @@
       "Bash(uv run ruff*)",
       "Bash(rsync *)",
       "Bash(ls /dev/serial/by-id*)",
-      "Bash(lsusb*)"
+      "Bash(lsusb*)",
+      "mcp__lab-os__arm_status",
+      "mcp__lab-os__list_poses",
+      "mcp__lab-os__stop"
     ],
     "ask": [
       "Bash(sudo *)",
@@ -27,7 +30,11 @@
       "Bash(shutdown*)",
       "Bash(systemctl *)",
       "Bash(ssh * reboot*)",
-      "Bash(ssh * sudo *)"
+      "Bash(ssh * sudo *)",
+      "mcp__lab-os__move_joints",
+      "mcp__lab-os__gripper",
+      "mcp__lab-os__move_to",
+      "mcp__lab-os__go_to_pose"
     ],
     "deny": [
       "Edit(//home/ai-comp-lab-ubuntu-76358/miniforge3/envs/lerobot/**)",

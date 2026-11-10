@@ -110,6 +110,21 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 {"type": "error", "message": "another page has control"}
 ```
 
+## MCP tools (AI tools → the brain)
+Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTTP, this computer only; `--mcp-port`). Setup, rules and examples: `docs/ai-control.md`. Positions in cm from the arm's base (x forward, y left, z up), angles in degrees.
+
+| Tool | Arguments | Tier |
+|---|---|---|
+| `arm_status` | `arm?` | read |
+| `list_poses` | `arm?` | read |
+| `move_joints` | `joints` ({name: degrees}), `relative?` (false), `arm?` | move |
+| `gripper` | `open_pct` (0 closed … 100 open), `arm?` | move |
+| `move_to` | `x_cm`, `y_cm`, `z_cm`, `tool_angle_deg?` (0 up, 90 forward, 180 down; default: keep), `arm?` | move |
+| `go_to_pose` | `name`, `arm?` | move |
+| `stop` | `arm?` | always allowed |
+
+Moves return `{"result": "arrived" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`. Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
+
 ## HTTP endpoints (the hub)
 Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET`, never cached. The hub page reads only these and `/theme.json`, so the designed page (focus step 9) can read the same ones.
 
@@ -128,8 +143,8 @@ Polled every 3 s by the hub.
 ```
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking. `offline` while no AI is connected.
-- `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, else `free`.
-- `in_use`: what's in use right now (today only `"teleop"`); the hub never goes back to the start screen while it isn't empty.
+- `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
+- `in_use`: what's in use right now (`"teleop"`, `"ai"`); the hub never goes back to the start screen while it isn't empty.
 - `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.
 
 ### `/api/project`

@@ -15,7 +15,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/monitor` | the arm monitor |
 | `/perf` | the performance test (below) |
 
-Options are the same as `lab-os-teleop`'s: `--arm fake-xarm1`, `--venue visit-day`, `--port 8090`, `--quiet`. Real arms (`--arm so101-white`, `--arm xarm1`) need the builder's OK before anything moves (SAFETY.md).
+Options are the same as `lab-os-teleop`'s: `--arm fake-xarm1`, `--venue visit-day`, `--port 8090`, `--quiet`; plus `--mcp-port` for the robot tools for AI (`docs/ai-control.md`). Real arms (`--arm so101-white`, `--arm xarm1`) need the builder's OK before anything moves (SAFETY.md).
 
 ## Two taps
 Browsers allow full screen and sound only after a press, so:

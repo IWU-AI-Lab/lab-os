@@ -26,7 +26,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). Wi
 ## Repository map
 | Path | What |
 |---|---|
-| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `web/` (files all pages share: vendored three.js, `theme.js`), `cli.py` (`lab-os serve`), `venues.py` |
+| `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `tools/` (robot tools for AI, MCP server), `web/` (files all pages share: vendored three.js, `theme.js`), `cli.py` (`lab-os serve`), `venues.py` |
 | `config/` | `devices.yaml` (robot registry), `venues/` (lab, visit-day, …), `theme.yaml` (design tokens: colors, font) |
 | `models/` | Robot models (SO-101 URDF + meshes) for the 3D view and, later, inverse kinematics |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
@@ -38,6 +38,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). Wi
 ## Docs
 - `docs/current-focus.md`: what's being worked on now
 - `docs/hub.md`: running the hub, the two taps, other screens, the performance test
+- `docs/ai-control.md`: an AI tool (Claude Code, …) driving the arm through the brain's MCP tools
 - `docs/lab-jarvis-log.md`: the master log (goals, decisions, devices)
 - `docs/dev-setup.md`, `docs/network-setup-checklist.md`, `docs/project-scaffold.md`
 - `docs/GOTCHAS.md`: surprises and their fixes

@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-09 — `mcp` 2.x: FastMCP is now MCPServer, and plain exceptions lose their message
+**What:** `uv add mcp` installed 2.3.0, where `mcp.server.fastmcp.FastMCP` (in most examples online) is gone: it's `mcp.server.mcpserver.MCPServer`. A tool that raises an ordinary exception reaches the AI only as "Error executing tool …", without the reason. Also, its `run_streamable_http_async()` starts uvicorn, which takes over Ctrl+C.
+**Fix:** pinned `mcp>=2.3,<3`. Refusals are raised as `mcp.server.mcpserver.exceptions.ToolError("Refused: …")`, which keeps the text. The brain runs uvicorn itself with signal capture switched off (`tools/mcp_server.py`), so Ctrl+C still stops the whole brain.
+
+### 2026-11-09 — Near full stretch, 1 cm of gripper motion needs ~20° of joint motion
+**What:** On the SO-101, moving the gripper straight forward toward full reach, the IK's joint change per 1 cm grows from ~5° to ~18° (the arm is nearly straight). Moving between waypoints that far apart in joint space bends the gripper's path off the straight line, and a simple "big jump = flip" guard at 15° refused reachable points.
+**Fix:** `move_to` splits any 1 cm step needing more than 5° into smaller IK-solved steps; only more than 30° per cm counts as a flip and is refused (`tools/robot.py`).
+
+### 2026-11-09 — Ctrl+C tests: background jobs from a script ignore SIGINT
+**What:** A server started with `&` from a non-interactive shell (as Claude's tool calls are) inherits SIGINT as *ignored*, so `kill -INT` does nothing and Ctrl+C handling looks broken.
+**Fix:** test Ctrl+C from a launcher that resets the signal (`subprocess.Popen(..., preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))`), or in a real terminal.
+
 ### 2026-11-09 — New devices can't join the lab Wi-Fi quickly
 **What:** only campus IT can add a device (by MAC address) to the lab Wi-Fi. The Raspbots were sent in about two weeks ago and still aren't on (IT tried; it didn't work, cause unknown). Planning had assumed the Newline could just join it.
 **Fix:** plan around it: only devices already on it (the desktops, the Pis) use it; the Newline reaches the brain by cable, through a Pi, or by a phone hotspot until the lab router exists (`network-setup-checklist.md` → "Networks before the router").
