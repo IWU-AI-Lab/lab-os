@@ -37,7 +37,7 @@ from lab_os.hub.commits import commits_per_day
 from lab_os.hub.greeting import greeting
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
-from lab_os.personas import Persona, persona_for_venue
+from lab_os.personas import Persona, current_persona
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.server import CONTROL, LOOP, create_app
 from lab_os.theme import load_theme
@@ -70,7 +70,7 @@ class Brain:
     focus_file: Path
     repo: Path
     chat: Conversation
-    persona: Callable[[], Persona]  # the venue's persona, re-read each time (edit + reload)
+    persona: Callable[[], Persona]  # the chosen persona, re-read each time (edit + reload)
     check_ai: bool = False  # check the AI service in the background (off in tests)
 
 
@@ -280,7 +280,7 @@ def create_brain_app(
     server = create_mcp_server(app[TOOLS], ProjectTools(repo, venue))
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     place = place or config.load_place()
-    persona = persona or (lambda: persona_for_venue(venue.name))
+    persona = persona or current_persona
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
         assistant,

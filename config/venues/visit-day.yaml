@@ -3,7 +3,6 @@ name: visit-day
 active_devices: [so101-white]
 motion_allowed: true
 max_speed_scale: 0.3   # slower with visitors at the controls
-persona: jarvis        # the show persona for visitors (config/personas/)
 ai_tools:              # what an AI tool may do per call (docs/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call

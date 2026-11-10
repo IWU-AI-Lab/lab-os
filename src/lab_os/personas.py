@@ -1,5 +1,6 @@
-"""Personas (personas/<id>.yaml): who the assistant is. The venue picks one (`persona:`), the plain
-`lab-assistant` by default. A persona changes the name on screen, how it talks (a short text file
+"""Personas (personas/<id>.yaml): who the assistant is. Chosen by `--persona`, else
+$LAB_OS_PERSONA, else the place's `persona:` (place.yaml), else the plain `lab-assistant`; not tied
+to a venue. A persona changes the name on screen, how it talks (a short text file
 next to it), which AI setup answers (models.yaml), the picture, voice, lines and sounds. The theme
 (colors, fonts) stays the same for all.
 
@@ -8,6 +9,7 @@ them (never crashes), so new fields can be added any time.
 """
 
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -120,18 +122,25 @@ def load_persona(persona_id: str | None = None, path: Path | None = None) -> Per
     )
 
 
-def persona_for_venue(venue_name: str) -> Persona:
-    """The venue's persona, re-read from the files (switching = a config edit + reload). A broken
-    or unknown persona falls back to the plain one, with a warning, so the hub keeps working."""
-    from lab_os.venues import load_venue
-
+def chosen_persona_id(override: str | None = None) -> str:
+    """`override` (--persona), else $LAB_OS_PERSONA, else the place's `persona:`, else the plain
+    one."""
+    if override:
+        return override
+    if os.environ.get("LAB_OS_PERSONA"):
+        return os.environ["LAB_OS_PERSONA"]
     try:
-        wanted = load_venue(venue_name).persona or DEFAULT_PERSONA
+        return config.load_place().persona or DEFAULT_PERSONA
     except (config.ConfigError, OSError, yaml.YAMLError) as e:
-        _warn("venue %s: %s; using the %s persona", venue_name, e, DEFAULT_PERSONA)
-        wanted = DEFAULT_PERSONA
+        _warn("%s; using the %s persona", e, DEFAULT_PERSONA)
+        return DEFAULT_PERSONA
+
+
+def current_persona(override: str | None = None) -> Persona:
+    """The chosen persona, re-read from the files (switching = an edit + reload). A broken or
+    unknown persona falls back to the plain one, with a warning, so the hub keeps working."""
     try:
-        return load_persona(wanted)
+        return load_persona(chosen_persona_id(override))
     except (config.ConfigError, OSError, yaml.YAMLError) as e:
         _warn("%s; using the plain persona", e)
         return default_persona()

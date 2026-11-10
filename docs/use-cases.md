@@ -15,11 +15,11 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 
 ### 2. Getting ready for a visit
 **Who:** the builder, an hour before visitors.
-1. Picks the `visit-day` venue: persona switches to `jarvis`, only that venue's devices are expected.
+1. Picks the `visit-day` venue (only that venue's devices are expected) and, separately, the `jarvis` persona.
 2. Asks "is everything ready?" → list: Quest battery 40% (charge it), `so101-white` connected, limits set, internet: no (fine, offline mode).
 3. Runs the teleop once with STOP tested.
 
-**Needs:** venue profiles, personas per venue, battery/diagnostics in device cards, a readiness check (roll call + venue checklist), teleop.
+**Needs:** venue profiles, personas, battery/diagnostics in device cards, a readiness check (roll call + venue checklist), teleop.
 
 ### 3. The visit
 **Who:** 3–10 visitors, the builder running it.
@@ -84,7 +84,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 | MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | focus steps 2 (server), 6 (project tools) |
 | Roll call / device diagnostics / battery | 1, 2, 6 | on hold (router) / idea |
 | Teleop + control handover + STOP everywhere | 2, 3 | done (polish on hold) |
-| Personas per venue | 2, 3 | focus step 4 |
+| Personas | 2, 3 | focus step 4 |
 | Kiosk screens | 3, 9 | idea (full screen on the start press: focus step 1) |
 | Remote access + tokens + tiers | 4, 8 | after focus / idea (needs router + IT) |
 | Harness toggle + lab-paid agent + cost display | 5 | after focus |

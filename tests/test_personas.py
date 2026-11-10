@@ -1,5 +1,5 @@
-"""Personas (step 4): the loader, the venue's pick, the greeting's news line, how the hub uses
-them."""
+"""Personas (step 4): the loader, the place's pick (not the venue's), the greeting's news line,
+how the hub uses them."""
 
 import logging
 from datetime import date, datetime
@@ -19,7 +19,8 @@ from lab_os.hub.greeting import (
     step_news,
     time_of_day,
 )
-from lab_os.personas import DEFAULT_PERSONA, Persona, load_persona, persona_for_venue
+from lab_os.personas import DEFAULT_PERSONA, Persona, current_persona, load_persona
+from lab_os.venues import load_venue
 
 FOCUS = """# Current Focus: test
 ## Steps
@@ -81,21 +82,34 @@ def test_unknown_persona_says_which_exist():
         load_persona("nobody")
 
 
-def test_the_venue_picks_the_persona():
-    assert persona_for_venue("lab").id == "lab-assistant"
-    assert persona_for_venue("visit-day").id == "jarvis"
+def test_the_place_picks_the_persona_not_the_venue(monkeypatch):
+    assert current_persona().id == "lab-assistant"  # config/place.yaml
+    monkeypatch.setenv("LAB_OS_VENUE", "visit-day")
+    assert current_persona().id == "lab-assistant"  # a venue doesn't change it
+    monkeypatch.setenv("LAB_OS_PERSONA", "jarvis")
+    assert current_persona().id == "jarvis"
+    assert current_persona("lab-assistant").id == "lab-assistant"  # --persona wins
+
+
+def test_an_old_venue_persona_line_is_ignored_with_a_warning(home, caplog):
+    venue = home / "venues" / "home.yaml"
+    venue.write_text(venue.read_text() + "persona: jarvis\n")
+    with caplog.at_level(logging.WARNING):
+        load_venue("home")
+    assert "`persona:` is ignored" in caplog.text
+    assert current_persona().id == "lab-assistant"
 
 
 def test_a_place_can_have_its_own_persona_and_a_bad_pick_falls_back(home, caplog):
     (home / "personas").mkdir()
     (home / "personas" / "butler.yaml").write_text("id: butler\ndisplay_name: Jeeves\n")
-    venue = home / "venues" / "home.yaml"
-    venue.write_text(venue.read_text() + "persona: butler\n")
-    assert persona_for_venue("home").display_name == "Jeeves"
+    place = home / "place.yaml"
+    place.write_text(place.read_text().replace("persona: lab-assistant", "persona: butler"))
+    assert current_persona().display_name == "Jeeves"
     assert load_persona("jarvis").id == "jarvis"  # the repo's personas are still there
-    venue.write_text(venue.read_text().replace("butler", "nobody"))
+    place.write_text(place.read_text().replace("butler", "nobody"))
     with caplog.at_level(logging.WARNING):
-        assert persona_for_venue("home").id == "lab-assistant"  # the hub keeps working
+        assert current_persona().id == "lab-assistant"  # the hub keeps working
     assert "no persona 'nobody'" in caplog.text
 
 
@@ -186,8 +200,8 @@ async def test_status_greeting_and_switching_without_restart(aiohttp_client, hom
     st = await (await client.get("/api/status")).json()
     assert st["persona"]["display_name"] == "Lab Assistant"
 
-    venue = home / "venues" / "home.yaml"
-    venue.write_text(venue.read_text() + "persona: jarvis\n")  # a config edit...
+    place = home / "place.yaml"
+    place.write_text(place.read_text().replace("persona: lab-assistant", "persona: jarvis"))  # edit
     st = await (await client.get("/api/status")).json()  # ...and a reload: no restart
     assert st["persona"]["id"] == "jarvis"
 

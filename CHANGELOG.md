@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-10
+- Personas aren't tied to a venue any more: `persona:` moved from the venue profiles to `place.yaml`; `lab-os serve --persona <id>` and `$LAB_OS_PERSONA` override it. An old venue `persona:` line is ignored with a warning; a mistyped `--persona` stops at start.
 - Where the `.env` goes: `new-place` never copies a `.env` from the template; a missing `.env` is logged with its exact path, and the chat's "isn't set up" sentence names it (the key had been saved in `src/lab_os/place_template/.env`, see GOTCHAS).
 
 ## 2026-11-09

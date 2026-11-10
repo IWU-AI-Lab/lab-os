@@ -1,5 +1,6 @@
 """Venue profiles (<place>/venues/<name>.yaml): which devices are active, how cautious to be."""
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,6 +8,9 @@ from pathlib import Path
 import yaml
 
 from lab_os import config
+
+log = logging.getLogger(__name__)
+_told: set[Path] = set()  # venue files already warned about (old `persona:` line)
 
 
 @dataclass(frozen=True)
@@ -18,7 +22,6 @@ class Venue:
     reset_after_s: float | None = None  # hub: back to the start screen; None = the theme's value
     ai_tools: dict = field(default_factory=dict)  # limits for the AI tools (lab_os.tools.robot)
     public: bool = False  # a public screen: the hub hides internal details (AI spend, later IPs)
-    persona: str | None = None  # personas/<id>.yaml; None = the plain one (lab_os.personas)
 
 
 def venue_names(config_dir: Path | None = None) -> list[str]:
@@ -52,6 +55,13 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         known = ", ".join(venue_names(folder)) or "none"
         raise config.ConfigError(f"no venue {name!r} in {folder / 'venues'} (there: {known})")
     raw = yaml.safe_load(path.read_text())
+    if raw.get("persona") and path not in _told:
+        _told.add(path)
+        log.warning(
+            "%s: `persona:` is ignored (a venue doesn't pick the persona any more); set it in "
+            "place.yaml or use --persona (docs/personas.md)",
+            path,
+        )
     return Venue(
         name=raw["name"],
         active_devices=tuple(raw.get("active_devices") or ()),
@@ -60,5 +70,4 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         reset_after_s=float(raw["reset_after_s"]) if raw.get("reset_after_s") else None,
         ai_tools=dict(raw.get("ai_tools") or {}),
         public=bool(raw.get("public", False)),
-        persona=raw.get("persona") or None,
     )
