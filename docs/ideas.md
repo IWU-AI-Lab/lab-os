@@ -34,6 +34,14 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-10)
+
+### Past conversations (more than "bring back the last one")
+- **What:** a list of recent conversations on the hub (or per person, once the hub knows who's there), to reopen one and continue: e.g. a drafted prompt from yesterday, or picking up after lunch.
+- **Built so far (2026-11-10, quick version):** the last conversation is kept for `chat_keep_minutes` and can be brought back after an accidental reset or a restart (`docs/chat.md` → "Kept for a while").
+- **Watch out:** a public screen; anyone can tap. Past conversations probably need a private screen (venue not `public`) or a sign-in, and a clear way to delete them.
+- **Plugs into:** the conversation manager (`lab_os.ai.history`), the hub's History page.
+
 ## Recent ideas (2026-11-09)
 
 ### lab-os at home, or in someone else's place

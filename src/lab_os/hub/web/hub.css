@@ -60,6 +60,7 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
   background: #1c1c1c; border: 1px solid #555; border-radius: 6px;
 }
 #quick:focus, #ask:focus { outline: none; border-color: #bbb; }
+#restore-chat { margin-top: 0.6em; min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; color: inherit; font: inherit; border: 1px dashed #555; border-radius: 6px; }
 #open-chat { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; }
 #reply { width: min(32em, 80vw); white-space: pre-wrap; }
 #reply .q { color: #aaa; }

@@ -12,7 +12,8 @@ GET /api/greeting        "Good evening." + one line of real news, else the perso
 POST /api/chat/start     start a fresh conversation with the greeting (the start press)
 GET /api/chat            the conversation so far and the chat's status
 POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/protocol.md)
-POST /api/chat/clear     forget the conversation (the hub's reset)
+POST /api/chat/clear     put the conversation aside (the hub's reset; kept chat_keep_minutes)
+POST /api/chat/restore   bring back the conversation put aside
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
@@ -31,6 +32,7 @@ from aiohttp import web
 from lab_os import REPO_ROOT, config
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
+from lab_os.ai.history import ChatStore
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.hub.commits import commits_per_day
@@ -187,12 +189,14 @@ async def api_chat_start(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
     hello = await asyncio.to_thread(_greeting, brain)
     brain.chat.clear(opening=hello["text"])
-    return web.json_response(hello)
+    return web.json_response(hello | {"previous": brain.chat.previous()})
 
 
 async def api_chat_get(request: web.Request) -> web.Response:
     chat = request.app[BRAIN].chat
-    return web.json_response({"messages": chat.messages, "status": chat.status()})
+    return web.json_response(
+        {"messages": chat.messages, "status": chat.status(), "previous": chat.previous()}
+    )
 
 
 async def api_chat_post(request: web.Request) -> web.StreamResponse:
@@ -212,6 +216,12 @@ async def api_chat_post(request: web.Request) -> web.StreamResponse:
 async def api_chat_clear(request: web.Request) -> web.Response:
     request.app[BRAIN].chat.clear()
     return web.json_response({"ok": True})
+
+
+async def api_chat_restore(request: web.Request) -> web.Response:
+    chat = request.app[BRAIN].chat
+    ok = chat.restore()
+    return web.json_response({"ok": ok, "messages": chat.messages, "previous": chat.previous()})
 
 
 async def api_spend(request: web.Request) -> web.Response:
@@ -257,6 +267,13 @@ async def _mcp_task(app: web.Application):
             task.cancel()
 
 
+def _chat_store(place: config.Place) -> ChatStore | None:
+    if place.chat_keep_minutes > 0:
+        return ChatStore(keep_minutes=place.chat_keep_minutes)
+    ChatStore().forget()  # keeping is off: nothing from before stays on disk either
+    return None
+
+
 def create_brain_app(
     loop: TeleopLoop,
     venue: Venue,
@@ -288,6 +305,7 @@ def create_brain_app(
         place_name=place.name,
         persona=persona,
         tools=ChatTools(server),
+        store=_chat_store(place),
     )
     app[BRAIN] = Brain(place, venue, internet, assistant, focus_file, repo, chat, persona, check_ai)
     app.router.add_get("/", hub_page)
@@ -301,6 +319,7 @@ def create_brain_app(
     app.router.add_get("/api/chat", api_chat_get)
     app.router.add_post("/api/chat", api_chat_post)
     app.router.add_post("/api/chat/clear", api_chat_clear)
+    app.router.add_post("/api/chat/restore", api_chat_restore)
     app.router.add_get("/api/spend", api_spend)
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)

@@ -5,6 +5,8 @@ logs what it cost, and goes back to `idle`. It refuses with a full sentence when
 usable or this month's budget is used up. With `tools` (the brain's MCP read tools: the docs,
 git, devices; lab_os.ai.tools) the model may look things up first, up to MAX_TOOL_ROUNDS times.
 The hub's chat only reads and answers (rule 5): it gets no tools that change anything.
+With a `store` (lab_os.ai.history) the conversation is kept for a short while: saved after every
+answer, put aside by a reset, brought back with `restore()`.
 """
 
 import logging
@@ -15,6 +17,7 @@ import aiohttp
 
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.client import AiError, Reply, Usage, check, estimate, stream_chat
+from lab_os.ai.history import ChatStore
 from lab_os.ai.models import NoSetup, Setup, load_setups, pick
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
@@ -51,6 +54,7 @@ class Conversation:
         setups: Callable[[], dict[str, Setup]] = load_setups,
         persona: Callable[[], Persona] | None = None,
         tools: ChatTools | None = None,
+        store: ChatStore | None = None,
     ):
         """`persona`: read before every turn, so a venue or persona edit applies without a restart;
         it then sets the setup (`model`) and the personality instead of the two arguments."""
@@ -63,7 +67,9 @@ class Conversation:
         self.personality = personality.strip()
         self.place_name = place_name
         self._setups = setups
-        self.messages: list[dict] = []  # what's on screen: {"role": "user"|"assistant", ...}
+        self.store = store
+        # what's on screen: {"role": "user"|"assistant", ...}; after a restart, the one kept last
+        self.messages: list[dict] = store.load() if store else []
         self.busy = False
         self.connected: bool | None = None  # None = not checked yet
         self.problem: str | None = None  # the last failure, as a sentence
@@ -164,8 +170,30 @@ class Conversation:
     def clear(self, opening: str | None = None) -> None:
         """Forget the conversation (the hub's reset: the next visitor starts fresh). `opening`:
         the assistant's first message (the greeting), sent along with later questions."""
-        if not self.busy:
-            self.messages = [{"role": "assistant", "content": opening}] if opening else []
+        if self.busy:
+            return
+        if self.store:
+            self.store.put_aside(self.messages)  # an accidental reset can be undone for a while
+        self.messages = [{"role": "assistant", "content": opening}] if opening else []
+        if self.store:
+            self.store.save(self.messages)
+
+    def previous(self) -> dict | None:
+        """The conversation a reset put aside: {"questions", "saved_at"}, or None."""
+        return self.store.previous() if self.store else None
+
+    def restore(self) -> bool:
+        """Bring back the conversation a reset put aside. The current one is put aside in its
+        place (if it has a question), so pressing it twice changes nothing."""
+        if self.busy or not self.store:
+            return False
+        kept = self.store.take_previous()
+        if kept is None:
+            return False
+        self.store.put_aside(self.messages)
+        self.messages = kept
+        self.store.save(self.messages)
+        return True
 
     async def ask(self, text: str) -> AsyncIterator[dict]:
         """One turn. Yields events for the page: state, text (pieces of the answer), done or
@@ -268,6 +296,8 @@ class Conversation:
             cost,
         )
         self.messages.append({"role": "assistant", "content": answer.strip()})
+        if self.store:
+            self.store.save(self.messages)
         self.connected, self.problem = True, None
         self._settle()
         yield {"type": "state", "state": self.assistant.state}

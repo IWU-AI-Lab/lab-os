@@ -35,7 +35,15 @@ The system prompt is the persona's personality text (`config/personas/<id>.md`, 
 
 **It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is never served (the reveal is a surprise).
 
+## Kept for a while
+An accidental reset, a closed page or the brain restarting (even a power cut) doesn't lose the conversation:
+- The brain saves it after every answer (`logs/chat/current.json`) and reads it back when it starts.
+- The reset, or the start press, puts a conversation with a question in it aside (`logs/chat/previous.json`). Under the ask line, **Bring back the last conversation (2 questions, 3:41 PM)** swaps it back in. Press it again to swap back.
+- Both files are deleted once they're older than `chat_keep_minutes` in `place.yaml` (30 by default). `0` keeps nothing and deletes what's there when the brain starts.
+- After a restart: press start, then **Bring back**.
+- Only one conversation is kept aside (the latest one). A list of past conversations is an idea for later (`docs/ideas.md`).
+
 ## Privacy and the public screen
-Anyone at the screen can type. The conversation clears when the hub goes back to the start screen (after ~3 minutes with nobody there). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.
+Anyone at the screen can type. The conversation clears from the screen when the hub goes back to the start screen (after ~3 minutes with nobody there), but **Bring back** can show it again for `chat_keep_minutes`. On a hallway screen with visitors, consider a short time (e.g. `chat_keep_minutes: 5`). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.
 
 Endpoints and the streamed message format: `docs/protocol.md` → "Chat".

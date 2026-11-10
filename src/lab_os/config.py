@@ -120,10 +120,20 @@ class Place:
     # reaches it; None = no cap (fine for a local model, not for a paid key)
     calendar: tuple = ()  # dates the greeting may mention: ({"date": "2026-12-15", "what": ...},)
     persona: str | None = None  # who the assistant is (personas/<id>.yaml); None = the plain one
+    chat_keep_minutes: float = 30  # the hub keeps a reset or interrupted conversation this long
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
-PLACE_FIELDS = {"version", "name", "venue", "domain", "ai_budget_usd_month", "calendar", "persona"}
+PLACE_FIELDS = {
+    "version",
+    "name",
+    "venue",
+    "domain",
+    "ai_budget_usd_month",
+    "calendar",
+    "persona",
+    "chat_keep_minutes",
+}
 
 
 def load_place(path: Path | None = None) -> Place:
@@ -146,6 +156,7 @@ def load_place(path: Path | None = None) -> Place:
         ai_budget_usd_month=float(budget) if budget is not None else None,
         calendar=tuple(c for c in (raw.get("calendar") or []) if isinstance(c, dict)),
         persona=str(raw["persona"]) if raw.get("persona") else None,
+        chat_keep_minutes=float(raw.get("chat_keep_minutes", 30)),
         extra=extra,
     )
 
