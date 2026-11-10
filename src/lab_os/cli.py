@@ -9,18 +9,24 @@ import logging
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import create_brain_app
 from lab_os.teleop.cli import add_arm_args, make_loop, serve
+from lab_os.tools.mcp_server import DEFAULT_PORT as MCP_PORT
 from lab_os.venues import load_venue
 
 LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
-def _banner(port: int, host: str) -> str:
+def _banner(port: int, host: str, mcp_port: int) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Perf:     http://localhost:{port}/perf",
     ]
+    if mcp_port:
+        lines.append(
+            f"AI tools: http://127.0.0.1:{mcp_port}/mcp   (MCP, this computer only; "
+            "docs/ai-control.md)"
+        )
     if host not in LOCAL_HOSTS:
         lines.append(f"Other screens: http://<this computer's IP address>:{port}/ (docs/hub.md)")
     return "\n".join(lines)
@@ -37,6 +43,13 @@ def main(argv: list[str] | None = None) -> None:
         help="address to listen on (default: this computer only). 0.0.0.0 lets other screens on "
         "the network open the hub; only allowed with a fake arm",
     )
+    s.add_argument(
+        "--mcp-port",
+        type=int,
+        default=MCP_PORT,
+        help=f"port of the robot tools for AI tools (MCP, on 127.0.0.1 only; default {MCP_PORT}; "
+        "0 = off)",
+    )
     add_arm_args(s)
     args = parser.parse_args(argv)
 
@@ -48,12 +61,15 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
     venue = load_venue(args.venue)
     loop = make_loop(args)
-    app = create_brain_app(loop, venue, internet=InternetCheck())
+    app = create_brain_app(loop, venue, internet=InternetCheck(), mcp_port=args.mcp_port or None)
+    if args.mcp_port and not args.arm.startswith("fake"):
+        print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
     if args.host not in LOCAL_HOSTS:
         print(f"listening on {args.host}: other computers on the network can open the hub")
     try:
         with contextlib.suppress(KeyboardInterrupt):
-            asyncio.run(serve(app, args.port, host=args.host, banner=_banner(args.port, args.host)))
+            banner = _banner(args.port, args.host, args.mcp_port)
+            asyncio.run(serve(app, args.port, host=args.host, banner=banner))
     finally:
         loop.arm.stop()
         loop.arm.close()

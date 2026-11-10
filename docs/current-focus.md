@@ -146,6 +146,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - **Fake arm first** (watch it on the monitor page), then the real `so101-white`, with the builder present (CLAUDE.md: ask before anything that makes a real robot move).
 - **A log of every call** (time, tool, arguments, clipped or refused, the result) per session, so runs can be compared later (e.g. with SmolVLA's ~30% on the green arm).
 - **Protocol:** list the tools in `docs/protocol.md`.
+- **Status (2026-11-09):** built on the fake arm (branch `robot-tools`): the seven tools, clipping, refusals (incl. "teleop has control"), stop, the call log, tested end to end over MCP. How to run and connect: `docs/ai-control.md`. **Left:** the cube task from a real Claude Code session (fake arm), then the real `so101-white` with the builder present.
 - **Done when:** the fake arm does the cube task from a Claude Code prompt; then the real arm does it, with every move approved; a test proves clipping, refusal while teleop has control, and `stop`.
 
 ### Step 3, concretely (cameras for the AI)
@@ -188,6 +189,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 - **The Newline, full screen, for another project** (due Wed/Thu 2026-11-11/12): options and a test plan in `ideas.md` → "Screens without browser bars". The builder also checks whether Newline Signage Pro can show a web page.
 
 ## Hacks to clean up
+- `config/poses.yaml`: the SO-101 `rest` pose comes from forward kinematics only; check it on the real `so101-white` (slowly, builder present) before relying on it.
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 
 ## Up next (after this focus)

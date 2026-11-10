@@ -24,7 +24,8 @@ function row(name, lo, hi) {
 
 function show(s) {
   setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
-  setPill($("control"), s.control === "free" ? "free" : "an input page", s.control === "free" ? "off" : "on");
+  const who = { free: "free", ai: "the AI tools" }[s.control] || "an input page";
+  setPill($("control"), who, s.control === "free" ? "off" : "on");
   if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
   else setPill($("state"), "holding", "off");

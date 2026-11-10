@@ -8,6 +8,7 @@ GET /api/project         the Current Project panel (docs/current-focus.md → St
 GET /api/commits?days=N  commits per day for the last N days
 GET /api/hub             the module buttons (hub.modules that have a page) and the reset time
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
+The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
 
 import asyncio
@@ -25,6 +26,9 @@ from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.server import CONTROL, LOOP, create_app
 from lab_os.theme import load_theme
+from lab_os.tools.calllog import CallLog
+from lab_os.tools.mcp_server import McpHttp, create_mcp_server
+from lab_os.tools.robot import RobotTools
 from lab_os.venues import Venue
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
@@ -64,6 +68,8 @@ class Brain:
 
 
 BRAIN = web.AppKey("brain", Brain)
+TOOLS = web.AppKey("tools", RobotTools)
+MCP = web.AppKey("mcp", McpHttp | None)
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -87,8 +93,13 @@ def reset_after_s(theme: dict, venue: Venue) -> float:
 
 def in_use(app: web.Application) -> list[str]:
     """What's in use right now; the hub never goes back to the start screen while this isn't
-    empty. Today: teleop has the arm. Later: the AI tools are moving it, a voice turn runs."""
-    return ["teleop"] if app[CONTROL].get("ws") is not None else []
+    empty: teleop has the arm, the AI tools are moving it. Later: a voice turn runs."""
+    used = []
+    if app[CONTROL].get("ws") is not None:
+        used.append("teleop")
+    if app[LOOP].motion_active:
+        used.append("ai")
+    return used
 
 
 async def _file(request: web.Request, name: str) -> web.FileResponse:
@@ -115,7 +126,11 @@ async def api_status(request: web.Request) -> web.Response:
             "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
             "arm": {
                 "name": loop.arm.name,
-                "control": "taken" if app[CONTROL].get("ws") is not None else "free",
+                "control": "ai"
+                if loop.motion_active
+                else "taken"
+                if app[CONTROL].get("ws") is not None
+                else "free",
             },
             "in_use": in_use(app),
             "time_ms": int(time.time() * 1000),
@@ -155,16 +170,33 @@ async def _internet_task(app: web.Application):
         task.cancel()
 
 
+async def _mcp_task(app: web.Application):
+    mcp = app[MCP]
+    task = asyncio.create_task(mcp.serve()) if mcp else None
+    yield
+    if task:
+        mcp.shutdown()
+        try:
+            await asyncio.wait_for(task, 3)
+        except (TimeoutError, asyncio.CancelledError):
+            task.cancel()
+
+
 def create_brain_app(
     loop: TeleopLoop,
     venue: Venue,
     internet: InternetCheck | None = None,
     focus_file: Path = FOCUS_FILE,
     repo: Path = REPO_ROOT,
+    mcp_port: int | None = None,
 ) -> web.Application:
-    """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background."""
+    """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
+    and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/)."""
     app = create_app(loop, root_page=False)
     app[BRAIN] = Brain(venue, internet, Assistant(), focus_file, repo)
+    calls = CallLog.for_this_run() if mcp_port else CallLog()
+    app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
+    app[MCP] = McpHttp(create_mcp_server(app[TOOLS]), mcp_port) if mcp_port else None
     app.router.add_get("/", hub_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
@@ -173,4 +205,5 @@ def create_brain_app(
     app.router.add_get("/api/hub", api_hub)
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
+    app.cleanup_ctx.append(_mcp_task)
     return app
