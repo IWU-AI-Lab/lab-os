@@ -3,6 +3,10 @@
 Pose input (XRFrame: Quest, glove, ...) goes through the ClutchMapper (IK when the arm has
 kinematics); joint input (JointFrame: keyboard/mouse jogging) goes through the JogMapper. Switching
 between the two resets both, so nothing carries over.
+
+A third source: a `Motion` from the AI tools (lab_os.tools.robot): joint waypoints followed at a
+capped speed. While one runs, the AI tools have control and teleop input is refused (the server
+checks `motion_active`); STOP, like every freeze, ends it.
 """
 
 import asyncio
@@ -37,6 +41,24 @@ class InputState:
 
 
 @dataclass
+class Motion:
+    """A move asked for by the AI tools: joint waypoints, followed one after another so that all
+    joints arrive together, the furthest one moving at `deg_per_s` × the loop's speed scale."""
+
+    path: list[dict[str, float]]
+    deg_per_s: float = 60.0
+    result: str | None = None  # "arrived" / "stopped" once finished
+    done: asyncio.Event = field(default_factory=asyncio.Event)
+    _index: int = 0
+    _commanded: dict[str, float] = field(default_factory=dict)
+
+    def finish(self, result: str) -> None:
+        if self.result is None:
+            self.result = result
+            self.done.set()
+
+
+@dataclass
 class TeleopLoop:
     arm: Arm
     inputs: InputState
@@ -52,6 +74,7 @@ class TeleopLoop:
     command_seq: int = 0
     last_command: dict | None = None
     input_kind: str | None = None  # "pose" / "joints": which mapper the latest input used
+    motion: Motion | None = None  # the AI tools' move in progress, if any
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -61,7 +84,21 @@ class TeleopLoop:
         if self.on_command:
             self.on_command(msg)
 
+    @property
+    def motion_active(self) -> bool:
+        return self.motion is not None
+
+    def start_motion(self, motion: Motion) -> None:
+        """Run an AI move (the caller checked that nobody else has control)."""
+        if self.motion is not None:
+            raise RuntimeError("another move is running")
+        motion._commanded = self.arm.read_joints()
+        self.motion = motion
+
     def _freeze(self) -> None:
+        if self.motion is not None:
+            self.motion.finish("stopped")
+            self.motion = None
         if not self.frozen:
             self.arm.stop()
             self.frozen = True
@@ -73,7 +110,45 @@ class TeleopLoop:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
         self._freeze()
 
+    def _step_motion(self, dt: float) -> None:
+        m = self.motion
+        budget = m.deg_per_s * min(max(self.speed_scale, 0.0), 1.0) * dt
+        while budget > 0 and m._index < len(m.path):
+            target = m.path[m._index]
+            remaining = {j: v - m._commanded[j] for j, v in target.items()}
+            far = max((abs(d) for d in remaining.values()), default=0.0)
+            if far <= budget:
+                m._commanded.update(target)
+                m._index += 1
+                budget -= far
+            else:
+                k = budget / far
+                for j, d in remaining.items():
+                    m._commanded[j] += d * k
+                budget = 0.0
+        if self.frozen:
+            self.arm.resume()
+            self.frozen = False
+            self._emit({"type": "arm_resume"})
+        moving = {j for wp in m.path for j in wp}
+        targets = {j: m._commanded[j] for j in moving}
+        self.arm.move_joints(targets, self.speed_scale)
+        self._emit(
+            {
+                "type": "arm_command",
+                "joints": dict(targets),
+                "speed_scale": self.speed_scale,
+                "driver_joints": getattr(self.arm, "commanded_joints", self.arm.read_joints)(),
+            }
+        )
+        if m._index >= len(m.path):
+            m.finish("arrived")
+            self.motion = None  # the next tick has no input: freeze = hold here
+
     def step(self, now: float, dt: float) -> None:
+        if self.motion is not None:
+            self._step_motion(dt)
+            return
         live = self.inputs.connected and now - self.inputs.received_at <= self.stale_after
         frame = self.inputs.latest
         kind = "joints" if isinstance(frame, JointFrame) else "pose"
@@ -125,6 +200,7 @@ class TeleopLoop:
             "clutch": self.mapper.engaged or self.jog.active,
             "needs_release": self.mapper.needs_release or self.jog.needs_release,
             "input_kind": self.input_kind,
+            "ai_motion": self.motion_active,
             "speed_scale": self.speed_scale,
             "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
             "joints": joints,

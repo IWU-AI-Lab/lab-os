@@ -11,7 +11,8 @@ WS  /ws          input page connects here; /ws?role=monitor for watchers
 
 Only one input page drives at a time ("has control"): the first page to send input while control
 is free. Others are ignored until the driver releases control (session_end or disconnect); it's
-handed over, never grabbed. Any page, monitors included, can send `stop`.
+handed over, never grabbed. While the AI tools move the arm (lab_os.tools), they have control and
+all teleop input is ignored. Any page, monitors included, can send `stop`; it also ends an AI move.
 """
 
 import asyncio
@@ -93,6 +94,8 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
     if kind in ("xr_input", "joint_input"):
         frame = parse_frame(raw) if kind == "xr_input" else parse_joint_frame(raw)
         control = app[CONTROL]
+        if loop.motion_active:
+            return False  # the AI tools have control until their move ends
         if control.get("ws") is None:
             control["ws"] = ws
             log.info("control taken by an input page")
@@ -142,7 +145,8 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
                 continue
             if not accepted and not told_busy:
                 told_busy = True  # once per page; the `control` field in status keeps it current
-                await ws.send_json({"type": "error", "message": "another page has control"})
+                who = "the AI tools have" if app[LOOP].motion_active else "another page has"
+                await ws.send_json({"type": "error", "message": f"{who} control"})
             elif accepted:
                 told_busy = False
     finally:
@@ -177,7 +181,10 @@ async def _broadcaster(app: web.Application) -> None:
             if ws.closed:
                 continue
             if msg["type"] == "status":  # each page learns whether it is the one driving
-                control = "free" if driver is None else "you" if driver is ws else "other"
+                if app[LOOP].motion_active:
+                    control = "ai"
+                else:
+                    control = "free" if driver is None else "you" if driver is ws else "other"
                 await ws.send_str(json.dumps(msg | {"control": control}))
             else:
                 await ws.send_str(text)

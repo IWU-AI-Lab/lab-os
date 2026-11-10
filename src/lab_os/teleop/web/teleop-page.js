@@ -28,6 +28,7 @@ const CONTROL = {
   you: ["this page", "on"],
   other: ["another page (it must leave first)", "warn"],
   free: ["free (start an input to take it)", "off"],
+  ai: ["the AI tools (until their move ends)", "warn"],
 };
 link.on("status", (s) => {
   const [text, cls] = CONTROL[s.control] || ["—", "off"];

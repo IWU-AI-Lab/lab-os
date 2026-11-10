@@ -204,3 +204,22 @@ async def test_joint_input_follows_the_same_control_rules(aiohttp_client):
     await b.send_json({"type": "joint_input", "t": 0, "rates": {"gripper": -0.5}})
     assert (await next_of(b, "error"))["message"] == "another page has control"
     assert loop.inputs.latest.rates == {"gripper": 0.5}
+
+
+async def test_teleop_input_is_refused_while_the_ai_tools_move(aiohttp_client):
+    from lab_os.teleop.loop import Motion
+
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    loop.start_motion(Motion(path=[{"shoulder_pan": 45.0}], deg_per_s=1.0))
+    ws = await client.ws_connect("/ws")
+    await ws.send_json({"type": "joint_input", "t": 1, "rates": {"gripper": 0.5}})
+    for _ in range(50):
+        m = await ws.receive_json(timeout=1)
+        if m["type"] == "error":
+            break
+    assert m["message"] == "the AI tools have control"
+    assert loop.inputs.latest is None
+    await ws.send_json({"type": "stop"})  # STOP from a page still wins
+    assert await wait_for(lambda: not loop.motion_active)
+    await ws.close()

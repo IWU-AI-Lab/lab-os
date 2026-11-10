@@ -87,8 +87,13 @@ def reset_after_s(theme: dict, venue: Venue) -> float:
 
 def in_use(app: web.Application) -> list[str]:
     """What's in use right now; the hub never goes back to the start screen while this isn't
-    empty. Today: teleop has the arm. Later: the AI tools are moving it, a voice turn runs."""
-    return ["teleop"] if app[CONTROL].get("ws") is not None else []
+    empty: teleop has the arm, the AI tools are moving it. Later: a voice turn runs."""
+    used = []
+    if app[CONTROL].get("ws") is not None:
+        used.append("teleop")
+    if app[LOOP].motion_active:
+        used.append("ai")
+    return used
 
 
 async def _file(request: web.Request, name: str) -> web.FileResponse:
@@ -115,7 +120,11 @@ async def api_status(request: web.Request) -> web.Response:
             "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
             "arm": {
                 "name": loop.arm.name,
-                "control": "taken" if app[CONTROL].get("ws") is not None else "free",
+                "control": "ai"
+                if loop.motion_active
+                else "taken"
+                if app[CONTROL].get("ws") is not None
+                else "free",
             },
             "in_use": in_use(app),
             "time_ms": int(time.time() * 1000),

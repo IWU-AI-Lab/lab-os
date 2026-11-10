@@ -169,3 +169,57 @@ def test_connected_but_no_frame_yet_just_freezes():
     loop.inputs.received_at = 0.0
     loop.step(0.0, 0.02)  # must not raise
     assert loop.frozen
+
+
+# --- AI motions (lab_os.tools.robot drives the loop through these) ---
+
+
+async def test_motion_follows_the_path_at_the_capped_speed():
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    loop.speed_scale = 0.5
+    start = loop.arm.read_joints()["shoulder_pan"]
+    m = Motion(path=[{"shoulder_pan": start + 10}, {"shoulder_pan": start + 20}], deg_per_s=60)
+    loop.start_motion(m)
+    assert loop.motion_active
+    loop.step(0.0, 0.1)  # 60 °/s × 0.5 × 0.1 s = 3°
+    assert abs(loop.arm.read_joints()["shoulder_pan"] - (start + 3)) < 1e-6
+    for _ in range(10):
+        loop.step(0.0, 0.1)
+    assert m.result == "arrived" and m.done.is_set()
+    assert abs(loop.arm.read_joints()["shoulder_pan"] - (start + 20)) < 1e-6
+    assert not loop.motion_active
+    loop.step(0.0, 0.1)  # no input afterwards: the arm is held still
+    assert loop.frozen
+
+
+async def test_all_joints_of_a_motion_arrive_together():
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    j0 = loop.arm.read_joints()
+    loop.start_motion(
+        Motion(
+            path=[{"shoulder_pan": j0["shoulder_pan"] + 20, "elbow_flex": j0["elbow_flex"] + 10}]
+        )
+    )
+    loop.speed_scale = 1.0
+    loop.step(0.0, 0.1)  # the furthest joint moves 6°, the other in proportion (3°)
+    j = loop.arm.read_joints()
+    assert abs(j["shoulder_pan"] - j0["shoulder_pan"] - 6) < 1e-6
+    assert abs(j["elbow_flex"] - j0["elbow_flex"] - 3) < 1e-6
+
+
+async def test_stop_ends_a_motion():
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    m = Motion(path=[{"shoulder_pan": 40.0}])
+    loop.start_motion(m)
+    loop.step(0.0, 0.1)
+    loop.stop()
+    assert m.result == "stopped" and not loop.motion_active
+    before = loop.arm.read_joints()
+    loop.step(0.0, 0.1)
+    assert loop.arm.read_joints() == before
