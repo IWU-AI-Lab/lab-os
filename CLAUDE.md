@@ -16,6 +16,7 @@ Setup and conventions: `docs/dev-setup.md`, `docs/project-scaffold.md`. Safety: 
 - **Never recalibrate it** or touch `~/.cache/huggingface/lerobot/calibration/`.
 - **Never modify the `lerobot` conda env** (`~/miniforge3/envs/lerobot`) or the `~/lerobot` checkout. Don't install into it, don't activate it for lab-os work.
 - The green arm may be unplugged during lab-os testing. Don't assume it's there or gone.
+- **One exception (the builder's decision, 2026-11-10): the training launcher.** `lab-os green` (desktop icon, hub Training page) may *start LeLab* (the training project's own web page) after its check passes: both green ports present, nothing else on a serial port, LeLab's saved ports exactly the green ones, the same way round as last time. lab-os still opens no green port itself (it only lists `/dev/serial/by-id/` names) and never edits LeLab's settings or the calibration. `docs/green-launcher.md`.
 
 A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules apply even where the hook can't see them.
 

@@ -1,0 +1,203 @@
+"""One click to start the SO-101 training setup (so101-green + LeLab) on the lab desktop.
+
+lab-os itself still never opens the green arm's ports (CLAUDE.md). This only *looks*: at the
+names in /dev/serial/by-id/ (a directory listing; no port is opened) and at LeLab's saved settings.
+It starts LeLab (`lelab`, Hugging Face's web page for LeRobot, its own uv tool) only when:
+- both green ports are plugged in;
+- nothing else is on a serial port, the white arm above all: LeLab saves raw ttyACM names, and those
+  are handed out in plug-in order, so another arm can take a green arm's number;
+- LeLab's saved leader and follower ports are exactly the two green arms, one each;
+- they're the same way round as at the last good start (otherwise the leader and follower swapped).
+LeLab opens the ports when you press teleop or record in its page. `lab-os green` in a terminal,
+the desktop icon (docs/green-launcher.md) and the hub's Training page all run this.
+"""
+
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from lab_os import REPO_ROOT
+from lab_os.devices import load_registry
+
+BY_ID = Path("/dev/serial/by-id")
+# LeLab's ports/ and robots/ (its calibration/ is never read or touched)
+LELAB_HOME = Path.home() / ".cache/huggingface/lerobot"
+LAST_GOOD = REPO_ROOT / "logs/green-last-start.json"  # which green serial was the follower
+LELAB_PORT = 8000
+LELAB_URL = f"http://127.0.0.1:{LELAB_PORT}"
+GREEN = "so101-green"
+
+
+@dataclass
+class Check:
+    lines: list[tuple[bool, str]] = field(default_factory=list)  # (fine?, what was found)
+    follower: str = ""  # serial number of the arm LeLab will use as the follower
+    leader: str = ""
+    running: bool = False  # LeLab already answers on its port
+
+    @property
+    def ok(self) -> bool:
+        return all(fine for fine, _ in self.lines)
+
+    def add(self, fine: bool, text: str) -> bool:
+        self.lines.append((fine, text))
+        return fine
+
+    def as_dict(self) -> dict:
+        return {
+            "ok": self.ok,
+            "lines": [{"ok": f, "text": t} for f, t in self.lines],
+            "running": self.running,
+            "url": LELAB_URL,
+        }
+
+
+def _serial(by_id: str) -> str:
+    """…_5B41531599-if00 → 5B41531599"""
+    return Path(by_id).name.removesuffix("-if00").rsplit("_", 1)[-1]
+
+
+def _saved_ports(home: Path) -> list[tuple[str, str, str]]:
+    """LeLab's saved ports: (where, role, port) from ports/*.txt and robots/*.json."""
+    out = []
+    for role in ("leader", "follower"):
+        f = home / "ports" / f"{role}_port.txt"
+        if f.is_file():
+            out.append((f"ports/{f.name}", role, f.read_text().strip()))
+    for f in sorted((home / "robots").glob("*.json")):
+        try:
+            d = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        for role in ("leader", "follower"):
+            if d.get(f"{role}_port"):
+                out.append((f"robots/{f.name}", role, d[f"{role}_port"]))
+    return out
+
+
+def _lelab() -> str | None:
+    return shutil.which("lelab") or next(
+        (str(p) for p in [Path.home() / ".local/bin/lelab"] if p.is_file()), None
+    )
+
+
+def _answers(port: int) -> bool:
+    with socket.socket() as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def check(
+    by_id: Path = BY_ID, home: Path = LELAB_HOME, last_good: Path = LAST_GOOD, registry=None
+) -> Check:
+    """Is it safe to start LeLab for the green arms right now? Opens nothing."""
+    c = Check()
+    registry = registry or load_registry()
+    green = registry.devices.get(GREEN)
+    if not green or len(green.ports) != 2:
+        c.add(False, f"{GREEN} isn't in devices.yaml with its two ports")
+        return c
+    # compared by name, so a test can pass another folder as /dev/serial/by-id
+    names = {Path(p).name: d.name for d in registry.devices.values() for p in d.ports}
+    present = sorted(p.name for p in by_id.iterdir()) if by_id.is_dir() else []
+    mine = [Path(p).name for p in green.ports]
+    for port in mine:
+        c.add(
+            port in present,
+            f"green arm …{_serial(port)[-4:]}: "
+            + ("plugged in" if port in present else "not plugged in"),
+        )
+    others = [p for p in present if p not in mine]
+    for p in others:
+        who = names.get(p, "an unknown device")
+        c.add(
+            False, f"unplug {who} (…{_serial(p)[-4:]}): it could take a green arm's ttyACM number"
+        )
+    if not others:
+        c.add(True, "nothing else on a serial port (the white arm is unplugged)")
+    if not c.ok:
+        return c
+
+    number = {os.path.realpath(by_id / p): _serial(p) for p in mine}  # /dev/ttyACM1 → serial
+    saved = _saved_ports(home)
+    if not saved:
+        c.add(False, f"LeLab has no saved ports in {home}: set them up in LeLab once by hand")
+    roles: dict[str, set[str]] = {"leader": set(), "follower": set()}
+    for where, role, port in saved:
+        serial = number.get(os.path.realpath(port))
+        if serial is None:
+            c.add(False, f"LeLab's {role} in {where} is {port}: not a green arm right now")
+        else:
+            roles[role].add(serial)
+    if c.ok:
+        if (
+            len(roles["leader"]) == 1
+            and len(roles["follower"]) == 1
+            and roles["leader"] != roles["follower"]
+        ):
+            c.leader, c.follower = roles["leader"].pop(), roles["follower"].pop()
+            c.add(True, f"LeLab: follower …{c.follower[-4:]}, leader …{c.leader[-4:]}")
+        else:
+            c.add(False, "LeLab's saved ports don't name one leader and one follower")
+    if c.ok and last_good.is_file():
+        before = json.loads(last_good.read_text())
+        same = before.get("follower") == c.follower
+        c.add(
+            same,
+            "same way round as at the last start"
+            if same
+            else (
+                f"leader and follower swapped since the last start (follower was …"
+                f"{before.get('follower', '?')[-4:]}): unplug both and plug the follower in first, "
+                "or pick the ports again in LeLab"
+            ),
+        )
+    elif c.ok:
+        c.add(True, "first start: this leader/follower pairing is remembered from now on")
+    c.add(_lelab() is not None, "LeLab installed" if _lelab() else "LeLab (`lelab`) not found")
+    c.running = _answers(LELAB_PORT)
+    return c
+
+
+def remember(c: Check, last_good: Path = LAST_GOOD) -> None:
+    last_good.parent.mkdir(parents=True, exist_ok=True)
+    last_good.write_text(json.dumps({"follower": c.follower, "leader": c.leader}))
+
+
+def open_terminal() -> None:
+    """The hub's Start: `lab-os green --wait` in a terminal window of this desktop (it checks
+    again there), so LeLab's log is visible and Ctrl+C stops it."""
+    cmd = [sys.executable, "-m", "lab_os.cli", "green", "--wait"]
+    subprocess.Popen(
+        ["gnome-terminal", "--title", "SO-101 training (LeLab)", "--", *cmd],
+        cwd=REPO_ROOT,
+        start_new_session=True,
+    )
+
+
+def main(wait: bool = False) -> int:
+    """`lab-os green`: check, then start LeLab in this terminal (or just say so if it runs)."""
+    c = check()
+    print("SO-101 training setup (so101-green + LeLab)\n")
+    for fine, text in c.lines:
+        print(f"  {'ok ' if fine else 'NO '} {text}")
+    if not c.ok:
+        print("\nNot started: fix the lines marked NO, then try again. Nothing was opened.")
+        if wait:
+            input("\nPress Enter to close.")
+        return 1
+    remember(c)
+    if c.running:
+        print(f"\nLeLab is already running: {LELAB_URL}")
+        subprocess.run(["xdg-open", LELAB_URL], check=False)
+        if wait:
+            input("\nPress Enter to close.")
+        return 0
+    print(f"\nStarting LeLab ({LELAB_URL}; it opens in the browser). Ctrl+C here stops it.\n")
+    os.execv(_lelab(), ["lelab"])
+    return 0  # not reached

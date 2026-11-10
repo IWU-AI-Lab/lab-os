@@ -18,12 +18,13 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/design`, `/plain` | each look by name, whatever `hub.look` says |
 | `/ai` | AI Control: what an AI tool is doing with the arm (below) |
 | `/settings` | the settings (also the gear in the hub's strip) |
+| `/training` | start the SO-101 training setup (green arms + LeLab) after a port check, on the brain's computer (`docs/green-launcher.md`) |
 | `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
 | `/teleop` | the teleop page (the Quest opens this one under `lab-os serve`; `lab-os-teleop` still serves it at `/`) |
 | `/monitor` | the arm monitor |
 | `/perf` | the performance test (below) |
 
-Options are the same as `lab-os-teleop`'s: `--arm fake-xarm1`, `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/places.md`); plus `--mcp-port` for the robot tools for AI (`docs/ai-control.md`), `--persona` (`docs/personas.md`), and `--status-line` to print teleop's live status line under the log (off by default for `lab-os serve`: the hub shows the state; `lab-os-teleop` still prints it unless `--quiet`). Real arms (`--arm so101-white`, `--arm xarm1`) need the builder's OK before anything moves (SAFETY.md).
+Options are the same as `lab-os-teleop`'s: `--arm fake-xarm1`, `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/places.md`); plus `--mcp-port` for the robot tools for AI (`docs/ai-control.md`), `--persona` (`docs/personas.md`), and `--status-line` to print teleop's live status line under the log (off by default for `lab-os serve`: the hub shows the state; `lab-os-teleop` still prints it unless `--quiet`). Real arms (`--arm so101-white`, `--arm xarm1`) need the builder's OK before anything moves (SAFETY.md). With a real arm and `--host 0.0.0.0`, other computers only watch (and STOP); `--drive-from pi01.iwu.ai.lab` (repeatable) lets that computer drive too.
 
 ## Two taps
 Browsers allow full screen and sound only after a press, so:

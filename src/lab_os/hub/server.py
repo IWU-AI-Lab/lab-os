@@ -39,7 +39,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT, config, settings
+from lab_os import REPO_ROOT, config, green, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
@@ -69,6 +69,7 @@ MODULES = {
     "teleop": ("Teleop", "/teleop"),
     "monitor": ("Monitor", "/monitor"),
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
+    "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
 }
 
 DEFAULT_RESET_AFTER_S = 1800.0
@@ -156,6 +157,29 @@ async def ai_page(request: web.Request) -> web.FileResponse:
 
 async def settings_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "settings.html")
+
+
+async def training_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "training.html")
+
+
+async def api_green(request: web.Request) -> web.Response:
+    """The green launcher's check (lab_os.green): looks at port names only, opens nothing."""
+    c = await asyncio.to_thread(green.check)
+    return web.json_response(c.as_dict() | {"here": is_local(request)})
+
+
+async def api_green_start(request: web.Request) -> web.Response:
+    """Start: checks again, then opens a terminal on this desktop that starts LeLab. Only from the
+    brain's computer (it opens a window there)."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="The training setup starts only on the brain's computer.")
+    c = await asyncio.to_thread(green.check)
+    if c.ok and not c.running:
+        green.remember(c)
+        green.open_terminal()
+        log.info("green launcher: LeLab starting in a terminal")
+    return web.json_response(c.as_dict() | {"here": True, "started": c.ok and not c.running})
 
 
 async def api_ai_calls(request: web.Request) -> web.Response:
@@ -446,13 +470,20 @@ def create_brain_app(
     persona: Callable[[], Persona] | None = None,
     local_control_only: bool = False,
     recorder: Recorder | None = None,
+    drive_from: frozenset[str] = frozenset(),
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml. `local_control_only`: only pages on this
     computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
     input (`lab-os serve --record`)"""
-    app = create_app(loop, recorder, root_page=False, local_control_only=local_control_only)
+    app = create_app(
+        loop,
+        recorder,
+        root_page=False,
+        local_control_only=local_control_only,
+        drive_from=drive_from,
+    )
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
     # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the
@@ -478,6 +509,9 @@ def create_brain_app(
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
     app.router.add_get("/ai", ai_page)
+    app.router.add_get("/training", training_page)
+    app.router.add_get("/api/green", api_green)
+    app.router.add_post("/api/green/start", api_green_start)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)

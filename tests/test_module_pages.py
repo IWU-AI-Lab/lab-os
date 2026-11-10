@@ -179,3 +179,27 @@ async def test_a_taken_hub_port_says_so():
             await serve(web.Application(), port)
     finally:
         sock.close()
+
+
+async def test_training_starts_only_when_safe_and_only_here(aiohttp_client, monkeypatch):
+    from lab_os import green
+
+    started = []
+    monkeypatch.setattr(green, "open_terminal", lambda: started.append(1))
+    monkeypatch.setattr(green, "remember", lambda c: None)
+    unsafe = green.Check([(False, "unplug so101-white")])
+    monkeypatch.setattr(green, "check", lambda: unsafe)
+    client = await aiohttp_client(make_app())
+    assert (await client.get("/training")).status == 200
+    got = await (await client.get("/api/green")).json()
+    assert got["ok"] is False and got["here"] is True
+    res = await (await client.post("/api/green/start")).json()
+    assert res["started"] is False and not started  # refused: nothing opened
+
+    monkeypatch.setattr(green, "check", lambda: green.Check([(True, "fine")]))
+    assert (await (await client.post("/api/green/start")).json())["started"] is True
+    assert started == [1]
+
+    monkeypatch.setattr(hub_server, "is_local", lambda request: False)  # another screen
+    assert (await client.post("/api/green/start")).status == 403
+    assert started == [1]
