@@ -3,28 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Arm monitor</title>
+  <title>Monitor</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/static/pages.css">
   <script type="importmap">
     { "imports": { "three": "/web/vendor/three/three.module.js",
                    "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
   </script>
 </head>
-<body>
-  <main>
-    <h1>Arm monitor</h1>
-    <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
-    <section class="panel">
-      <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
-      <div><span class="label">Input</span> <span id="input" class="pill off">—</span></div>
-      <div><span class="label">Control</span> <span id="control" class="pill off">—</span></div>
-      <div><span class="label">Arm</span> <span id="state" class="pill off">—</span></div>
-    </section>
-    <section id="arm-panel" class="panel arm3d" data-role="monitor"></section>
-    <section class="panel" id="joints"><div class="label">Driver state (what the arm reports)</div></section>
+<!--
+  The arm monitor, in the hub's design (2026-11-10): for an onlooker screen. It watches, and its STOP
+  works; it never drives. Same element ids as the plain page kept at /classic/monitor.
+-->
+<body class="monitor">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg><span>Monitor</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
+      <span class="chip"><b>Input</b><span id="input" class="pill off">—</span></span>
+      <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
+      <span class="chip"><b>Arm</b><span id="state" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page)">STOP</button>
+  </header>
+
+  <main class="split">
+    <section class="card view"><div id="arm-panel" class="in arm3d" data-role="monitor"></div></section>
+    <aside class="side">
+      <section class="card grow-card"><div class="in" id="joints">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg>Joints <small>what the arm reports</small></h2>
+      </div></section>
+      <p class="hint"><a href="/classic/monitor">classic page</a></p>
+    </aside>
   </main>
-  <script src="/static/monitor.js"></script>
-  <script type="module" src="/static/arm/arm-panel.js"></script>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script src="/static/monitor.js"></script>
+<script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

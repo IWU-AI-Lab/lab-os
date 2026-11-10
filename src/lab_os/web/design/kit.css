@@ -1,0 +1,110 @@
+/* The design for the module pages (teleop, monitor, AI control, settings): the hub's look
+   (docs/design/DESIGN.md) in small pieces. kit.js sets the colors and fonts from /theme.json; the
+   values here are the fallback. Inside the hub (an iframe) the page drops its own frame and title,
+   since the hub draws them; on its own screen it has both, and a Full screen button. */
+@import url("/web/vendor/fonts/fonts.css");
+
+:root {
+  color-scheme: dark;
+  --bg: #05080b; --surface: #0b161c; --line: #1f3d48; --text: #d4eef5; --text-dim: #6d8c96;
+  --primary: #29d4ff; --hot: #eafcff; --accent: #ff9a2e; --danger: #ff2436; --offline: #56636a;
+  --ok: #3ee07f; --frozen: #7a1d00;
+  --c: var(--primary);
+  --f-title: "Orbitron", system-ui, sans-serif;
+  --f-ui: "Chakra Petch", system-ui, sans-serif;
+  --f-lines: "Inter", system-ui, sans-serif;
+  --w-lines: 300;
+  --f-digits: "DSEG7", "JetBrains Mono", ui-monospace, monospace;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --cut: 0.7rem;
+}
+html { font-size: clamp(12px, min(1.05vw, 1.9vh), 22px); }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text); font: 500 1rem/1.45 var(--f-ui);
+  background-image: radial-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1.2px);
+  background-size: 2rem 2rem;
+}
+body.embedded { background: transparent; }
+a { color: var(--c); }
+.ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.14em; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+[hidden] { display: none !important; }
+
+/* the page: a bar on top, the content under it; framed like the hub when on its own screen */
+.page { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; height: 100vh; padding: 1.2rem 1.6rem 1.4rem; }
+body:not(.embedded) .page { padding: 1.6rem 2.2rem 1.8rem; }
+body:not(.embedded)::before {  /* the frame: cut corners, like the hub's */
+  content: ""; position: fixed; inset: 0.6rem; pointer-events: none; border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+  clip-path: polygon(1.6rem 0, calc(100% - 1.6rem) 0, 100% 1.6rem, 100% calc(100% - 1.6rem), calc(100% - 1.6rem) 100%, 1.6rem 100%, 0 calc(100% - 1.6rem), 0 1.6rem);
+}
+.bar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1.4rem; min-width: 0; }
+.bar .title { display: flex; align-items: center; gap: 0.7rem; font: 700 1.15rem/1 var(--f-title); letter-spacing: 0.18em; text-transform: uppercase; color: var(--hot); }
+.bar .title .ico { color: var(--c); font-size: 1.3rem; }
+body.embedded .bar .title { display: none; }  /* the hub shows the title */
+.bar .place { font: 700 0.8rem/1 var(--f-title); letter-spacing: 0.16em; color: var(--text-dim); text-transform: uppercase; }
+body.embedded .bar .place, body.embedded .bar .clock { display: none; }
+.bar .grow { flex: 1; }
+.clock { font: 1rem/1 var(--f-digits); color: var(--c); }
+
+/* status chips: a dot and a word; .pill is what the teleop scripts set (on | off | warn) */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.2rem; }
+.chip { display: inline-flex; align-items: center; gap: 0.45rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+.chip b { font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+.pill { display: inline-flex; align-items: center; gap: 0.4rem; font: 500 0.85rem/1 var(--f-ui); color: var(--text); }
+.pill::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--offline); flex: none; }
+.pill.on::before { background: var(--c); box-shadow: 0 0 6px var(--c); }
+.pill.warn { color: var(--accent); }
+.pill.warn::before { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.pill.bad { color: var(--danger); }
+.pill.bad::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.pill.off { color: var(--text-dim); }
+
+/* cards: a thin line with cut corners around a see-through fill */
+.card { --cut: 0.7rem; padding: 1px; min-width: 0; min-height: 0; background: color-mix(in srgb, var(--c) 32%, transparent);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+.card > .in { height: 100%; padding: 0.9rem 1.1rem 1rem; background: color-mix(in srgb, var(--surface) 88%, transparent); overflow: auto; scrollbar-width: thin;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+h2, .cap { margin: 0 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid color-mix(in srgb, var(--c) 45%, transparent); font: 500 0.95rem/1.2 var(--f-ui); color: var(--c); display: flex; align-items: center; gap: 0.5rem; }
+h2 .ico { font-size: 1.1rem; }
+.hint, .msg { margin: 0.5rem 0 0; font: var(--w-lines) 0.85rem/1.5 var(--f-lines); color: var(--text-dim); }
+.msg:empty { display: none; }
+.msg { color: var(--accent); }
+.num { font-family: var(--f-digits); }
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 1rem; margin: 0.8rem 0 0; }
+dl.facts dt { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); }
+dl.facts dd { margin: 0; font: 500 0.95rem/1.4 var(--f-ui); color: var(--text); }
+
+/* buttons: cut corners, a line that fills on hover */
+.btn, .stop { --cut: 0.55rem; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; min-height: 2.8rem; padding: 0.6rem 1.2rem;
+  font: 600 0.95rem/1.1 var(--f-ui); letter-spacing: 0.06em; color: var(--text); cursor: pointer; border: 0;
+  background: color-mix(in srgb, var(--c) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  transition: background 0.12s, color 0.12s; }
+.btn:hover:not(:disabled), .btn:focus-visible { background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--hot); outline: none; }
+.btn.primary { background: color-mix(in srgb, var(--c) 24%, transparent); color: var(--hot); }
+.btn:disabled { color: var(--offline); box-shadow: inset 0 0 0 1px var(--line); background: none; cursor: default; }
+.btn.small { min-height: 2.1rem; padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+.stop { min-height: 3rem; padding: 0.6rem 1.8rem; font: 700 1.05rem/1 var(--f-title); letter-spacing: 0.2em; color: #fff;
+  background: color-mix(in srgb, var(--danger) 78%, transparent); box-shadow: inset 0 0 0 1px var(--danger), 0 0 18px color-mix(in srgb, var(--danger) 45%, transparent); }
+.stop:hover, .stop:focus-visible { background: var(--danger); outline: none; }
+.stop:active { transform: translateY(1px); }
+
+select, input[type="number"], input[type="text"] { font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent); border: 1px solid var(--line); padding: 0.45rem 0.6rem; min-height: 2.3rem; }
+select:focus-visible, input:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
+input[type="range"] { accent-color: var(--c); }
+input[type="checkbox"] { accent-color: var(--c); width: 1.05rem; height: 1.05rem; }
+kbd { display: inline-block; min-width: 1.7em; padding: 0.1em 0.4em; margin-right: 0.15em; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); font: 0.78rem/1.5 var(--f-mono); text-align: center; color: var(--hot); }
+pre, code { font: 0.8rem/1.5 var(--f-mono); color: var(--text); }
+pre { margin: 0; white-space: pre-wrap; }
+table { border-collapse: collapse; width: 100%; }
+td, th { padding: 0.3rem 0.5rem 0.3rem 0; text-align: left; vertical-align: top; }
+
+/* on its own screen: full screen with one press (browsers only allow it from a press) */
+#fs-btn { position: fixed; right: 1.4rem; bottom: 1.2rem; z-index: 20; }
+.bar #fs-btn { position: static; }
+#fs-ask { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); cursor: pointer;
+  font: 600 1.4rem/1.3 var(--f-ui); letter-spacing: 0.08em; color: var(--hot); text-align: center; }
+#fs-ask small { display: block; margin-top: 0.6rem; font: var(--w-lines) 0.9rem/1.4 var(--f-lines); color: var(--text-dim); letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

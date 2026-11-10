@@ -145,6 +145,10 @@ class RobotTools:
             out["tool_angle_deg"] = round(angle, 1)
         return out
 
+    def position(self) -> dict:
+        """Joints, gripper opening and gripper point (cm) right now, for the hub's pages."""
+        return self._where()
+
     def _check_arm(self, arm: str | None) -> None:
         if arm not in (None, "", self.arm.name):
             raise Refused(
