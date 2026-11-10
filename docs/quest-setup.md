@@ -11,7 +11,11 @@ Then open **http://localhost:8080/monitor** to watch the fake arm. **Under `uv r
 
 **3D view** (on both pages): draws exactly the joint angles the arm driver receives, per command, unclamped. Pick the model in its dropdown: SO-101 (real URDF meshes), SO-101 stick figure, or xArm 1S boxes. Drag to orbit, scroll to zoom. The table under it flags joints the driver clamped and commands outside the model's limits; the arm turns dark red while frozen. Works offline (three.js and the model are in the repo). Note: control is relative, so `replay --loop` adds the same motion every loop until joints reach their soft limits (3° inside the real ones). There the clutch slips: the arm stops, and moving the hand back moves it back right away.
 
-Controls: **grip** held = clutch (arm follows, relative to where it is) · **trigger** = gripper (released = open, fully pressed = closed; applied while the clutch is held) · **A/X** = stop. The arm freezes when the grip is released, tracking is lost, the connection drops, or the session ends. After a freeze, release and re-press the grip.
+Controls: **grip** held = clutch (arm follows, relative to where it is) · **trigger** = gripper (released = open, fully pressed = closed; applied while the clutch is held) · **A/X** = stop · right **thumbstick** up/down = speed (5 % steps, up to the venue's cap; also the Speed slider on the page) · **left grip** held = move and turn the 3D arm, **Y** = put it back. The arm freezes when the grip is released, tracking is lost, the connection drops, or the session ends. After a freeze, release and re-press the grip.
+
+**Bare hands** (put the controllers down; the Quest switches to hand tracking by itself): the **right wrist** moves the arm like the controller, hold a **left pinch** (thumb on index finger) = clutch, **right pinch** = gripper (fingers apart = open, touching = closed). Let go of the left pinch and the arm holds still. Each hand's ball grows as you pinch; the left one turns green once the pinch holds the clutch, the right one while the arm follows. Without finger tracking (the Quest then offers hands as simple controllers) the page uses the Quest's own pinch instead. No stop gesture: let go, or STOP on a screen. Palm up + pinch is the Quest's own menu gesture, so pinch with the palm down or sideways.
+
+**Lining the 3D arm up with the real one:** hold the left grip and move: the ghost follows the controller (and turns with it); let go to leave it there. It's kept in the Quest's browser for next time. Once it sits on the real arm, hand moves are sent in *its* direction: push your hand toward the arm's front and the gripper goes forward, from whichever side you stand.
 
 ---
 
@@ -52,14 +56,27 @@ One-time:
 3. Plug the Quest into the desktop with a USB-C data cable. In the headset, accept **"Allow USB debugging"** (tick "always allow from this computer").
 4. Check: `adb devices` should list the headset as `device` (not `unauthorized`).
 
-Each session:
+Each session, with the brain (the hub runs too):
 ```bash
-uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl
+uv run lab-os serve                    # fake arm
 adb reverse tcp:8080 tcp:8080          # re-run after every re-plug
 ```
-In the headset: open **Quest Browser** → `http://localhost:8080` → **Enter AR (passthrough)**. Hold the grip and move the controller; the desktop terminal and `http://localhost:8080/monitor` (on the desktop) should follow.
+In the headset: open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller; `http://localhost:8080/monitor` on the desktop should follow. If the redesigned page misbehaves in the Quest's browser, `http://localhost:8080/classic/teleop` is the old one.
 
-**Real SO-101:** `uv run --extra so101 lab-os-teleop --arm so101-white --speed 0.2 serve`, then the same `adb reverse` and page. The SO-101 is driven by IK (hand forward/left/up → gripper forward/left/up, controller tilt/roll → wrist). Close any desktop-control tab first (one page has control at a time). Ctrl+C turns torque off and the arm goes limp: hold it or park it low first.
+Teleop on its own (no hub; it can record): `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`, and the page is `http://localhost:8080` (no `/teleop`).
+
+**Real SO-101:** `uv run --extra so101 lab-os serve --arm so101-white --speed 0.2` (or `uv run --extra so101 lab-os-teleop --arm so101-white --speed 0.2 serve`), then the same `adb reverse` and page. Without `--speed` it runs at the venue's maximum (`max_speed_scale`, 0.5 in the lab). The SO-101 is driven by IK (hand forward/left/up → gripper forward/left/up, controller tilt/roll → wrist). Close any desktop-control tab first (one page has control at a time). Ctrl+C turns torque off and the arm goes limp: hold it or park it low first.
+
+### Tuning: when it doesn't follow well
+Record a session, then replay it without the Quest (and without the real arm):
+```bash
+uv run lab-os serve --arm so101-white --speed 0.2 --record recordings/quest-$(date +%F).jsonl
+uv run lab-os-teleop replay recordings/quest-2026-11-10.jsonl      # the fake arm; watch /monitor
+```
+A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow straightens"). The knobs are in `MappingConfig` (`src/lab_os/teleop/mapping.py`):
+- `tip_m_per_hand_m` (0.5): 10 cm of hand → 5 cm of gripper. Lower = finer and more "it doesn't follow"; higher = jumpier.
+- `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
+- The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
 Troubleshooting:
 - Page doesn't load → `adb reverse --list` should show `tcp:8080 tcp:8080`; re-run it after re-plugging.

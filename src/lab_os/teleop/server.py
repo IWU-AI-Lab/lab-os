@@ -131,6 +131,11 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
         _release_control(app, ws)
         if app[RECORDER]:
             app[RECORDER].write(raw)
+    elif kind == "set_speed":  # the speed control; any input page on this computer
+        speed = loop.set_speed(float(raw["speed_scale"]))
+        log.info("speed scale set to %s", speed)
+        if app[RECORDER]:
+            app[RECORDER].write(raw)
     elif kind == "hello":
         log.info("input page connected: %s", raw.get("agent", "?"))
     else:

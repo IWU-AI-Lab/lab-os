@@ -226,3 +226,46 @@ def test_trigger_released_opens_the_gripper_all_the_way(arm):
     _, limits, _ = arm
     _, _, joints = drive_arm(arm, hand())  # trigger 0
     assert joints["gripper"] == pytest.approx(limits["gripper"].high - 3.0)  # open end − margin
+
+
+def _lowest(joints):
+    f = SO101.frames(joints)
+    return min(f[n][0][2] for n in ("wrist_flex", "tip"))
+
+
+def test_so101_stays_above_the_table_and_comes_back_up_at_once():
+    deep = (HAND[0], HAND[1] - 1.0, HAND[2])  # hand 1 m down: the gripper would go 50 cm down
+    up = (HAND[0], HAND[1] - 0.9, HAND[2])  # then 10 cm back up
+    m = ClutchMapper(kinematics=SO101)
+    j = dict(SO101_REACHING)
+    m.step(hand(), j, 0.02, 1.0, so101_limits())
+    for _ in range(300):
+        j = j | (m.step(hand(deep), j, 0.02, 1.0, so101_limits()) or {})
+    assert _lowest(j) >= m.config.floor_m - 0.003  # resting on the floor, not in the table
+    low = SO101.fk(j)[0][2]
+    for _ in range(200):
+        j = j | (m.step(hand(up), j, 0.02, 1.0, so101_limits()) or {})
+    assert SO101.fk(j)[0][2] > low + 0.03  # the floor slipped: up ~5 cm right away
+
+
+def test_so101_far_reach_goes_as_far_as_the_table_allows():
+    far = (HAND[0], HAND[1], HAND[2] - 2.0)  # 2 m forward at table height
+    (tip0, _), (tip1, _), j = drive(hand(far), SO101_REACHING, 400, SO101, so101_limits())
+    assert tip1[0] > tip0[0] + 0.05  # it reached out
+    assert _lowest(j) >= 0.01 - 0.003  # without going into the table (it went 8.6 cm in)
+
+
+def test_joints_arrive_together():
+    # 6 cm forward at a low speed: the gripper should travel along the line, not joint by joint
+    m = ClutchMapper(kinematics=SO101)
+    j = dict(SO101_REACHING)
+    m.step(hand(), j, 0.02, 0.2, so101_limits())
+    end = (HAND[0], HAND[1], HAND[2] - 0.06)
+    tip0 = SO101.fk(j)[0]
+    path = []
+    for _ in range(400):
+        j = j | (m.step(hand(end), j, 0.02, 0.2, so101_limits()) or {})
+        path.append(SO101.fk(j)[0])
+    for p in path:
+        assert abs(p[1] - tip0[1]) < 0.002  # never off to the side
+        assert abs(p[2] - tip0[2]) < 0.006  # nor much up or down on the way

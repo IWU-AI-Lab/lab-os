@@ -39,7 +39,8 @@ Sent every XR frame (72–120 Hz on a Quest).
 }
 ```
 - `t`: the page's XR frame time in ms. Only differences between frames mean anything; it's not synced to the server clock.
-- `pos`: metres, WebXR `local-floor` space: **+x right, +y up, −z forward** (the way the user faced when the session started). `quat` = orientation `[x, y, z, w]` of the controller's grip.
+- `pos`: metres, WebXR `local-floor` space: **+x right, +y up, −z forward** (the way the user faced when the session started), **turned with the 3D arm**: when the user has turned the XR page's arm (left grip), the page rotates `pos` and `quat` about the vertical by the opposite angle, so "forward" is the arm's forward. `quat` = orientation `[x, y, z, w]` of the controller's grip.
+- `source` (optional): `"hands"` when the Quest tracks bare hands instead of controllers. The page then sends the right wrist as the right "controller", with `grip` = the **left** hand's pinch (the clutch) and `trigger` = the right hand's pinch (the gripper); no buttons. The server treats it like controllers.
 - `pos` / `quat` are `null` when tracking is lost (treated like releasing the clutch).
 - `trigger`, `grip`: 0..1 (analog).
 - `buttons.a` is the lower face button on **either** controller (A on the right, X on the left); `buttons.b` is the upper one (B / Y).
@@ -53,6 +54,13 @@ Joint jogging from a keyboard/mouse page: how fast to turn each motor, sent ever
 - `rates`: shared joint names → −1..1, a fraction of the jog speed (60 °/s × the venue speed scale). Missing joints hold still; joints the arm doesn't have are ignored (pages can stay generic across arms).
 - After any freeze, all rates must return to 0 before anything moves again (like releasing the grip).
 - Same control rules as `xr_input`. Switching between `xr_input` and `joint_input` freezes once and starts clean.
+
+### `set_speed`
+The teleop page's speed slider, or the right thumbstick in XR. From input pages only (watchers can't).
+```json
+{"type": "set_speed", "speed_scale": 0.3}
+```
+- Kept between 0.05 and the venue's `max_speed_scale`; `status.speed_scale` says what was set. Doesn't take control.
 
 ### `session_end`
 The XR session ended (user exited, headset removed, Esc in desktop control). From the driving page: the server freezes the arm and frees control. From any other page: ignored.
@@ -78,6 +86,7 @@ Broadcast to all clients at 10 Hz.
   "clutch": true,
   "needs_release": false,
   "speed_scale": 0.5,
+  "max_speed_scale": 0.5,
   "arm": {"name": "fake-arm", "model": "so101"},
   "joints": {"shoulder_pan": -12.0, "...": 0.0},
   "limits": {"shoulder_pan": [-110.0, 110.0], "...": [0, 0]},
@@ -86,6 +95,7 @@ Broadcast to all clients at 10 Hz.
 ```
 - `frozen`: dead-man freeze is active (input stale > 250 ms, disconnected, session ended, or A/X pressed).
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
+- `speed_scale` / `max_speed_scale`: the speed now (`set_speed` changes it) and the venue's cap, the slider's end.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
 - `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.

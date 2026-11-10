@@ -40,7 +40,13 @@ link.on("status", (s) => {
   const [lo, hi] = s.limits.gripper || [0, 1];
   $("gripper").textContent = g === undefined ? "—" : `${Math.round(((g - lo) / (hi - lo)) * 100)}% open`;
   $("speed").textContent = `${Math.round(s.speed_scale * 100)}%`;
+  // the slider goes up to the venue's cap; it follows the arm's speed unless it's being dragged
+  const sp = $("speed-set");
+  sp.disabled = false;
+  sp.max = Math.round((s.max_speed_scale ?? 1) * 100);
+  if (document.activeElement !== sp) sp.value = Math.round(s.speed_scale * 100);
 });
+$("speed-set").oninput = (e) => link.send({ type: "set_speed", speed_scale: e.target.value / 100 });
 
 // ---- Shared UI helpers for the input sources ---------------------------------------------
 function fmt(c) {

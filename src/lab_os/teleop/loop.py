@@ -65,6 +65,7 @@ class TeleopLoop:
     mapper: ClutchMapper = field(default_factory=ClutchMapper)
     jog: JogMapper = field(default_factory=JogMapper)
     speed_scale: float = 0.5
+    max_speed_scale: float = 1.0  # the venue's cap: set_speed never goes above it
     rate_hz: float = 50.0
     stale_after: float = 0.25  # seconds without input → freeze (dead-man)
     frozen: bool = False
@@ -105,6 +106,11 @@ class TeleopLoop:
             self._emit({"type": "arm_stop"})
         self.mapper.reset(require_release=True)
         self.jog.reset(require_release=True)
+
+    def set_speed(self, scale: float) -> float:
+        """The teleop page's speed control: 5 % up to the venue's cap. Returns what was set."""
+        self.speed_scale = round(min(max(scale, 0.05), self.max_speed_scale), 3)
+        return self.speed_scale
 
     def stop(self) -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
@@ -202,6 +208,7 @@ class TeleopLoop:
             "input_kind": self.input_kind,
             "ai_motion": self.motion_active,
             "speed_scale": self.speed_scale,
+            "max_speed_scale": self.max_speed_scale,
             "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
             "joints": joints,
             "last_command": self.last_command,
