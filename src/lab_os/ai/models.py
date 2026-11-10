@@ -95,4 +95,4 @@ def pick(name: str, setups: dict[str, Setup] | None = None) -> Setup:
         tried.append(setup)
         current = setup.fallback
     keys = " or ".join(t.key_env for t in tried if t.key_env)
-    raise NoSetup(f"The AI isn't set up here yet: add {keys} to the .env file, then restart.")
+    raise NoSetup(f"The AI isn't set up here yet: add {keys} to {config.env_file()}, then restart.")

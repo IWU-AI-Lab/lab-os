@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-10
+- Where the `.env` goes: `new-place` never copies a `.env` from the template; a missing `.env` is logged with its exact path, and the chat's "isn't set up" sentence names it (the key had been saved in `src/lab_os/place_template/.env`, see GOTCHAS).
+
 ## 2026-11-09
 - Project helper (focus step 6): read tools on the brain's MCP server, `project_status`, `list_docs`, `read_doc` (a doc or one section), `search_docs`, `git_status`, `git_log`, `list_devices` (`docs/design/` left out until the reveal). The hub's chat uses the same server's read-only tools (never a move tool or `stop`), up to 4 look-ups per question, and drafts prompts for Claude Code / Codex (Copy button in History). Gemini's thought signatures are sent back with tool calls.
 - Personas (focus step 4): `config/personas/<id>.yaml` + a personality text (`lab-assistant`, the default, and `jarvis`); the loader keeps and warns about unknown fields. The venue's `persona:` picks one (visit-day: jarvis); the status strip shows it; switching = edit + reload. The chat uses the persona's personality and AI setup. The greeting after the start press: time of day + one line of real news (a step finished, the place's `calendar`, a busy day of commits), else the persona's line; also the chat's first message. `/api/greeting`, `/api/chat/start`. Docs: `docs/personas.md`. Chat's `backup` setup now `gemini-3.5-flash-lite` (3.8 Flash overloaded on the free key); checked with the real key.

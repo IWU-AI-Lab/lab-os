@@ -47,6 +47,8 @@ def use(path: str | Path | None) -> Path:
     found = load_env(env_file())
     if found:
         log.info("config %s: read %s from %s", active_dir(), ", ".join(found), env_file())
+    elif not env_file().is_file():
+        log.warning("no %s: no API keys, so no AI chat (docs/places.md)", env_file())
     return active_dir()
 
 
@@ -146,6 +148,11 @@ def load_place(path: Path | None = None) -> Place:
     )
 
 
+def _secret(path: Path) -> bool:
+    """A .env (not .env.example): someone's real keys, never copied into a new place."""
+    return path.name.startswith(".env") and path.name != ".env.example"
+
+
 def new_place(folder: str | Path) -> Path:
     """Write the starter files (place.yaml, devices.yaml with the fake arm, venues/home.yaml,
     .env.example) into `folder`. Never overwrites: refuses if the folder has a place.yaml."""
@@ -154,7 +161,7 @@ def new_place(folder: str | Path) -> Path:
         raise ConfigError(f"{folder} already has a place.yaml; nothing written")
     folder.mkdir(parents=True, exist_ok=True)
     for src in TEMPLATE_DIR.rglob("*"):
-        if src.is_file() and "__pycache__" not in src.parts:
+        if src.is_file() and "__pycache__" not in src.parts and not _secret(src):
             dest = folder / src.relative_to(TEMPLATE_DIR)
             dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists():

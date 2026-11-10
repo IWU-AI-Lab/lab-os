@@ -3,7 +3,7 @@
 The assistant under the hub's circle answers typed questions (focus step 5). It **only reads and answers**: from the hub it can't change or move anything (focus rule 5).
 
 ## Try it
-1. Put a key in `.env` (repo top folder; copy `.env.example` if there's none). The names, exactly:
+1. Put a key in `.env` in the repo's **top folder**, next to `pyproject.toml` (copy `.env.example` there if there's none; not the one in `src/lab_os/place_template/`). Without it, the chat says which file it looked for. The names, exactly:
    - `OPENAI_API_KEY=…`: the `main` setup (OpenAI).
    - `GEMINI_API_KEY=…`: the `backup` setup (Gemini). Used automatically when there's no OpenAI key.
 2. `uv run lab-os serve`, open http://localhost:8080/, start the hub.

@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — The key went into the place template's `.env`, so the chat had no key
+**What:** the hub's chat said it wasn't connected although a Gemini key had been saved. The key was in `src/lab_os/place_template/.env`: the template folder has a `.env.example` that said "Copy to .env (in this folder)", so it was copied right there. The lab's place reads the `.env` in the repo's **top folder**; nothing said that file was missing. Worse, `lab-os new-place` copied everything in the template, so the real key would have been copied into every new place folder.
+**Fix:** the key file moved to the repo's top folder. `new-place` never copies a `.env` (only `.env.example`); the brain logs a warning naming the `.env` it looked for when there's none, and the chat's "isn't set up" sentence names the full path. The template's `.env.example` now says to copy it in the new place's folder, not in lab-os's template.
+
 ### 2026-11-09 — Gemini refuses a tool round without its thought signature
 **What:** through Gemini's OpenAI-compatible address, the first request with tools worked (the model asked for `project_status`), but sending the tool's result back failed with HTTP 400 "Function call is missing a thought_signature in functionCall parts". Gemini attaches `"extra_content": {"google": {"thought_signature": "…"}}` to each streamed tool call (and no `index`), and wants it back on the assistant message's `tool_calls`. OpenAI sends no such field. Google's thought-signature page only covers its own Interactions API.
 **Fix:** the client keeps any `extra_content` of a tool call as is (`ToolCall.extra`) and the chat sends it back (`ai/chat.py`). A test's fake service sends one like Gemini.
