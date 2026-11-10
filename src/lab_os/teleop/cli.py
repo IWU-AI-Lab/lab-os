@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -56,16 +57,24 @@ def _fmt_status(loop: TeleopLoop) -> str:
     return f"{source} | {state:8} | arm {joints}"
 
 
-def _make_printer():
-    last = 0.0
+def _make_printer(out=sys.stdout):
+    """The live status line: redrawn in place at most PRINT_HZ times a second, only when it
+    changed, cut to the terminal's width (a wrapped line can't be redrawn with \r, so every
+    redraw would add lines). Nothing when the output isn't a terminal (a log file)."""
+    last, shown = 0.0, ""
 
     def on_tick(loop: TeleopLoop) -> None:
-        nonlocal last
+        nonlocal last, shown
         now = time.monotonic()
-        if now - last >= 1 / PRINT_HZ:
-            last = now
-            sys.stdout.write("\r\033[K" + _fmt_status(loop))
-            sys.stdout.flush()
+        if now - last < 1 / PRINT_HZ or not out.isatty():
+            return
+        last = now
+        width = shutil.get_terminal_size().columns - 1
+        text = _fmt_status(loop)[:width]
+        if text != shown:
+            shown = text
+            out.write("\r\033[K" + text)
+            out.flush()
 
     return on_tick
 

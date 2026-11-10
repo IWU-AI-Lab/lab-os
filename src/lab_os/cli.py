@@ -58,6 +58,12 @@ def main(argv: list[str] | None = None) -> None:
         "$LAB_OS_PERSONA, else `persona` in place.yaml, else lab-assistant)",
     )
     add_arm_args(s)
+    s.add_argument(
+        "--status-line",
+        action="store_true",
+        help="print teleop's live status line (input, clutch, joints) under the log; off by "
+        "default: the hub shows the state",
+    )
     n = sub.add_parser(
         "new-place",
         help="write a starter config folder for another place (a home): place.yaml, devices.yaml "
@@ -78,6 +84,7 @@ def main(argv: list[str] | None = None) -> None:
             f"--host {args.host} would let anyone on the network drive {args.arm}; "
             "real arms are served on this computer only (leave out --host)"
         )
+    args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
     use_config(args)
     loop = make_loop(args)  # stops with a message if the venue or arm doesn't fit this place

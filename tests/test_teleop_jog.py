@@ -145,3 +145,58 @@ def test_engaging_a_pose_input_outside_the_limits_does_not_move():
         c, arm_joints, DT, 1.0, load_limits("not-calibrated")
     )
     assert out["shoulder_pan"] == 116.6 and out["wrist_roll"] == -116.4
+
+
+class _Tty:
+    def __init__(self, tty=True):
+        self.tty, self.text = tty, ""
+
+    def isatty(self):
+        return self.tty
+
+    def write(self, s):
+        self.text += s
+
+    def flush(self):
+        pass
+
+
+def test_the_status_line_is_drawn_only_when_it_changes(monkeypatch):
+    """A wrapped line can't be redrawn in place, so it's cut to the terminal's width; an unchanged
+    line isn't drawn again; a log file (not a terminal) gets nothing."""
+    import os
+
+    from lab_os.teleop import cli
+
+    monkeypatch.setattr(cli.shutil, "get_terminal_size", lambda: os.terminal_size((30, 20)))
+    now = [0.0]
+    monkeypatch.setattr(cli.time, "monotonic", lambda: now[0])
+    arm = FakeArm()
+    arm.connect()
+    loop = TeleopLoop(arm=arm, inputs=InputState())
+    out = _Tty()
+    tick = cli._make_printer(out)
+    for _ in range(5):
+        now[0] += 1
+        tick(loop)
+    assert out.text.count("\r") == 1
+    assert all(len(line) <= 29 for line in out.text.replace("\033[K", "").split("\r"))
+    log_file = _Tty(tty=False)
+    cli._make_printer(log_file)(loop)
+    assert log_file.text == ""
+
+
+def test_lab_os_serve_has_no_status_line_unless_asked(monkeypatch):
+    from lab_os import cli
+
+    made = []
+
+    def stop_before_the_arm(args):
+        made.append(args.quiet)
+        raise SystemExit("stop")
+
+    monkeypatch.setattr(cli, "make_loop", stop_before_the_arm)
+    for argv in (["serve"], ["serve", "--status-line"]):
+        with pytest.raises(SystemExit):
+            cli.main(argv)
+    assert made == [True, False]
