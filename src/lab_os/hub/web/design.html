@@ -724,6 +724,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
+      <button class="tool" id="xr-btn" type="button" title="The hub in VR" aria-label="The hub in VR" hidden><svg class="ico"><use href="#i-headset"/></svg></button>
       <button class="tool" id="sleep-btn" type="button" title="Back to the start screen" aria-label="Back to the start screen"><svg class="ico"><use href="#i-power"/></svg></button>
       <button class="tool" id="settings-btn" data-module="settings" type="button" title="Settings" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
     </div>
@@ -2728,6 +2729,9 @@ function watchFrame(frame) {
   }
 }
 // the strip's quiet tools: back to the start screen now, and settings (opens like a module)
+// the hub in VR (/xr): only where the browser can do immersive VR (the Quest's)
+navigator.xr?.isSessionSupported("immersive-vr").then((ok) => ($("#xr-btn").hidden = !ok)).catch(() => {});
+$("#xr-btn").addEventListener("click", (e) => { e.stopPropagation(); location.href = "/xr"; });
 $("#sleep-btn").addEventListener("click", (e) => { e.stopPropagation(); SFX.close(); toStart("the power button"); });
 $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
 // A module page full screen on another monitor of this computer (HDMI/DP): Chrome's Window Management

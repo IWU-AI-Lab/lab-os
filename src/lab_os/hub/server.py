@@ -159,6 +159,10 @@ async def settings_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "settings.html")
 
 
+async def xr_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "xr.html")
+
+
 async def training_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "training.html")
 
@@ -510,6 +514,7 @@ def create_brain_app(
     app.router.add_get("/design", design_page)
     app.router.add_get("/ai", ai_page)
     app.router.add_get("/training", training_page)
+    app.router.add_get("/xr", xr_page)
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
     app.router.add_get("/settings", settings_page)

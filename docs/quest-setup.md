@@ -78,6 +78,8 @@ A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow
 - `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
 - The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
+**The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR), then the trigger or a pinch jumps (again). Watch-only.
+
 Troubleshooting:
 - Page doesn't load → `adb reverse --list` should show `tcp:8080 tcp:8080`; re-run it after re-plugging.
 - `unauthorized` in `adb devices` → put the headset on and accept the USB debugging prompt.
