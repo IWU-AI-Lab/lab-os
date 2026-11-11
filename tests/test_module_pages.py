@@ -73,6 +73,22 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
         assert 'from "/web/fullscreen.js"' in text and "fullscreenButton(" in text, script
 
 
+async def test_a_drawing_resolution_per_screen(aiohttp_client):
+    """?res= or Settings → This screen: the designed hub's canvases, the 3D arm and AI Control's
+    drawing at fewer pixels, scaled up by the screen (for the Newline; focus step 1)."""
+    client = await aiohttp_client(make_app())
+    design = await (await client.get("/design")).text()
+    assert 'params.get("res") ?? screenPrefs().res' in design and "S.dpr = drawRes()" in design
+    assert "Math.min(devicePixelRatio || 1, 2);\n  W = innerWidth" not in design  # not fixed now
+    screen = await (await client.get("/web/screen.js")).text()
+    assert "export function drawRes" in screen and '"lab-os.screen"' in screen
+    for path in ("/static/arm/arm-view.js", "/hub/ai.js"):
+        text = await (await client.get(path)).text()
+        assert 'from "/web/screen.js"' in text and "drawRes()" in text, path
+    settings = await (await client.get("/hub/settings.js")).text()
+    assert 'key: "res"' in settings and '"auto", "1", "0.75", "0.5"' in settings
+
+
 async def test_ai_calls_show_what_the_tools_did(aiohttp_client):
     app = make_app()
     client = await aiohttp_client(app)

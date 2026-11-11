@@ -41,6 +41,7 @@ async def test_pages_served(aiohttp_client):
         "/static/monitor.js",
         "/web/theme.js",
         "/web/fullscreen.js",  # the full-screen button, from lab-os-teleop on its own too
+        "/web/screen.js",  # this screen's drawing resolution (the 3D arm uses it)
         "/web/vendor/three/three.module.js",
         "/web/vendor/urdf-loader/URDFLoader.js",
     ):

@@ -1,13 +1,14 @@
 // Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel at a time.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { drawRes } from "/web/screen.js";
 import { color } from "/web/theme.js";
 
 const DEG = Math.PI / 180;
 
 export function createArmView(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(drawRes()); // this screen's drawing resolution (Settings → This screen, ?res=)
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();

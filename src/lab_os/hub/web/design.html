@@ -1002,14 +1002,24 @@ const cv = $("#net"), cx = cv.getContext("2d");
 let W = 0, H = 0, dots = [], fires = [], rain = [], stars = [];
 const pointer = { x: -1e4, y: -1e4 };
 const NET = { link: 140, push: 170 };
+// The drawing resolution (Settings → This screen, or ?res= in the address, which wins): canvas pixels per CSS
+// pixel. "auto" = the device's, up to 2×. Lower draws fewer pixels and the screen scales them up: softer, but
+// far cheaper on a 4K panel driven by a phone-class chip (the Newline). Same scale as /perf?res=.
+function drawRes() {
+  const want = params.get("res") ?? screenPrefs().res ?? "auto", n = Number(want);
+  const dev = Math.min(devicePixelRatio || 1, 2);
+  return want === "auto" || !(n > 0) ? dev : Math.min(dev, Math.max(0.25, n));
+}
 function resize() {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const dpr = (S.dpr = drawRes());
   W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
   cx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fxc.width = cv.width; fxc.height = cv.height; fxx.setTransform(dpr, 0, 0, dpr, 0, 0);
   seedNetwork(); buildFrame(); layoutTraces();
   if (S.quality === "minimal") drawStillGrid();
+  body.dataset.res = String(dpr);
+  console.info(`hub: drawing at ${dpr}× (${cv.width}×${cv.height} for ${W}×${H})`);
 }
 function seedNetwork() {
   const per = S.quality === "reduced" ? 45 : S.quality === "maximal" ? 120 : 90;
@@ -2201,7 +2211,7 @@ function labelColumn(h, items, labelX, fontLines, fontDigits, narrow) {
 }
 function drawModule(now) {
   if (S.moduleOpen !== "holo" && S.moduleOpen !== "side") return;
-  const box = modCv.parentElement.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  const box = modCv.parentElement.getBoundingClientRect(), dpr = S.dpr || 1;
   if (modCv.width !== Math.round(box.width * dpr)) { modCv.width = Math.round(box.width * dpr); modCv.height = Math.round(box.height * dpr); }
   const w = box.width, h = box.height, narrow = w < 640;
   mcx.setTransform(dpr, 0, 0, dpr, 0, 0); mcx.clearRect(0, 0, w, h);
@@ -2577,6 +2587,7 @@ function applyTheme(t) {
   const mine = screenPrefs();
   S.sound = params.get("sound") !== "0" && mine.sound !== false;
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
+  if (S.dpr && drawRes() !== S.dpr) resize();  // "This screen" changed the drawing resolution
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
 }
 function setQuality(q) {
