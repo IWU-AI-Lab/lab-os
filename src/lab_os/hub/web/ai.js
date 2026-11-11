@@ -1,6 +1,7 @@
 // AI Control: the arm from its side (real geometry, /api/arm 5×/s), where the last move aimed, and every
 // robot-tool call as it happens (/api/ai-calls 1×/s). STOP goes over the same WebSocket as every page's.
 import { getLink } from "/static/link.js";
+import { drawRes } from "/web/screen.js";
 
 const $ = (s) => document.querySelector(s);
 const link = getLink("monitor");  // a watcher: it can only stop
@@ -93,9 +94,10 @@ async function pollArm() {
 /* ---------- the side view ---------- */
 const cv = $("#side"), cx = cv.getContext("2d");
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const res = drawRes(); // this screen's drawing resolution (Settings → This screen, ?res=)
 function draw() {
   requestAnimationFrame(draw);
-  const box = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  const box = cv.getBoundingClientRect(), dpr = res;
   if (!box.width) return;
   if (cv.width !== Math.round(box.width * dpr) || cv.height !== Math.round(box.height * dpr)) {
     cv.width = Math.round(box.width * dpr);

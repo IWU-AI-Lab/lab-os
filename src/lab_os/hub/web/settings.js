@@ -25,6 +25,9 @@ const LOCAL = [
   { key: "quality", label: "Level of detail", help: "this screen only; the theme's level otherwise (minimal for slow screens, maximal adds the extra rings and verses)",
     kind: "choice", choices: ["theme", "maximal", "full", "reduced", "minimal"], value: () => screenGet().quality || "theme",
     save: (v) => screenSet("quality", v === "theme" ? "" : v) },
+  { key: "res", label: "Drawing resolution", help: "this screen only: the designed hub's moving pictures drawn at fewer pixels and scaled up by the screen (softer, much lighter). auto = the screen's own, up to 2×; try 1 or 0.5 on a slow screen (the Newline). ?res= in the address wins",
+    kind: "choice", choices: ["auto", "1", "0.75", "0.5"], value: () => screenGet().res || "auto",
+    save: (v) => screenSet("res", v === "auto" ? "" : v) },
   { key: "sound", label: "Sound", help: "the startup and the interface sounds", kind: "bool", value: () => screenGet().sound !== false, save: (v) => screenSet("sound", v) },
   { key: "full", label: "Full screen on the start press", help: "off for a laptop you work on", kind: "bool", value: () => screenGet().full !== false, save: (v) => screenSet("full", v) },
 ];
