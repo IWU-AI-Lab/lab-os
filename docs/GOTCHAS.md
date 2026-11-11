@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — raspbot1 Wi-Fi: IWU-AI-LAB refuses it (open), its "Raspbot" hotspot works again
+**What:** raspbot1 (a Raspberry Pi 5, hostname `yahboom`, kernel 6.6.31, Wi-Fi firmware 7.45.234 from 2021, NetworkManager 1.42.4) can't join IWU-AI-LAB, and for a while its own hotspot refused phones too. Found on the way:
+- IWU-AI-LAB is "Enhanced Open" (OWE). The Pi's Wi-Fi driver (brcmfmac) can't do OWE, so a profile saved as OWE never connects.
+- An earlier "make it open and connect" never ran: `sudo -v && nohup sudo … &` puts the sudo password prompt in the background, so the job just stopped and waited.
+- The real tries (open profile, also pinned to the open access point D8:B3:70:6C:B9:CC, also with the "minimal" firmware 7.45.241) all ended `ASSOC-REJECT status_code=16 bssid=00:…`. The driver's debug log shows the firmware itself saying no within ~50 ms; no 802.11 reason code. IT says both MACs are registered. `pi01` (also a Pi 5) joins fine with newer software: kernel 6.18.34, firmware 7.45.265 (2023), NetworkManager 1.52.1.
+- Hotspot: phones "asked for the password again" and the Pi logged no join attempt at all. That was after the hotspot had been restarted many times in one boot (OWE try, radio off/on, test hotspots). It works now (wpa-psk, rsn, ccmp, pmf off, band bg, channel 6, shared 192.168.1.11/24; a phone and the desktop joined, also after a reboot). Unknown whether the profile change or the reboot fixed it.
+- Not the cause (they show up when things work too): dnsmasq's "chown of PID file failed", and brcmfmac's "vndr ie set error -52" / "set chanspec fail" on every hotspot start.
+- Reloading the brcmfmac driver twice in quick succession hung the Wi-Fi chip ("dongle is not responding: err=-84"). Only a reboot fixed it.
+- raspbot1's logs look 13 h ahead of the desktop: its time zone is Asia/Shanghai (UTC+8). The clock is right.
+
+**Fix:** for OWE networks on a Pi, save the profile plain open: `sudo nmcli con modify IWU-AI-LAB remove 802-11-wireless-security` (worked on `pi01`). Run sudo commands in the foreground (or in one `sudo bash -c '…'`), never behind `&`. raspbot1 on IWU-AI-LAB: open. Suspected cause is its old software; untested next step `sudo apt install firmware-brcm80211` (offered 1:20240709-2~bpo12+1+rpt4, may not contain 7.45.265). Its IWU-AI-LAB profile is open with autoconnect off; debug log `~/iwu-debug-2026-11-10.log` and profile backups `~/Raspbot-working-2026-11-10.nmconnection`, `~/IWU-AI-LAB-2026-11-10.nmconnection` are on the Pi. Left as they were: the Raspbot profile's gateway 192.168.1.0 (bogus, adds a dead default route), and the old Yahboom / Yahboom3 Wi-Fi profiles outrank Raspbot (priority 4 and 6 vs 2). Reaching it by cable: `network-setup-checklist.md` → Step 2.
+
 ### 2026-11-10 — The Pi's browser "kept loading" the hub: it was waiting for a password
 **What:** on `pi01`, `http://192.168.7.72:8080/monitor` kept loading. The brain saw the Pi connect but never send a request: Chromium on Raspberry Pi OS was waiting behind a password prompt (most likely "Unlock login keyring", asked when Chromium first starts). The Pi also didn't reach the desktop by its name (`ai-comp-lab-ubuntu-76358.iwu.ai.lab`); the IP address works.
 **Fix:** answer the prompt (the Pi user's password). For a screen that starts the hub by itself, start Chromium with `--password-store=basic` (or give the keyring an empty password), so nothing waits for a person.
