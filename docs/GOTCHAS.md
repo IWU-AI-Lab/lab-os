@@ -63,10 +63,6 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 **What:** the Current Project panel said "Step 1 of 10" although steps 4–6 were finished: the panel only counts a step as done when its line in `current-focus.md` says `(done YYYY-MM-DD)` right after the bold title; the status lines underneath don't count.
 **Fix:** marked 4–6 `(done 2026-11-10)`. When a step is finished, add the `(done …)` mark (step 1 waits for its Newline check).
 
-### 2026-11-10 — Headless Chrome refuses full screen from scripted clicks
-**What:** testing the hub with headless Chrome over the DevTools protocol, `requestFullscreen()` after a dispatched click fails with "not granted"; a real press on a real screen works.
-**Fix:** none; it's only the test setup. The hub logs it (`hub: no full screen`) and starts anyway.
-
 ### 2026-11-10 — The live status line floods a narrow terminal
 **What:** `lab-os serve` printed teleop's status line (`right: no controller | FROZEN | arm +0.0 -20.0 …`) 10 times a second, redrawn with `\r`. In a narrow terminal (VS Code's panel) the line wraps, and `\r` only goes back to the start of the last wrapped row, so every redraw added new lines: a constant stream.
 **Fix:** `lab-os serve` doesn't print it unless `--status-line` (the hub shows the state). When it's on (also `lab-os-teleop`), it's cut to the terminal's width, drawn only when it changes, and never written when the output isn't a terminal.
@@ -113,7 +109,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-09 — Headless Chrome refuses full screen and pointer lock
 **What:** In headless Chrome (`--headless=new`), `requestFullscreen()` and `requestPointerLock()` are refused even after a real (DevTools-sent) click. So the hub's tap 1 takes its "can't go full screen" path (straight to tap 2), and teleop's Desktop control never starts. Not a bug in the pages: the standalone `/teleop` page behaves the same.
-**Fix:** for headless checks, fake both APIs before the page loads (DevTools `Page.addScriptToEvaluateOnNewDocument`: define `document.fullscreenElement` / `pointerLockElement` getters, patch `Element.prototype.requestFullscreen` / `requestPointerLock` to set them and fire `fullscreenchange` / `pointerlockchange`; patch the prototype, because `document.documentElement` doesn't exist yet when the script runs). The real two-tap check happens on the Newline.
+**Fix:** for headless checks, fake both APIs before the page loads (DevTools `Page.addScriptToEvaluateOnNewDocument`: define `document.fullscreenElement` / `pointerLockElement` getters, patch `Element.prototype.requestFullscreen` / `requestPointerLock` to set them and fire `fullscreenchange` / `pointerlockchange`; patch the prototype, because `document.documentElement` doesn't exist yet when the script runs). The real two-tap check happens on the Newline. (Seen again 2026-11-10 with the designed hub, which logs `hub: no full screen` and starts anyway.)
 
 ### 2026-11-09 — `gh pr edit` fails on this repo
 **What:** `gh pr edit <n>` (GitHub CLI 2.45, Ubuntu's package) stops with `GraphQL: Projects (classic) is being deprecated … (repository.pullRequest.projectCards)`: this old `gh` still asks GitHub for the retired "classic projects" field. Nothing is changed. Checked on PR #3.
@@ -202,7 +198,7 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 
 ### 2026-10-28 — The two training cameras have the same serial number
 **What:** Both USB cameras (Innomaker U20CAM-1080p, USB ID `0c45:6366`, `lsusb` calls them "Microdia Webcam Vitade AF") belong to the so101-green training setup. Both report serial `SN0001`, so a serial number can't tell them apart. On the lab desktop they sit in USB sockets `1-7` and `1-8` (each shows up as two `/dev/video*` entries).
-**Rule:** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Mark them off limits either by USB socket path or by blocking that camera model in lab-os entirely (simpler; revisit if lab-os ever gets the same model). Identified from `/sys` only, without opening them.
+**Rule:** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Today `config/devices.yaml` blocks that camera model entirely. The white arm's cameras are the same model, so focus step 3 switches to blocking by USB socket (`/dev/v4l/by-path/`). Identified from `/sys` only, without opening them.
 
 ### 2026-10-27 — xArm driver: the `hidapi` wheel can't open the arm on Linux; use `hid`
 **What:** PyPI's `hidapi` ships wheels for Linux/Windows/macOS, but its Linux build uses the *libusb* backend: it needs access to `/dev/bus/usb/…` (root-only), so `enumerate()` returns empty serial/product strings and `open()` fails ("open failed"). Our udev rule only covers `/dev/hidraw*`. The `xarm` PyPI package is an unmaintained 5-file wrapper (imports `hid` without declaring it), so we don't use it.
@@ -264,7 +260,7 @@ Then unplug and re-plug the xArm's USB.
 
 ### 2026-10-24 — Never open so101-green's serial ports
 **What:** The lab desktop has so101-green's leader + follower plugged in. Both show up as CH343 adapters (`1a86:55d3`, "USB Single Serial"), exactly what so101-white will look like.
-**Why it matters:** so101-green is another project's training arm. Opening its port (even to read) can disturb their session.
+**Why it matters:** so101-green is the training project's arm (the builder's own, separate from lab-os). Opening its port (even to read) can disturb their session.
 **Rule:** Never open these:
 - `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00`
 - `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00`

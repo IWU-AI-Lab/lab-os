@@ -4,7 +4,7 @@ Short and printable. Applies to every robot, every venue, every session.
 
 ## Stop
 - **Physical:** pull the arm's power plug. Know where it is before the first motion.
-- **Software:** the STOP button (Quest overlay / screen) and `Ctrl+C` in the teleop program both freeze the arm.
+- **Software:** the STOP button (every page, any screen; A/X on the Quest) freezes the arm and holds it. `Ctrl+C` in the brain's terminal ends the program: the SO-101 then goes **limp** (torque off), so hold it or park it low first.
 - **Test both stops** at the start of every session and every demo.
 
 ## Dead-man rule
@@ -12,13 +12,16 @@ The arm **freezes** whenever any of these happens: clutch released · hand/contr
 
 ## Limits
 - **Speed:** capped per venue (`config/venues/*.yaml`, `max_speed_scale`). Visitors get the slowest setting.
-- **Workspace:** a box around the table area; commands outside it are clamped. Red warning near the edge.
+- **Workspace:** each joint stays 3° inside its limits (soft limits), and the gripper and wrist stay at least 1 cm above the table (teleop's `floor_m`, the AI tools' `min_z_cm`). A box around the table area is not built yet.
 - **No snapping:** relative (clutch) control, gentle ramps, start from the arm's current pose.
 
 ## Visitors
 - One person at the controls; others stay outside the arm's reach.
 - An operator stands next to the arm with the stop within reach at all times.
 - Only approved demo commands; no free-form AI control of motion with visitors.
+
+## AI tools
+An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call, and **a person approves every move** (never "always allow" a move tool). The hub's built-in chat can't move anything. `docs/ai-control.md`.
 
 ## Remote mode
 Remote sessions (from home, Remote Control, any off-site connection) = **no motion by default**. Read-only checks only, unless someone is physically next to the robot.
@@ -27,4 +30,4 @@ Remote sessions (from home, Remote Control, any off-site connection) = **no moti
 Excluded from AI, voice and visitor control.
 
 ## Arms that aren't ours
-`so101-green` belongs to another project: never connect to it, never recalibrate it (see `CLAUDE.md`).
+`so101-green` belongs to the SO-101 training project, not to lab-os: lab-os never opens its ports and never recalibrates it (see `CLAUDE.md`; the one exception, starting LeLab after a port check: `docs/green-launcher.md`).

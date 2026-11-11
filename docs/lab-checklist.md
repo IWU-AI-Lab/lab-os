@@ -35,7 +35,7 @@ Find the desktop's address: `hostname -I` (the first one). With the brain from p
 - [ ] **One tap = full screen + start.** Swipe from the edge: can you leave it? Does the Newline's own bar stay away?
 - [ ] Chrome menu → **Add to Home screen**: does the icon open the hub? (On `http://` it opens as a tab; tap once for full screen.)
 - [ ] Touch: the panels' details pages, the commit range buttons, the devices list.
-- [ ] Leave it alone for 3 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 5 minutes only where the reset time is longer).
+- [ ] Leave it alone for 30 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 15 minutes). To check it quickly, set a shorter reset in ⚙ → The hub, then set it back.
 - [ ] The plain hub's two taps too (`http://<address>:8080/plain`): this checks off focus step 1 (then mark it `(done …)` in `current-focus.md`).
 
 ## 3. Fable drives the real arm (20–30 min, you at the arm)

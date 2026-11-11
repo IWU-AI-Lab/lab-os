@@ -6,10 +6,10 @@
 # _s seconds. "Used by" notes say where a token is read today; "(planned)" = for the hub, not read yet.
 
 colors:
-  background: "#05080b"  # near-black behind everything. Used by: the designed hub (other pages still use style.css)
+  background: "#05080b"  # near-black behind everything. Used by: the designed hub, the module pages (kit.js)
   surface: "#0b161c"     # panel fill, drawn see-through (glow.panel_fill). Used by: the designed hub
   line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. Used by: the designed hub
-  text: "#d4eef5"        # main text. Used by: the designed hub (other pages still use style.css)
+  text: "#d4eef5"        # main text. Used by: the designed hub, the module pages (kit.js)
   text_dim: "#6d8c96"    # labels, secondary text. Used by: the designed hub
   primary: "#29d4ff"     # cyan, the main color; change this to recolor (surface/line/hot/text are cyan-tinted). Used by: robot joints in the 3D views, controller pointer
   hot: "#eafcff"         # white-hot core of the brightest things only. Used by: the designed hub
@@ -29,7 +29,7 @@ font:                    # one font per role; every font in `bundled` ships with
   lines_weight: 300      # light only; heavier looks bloated
   digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. Used by: the designed hub
   mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. Used by: the designed hub
-  base_size_px: 20       # body text on the 32" monitor. Used by: (pages still use style.css for now)
+  base_size_px: 20       # body text on the 32" monitor. (planned)
   scale_with_screen: true  # hub sizes follow the screen (the smaller of width/height decides), so the core keeps its share. (planned)
   label_spacing_em: 0.12 # extra letter spacing for CAPS labels and titles. (planned)
 

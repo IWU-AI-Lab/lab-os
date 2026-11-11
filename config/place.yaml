@@ -10,4 +10,5 @@ ai_budget_usd_month: 20   # the hub's chat pauses when this month's AI spend rea
 chat_keep_minutes: 30     # a reset or interrupted conversation can be brought back this long (0 = off)
 calendar:             # dates the hub's greeting mentions in the two weeks before (docs/personas.md)
   - {date: 2026-12-15, what: "The semester ends"}
-domain: hub.indwesailab.com   # (planned, step 7: the certificate; step 8: only this place updates the name)
+domain: hub.indwesailab.com   # not used yet: the secure address is deferred (current-focus.md → step 7);
+                              # later only this place updates the name (step 8)

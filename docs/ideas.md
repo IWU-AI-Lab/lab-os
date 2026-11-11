@@ -12,9 +12,9 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 Not ideas any more: agreed features, paused when the teleop focus closed (the demo is showable, "needs polishing"; tag `demo-2026-10-30`). Pick them up from here; the teleop focus's full context is in `docs/archive/focus-2026-10-teleop-demo.md` (step numbers below refer to it).
 
 ### Teleop demo: what's left
-- **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built 2026-11-10, not yet tried on the Quest:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/quest-setup.md`). The first try showed no movement: the Quest sent the hands as simple controllers (no finger joints, trigger = its pinch), which the page didn't treat as hands; it does now. Left: try it, then per-user thresholds, and a one-handed clutch if two hands feel clumsy.
+- **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built and tried 2026-11-10:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/quest-setup.md`). It works but is hard to steer (builder). Left: tune it from recordings, per-user thresholds, and a one-handed clutch if two hands feel clumsy.
 - **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then the 0.5× hand-to-gripper scale, smoothing, end-to-end delay. Above 0.5 is the builder's call (`config/venues/lab.yaml`).
-- **Quest display (step 5).** Visitor hint until the first grab; the lazy-follow **HUD mini-arm** (decision 2026-10-28) whose joints turn red near their limits (= the workspace warning); the status panel lazy-follows too.
+- **Quest display (step 5).** Visitor hint until the first grab; joints that turn red near their limits (= the workspace warning) on the 3D arm, which can now be moved onto the real one (2026-11-10; the lazy-follow HUD mini-arm of decision 2026-10-28 is the other option); the status panel lazy-follows.
 - **Visitor polish + portability test (step 8).** Script, casting to a monitor, one run from the laptop away from the lab, tag, 60-second clip. The SO-101 port check uses Linux paths (`/dev/serial/by-id/`, sysfs): a Windows/macOS field laptop needs the USB-ID lookup `xarm1` already uses.
 - **`so101-white-leader`.** Build and set it up (spare board `5B41532183`; `python -m lab_os.robots.so101_setup setup-motors --arm so101-white-leader` after its port is in `config/devices.yaml`). For recording training demonstrations (second act B), not needed for the visitor demo.
 - **xarm1 leftovers.** Hand-measured limits (`python -m lab_os.robots.xarm calibrate`), Keys at `--speed 0.4`, a precise delay measurement, hold-position on stop, Mouse mode tried in a browser. Its HACK stays listed in `current-focus.md`.
@@ -36,6 +36,13 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-10)
 
+### Teleop with a webcam instead of the Quest
+- **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.
+- **Why:** anyone can try it at a desk; no Quest to charge, set up or put on; a fallback when the Quest is out.
+- **How:** a hand-tracking model that runs in the browser, offline, on the webcam (e.g. Google's MediaPipe hand landmarker, vendored like three.js; license to check), producing the same `xr_input` hand messages (`source: "hands"`). Or on the brain with OpenCV, once camera code exists (focus step 3).
+- **Watch out:** one webcam sees left/right/up/down well but **depth (toward/away) only roughly** (from the hand's size in the picture), so forward/back will feel worse than the Quest; a second camera from the side, or the Kinect's depth camera, could fix that. **Never the training cameras** (same model as the white arm's, off limits): use the lab's spare webcam or a laptop's. Same dead-man rule: hand out of view = freeze. The browser gives the camera only to a secure page, so the webcam page runs on the brain's own computer (`localhost`) until the secure address exists.
+- **Plugs into:** inputs slot (a new input page, same clutch mapping); cameras/vision.
+
 ### Past conversations (more than "bring back the last one")
 - **What:** a list of recent conversations on the hub (or per person, once the hub knows who's there), to reopen one and continue: e.g. a drafted prompt from yesterday, or picking up after lunch.
 - **Built so far (2026-11-10, quick version):** the last conversation is kept for `chat_keep_minutes` and can be brought back after an accidental reset or a restart (`docs/chat.md` → "Kept for a while").
@@ -51,17 +58,10 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Watch out:** the lab's hard rules (the green arm) stay in the lab's config, and the lab's domain name is updated only by the lab's brain.
 - **Plugs into:** config/venues; the brain program; docs.
 
-### Open a module on another screen ("screen-to-screen sending")
-- **What:** the hub runs on one screen (say the Newline); tap a module and choose to open it on another screen (the 32" monitor, a Pi screen, later the Quest). Example: a visitor at the Newline taps Monitor → "on the big monitor", and the arm view appears there while the hub stays on the Newline. Also: send a chat answer, a picture from a camera, or the other project's poster to a screen.
-- **Why it's doable:** the concept page shows modules as layers over the hub, but the real modules are already separate pages (`/teleop`, `/monitor`) that the hub loads inside itself, so any screen can show any module. Missing: the brain knowing which screens are there.
-- **How:**
-  - every screen running the hub connects to the brain and is named once ("Newline", "Desk monitor": a setting, or picked on the screen the first time); the brain keeps the list (this is the "roll call" for screens);
-  - a module button gets "open on…" (a long press, or a small send icon) listing the screens that are there; the brain tells that screen to open the module; Back on that screen, or "bring it back" on the sender, closes it;
-  - **the two taps make it work:** a page can only go full screen after a tap on *that* screen, so a screen left full screen at its start screen (tap 1 done, sound unlocked) can be taken over from elsewhere; a screen that isn't full screen shows the module in a window and says so;
-  - the reset brings every screen back to its start screen; one controller per robot still applies (a teleop page sent to a screen asks before taking control).
-- **Watch out:** screens over the network need to reach the brain (the university network may block it; the router fixes it) and a secure address for the voice and Esc parts (`current-focus.md` → "Step 7, concretely"). How a sent module looks (it flies off toward the edge, a callout on the hub says where it went) is a design-session question.
-- **In the focus (2026-11-09):** `current-focus.md` step 8, before the reveal, with names in the screens' addresses and one tap or click to open the hub on a screen (nothing starts by itself).
-- **Plugs into:** outputs/clients; the screens roll call (Milestone 1); kiosk clients (entry above); casting in `use-cases.md` (the visit, another project borrows a screen).
+### Sending more than a module to another screen
+- **Opening a module on another screen is in the focus** (`current-focus.md` step 8, "Step 8, concretely").
+- **What stays here:** sending other things to a screen: a chat answer, a picture from a camera, the other project's poster; and later the Quest as a target.
+- **Plugs into:** outputs/clients; the screens list from step 8; casting in `use-cases.md` (the visit, another project borrows a screen).
 
 ### Screens without browser bars ("kiosk clients")
 - **What:** any lab screen (32" monitor, Pi touchscreens, the Newline) shows the hub, or any other web app, full screen, with no tabs or address bar, and starts by itself.
@@ -72,16 +72,16 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **The Newline (TT-7523QCA+, a Q+ Pro: Android 15 with the Google Play Store).** Its Chrome has **no full-screen button** (builder, 2026-11-09). Options, quickest first (needed for another project by 2026-11-11/12):
   0. **The lab-os hub does this with its two taps** (focus step 1: tap 1 = full screen, tap 2 = start). The same trick suits the other project.
   1. **The page asks for full screen itself:** a "tap to start" layer that calls `document.documentElement.requestFullscreen()` on the first tap (Android Chrome allows it after a tap; works over plain `http` too). Needs a small change to that project's page; a reload or the Back gesture leaves full screen, so the tap layer comes back.
-  2. **Install the page as an app (PWA)** with a web app manifest saying `"display": "fullscreen"`: Chrome's menu → "Install app" / "Add to home screen", then it opens from its icon with no bars. Needs HTTPS (for the lab-os hub: `hub.indwesailab.com`, focus step 7; a plain `http://` LAN address won't install; workaround: `chrome://flags` → "Insecure origins treated as secure", if the Newline allows flags) and Chrome's install rules (a manifest with name + icons; older Chrome versions also want a small service worker).
+  2. **Install the page as an app (PWA)** with a web app manifest saying `"display": "fullscreen"`: Chrome's menu → "Install app" / "Add to home screen", then it opens from its icon with no bars. Needs HTTPS (for the lab-os hub: `hub.indwesailab.com`, deferred 2026-11-10, focus step 7; a plain `http://` LAN address won't install; workaround: `chrome://flags` → "Insecure origins treated as secure", if the Newline allows flags) and Chrome's install rules (a manifest with name + icons; older Chrome versions also want a small service worker).
   3. **A kiosk browser app from the Play Store** (e.g. Fully Kiosk Browser: full screen, starts at boot, locks to one address; check its license terms): no change to the page. Only if the Newline lets us install apps.
   4. **A small computer on its HDMI + USB touch** (spare Pi 5 or ThinkCentre) with Chromium `--kiosk` (2 above): always works, same recipe as the Pi screens; the long-term choice for the hub.
   - Test 1 and 2 today on any **Android phone** with Chrome (it behaves like the Newline's); try 3 at the Newline.
 - **Newline Signage Pro** (corrected 2026-11-09): installed on the Newline but needs registering; Newline names only the Q Pro and STV+ as "fully integrated", and resellers sell a license (~$99 per display per year; a free year comes with Newline's media-player box), so maybe not free. Its listed content is images, videos, text, weather, QR codes and live feeds: **no mention of web pages or touch**. The builder checks at the lab: does registering ask for a license, can it show a URL full screen, does touch work. Good for watch-only screens if so; the interactive hub uses 1–4.
-- **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows ("Screen-to-screen sending" idea).
+- **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows (focus step 8; "Sending more than a module to another screen" above).
 - **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `network-setup-checklist.md`).
 
 ## Recent ideas (2026-11-08)
-"Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md` (design branch).
+"Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md`.
 
 ### GPU-busy indicator on the hub
 - **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
@@ -91,7 +91,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Teleop delay graph
 - **What:** a small live graph of the Quest-to-arm delay over the last minute, in the teleop module (and the monitor page).
-- **Why:** shows whether lag comes from the network, the brain or the arm; makes speed tuning measurable ("feel" on hold: `ideas.md` → "On hold" → speed and feel).
+- **Why:** shows whether lag comes from the network, the brain or the arm; makes speed tuning measurable ("feel" is on hold: "On hold" → "Speed and feel" above).
 - **Watch out:** the Quest and the brain have different clocks, so measure with a round trip (the brain echoes a timestamp back) rather than comparing clocks. "Reached the arm" can mean *command sent* (easy) or *arm got there* (needs position read-back; slower, arm-specific). Start with command sent; label which one the graph shows.
 - **Plugs into:** teleop module + monitor; the troubleshooting suite (network delay).
 
@@ -122,7 +122,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   1. **Place labels by hand once:** point the controller at a device, pick its name; the Quest remembers the spot (WebXR anchors). No camera needed. Moving a device means re-placing its label.
   2. **QR codes / AprilTags** (square printed markers made for robots, readable from far): automatic, but the Quest's browser may not give web pages access to the camera images; to check (native apps can use Meta's camera access).
   3. **Recognizing devices by sight** (computer vision): hardest; identical Pis look the same anyway.
-- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and the dropped ghost-arm alignment (decision 2026-10-28).
+- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and lining the 3D arm up with the real one by hand (built 2026-11-10, `docs/quest-setup.md`), the same idea for one device.
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
@@ -196,11 +196,11 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Rules that still apply:** any robot motion from a touch goes through the same safety layer (limits, dead-man); every screen that can move a robot shows a STOP.
 - **Answers (2026-10-27):** "hologram" = a 3D arm model you spin with touch (the existing three.js arm view already does this with a mouse; touch is a small step). The Newline is a standalone Android computer, so its own browser opens the brain's page (check that browser supports WebGL + WebSockets). Uses: data display, or robot control with sliders.
 - **Note:** slider control is the same page as phone teleop's touch mode (below). Build **one touch-control page** that adapts to phone, small screen and the 75" screen.
-- **Open questions:** which Pi models are behind the small screens? The Pis and the Newline need the lab network (router) to reach the brain.
+- **Open questions:** which Pi models are behind the small screens? (Reaching the brain: `pi01` does over the lab Wi-Fi, and the Newline through `pi01`, 2026-11-10; the router makes it simple.)
 
 ### Voice beyond push-to-talk
 - **In the focus:** push-to-talk voice is `current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
-- **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); our own speech-to-text → model → text-to-speech pipeline as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
+- **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Plugs into:** triggers slot, conversation manager, model router.
 
 ### Google Glass (Explorer Edition) as a display + camera
@@ -268,7 +268,6 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Multi-screen presence (lab PCs/displays) | The system "lives" on the room's screens; lab only. | Outputs/clients |
-| Screen-to-screen sending (detailed above: "Open a module on another screen") | — | Outputs/clients |
 | Visitors' phones as remotes | Let visitors interact without the headset. | Inputs, clients |
 | Quest-only mode | — | Quest client |
 | Quest launch → HUD (launch animation into the HUD) | — | Quest client, theme/decorative layer |

@@ -1,6 +1,6 @@
 # CLAUDE.md — lab-os
 
-Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the core (brain + plug-in interfaces). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
+Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub and an AI driving `so101-white` through the brain's tools (`docs/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
 
 ## Read first, every session
 1. `docs/current-focus.md` — what to work on now (and "Up next").
@@ -11,7 +11,7 @@ Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the 
 Setup and conventions: `docs/dev-setup.md`, `docs/project-scaffold.md`. Safety: `SAFETY.md`.
 
 ## Hard rules: so101-green and the shared LeRobot setup
-`so101-green` belongs to another training project. It is **not ours**.
+`so101-green` belongs to the SO-101 training project (the builder's own, separate from lab-os). It is **not lab-os's** until its integration is planned (`docs/ideas.md`).
 - **Never open the green arm's ports.** Serial devices `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00` and `…5B41533501-if00`. No reading, no probing, no "just checking" — opening the port can disturb a running training session. They're marked `off_limits` in `config/devices.yaml`, and `lab_os.devices` refuses to return them.
 - **Never recalibrate it** or touch `~/.cache/huggingface/lerobot/calibration/`.
 - **Never modify the `lerobot` conda env** (`~/miniforge3/envs/lerobot`) or the `~/lerobot` checkout. Don't install into it, don't activate it for lab-os work.
