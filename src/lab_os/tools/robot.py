@@ -33,6 +33,7 @@ from lab_os.kinematics import IK_JOINTS, kinematics_for, solve_ik
 from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
+from lab_os.tools import pose_view as pv
 from lab_os.tools.calllog import CallLog
 from lab_os.venues import Venue
 
@@ -87,6 +88,29 @@ def _angle_diff(a: float, b: float) -> float:
     return (a - b + 180.0) % 360.0 - 180.0
 
 
+def _check_marks(marks: list) -> list[dict]:
+    """pose_view's marks: points (cm) to draw, e.g. where the AI thinks the cube is."""
+    if not isinstance(marks, list) or len(marks) > pv.MAX_MARKS:
+        raise Refused(f"marks must be a list of at most {pv.MAX_MARKS} points")
+    out = []
+    for m in marks:
+        if not isinstance(m, dict) or not {"x_cm", "y_cm", "z_cm"} <= set(m):
+            raise Refused(
+                'each mark needs x_cm, y_cm and z_cm, e.g. {"x_cm": 15, "y_cm": 5, '
+                '"z_cm": 1.5, "label": "cube", "size_cm": 3}'
+            )
+        _finite(**{k: m[k] for k in ("x_cm", "y_cm", "z_cm")})
+        size = m.get("size_cm") or 0
+        _finite(size_cm=size)
+        if not 0 <= size <= 30 or any(abs(m[k]) > 200 for k in ("x_cm", "y_cm", "z_cm")):
+            raise Refused("marks must be within 200 cm of the base, size_cm 0–30")
+        out.append(
+            {k: m[k] for k in ("x_cm", "y_cm", "z_cm")}
+            | {"label": str(m.get("label") or "")[:30], "size_cm": float(size)}
+        )
+    return out
+
+
 def _finite(**values: float) -> None:
     for name, v in values.items():
         if not isinstance(v, int | float) or not math.isfinite(v):
@@ -113,6 +137,7 @@ class RobotTools:
         self.kin = kinematics_for(self.arm.model)
         self.poses = (load_poses() if poses is None else poses).get(self.arm.model, {})
         self.calls = calls or CallLog()
+        self.last_target: tuple[tuple[float, float, float], float] | None = None  # move_to's
 
     # ---------- reading ----------
 
@@ -204,6 +229,37 @@ class RobotTools:
     async def list_poses(self, arm: str | None = None) -> dict:
         self._check_arm(arm)
         return {"arm": self.arm.name, "poses": self.poses}
+
+    async def pose_view(self, marks: list[dict] | None = None, arm: str | None = None) -> dict:
+        """A picture of the arm's 3D model where the motors are now (side + top, grid in cm),
+        with the last move_to target and the caller's `marks`. The PNG is under "image_png"."""
+        self._check_arm(arm)
+        if self.arm.model not in pv.URDFS or not self.kin:
+            raise Refused(f"no 3D model to draw for the {self.arm.model} model")
+        marks = _check_marks(marks or [])
+        joints = self._measured()
+        where = self._where(joints)
+        p = where["gripper_point_cm"]
+        png = await asyncio.to_thread(  # ~0.2 s (~1 s the first time): keep the loop running
+            pv.render,
+            self.arm.model,
+            joints,
+            (p["x"], p["y"], p["z"]),
+            where["tool_angle_deg"],
+            self.last_target,
+            marks,
+        )
+        out = {"arm": self.arm.name} | where
+        if self.last_target:
+            (x, y, z), a = self.last_target
+            out["last_target_cm"] = {"x": round(x, 1), "y": round(y, 1), "z": round(z, 1)}
+        return out | {
+            "views": "left: side, in the arm's plane (across = reach from the base axis, up = "
+            "height); right: top, from above with forward up and the arm's left on the left. "
+            "Red dot = gripper point, magenta x = last move_to target, blue = your marks. Drawn "
+            "from the joint readings, not a camera: objects other than your marks aren't in it.",
+            "image_png": png,
+        }
 
     # ---------- checks shared by every move ----------
 
@@ -471,7 +527,8 @@ class RobotTools:
             path.append({j: q[j] for j in IK_JOINTS})
             seed = q
         self._check_floor(current, [current | wp for wp in path])
-        return await self._run(path, notes, aim=(end, angle0 + d_angle * k))
+        self.last_target = (end, angle0 + d_angle * k)
+        return await self._run(path, notes, aim=self.last_target)
 
     async def stop(self, arm: str | None = None) -> dict:
         """Always allowed: freeze now, whoever has control."""
@@ -499,5 +556,8 @@ class RobotTools:
             if result.get("clipped")
             else "ok"
         )
-        self.calls.write(tool, args, outcome, result)
+        logged = dict(result)
+        if "image_png" in logged:
+            logged["image_png"] = f"{len(logged['image_png'])} bytes"
+        self.calls.write(tool, args, outcome, logged)
         return result
