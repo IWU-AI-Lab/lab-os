@@ -62,7 +62,7 @@ Notes:
 
 ### Getting into a device
 - **Raspbot:** connect to its own hotspot ("Raspbot") and SSH in (IP shown on its little screen).
-- **Raspbot by Ethernet cable** (worked for raspbot1, 2026-11-10; no Wi-Fi needed): cable from the desktop's Ethernet port to the Raspbot. On the desktop, set "Wired connection 1" to share (once; Ubuntu Settings → Network → the wired connection → IPv4 → "Shared to other computers", or `nmcli con modify "Wired connection 1" ipv4.method shared`, then `nmcli con up "Wired connection 1"`). The desktop becomes `10.42.0.1` and gives the Raspbot a `10.42.0.x` address. Find it with `ip neigh` (raspbot1 was `10.42.0.84`), then `ssh pi@10.42.0.x`.
+- **Raspbot by Ethernet cable** (worked for raspbot1, 2026-11-10; no Wi-Fi needed): cable from a desktop's Ethernet port to the Raspbot (it was done on the lab's **other** Ubuntu desktop, not `ai-comp-lab-ubuntu-76358`: that one's "Wired connection 1" is set to share since, so don't plug it into a wall socket). On the desktop, set "Wired connection 1" to share (once; Ubuntu Settings → Network → the wired connection → IPv4 → "Shared to other computers", or `nmcli con modify "Wired connection 1" ipv4.method shared`, then `nmcli con up "Wired connection 1"`). The desktop becomes `10.42.0.1` and gives the Raspbot a `10.42.0.x` address. Find it with `ip neigh` (raspbot1 was `10.42.0.84`), then `ssh pi@10.42.0.x`.
 - **Raspberry Pi 5:** monitor + keyboard. ⚠️ The Pi 5 uses **micro-HDMI** — you need a micro-HDMI → HDMI cable or adapter.
 - **Jetson Orin Nano:** monitor + keyboard. ⚠️ The dev kit's video port is **DisplayPort**, not HDMI.
 
