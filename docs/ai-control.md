@@ -100,8 +100,11 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …
 
 Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
 
+## "Arrived" or "stopped short"
+After each move the brain holds the target for half a second (so a slow joint can catch up), then reads where the motors really are and compares that with the target. Within 0.5 cm (2° per joint) the result is `arrived`; otherwise `stopped_short` with how far off (`off_by_cm`), which joints fell short (`joints_short_deg`) and a sentence (`message`). A gripper that closes on something says "stopped at 30 % open instead of 0 % (it may be holding something)". The AI Control page (`/ai`) shows these as "short". Why: blind on the real arm, `move_to` used to say "arrived" 1.6 cm short (GOTCHAS 2026-11-10).
+
 ## The log
-Every call (time, tool, arguments, outcome `ok` / `clipped` / `refused` / `stopped` / `error`, and the result) goes to `logs/ai-tools/<date>_<time>.jsonl`, one file per brain run (not in git). Use it to compare runs later.
+Every call (time, tool, arguments, outcome `ok` / `clipped` / `short` / `refused` / `stopped` / `error`, and the result) goes to `logs/ai-tools/<date>_<time>.jsonl`, one file per brain run (not in git). Use it to compare runs later.
 
 ## Other AI tools
 Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, …). Make it ask before each move tool, as above.

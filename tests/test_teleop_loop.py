@@ -194,6 +194,24 @@ async def test_motion_follows_the_path_at_the_capped_speed():
     assert loop.frozen
 
 
+async def test_a_motion_holds_its_last_waypoint_before_finishing():
+    """The freeze after a move holds where the motors are; holding the target a little longer
+    first lets trailing servos catch up (GOTCHAS 2026-11-10)."""
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    start = loop.arm.read_joints()["shoulder_pan"]
+    m = Motion(path=[{"shoulder_pan": start + 1}], deg_per_s=60, hold_s=0.3)
+    loop.start_motion(m)
+    loop.step(0.0, 0.1)  # reaches the waypoint
+    assert m.result is None and loop.motion_active
+    for _ in range(3):
+        loop.step(0.0, 0.1)  # still sending the target
+        assert not loop.frozen
+    loop.step(0.0, 0.1)
+    assert m.result == "arrived" and not loop.motion_active
+
+
 async def test_all_joints_of_a_motion_arrive_together():
     from lab_os.teleop.loop import Motion
 
