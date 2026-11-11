@@ -15,6 +15,7 @@ GET /api/status          venue, internet, AI, assistant state, the brain's clock
 GET /api/project         the Current Project panel (docs/current-focus.md → Steps)
 GET /api/commits?days=N  commits per day for the last N days, and the latest few commits
 GET /api/arm             the arm now: name, joints (degrees), held still, who has control
+GET /api/pose-view.png   the AI's pose_view picture of the arm now (side + top, grid in cm)
 GET /api/devices         the place's devices (devices.yaml): kind, off limits, linked to the brain
 GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
 GET /api/settings        the settings (src/lab_os/settings.py) and their values
@@ -61,7 +62,7 @@ from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, create_mcp_server
 from lab_os.tools.project import ProjectTools
-from lab_os.tools.robot import RobotTools
+from lab_os.tools.robot import Refused, RobotTools
 from lab_os.venues import Venue
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
@@ -292,6 +293,19 @@ def side_view_cm(kin, joints: dict[str, float]) -> list[dict] | None:
         forward = ax + (p[0] - ax) * math.cos(pan) - (p[1] - ay) * math.sin(pan)
         points.append({"name": name, "r": round(forward * 100, 1), "z": round(p[2] * 100, 1)})
     return points
+
+
+async def api_pose_view(request: web.Request) -> web.Response:
+    """The same picture the AI tool pose_view returns (no marks), for people to check it."""
+    try:
+        r = await request.app[TOOLS].pose_view()
+    except Refused as e:
+        return web.Response(status=404, text=str(e))
+    except Exception as e:  # the arm stopped answering
+        return web.Response(status=503, text=f"can't read the arm: {e}")
+    return web.Response(
+        body=r["image_png"], content_type="image/png", headers={"Cache-Control": "no-store"}
+    )
 
 
 async def api_arm(request: web.Request) -> web.Response:
@@ -527,6 +541,7 @@ def create_brain_app(
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/arm", api_arm)
+    app.router.add_get("/api/pose-view.png", api_pose_view)
     app.router.add_get("/api/devices", api_devices)
     app.router.add_get("/api/ai-calls", api_ai_calls)
     app.router.add_get("/api/settings", api_settings_get)

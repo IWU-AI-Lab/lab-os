@@ -149,6 +149,7 @@ async def test_the_hub_chat_gets_read_tools_only(repo):
     chat_tools = ChatTools(create_mcp_server(robot_tools(), ProjectTools(repo)))
     offered = {t["function"]["name"] for t in await chat_tools.openai_tools()}
     assert offered == READ_TOOLS  # no move_joints, gripper, move_to, go_to_pose, stop
+    assert "pose_view" not in offered  # a read tool, but its answer is a picture
     assert "isn't a tool you have" in await chat_tools.call("move_joints", '{"joints": {}}')
     assert "isn't a tool you have" in await chat_tools.call("stop", "{}")
     assert "aren't valid JSON" in await chat_tools.call("read_doc", "{oops")

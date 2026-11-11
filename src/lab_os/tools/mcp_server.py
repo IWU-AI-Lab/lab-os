@@ -3,17 +3,17 @@
 
 Listens on this computer only (127.0.0.1), on its own port next to the hub (default 8081, path
 /mcp), in the brain's event loop, so the tools drive the same teleop loop as the pages. How to
-connect: docs/ai-control.md. Permission tiers (current-focus.md): arm_status, list_poses and the
-project tools (project_status, list_docs, read_doc, search_docs, git_status, git_log, list_devices)
-are read; stop is always allowed; move_joints, gripper, move_to and go_to_pose are move (never
-allow-list them: each one should ask).
+connect: docs/ai-control.md. Permission tiers (current-focus.md): arm_status, list_poses,
+pose_view and the project tools (project_status, list_docs, read_doc, search_docs, git_status,
+git_log, list_devices) are read; stop is always allowed; move_joints, gripper, move_to and
+go_to_pose are move (never allow-list them: each one should ask).
 """
 
 import contextlib
 import logging
 
 import uvicorn
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Image, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
@@ -35,7 +35,8 @@ call again to continue. Every move returns where the arm really ended up: check 
 move. "result": "stopped_short" means the arm didn't get there (off_by_cm, joints_short_deg and a
 message say how far): don't grip or carry on as if it had. Refusals say why; don't retry a
 refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
-The user approves each move.
+The user approves each move. pose_view draws the arm as it is now (no camera): look at it after
+a move, with marks where you think the objects are, before you grip.
 
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
@@ -71,6 +72,17 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
     async def list_poses(arm: str | None = None) -> dict:
         """Named poses for go_to_pose (e.g. home, rest) with their joint angles."""
         return await run("list_poses", arm=arm)
+
+    @server.tool(annotations=READ)
+    async def pose_view(marks: list[dict] | None = None, arm: str | None = None) -> list:
+        """A picture of the arm's 3D model in its current pose (from the joint readings, not a
+        camera): side view in the arm's plane + top view, a grid in cm, the table, the gripper
+        point (red dot) and the last move_to target (magenta x). `marks`: points to draw too
+        (blue), e.g. where you think an object is: [{"x_cm": 15, "y_cm": 5, "z_cm": 1.5,
+        "label": "cube", "size_cm": 3}] (at most 10). Use it to check a move before gripping."""
+        r = await run("pose_view", marks=marks, arm=arm)
+        png = r.pop("image_png")
+        return [Image(data=png, format="png"), r]
 
     @server.tool(annotations=MOVE)
     async def move_joints(

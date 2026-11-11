@@ -380,7 +380,7 @@ def test_unknown_ai_tools_settings_are_ignored_not_fatal(caplog):
 
 # ---------- MCP ----------
 
-READ_TOOLS = {"arm_status", "list_poses"}
+READ_TOOLS = {"arm_status", "list_poses", "pose_view"}
 MOVE_TOOLS = {"move_joints", "gripper", "move_to", "go_to_pose"}
 
 

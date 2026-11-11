@@ -629,6 +629,7 @@ dependencies = [
     { name = "aiohttp" },
     { name = "hid" },
     { name = "mcp" },
+    { name = "pillow" },
     { name = "pyyaml" },
     { name = "ruamel-yaml" },
 ]
@@ -651,6 +652,7 @@ requires-dist = [
     { name = "hid", specifier = ">=1.0.9" },
     { name = "lerobot", extras = ["feetech"], marker = "extra == 'so101'", specifier = ">=0.6.1" },
     { name = "mcp", specifier = ">=2.3,<3" },
+    { name = "pillow", specifier = ">=12.3.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruamel-yaml", specifier = ">=0.19.1" },
 ]
