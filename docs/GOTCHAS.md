@@ -4,6 +4,13 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — The Pi's browser "kept loading" the hub: it was waiting for a password
+**What:** on `pi01`, `http://192.168.7.72:8080/monitor` kept loading. The brain saw the Pi connect but never send a request: Chromium on Raspberry Pi OS was waiting behind a password prompt (most likely "Unlock login keyring", asked when Chromium first starts). The Pi also didn't reach the desktop by its name (`ai-comp-lab-ubuntu-76358.iwu.ai.lab`); the IP address works.
+**Fix:** answer the prompt (the Pi user's password). For a screen that starts the hub by itself, start Chromium with `--password-store=basic` (or give the keyring an empty password), so nothing waits for a person.
+
+### Seen once, 2026-11-10: one test failed in a full run on `main`, then 9 runs passed
+**What:** `uv run pytest` once ended "1 failed, 341 passed" right after PR #29 was merged (the lab brain was running with `--host 0.0.0.0` at the same time); the failing test's name wasn't captured, and it never came back. Probably a timing-dependent test. If it shows up again, note its name here.
+
 ### 2026-11-10 — `move_to` said "arrived" 1.6 cm short of the target (real so101-white)
 **What:** blind cube test (cube "10 cm in front"), the AI driving the real `so101-white` through the MCP tools. Close to the base, straight-down picks are out of reach (refused down to ~16 cm at 180°); the nearest the IK offered was (10.9, 0, 2.1) cm at 172°. Asked for (11, 0, 2.1), the arm reported "arrived" at (12.6, 0.1, 2.5) at 166°: elbow and wrist short of the command, the arm folded near its limits. The gripper closed 2.7 cm past where the cube would be, and the blind AI couldn't tell.
 **Fix:** open. "Arrived" should compare the end position with the target and say "stopped short by X cm"; find out if it's load, a servo deadband, or the arm touching itself. Cameras (focus step 3) let the AI see the miss.
