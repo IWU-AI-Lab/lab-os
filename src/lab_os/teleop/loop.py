@@ -47,9 +47,11 @@ class Motion:
 
     path: list[dict[str, float]]
     deg_per_s: float = 60.0
+    hold_s: float = 0.0  # after the last waypoint, keep sending it this long (servos catch up)
     result: str | None = None  # "arrived" / "stopped" once finished
     done: asyncio.Event = field(default_factory=asyncio.Event)
     _index: int = 0
+    _held_s: float = 0.0
     _commanded: dict[str, float] = field(default_factory=dict)
 
     def finish(self, result: str) -> None:
@@ -148,6 +150,11 @@ class TeleopLoop:
             }
         )
         if m._index >= len(m.path):
+            # Hold the last waypoint a little longer before the freeze: a freeze holds where the
+            # motors ARE, so a joint still trailing (load) would be locked short (GOTCHAS).
+            if m._held_s < m.hold_s:
+                m._held_s += dt
+                return
             m.finish("arrived")
             self.motion = None  # the next tick has no input: freeze = hold here
 

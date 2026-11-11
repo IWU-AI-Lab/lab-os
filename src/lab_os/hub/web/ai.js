@@ -32,6 +32,7 @@ function summary(c) {
   const out = [];
   if (r.result && typeof r.result === "string") out.push(r.result);
   if (r.problem) out.push(r.problem);
+  if (r.message) out.push(r.message);
   if (Array.isArray(r.clipped) && r.clipped.length) out.push(`clipped: ${r.clipped.join("; ")}`);
   const p = r.gripper_point_cm;
   if (p) out.push(`gripper at ${p.x}, ${p.y}, ${p.z} cm`);

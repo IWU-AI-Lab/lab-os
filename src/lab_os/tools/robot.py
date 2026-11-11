@@ -12,6 +12,8 @@ refuses; it never trusts the numbers it's given:
   teleop); more than `max_joint_change_deg` per call (all joints go the same fraction of the way;
   the gripper is exempt); more than `max_move_cm` per call for move_to.
 - **stop**: always allowed. STOP on any page also ends a move ("stopped").
+- **checked**: after a move, the motors' real position is compared with the target; further than
+  `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
 
 Positions: cm from the arm's base (origin on the table under the base's turning axis), x forward
 (where the arm faces at shoulder_pan 0), y to the arm's left, z up. Tool angle: the gripper's tilt
@@ -43,7 +45,11 @@ ANGLE_TOLERANCE_DEG = 5.0  # ...with the tool angle this close
 SUBSTEP_DEG = 5.0  # near full stretch 1 cm can need ~20° of joint motion: split such steps so
 # the gripper stays on the line between waypoints
 MAX_WAYPOINT_JUMP_DEG = 30.0  # more than this for 1 cm of path = a flip of the arm: refuse
-SETTLE_S = 0.3  # after arriving, before reading where the arm really is
+HOLD_S = 0.5  # after the last waypoint, keep sending it this long so trailing servos catch up
+SETTLE_S = 0.2  # after the hold and the freeze, before reading where the arm really is
+SHORT_CM = 0.5  # the gripper point ended further than this from the target: "stopped_short"
+SHORT_DEG = 2.0  # a joint ended further than this from its target: "stopped_short"
+SHORT_PCT = 5.0  # the gripper's opening ended further than this from the one asked for
 FLOOR_SAMPLES = 20  # points checked along a joint-space move
 
 
@@ -130,8 +136,19 @@ class RobotTools:
             return min(p[2] for p, _ in frames(joints).values()) * 100
         return self.kin.fk(joints)[0][2] * 100
 
-    def _where(self) -> dict:
-        joints = self.arm.read_joints()
+    def _measured(self) -> dict[str, float]:
+        """Where the motors really are. Drivers report where they were told to be while driving
+        (`read_joints`), so after a move ask the motors (`read_measured`) where there's a way."""
+        read = getattr(self.arm, "read_measured", None)
+        if read is not None:
+            try:
+                return read()
+            except Exception as e:  # a dropped packet: the driver's own idea is next best
+                log.warning("%s: measured read failed (%s)", self.arm.name, e)
+        return self.arm.read_joints()
+
+    def _where(self, joints: dict[str, float] | None = None) -> dict:
+        joints = self.arm.read_joints() if joints is None else joints
         out = {"joints_deg": {j: round(v, 1) for j, v in joints.items()}}
         if "gripper" in joints:
             out["gripper_open_pct"] = self._gripper_pct(joints["gripper"])
@@ -246,9 +263,13 @@ class RobotTools:
             for i in range(1, FLOOR_SAMPLES + 1)
         ]
 
-    async def _run(self, path: list[dict], notes: list[str]) -> dict:
+    async def _run(
+        self, path: list[dict], notes: list[str], aim: tuple[tuple, float] | None = None
+    ) -> dict:
+        """Follow `path`, then report where the arm really ended up. `aim` (move_to only) is
+        the gripper point (cm) and tool angle the move was aiming for."""
         start = self.arm.read_joints()
-        motion = Motion(path=path, deg_per_s=self.limits.deg_per_s)
+        motion = Motion(path=path, deg_per_s=self.limits.deg_per_s, hold_s=HOLD_S)
         travel, prev = 0.0, start
         for wp in path:
             travel += max((abs(v - prev[j]) for j, v in wp.items()), default=0.0)
@@ -263,16 +284,69 @@ class RobotTools:
         except asyncio.CancelledError:
             self.loop.stop()  # the AI tool went away mid-move: freeze (dead-man)
             raise
-        if motion.result == "arrived":
-            await asyncio.sleep(SETTLE_S)
-            result = "arrived"
-        else:
-            result = "stopped"
+        if motion.result != "arrived":
             notes.append(
                 "stopped before arriving (STOP was pressed, or the arm was frozen). Don't move "
                 "again until the user says so."
             )
-        return {"result": result, "clipped": notes} | self._where()
+            return {"result": "stopped", "clipped": notes} | self._where()
+        await asyncio.sleep(SETTLE_S)
+        joints = self._measured()
+        where = self._where(joints)
+        off = self._off_target(path[-1], joints, where, aim)
+        result = "stopped_short" if off.pop("short") else "arrived"
+        return {"result": result, "clipped": notes} | off | where
+
+    def _off_target(self, target: dict, joints: dict, where: dict, aim: tuple | None) -> dict:
+        """Compare where the arm ended with where it was sent. Never a plain "arrived" when it
+        isn't there: a blind AI can't tell otherwise (GOTCHAS 2026-11-10)."""
+        out: dict = {"short": False}
+        said: list[str] = []
+        joint_short = {
+            j: round(v - joints[j], 1)
+            for j, v in target.items()
+            if j != "gripper" and j in joints and abs(v - joints[j]) > SHORT_DEG
+        }
+        if aim is not None and "gripper_point_cm" in where:
+            (gx, gy, gz), angle = aim
+            p = where["gripper_point_cm"]
+            off_cm = math.dist((gx, gy, gz), (p["x"], p["y"], p["z"]))
+            out |= {
+                "target_cm": {"x": round(gx, 1), "y": round(gy, 1), "z": round(gz, 1)},
+                "target_tool_angle_deg": round(angle, 1),
+                "off_by_cm": round(off_cm, 1),
+            }
+            if off_cm > SHORT_CM:
+                out["short"] = True
+                said.append(
+                    f"stopped {off_cm:.1f} cm from the target ({gx:.1f}, {gy:.1f}, {gz:.1f}) cm: "
+                    f"the gripper point is at ({p['x']:.1f}, {p['y']:.1f}, {p['z']:.1f}) cm, "
+                    f"tool angle {where['tool_angle_deg']:.0f}° (asked {angle:.0f}°)"
+                )
+        if joint_short:
+            out["short"] = True
+            out["joints_short_deg"] = joint_short
+            said.append(
+                "short of the command: "
+                + ", ".join(f"{j} by {abs(d):.1f}°" for j, d in joint_short.items())
+            )
+        if "gripper" in target and "gripper" in joints:
+            want, got = self._gripper_pct(target["gripper"]), self._gripper_pct(joints["gripper"])
+            if abs(want - got) > SHORT_PCT:
+                out["short"] = True
+                said.append(
+                    f"the gripper stopped at {got:.0f} % open instead of {want:.0f} %"
+                    + (" (it may be holding something)" if got > want else "")
+                )
+        if out["short"]:
+            why = (
+                ". Likely load, a joint near its limit, or something in the way. Check before "
+                "gripping or moving on."
+                if joint_short or out.get("off_by_cm", 0) > SHORT_CM
+                else "."
+            )
+            out["message"] = "; ".join(said) + why
+        return out
 
     # ---------- moving ----------
 
@@ -397,7 +471,7 @@ class RobotTools:
             path.append({j: q[j] for j in IK_JOINTS})
             seed = q
         self._check_floor(current, [current | wp for wp in path])
-        return await self._run(path, notes)
+        return await self._run(path, notes, aim=(end, angle0 + d_angle * k))
 
     async def stop(self, arm: str | None = None) -> dict:
         """Always allowed: freeze now, whoever has control."""
@@ -419,6 +493,8 @@ class RobotTools:
         outcome = (
             "stopped"
             if result.get("result") == "stopped" and tool != "stop"
+            else "short"
+            if result.get("result") == "stopped_short"
             else "clipped"
             if result.get("clipped")
             else "ok"

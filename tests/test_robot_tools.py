@@ -93,6 +93,84 @@ async def test_go_to_pose(rig):
     assert r["result"] == "arrived"
 
 
+# ---------- "arrived" only when it's there (GOTCHAS 2026-11-10) ----------
+
+
+class SaggingArm(FakeArm):
+    """Like a loaded real arm: the motors stop `sag` degrees short of the command on some joints.
+    `read_joints` says where it was told to be (like the SO-101 while driving); `read_measured`
+    says where the motors are."""
+
+    def __init__(self, sag: dict[str, float]):
+        super().__init__()
+        self.sag = sag
+
+    def read_measured(self) -> dict[str, float]:
+        return {j: v - self.sag.get(j, 0.0) for j, v in self.read_joints().items()}
+
+
+async def sagging_rig(sag):
+    arm = SaggingArm(sag)
+    arm.connect()
+    loop = TeleopLoop(arm=arm, inputs=InputState(), speed_scale=1.0)
+    return RobotTools(loop, venue(), {"ws": None}), asyncio.create_task(loop.run())
+
+
+async def test_move_to_on_target_says_arrived_and_how_close(rig):
+    start = tip(rig)
+    r = await rig.call("move_to", x_cm=start["x"] + 3, y_cm=start["y"], z_cm=start["z"])
+    assert r["result"] == "arrived" and "message" not in r
+    assert r["off_by_cm"] < 0.5
+    assert r["target_cm"] == {"x": round(start["x"] + 3, 1), "y": start["y"], "z": start["z"]}
+
+
+async def test_move_to_that_stops_short_says_how_far():
+    tools, task = await sagging_rig({"elbow_flex": 4.0, "wrist_flex": 2.5})
+    try:
+        start = tip(tools)
+        r = await tools.call("move_to", x_cm=start["x"] - 3, y_cm=0, z_cm=start["z"])
+    finally:
+        task.cancel()
+    assert r["result"] == "stopped_short"
+    assert r["off_by_cm"] > 0.5
+    assert r["joints_short_deg"] == {"elbow_flex": 4.0, "wrist_flex": 2.5}
+    assert f"stopped {r['off_by_cm']:.1f} cm from the target" in r["message"]
+    assert "elbow_flex by 4.0°" in r["message"]
+    # the position it reports is the measured one, not where the arm was told to go
+    measured = tools.arm.read_measured()
+    assert r["joints_deg"]["elbow_flex"] == round(measured["elbow_flex"], 1)
+    assert tools.calls.entries[-1]["outcome"] == "short"
+
+
+async def test_a_small_sag_within_tolerance_still_arrives():
+    tools, task = await sagging_rig({"shoulder_pan": 1.0})
+    try:
+        r = await tools.call("move_joints", joints={"shoulder_pan": 5}, relative=True)
+    finally:
+        task.cancel()
+    assert r["result"] == "arrived" and "joints_short_deg" not in r
+
+
+async def test_a_gripper_that_closes_on_something_says_so():
+    tools, task = await sagging_rig({"gripper": -30.0})  # stays open: something is in it
+    try:
+        r = await tools.call("gripper", open_pct=0)
+    finally:
+        task.cancel()
+    assert r["result"] == "stopped_short"
+    assert "may be holding something" in r["message"]
+    assert "Likely load" not in r["message"]
+
+
+async def test_a_failed_measured_read_falls_back_to_the_driver(rig, monkeypatch):
+    def broken():
+        raise ConnectionError("no answer")
+
+    monkeypatch.setattr(rig.arm, "read_measured", broken, raising=False)
+    r = await rig.call("move_joints", joints={"shoulder_pan": 5}, relative=True)
+    assert r["result"] == "arrived"
+
+
 # ---------- clipping: it moves, and says so ----------
 
 

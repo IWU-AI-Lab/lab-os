@@ -32,8 +32,10 @@ the table), the tool angle (0 = gripper pointing up, 90 = forward, 180 = straigh
 control and the per-call limits. Moves are small on purpose: a call moves at most
 max_joint_change_deg per joint or max_move_cm (move_to) and says when it went only part of the way;
 call again to continue. Every move returns where the arm really ended up: check it before the next
-move. Refusals say why; don't retry a refusal unchanged. If a move result says it was stopped,
-don't move again until the user says so. The user approves each move.
+move. "result": "stopped_short" means the arm didn't get there (off_by_cm, joints_short_deg and a
+message say how far): don't grip or carry on as if it had. Refusals say why; don't retry a
+refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
+The user approves each move.
 
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead

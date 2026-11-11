@@ -1,6 +1,6 @@
-"""A log of every AI tool call: time, tool, arguments, outcome (ok / clipped / refused / stopped /
-error) and the result, one JSON line each, one file per brain run in logs/ai-tools/, so runs can be
-compared later."""
+"""A log of every AI tool call: time, tool, arguments, outcome (ok / clipped / short / refused /
+stopped / error) and the result, one JSON line each, one file per brain run in logs/ai-tools/, so
+runs can be compared later."""
 
 import json
 import time
