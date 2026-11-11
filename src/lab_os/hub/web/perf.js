@@ -1,6 +1,8 @@
 // Performance test: drifting dots linked when close, and 3D star streaks, at the screen's full size,
 // drawn the same way as the concept's network and hyperspace (brute-force links, one stroke per link;
 // streaks in brightness batches), so the numbers say what the real hub will cost. Plain gray on black.
+import { fullscreenButton } from "/web/fullscreen.js";
+
 const $ = (s) => document.querySelector(s);
 const cv = $("#cv"), cx = cv.getContext("2d");
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -148,10 +150,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-$("#full").addEventListener("click", () => {
-  const el = document.documentElement;
-  (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
-});
+fullscreenButton($("#full")); // hidden while full screen; says why where the browser can't
 $("#hide").addEventListener("click", (e) => {
   e.stopPropagation();
   $("#controls").hidden = true;

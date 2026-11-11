@@ -7,6 +7,7 @@
 //   tap 2 = start: the hub. Losing full screen afterwards brings back the start screen (tap 1).
 // Back to the start screen after hub.reset_after_s with no input, never while something is in use.
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
+import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 
 const $ = (s) => document.querySelector(s);
@@ -43,14 +44,7 @@ async function getJSON(url) {
 }
 
 /* ---------- full screen, Esc and sound ---------- */
-const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-const fsPossible = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-// full screen without the Fullscreen API: kiosk mode, F11, an installed app
-const fullByOther = () =>
-  matchMedia("(display-mode: fullscreen)").matches ||
-  matchMedia("(display-mode: standalone)").matches ||
-  (Math.abs(screen.width - innerWidth) <= 2 && Math.abs(screen.height - innerHeight) <= 2);
-const isFull = () => !!fsElement() || fullByOther();
+// (fsElement, isFull, …: /web/fullscreen.js, shared with every page)
 const needsTap1 = () => fsPossible() && !S.fullFailed && !isFull();
 
 async function goFull() {
@@ -73,6 +67,15 @@ async function goFull() {
 function lockEsc() {
   if (fsElement() && navigator.keyboard?.lock) navigator.keyboard.lock(["Escape"]).catch(() => {});
 }
+
+// the strip's full-screen button: in case something left full screen (a swipe, a system pop-up);
+// does what tap 1 does, and says why where the browser can't
+fullscreenButton($("#fs-btn"), {
+  onFull: () => {
+    S.fullFailed = false;
+    lockEsc();
+  },
+});
 
 function onFullscreenChange() {
   if (fsElement()) lockEsc();

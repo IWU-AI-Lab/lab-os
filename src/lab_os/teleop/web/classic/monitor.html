@@ -15,6 +15,7 @@
   <main>
     <h1>Arm monitor</h1>
     <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
+    <button id="fs-btn" type="button" hidden>Full screen</button>
     <section class="panel">
       <div><span class="label">Server</span> <span id="conn" class="pill off">disconnected</span></div>
       <div><span class="label">Input</span> <span id="input" class="pill off">—</span></div>
@@ -25,6 +26,11 @@
     <section class="panel" id="joints"><div class="label">Driver state (what the arm reports)</div></section>
   </main>
   <script src="/static/monitor.js"></script>
+  <script type="module">
+    // full screen on its own screen; says why where the browser can't (/web/fullscreen.js)
+    import { fullscreenButton } from "/web/fullscreen.js";
+    if (window.self === window.top) fullscreenButton(document.querySelector("#fs-btn"));
+  </script>
   <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

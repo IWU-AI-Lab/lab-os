@@ -657,6 +657,11 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .tools { display: flex; gap: 0.2rem; margin-left: -0.6rem; }
 .tool { display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; opacity: 0.7; }
 .tool:hover, .tool:focus-visible { color: var(--hot); opacity: 1; outline: none; }
+.tool[hidden] { display: none; }  /* .tool's display: grid would otherwise beat the hidden attribute */
+.tool.fs-unavailable { opacity: 0.4; }
+.fs-why { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; max-width: 26rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line); background: var(--surface, var(--bg));
+  font: var(--w-lines) 0.8rem/1.45 var(--f-lines); color: var(--accent); }
+.fs-why[hidden] { display: none; }
 /* a module page can go to another monitor of this computer */
 #module .send { position: absolute; right: 4.2rem; top: 0.8rem; display: none; align-items: center; gap: 0.5rem; height: 2.6rem; padding: 0 0.9rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
 body[data-mod="page"] #module .send { display: flex; }
@@ -695,6 +700,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <symbol id="i-pi" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14"/><path d="M6 5v-2M9 5v-2M12 5v-2M15 5v-2M18 5v-2"/><rect x="8" y="9.5" width="6" height="5"/><path d="M17 10h1.5M17 14h1.5"/></symbol>
     <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="13" height="10"/><path d="M6.5 19h5M9 14.5V19"/><rect x="17.5" y="4.5" width="4" height="14.5"/><path d="M19.5 7.5v.1"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
     <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3.5v8"/><path d="M7.2 6.5a7 7 0 1 0 9.6 0"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
     <symbol id="i-hist" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7.5V12l3 2"/></symbol>
@@ -724,6 +730,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
+      <button class="tool" id="fs-btn" type="button" title="Full screen" aria-label="Full screen" hidden><svg class="ico"><use href="#i-full"/></svg></button>
       <button class="tool" id="xr-btn" type="button" title="The hub in VR" aria-label="The hub in VR" hidden><svg class="ico"><use href="#i-headset"/></svg></button>
       <button class="tool" id="sleep-btn" type="button" title="Back to the start screen" aria-label="Back to the start screen"><svg class="ico"><use href="#i-power"/></svg></button>
       <button class="tool" id="settings-btn" data-module="settings" type="button" title="Settings" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
@@ -2728,7 +2735,11 @@ function watchFrame(frame) {
     console.warn(`hub: can't watch the module page (${e.message}); use the Back button`);
   }
 }
-// the strip's quiet tools: back to the start screen now, and settings (opens like a module)
+// the strip's quiet tools: full screen (shown while not full screen, in case a swipe or a system pop-up
+// left it; says why where the browser can't), back to the start screen now, and settings (opens like a module)
+import("/web/fullscreen.js")
+  .then(({ fullscreenButton }) => fullscreenButton($("#fs-btn"), { onFull: () => navigator.keyboard?.lock?.(["Escape"]).catch(() => {}) }))
+  .catch((e) => console.warn(`hub: no full-screen button (${e.message})`));
 // the hub in VR (/xr): only where the browser can do immersive VR (the Quest's)
 navigator.xr?.isSessionSupported("immersive-vr").then((ok) => ($("#xr-btn").hidden = !ok)).catch(() => {});
 $("#xr-btn").addEventListener("click", (e) => { e.stopPropagation(); location.href = "/xr"; });
