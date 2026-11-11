@@ -5,8 +5,9 @@
 //     speed. Left grip held = move and turn the 3D arm (e.g. onto the real one), Y = put it back.
 //   - Hands (controllers put down): right wrist = the controller, left pinch = clutch, right pinch
 //     = gripper. Sent as a "right controller" with grip/trigger from the pinches (source "hands").
-//   - Hand moves are sent in the 3D arm's frame: once it sits on the real arm, the gripper moves
-//     the way the hand moves in the room, from any side.
+//   - Hand positions are sent in the 3D arm's frame (from its base, turned with it; "frame": "arm"):
+//     once it sits on the real arm, the gripper moves the way the hand moves in the room, from any
+//     side, and in the 1:1 mode it goes exactly where the hand is (grab the 3D gripper to start).
 import * as THREE from "three";
 import { XRScene } from "./xr-scene.js";
 import { getArmFeed } from "./arm/arm-feed.js";
@@ -98,11 +99,12 @@ export function handsAsController(h) {
   }
   return out;
 }
-// Room → the 3D arm's frame: undo its turn, so "toward the arm's front" is forward.
-export function toArmFrame(c, yaw) {
+// Room → the 3D arm's frame: measured from its base, with its turn undone, so "toward the arm's
+// front" is forward and the brain knows where the hand is relative to the arm (1:1 mode).
+export function toArmFrame(c, yaw, base = new THREE.Vector3()) {
   if (!c.pos) return c;
   const turn = new THREE.Quaternion().setFromAxisAngle(Y_AXIS, -yaw);
-  const pos = new THREE.Vector3().fromArray(c.pos).applyQuaternion(turn);
+  const pos = new THREE.Vector3().fromArray(c.pos).sub(base).applyQuaternion(turn);
   const quat = turn.multiply(new THREE.Quaternion().fromArray(c.quat));
   return { ...c, pos: pos.toArray(), quat: quat.toArray() };
 }
@@ -219,8 +221,9 @@ async function start(mode, link, ui) {
     }
 
     const sent = {};
-    for (const [side, c] of Object.entries(hands)) sent[side] = toArmFrame(c, place.yaw);
-    link.send({ type: "xr_input", t, hands: sent, ...(source === "hands" ? { source } : {}) });
+    const base = xrScene.armBase();
+    for (const [side, c] of Object.entries(hands)) sent[side] = toArmFrame(c, place.yaw, base);
+    link.send({ type: "xr_input", t, frame: "arm", hands: sent, ...(source === "hands" ? { source } : {}) });
     ui.showHands(hands, source === "hands" ? "hands: left pinch = move, right pinch = gripper" : source ? "" : "no controllers or hands in view");
     xrScene.updateHands(hands, source, source === "hands" ? { left: bare.left?.pinch || 0, right: bare.right?.pinch || 0 } : null);
     renderer.render(xrScene.scene, camera);

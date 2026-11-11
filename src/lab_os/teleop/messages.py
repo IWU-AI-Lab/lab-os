@@ -33,6 +33,9 @@ class ControllerState:
 class XRFrame:
     t: float  # sender's clock, milliseconds (only meaningful relative to other frames)
     hands: dict[str, ControllerState]  # "left" / "right"; a missing key = controller not present
+    # True when `pos` is measured from the 3D arm's base (turned with it): the page knows where the
+    # arm is, so the 1:1 mode can put the gripper where the hand is. Else only differences count.
+    arm_frame: bool = False
 
 
 def _floats(value, n: int, what: str) -> tuple[float, ...]:
@@ -72,6 +75,7 @@ def parse_frame(raw: dict) -> XRFrame:
     return XRFrame(
         t=float(raw.get("t", 0.0)),
         hands={side: parse_controller(c) for side, c in hands.items() if side in ("left", "right")},
+        arm_frame=raw.get("frame") == "arm",
     )
 
 

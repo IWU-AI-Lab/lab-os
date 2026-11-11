@@ -286,6 +286,22 @@ async def test_speed_control_stays_within_the_venue_cap(aiohttp_client):
     assert loop.status()["max_speed_scale"] == 0.5
 
 
+async def test_the_teleop_page_switches_relative_and_one_to_one(aiohttp_client):
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws")
+    await ws.send_json({"type": "set_mode", "mode": "one_to_one"})
+    assert await wait_for(lambda: loop.mapper.config.mode == "one_to_one")
+    assert loop.status()["mode"] == "one_to_one"
+    monitor = await client.ws_connect("/ws?role=monitor")
+    await monitor.send_json({"type": "set_mode", "mode": "relative"})
+    await asyncio.sleep(0.05)
+    assert loop.mapper.config.mode == "one_to_one"  # watchers can only STOP
+    await ws.send_json({"type": "set_mode", "mode": "sideways"})  # ignored (logged)
+    await asyncio.sleep(0.05)
+    assert loop.mapper.config.mode == "one_to_one"
+
+
 async def test_listed_computers_may_drive_a_real_arm(aiohttp_client, monkeypatch):
     """--drive-from: a listed address drives like this computer; others still only watch."""
     import lab_os.teleop.server as srv

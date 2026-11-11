@@ -47,6 +47,13 @@
           <dt>Speed</dt><dd id="speed">—</dd>
         </dl>
         <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
+        <label class="row">Hand → arm
+          <select id="mode-set" disabled>
+            <option value="relative">Relative: half scale, grab again to recenter</option>
+            <option value="one_to_one">1:1: the gripper goes where the hand is</option>
+          </select>
+        </label>
+        <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
         <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down = <b>hands</b>: hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper. Let go and the arm holds still.</p>
       </div></section>
 

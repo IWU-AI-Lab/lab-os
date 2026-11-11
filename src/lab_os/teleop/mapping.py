@@ -1,6 +1,6 @@
 """Clutch-controlled mapping from a hand controller to arm joints (teleop focus steps 3-4).
 
-Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
+Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
 - **IK (hand space), step 4:** the gripper moves the way your hand moves: hand forward/left/up in
   the room → gripper forward/left/up, scaled by `tip_m_per_hand_m`. Controller pitch tilts the
   gripper (nose up = gripper tilts up); roll drives wrist_roll directly. Several joints move at
@@ -8,8 +8,17 @@ Two modes, chosen by whether the arm has kinematics (lab_os.kinematics):
 - **Joint space, step 3 (fallback):** hand x/y/z → pan/lift/elbow, pitch/roll → wrist joints.
 
 - Grip held = clutch engaged = the arm follows the controller. Released = the arm freezes.
-- Relative: on engage, remember the controller pose and the arm's *current* joints; afterwards the
-  arm moves by how far the controller has moved since then. No snapping, ever.
+- Relative (`mode: relative`, the default): on engage, remember the controller pose and the arm's
+  *current* joints; afterwards the arm moves by how far the controller has moved since then,
+  scaled. No snapping, ever.
+- **1:1** (`mode: one_to_one`, IK only, decision 2026-11-10): the gripper point goes where the hand
+  is, at scale 1, so hand and arm stay together (the relative mode drifts apart: scale ½, slips at
+  limits). Needs hand positions measured from the 3D arm's base (`XRFrame.arm_frame`: the Quest
+  page, once its 3D arm is lined up on the real one). To avoid any jump, the clutch engages only
+  with the hand within `capture_m` of the gripper ("grab it"); that small offset is kept. Nothing
+  slips: an unreachable hand leaves the arm as close as it gets, and it follows again as soon as
+  the hand comes back. Orientation stays relative (pitch → tilt, roll → wrist_roll, degree for
+  degree). Without arm positions or kinematics it falls back to relative.
 - Gentle ramps: the joint furthest from its target moves at most `max_deg_per_s * speed_scale`;
   the others are slowed by the same factor, so all arrive together and the gripper moves along the
   line the hand drew (the gripper itself ramps on its own).
@@ -41,6 +50,8 @@ from lab_os.teleop.messages import ControllerState, Quat, Vec3
 @dataclass
 class MappingConfig:
     hand: str = "right"
+    mode: str = "relative"  # or "one_to_one" (MODES)
+    capture_m: float = 0.08  # 1:1: the clutch engages only with the hand this close to the gripper
     grip_on: float = 0.6  # hysteresis: engage above this...
     grip_off: float = 0.4  # ...release below this
     deg_per_m: float = 200.0  # joint space: 10 cm of hand motion → 20° of joint motion
@@ -68,6 +79,8 @@ class MappingConfig:
         }
     )
 
+
+MODES = ("relative", "one_to_one")
 
 # Joints driven relative to the anchor (the clutch can slip on these); the gripper is absolute.
 RELATIVE_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
@@ -134,6 +147,11 @@ class ClutchMapper:
     _anchor_angle: float = 0.0
     _ik_seed: dict[str, float] = field(default_factory=dict)
     _floor: float = 0.0
+    # 1:1: whether this grab follows the hand absolutely, the hand→gripper offset kept at engage,
+    # and (while not engaged) how far the hand is from the gripper point, for the pages
+    absolute: bool = False
+    _offset: Vec3 = (0.0, 0.0, 0.0)
+    hand_gap_m: float | None = None
 
     def reset(self, require_release: bool = True) -> None:
         """Drop the clutch (e.g. on connection loss). Requires a fresh grip press to move again."""
@@ -148,20 +166,34 @@ class ClutchMapper:
         dt: float,
         speed_scale: float,
         limits: dict[str, JointLimit] | None = None,
+        arm_frame: bool = False,
     ) -> dict[str, float] | None:
-        """Return joint targets for this tick, or None when the arm should hold still."""
+        """Return joint targets for this tick, or None when the arm should hold still.
+        `arm_frame`: the controller's position is measured from the arm's base (1:1 possible)."""
         cfg = self.config
         if controller is None or not controller.tracked:
             self.engaged = False  # tracking lost = clutch released
+            self.hand_gap_m = None
             return None
+        one_to_one = cfg.mode == "one_to_one" and self.kinematics is not None and arm_frame
+        if one_to_one and not self.engaged:
+            tip = self.kinematics.fk(arm_joints)[0]
+            self.hand_gap_m = math.dist(tip, self._hand_in_arm(controller.pos))
+        elif not one_to_one:
+            self.hand_gap_m = None
 
         if self.needs_release:
             if controller.grip < cfg.grip_off:
                 self.needs_release = False
             return None
 
-        if not self.engaged and controller.grip > cfg.grip_on:
+        if (
+            not self.engaged
+            and controller.grip > cfg.grip_on
+            and not (one_to_one and self.hand_gap_m > cfg.capture_m)  # 1:1: grab the gripper
+        ):
             self.engaged = True
+            self.absolute = one_to_one
             self._anchor_pos = controller.pos
             self._anchor_quat = controller.quat
             self._twist = {0: 0.0, 2: 0.0}
@@ -173,6 +205,10 @@ class ClutchMapper:
                 self._ik_seed = dict(arm_joints)
                 # like the limits: an arm already lower may stay there or come up, never go lower
                 self._floor = min(cfg.floor_m, self._lowest(arm_joints))
+                if one_to_one:
+                    hand = self._hand_in_arm(controller.pos)
+                    self._offset = tuple(t - h for t, h in zip(self._anchor_tip, hand, strict=True))
+                    self.hand_gap_m = None
         elif self.engaged and controller.grip < cfg.grip_off:
             self.engaged = False
         if not self.engaged:
@@ -233,13 +269,24 @@ class ClutchMapper:
         self._twist[axis] = prev + step
         return self._twist[axis]
 
-    def _desired_ik(self, dpos: Vec3, pitch: float) -> dict[str, float]:
-        """IK joints for the anchor gripper pose moved by the hand. WebXR → arm axes: hand forward
-        (−z) = arm +x, hand left (−x) = arm +y, up (+y) = +z."""
+    @staticmethod
+    def _hand_in_arm(pos: Vec3) -> Vec3:
+        """A position from the page in the arm's axes. WebXR → arm axes: hand forward (−z) = arm
+        +x, hand left (−x) = arm +y, up (+y) = +z."""
+        px, py, pz = pos
+        return (-pz, -px, py)
+
+    def _desired_ik(self, pos: Vec3, dpos: Vec3, pitch: float) -> dict[str, float]:
+        """IK joints for the anchor gripper pose moved by the hand (relative), or for where the
+        hand is plus the grab's offset (1:1)."""
         cfg, kin = self.config, self.kinematics
-        dx, dy, dz = dpos
-        s = cfg.tip_m_per_hand_m
-        x, y, z = (a + d for a, d in zip(self._anchor_tip, (-dz * s, -dx * s, dy * s), strict=True))
+        if self.absolute:
+            hand = self._hand_in_arm(pos)
+            x, y, z = (h + o for h, o in zip(hand, self._offset, strict=True))
+        else:
+            s = cfg.tip_m_per_hand_m
+            move = (d * s for d in self._hand_in_arm(dpos))
+            x, y, z = (a + d for a, d in zip(self._anchor_tip, move, strict=True))
         target = (x, y, max(z, self._floor))
         angle = self._anchor_angle - pitch  # nose up → the gripper tilts back/up
         bounds = {j: JointLimit(*self._bounds[j]) for j in IK_JOINTS if j in self._bounds}
@@ -251,7 +298,7 @@ class ClutchMapper:
         # Slip: an unreachable target moves the anchor instead, so moving the hand back moves the
         # arm back straight away.
         miss = [r - t for r, t in zip(reached, (x, y, z), strict=True)]  # the floor slips too
-        if math.sqrt(sum(m * m for m in miss)) > cfg.slip_m:
+        if not self.absolute and math.sqrt(sum(m * m for m in miss)) > cfg.slip_m:
             self._anchor_tip = tuple(a + m for a, m in zip(self._anchor_tip, miss, strict=True))
         if abs(reached_angle - angle) > 1.0:
             self._anchor_angle += reached_angle - angle
@@ -266,7 +313,7 @@ class ClutchMapper:
         # WebXR axes: +x right, +y up, -z forward (away from the user). Twist about the
         # controller's x = pitch (nose up > 0), about its z = roll.
         if self.kinematics and all(j in a for j in IK_JOINTS):
-            desired = self._desired_ik((dx, dy, dz), self._unwrapped(rel, 0))
+            desired = self._desired_ik(c.pos, (dx, dy, dz), self._unwrapped(rel, 0))
             roll = self.kinematics.roll_sign * self._unwrapped(rel, 2)
             desired["wrist_roll"] = a.get("wrist_roll", 0.0) + roll
             desired["gripper"] = self._gripper(c.trigger)

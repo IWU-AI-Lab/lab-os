@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from lab_os.robots.base import Arm
 from lab_os.teleop.jog import JogMapper
-from lab_os.teleop.mapping import ClutchMapper
+from lab_os.teleop.mapping import MODES, ClutchMapper
 from lab_os.teleop.messages import JointFrame, XRFrame
 
 log = logging.getLogger(__name__)
@@ -114,6 +114,16 @@ class TeleopLoop:
         self.speed_scale = round(min(max(scale, 0.05), self.max_speed_scale), 3)
         return self.speed_scale
 
+    def set_mode(self, mode: str) -> str:
+        """The teleop page's mode: "relative" or "one_to_one" (1:1). A change drops the clutch:
+        grip again (released first) to move in the new mode. Returns what was set."""
+        if mode not in MODES:
+            raise ValueError(f"mode: expected one of {MODES}, got {mode!r}")
+        if mode != self.mapper.config.mode:
+            self.mapper.config.mode = mode
+            self.mapper.reset(require_release=True)
+        return mode
+
     def stop(self) -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
         self._freeze()
@@ -183,7 +193,12 @@ class TeleopLoop:
         else:
             controller = frame.hands.get(self.mapper.config.hand)
             targets = self.mapper.step(
-                controller, self.arm.read_joints(), dt, self.speed_scale, self.arm.limits
+                controller,
+                self.arm.read_joints(),
+                dt,
+                self.speed_scale,
+                self.arm.limits,
+                arm_frame=frame.arm_frame,
             )
         if targets is None:
             return
@@ -216,6 +231,15 @@ class TeleopLoop:
             "ai_motion": self.motion_active,
             "speed_scale": self.speed_scale,
             "max_speed_scale": self.max_speed_scale,
+            # hand → arm: "relative" or "one_to_one"; 1:1 only with kinematics (and a Quest page
+            # that says where the arm is); while 1:1 waits for a grab: how far the hand is
+            "mode": self.mapper.config.mode,
+            "modes": list(MODES) if self.mapper.kinematics else ["relative"],
+            "one_to_one": self.mapper.absolute and self.mapper.engaged,
+            "hand_gap_cm": None
+            if self.mapper.hand_gap_m is None
+            else round(self.mapper.hand_gap_m * 100, 1),
+            "capture_cm": round(self.mapper.config.capture_m * 100, 1),
             "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
             "joints": joints,
             "last_command": self.last_command,

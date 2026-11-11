@@ -2,6 +2,7 @@
 //   - the arm, driven by exactly what the driver receives (ArmFeed); a see-through "ghost" in AR
 //   - a marker on each controller (green while the clutch is held) and a line from where you grabbed
 //   - a floating status panel (connected / following / frozen, gripper, speed, hint)
+//   - 1:1 mode: a see-through ball around the 3D gripper, where the hand grabs it to start
 //   - VR only: a dim room with a floor grid and a table, so there's something to stand in
 // The arm stands on the table in front of you, facing away (you operate it from behind), until it's
 // moved (setPlacement: e.g. onto the real arm, with the left grip; xr.js).
@@ -59,6 +60,12 @@ export class XRScene {
     this.armHolder.rotation.y = Math.PI / 2 + yaw;
   }
 
+  /** Where the 3D arm's base is in the room (WebXR space), for hand positions relative to it. */
+  armBase() {
+    this.armHolder.updateWorldMatrix(true, false);
+    return this.armHolder.getWorldPosition(new THREE.Vector3());
+  }
+
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
   setFloorOffset(y) {
     this.root.position.y = y;
@@ -88,6 +95,18 @@ export class XRScene {
 
   /** Called every XR frame with the controller states (in room space), their source
    * ("controllers" / "hands" / null) and, for hands, each one's pinch (0..1). */
+  /** 1:1 mode, not holding: a ball around the 3D gripper point, green once the hand is in it. */
+  _updateGrabZone(clutch) {
+    const s = this.feed.status;
+    const tip = this.arm?.object.getObjectByName("gripper_frame_link");
+    const show = !!(s && s.mode === "one_to_one" && s.hand_gap_cm != null && !clutch && tip);
+    this.grabZone.visible = show;
+    if (!show) return;
+    this.grabZone.position.copy(this.root.worldToLocal(tip.getWorldPosition(new THREE.Vector3())));
+    this.grabZone.scale.setScalar((s.capture_cm || 8) / 100);
+    this.grabZone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
+  }
+
   updateHands(hands, source = "controllers", pinches = null) {
     // No right controller or hand: say so, and how to leave, instead of looking broken
     // (2026-10-29: the builder got stuck in the page).
@@ -98,6 +117,7 @@ export class XRScene {
       this.panel.update(this.feed);
     }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
+    this._updateGrabZone(clutch);
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
       marker.visible = !!(c && c.pos);
@@ -153,6 +173,13 @@ export class XRScene {
     this.armHolder.position.copy(ARM_BASE);
     this.armHolder.rotation.y = Math.PI / 2; // robot +x (its forward) → away from the user (-z)
     this.root.add(this.armHolder);
+    // 1:1 mode: the grab zone around the gripper point (the brain's capture distance)
+    this.grabZone = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 24, 16),
+      new THREE.MeshBasicMaterial({ color: CLUTCH_COLOR, transparent: true, opacity: 0.18, depthWrite: false }),
+    );
+    this.grabZone.visible = false;
+    this.root.add(this.grabZone);
     if (this.ar) {
       // a faint footprint, so the floating ghost arm reads as "standing" somewhere
       const ring = new THREE.Mesh(
@@ -213,15 +240,18 @@ class StatusPanel {
     const state = this.noController ? [this.source === "hands" ? "NO RIGHT HAND" : "NO CONTROLLER", "#e0662e"]
       : !s ? ["CONNECTING…", "#8a8a84"]
       : feed.frozen ? [s.needs_release ? `FROZEN · release ${this.source === "hands" ? "the pinch" : "grip"}` : "FROZEN", "#e0662e"]
-      : s.clutch ? ["FOLLOWING", "#2fbf71"]
-      : ["HOLDING", "#b8b8b2"];
+      : s.clutch ? [s.one_to_one ? "FOLLOWING 1:1" : "FOLLOWING", "#2fbf71"]
+      : s.mode === "one_to_one" && s.hand_gap_cm != null && s.hand_gap_cm > s.capture_cm
+        ? [`REACH THE GRIPPER · ${Math.round(s.hand_gap_cm)} cm`, "#b8b8b2"]
+        : ["HOLDING", "#b8b8b2"];
     let gripper = "—";
     if (s && feed.joints.gripper !== undefined && s.limits?.gripper) {
       const [lo, hi] = s.limits.gripper;
       gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
     }
     const speed = s ? `${Math.round(s.speed_scale * 100)}%` : "—";
-    const key = `${state[0]}|${gripper}|${speed}|${this.noController}|${this.source}`;
+    const oneToOne = s?.mode === "one_to_one";
+    const key = `${state[0]}|${gripper}|${speed}|${this.noController}|${this.source}|${oneToOne}`;
     if (key === this.key) return;
     this.key = key;
 
@@ -235,11 +265,15 @@ class StatusPanel {
     g.stroke();
     fitText(g, state[0], 36, 92, 568, "bold", 58, state[1]);
     fitText(g, `Gripper ${gripper}   ·   Speed ${speed}`, 36, 168, 568, "", 40, "#ececea");
-    const hint = this.source === "hands"
-      ? "Hold left pinch = move · Right pinch = gripper"
-      : this.noController
-        ? "Pick up the controllers · Leave: palm up + pinch"
-        : "Hold grip = move · Trigger = gripper · A/X = stop";
+    const hint = oneToOne && !this.noController
+      ? this.source === "hands"
+        ? "1:1 · Right wrist in the ball + left pinch = move"
+        : "1:1 · Hand in the ball + hold grip = move · A/X = stop"
+      : this.source === "hands"
+        ? "Hold left pinch = move · Right pinch = gripper"
+        : this.noController
+          ? "Pick up the controllers · Leave: palm up + pinch"
+          : "Hold grip = move · Trigger = gripper · A/X = stop";
     fitText(g, hint, 36, 246, 568, "", 32, "#9a9a94");
     this.texture.needsUpdate = true;
   }
