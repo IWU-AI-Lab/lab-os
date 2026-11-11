@@ -45,7 +45,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   - The arms plug into the brain by USB, so with the brain in the lab the arms stay there too: the demo shows a lab arm driven from far away (it needs a camera so people see it move), or a laptop brain comes along for the arm.
   - Delay: everything goes over the phone's internet (usually ~30–100 ms more, more when Tailscale has to relay). Fine for the hub and chat; teleop will feel it.
   - Phone data: cameras and video use a lot of it.
-  - Rules: it's a tunnel out of the campus network, so **ask the professor / IT first** (like the router). A lab Tailscale account, not a personal one (the free plan: 3 users, 100 devices).
+  - Rules: it's a tunnel out of the campus network, so **ask the professor / IT first** (like the router). Which account (the builder's or a lab one): to settle; the free plan's user and device limits may matter.
+- **Tried (the builder, before 2026-11-11):** Tailscale already runs on the other Ubuntu desktop, some of the Windows desktops and the builder's laptop, so it works on the campus network.
 - **Plugs into:** places and venues (a venue whose brain is far away), the travel router.
 
 ## Recent ideas (2026-11-10)
@@ -220,10 +221,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Voice beyond push-to-talk
 - **In the focus:** push-to-talk voice is `current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
-- **What stays here:** a **local wake word** (ours, on the brain, so the room isn't streamed to the cloud all day; one per persona via its `wake_word` field); a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
-- **How phones and speakers do it (2026-11-11):** the microphone is always on, but a tiny model on the device listens only for the wake phrase and throws everything else away; nothing leaves the device until it hears it (Siri: a low-power chip in the iPhone, then a second check, then Apple's servers; Alexa and Google speakers the same). The same works here: **openWakeWord** (free, open source, runs on the brain's CPU; ships a ready-made **"hey jarvis"** model) or Picovoice Porcupine (custom words; free for personal use). Only after the phrase does audio go to the voice service.
-- **Ways around an always-on microphone:** listen only while the hub is awake (not after the reset or at night); listen only when someone stands in front (a camera or distance sensor sees a person, then the wake word turns on); a visible "listening for 'Hey Jarvis'" sign and a mute button; off by default on `public: true` venues; or no wake word at all: a tap, a big USB button, or an IR remote (like the builder's Raspbot voice project).
-- **Watch out:** fan noise means misses and false wake-ups: a microphone close to where people stand (a speakerphone at the screen) matters more than the model. In a browser, an always-listening page needs the microphone permission kept (a kiosk with the secure flag); a microphone plugged into the brain itself avoids the browser.
+- **What stays here:** (the wake word moved into step 7, decision 2026-11-11) a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
+- **Other triggers later:** a big USB button, or an IR remote (like the builder's Raspbot voice project).
 - **Plugs into:** triggers slot, conversation manager, model router.
 
 ### Google Glass (Explorer Edition) as a display + camera
