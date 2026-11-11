@@ -45,7 +45,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   - The arms plug into the brain by USB, so with the brain in the lab the arms stay there too: the demo shows a lab arm driven from far away (it needs a camera so people see it move), or a laptop brain comes along for the arm.
   - Delay: everything goes over the phone's internet (usually ~30–100 ms more, more when Tailscale has to relay). Fine for the hub and chat; teleop will feel it.
   - Phone data: cameras and video use a lot of it.
-  - Rules: it's a tunnel out of the campus network, so **ask the professor / IT first** (like the router). Which account (the builder's or a lab one): to settle; the free plan's user and device limits may matter.
+  - Rules: it's a tunnel out of the campus network, so **ask the professor / IT first** (like the router). Account: the builder's own for now; a separate lab-admin account can be made (the builder). The free plan's user and device limits may matter.
 - **Tried (the builder, before 2026-11-11):** Tailscale already runs on the other Ubuntu desktop, some of the Windows desktops and the builder's laptop, so it works on the campus network.
 - **Plugs into:** places and venues (a venue whose brain is far away), the travel router.
 
@@ -233,6 +233,12 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Status (2026-10-27):** it boots; built-in voice commands (e.g. take a picture) work. No use picked yet ("I just want to use it for something").
 - **Candidate uses (pick one later):** (1) teleop status HUD (FOLLOWING / FROZEN / gripper %) while driving the arm with a phone or leader arm; (2) "what am I looking at?": a photo from the Glass → JARVIS answers on its display; (3) alerts from the troubleshooting suite.
 - **Next check (cheap, when curious):** which firmware is it on, and can a computer install apps on it over USB?
+
+### The phone as a microphone for the hub (2026-11-11)
+- **What:** open a small page on your phone, hold to talk (or dictate), and your words go to the brain; the answer plays on the phone, or on a screen you pick (e.g. ask on the phone, the Newline answers).
+- **Why:** talk to the hub from anywhere without a room microphone; works in noisy places because the microphone is in your hand.
+- **Watch out:** the phone's page must be secure for the microphone: Android Chrome's flag works; an iPhone needs a real `https://` address (the deferred domain, or Tailscale's certificate on a phone running Tailscale).
+- **Plugs into:** voice (step 7, the same per-screen recording), "Teleop from a phone" below, screens.
 
 ### Teleop from a phone
 - **What:** a phone as a teleop input. Either (a) a touch page with sliders/joystick + STOP, or (b) the phone itself as a 3D "controller" (Android Chrome supports WebXR AR, which tracks the phone's position and tilt in space; iPhones' browser doesn't).
