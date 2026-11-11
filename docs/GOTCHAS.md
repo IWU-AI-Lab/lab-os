@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-10 — `/teleop` on the Pi: no Full screen button
+**What:** on `pi01`'s Chromium the hub went full screen, but the `/teleop` page opened on its own didn't, and it showed no Full screen button. The module pages only draw that button when the browser says full screen is available (`document.fullscreenEnabled` in `web/design/kit.js`), so the Pi's Chromium most likely said no there (not checked).
+**Fix:** open. Meanwhile F11 on the Pi. To check: `document.fullscreenEnabled` in the Pi's Chromium console on `/teleop` vs `/design`. The planned full-screen button (focus, "How it fits together") should say why when full screen isn't available instead of just hiding.
+
 ### 2026-11-10 — raspbot1 Wi-Fi: IWU-AI-LAB refuses it (open), its "Raspbot" hotspot works again
 **What:** raspbot1 (a Raspberry Pi 5, hostname `yahboom`, kernel 6.6.31, Wi-Fi firmware 7.45.234 from 2021, NetworkManager 1.42.4) can't join IWU-AI-LAB, and for a while its own hotspot refused phones too. Found on the way:
 - IWU-AI-LAB is "Enhanced Open" (OWE). The Pi's Wi-Fi driver (brcmfmac) can't do OWE, so a profile saved as OWE never connects.
