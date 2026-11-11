@@ -44,6 +44,6 @@ An accidental reset, a closed page or the brain restarting (even a power cut) do
 - Only one conversation is kept aside (the latest one). A list of past conversations is an idea for later (`docs/ideas.md`).
 
 ## Privacy and the public screen
-Anyone at the screen can type. The conversation clears from the screen when the hub goes back to the start screen (after ~3 minutes with nobody there), but **Bring back** can show it again for `chat_keep_minutes`. On a hallway screen with visitors, consider a short time (e.g. `chat_keep_minutes: 5`). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.
+Anyone at the screen can type. The conversation clears from the screen when the hub goes back to the start screen (after 30 minutes with nobody there, `hub.reset_after_s`), but **Bring back** can show it again for `chat_keep_minutes`. On a hallway screen with visitors, consider a short time (e.g. `chat_keep_minutes: 5`). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.
 
 Endpoints and the streamed message format: `docs/protocol.md` → "Chat".

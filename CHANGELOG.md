@@ -3,6 +3,10 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-10
+- **Teleop:** the SO-101 stays 1 cm above the table and all joints arrive together; a speed slider + the right thumbstick (capped by the venue); **bare-hand tracking** (right wrist drives, left pinch = clutch, right pinch = gripper); the 3D arm can be moved onto the real one (left grip); `lab-os serve --record`.
+- **Training launcher:** `lab-os green` (a desktop icon, the hub's Training page `/training`, `/api/green`) starts LeLab for so101-green after a port check; lab-os still opens no green port (`docs/green-launcher.md`). `lab-os serve --drive-from <host>` lets another computer drive a real arm.
+- **The hub in VR** (`/xr`): the hyperspace jump around you, then the network and the core (watch-only, first version).
+- Hub fixes: "AI not connected" instead of "No answer" for a standing problem; the hyperspace drops stars on slow screens; Esc = Back regains full screen on the next tap where there's no Keyboard Lock; back to the start screen after 30 minutes (was 3), dim after 15.
 - Module pages in the hub's design: **teleop** and **monitor** redesigned (3D left, controls right, status and STOP in the bar; old pages at `/classic/teleop`, `/classic/monitor`); **AI Control** (`/ai`) replaces the concept's Arm view: the arm from its side with real geometry, every robot-tool call live, STOP. Shared look in `src/lab_os/web/design/` (`kit.css`, `kit.js`, `icons.svg`).
 - **Settings page** (the hub's ⚙, `/settings`): settings listed in `src/lab_os/settings.py` (sections; modules can add theirs), written into the YAML files with comments kept (ruamel.yaml), only from the brain's computer; "This screen" (level of detail, sound, full screen) per browser. `/api/settings`. The hub re-applies a change at once; the title follows `place.yaml` without a restart.
 - Designed hub: ⏻ in the strip (back to the start screen), answers type themselves out (~125 characters/s), "Bring back" moved into the ask line and History, **Show on another screen** for module pages (monitors on the brain's computer, Window Management API).

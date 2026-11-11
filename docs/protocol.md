@@ -181,7 +181,7 @@ Polled every 3 s by the hub.
 ### `/api/project`
 The Current Project panel, from the Steps list in `docs/current-focus.md`.
 ```json
-{"available": true, "focus": "The JARVIS hub + AI driving a robot arm", "step": 1, "of": 9,
+{"available": true, "focus": "The JARVIS hub + AI driving a robot arm", "step": 1, "of": 10,
  "next": "Plain hub", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
 ```
 `step` is the first step that isn't done (`next` its title, `null` when all are done). `{"available": false}` when the file is missing or has no steps.
@@ -212,6 +212,9 @@ The robot tools' calls this brain run (the last 50 after `T`, epoch seconds), fo
 ```
 `outcome`: `ok`, `clipped`, `refused` (then `result` is the sentence why), `stopped`, `error`. `mcp`: null when the AI tools are off (`--mcp-port 0`, or their port was taken).
 
+### `/api/green`, `/api/green/start`
+The training launcher (`docs/green-launcher.md`). `GET /api/green` → `{"ok": false, "lines": [{"ok": true, "text": "nothing else on a serial port (the white arm is unplugged)"}, …], "running": false, "url": "http://127.0.0.1:8000", "here": true}`: the port check (names in `/dev/serial/by-id/` and LeLab's saved settings only; nothing is opened), `running` = LeLab already answers, `here` = this page is on the brain's computer. `POST /api/green/start` checks again and, if every line is fine, opens a terminal on the brain's computer that starts LeLab: the same answer plus `"started": true | false`. Only from the brain's computer (`403` otherwise).
+
 ### `/api/settings`
 `GET`: `{"sections": [{"id", "title", "help", "fields": [{"key": "theme:hub.look", "file", "label", "kind", "help", "choices", "min", "max", "step", "unit", "applies", "value"}]}], "writable": true, "why_not": null, "venue": "lab"}` (from `src/lab_os/settings.py`). `POST {"key": "theme:hub.look", "value": "design"}` changes one value in its file (comments kept): `{"ok": true, "key", "value", "applies": "reload" | "next" | "restart"}`, or `400 {"ok": false, "message": "<why>"}`. Only from the brain's computer: `403` otherwise, and `writable: false`.
 
@@ -229,7 +232,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
 {"title": "AI Comp Lab",
  "modules": [{"id": "teleop", "title": "Teleop", "page": "/teleop"},
              {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
- "reset_after_s": 180}
+ "reset_after_s": 1800}
 ```
 `title`: the place's name (`name` in `place.yaml`, `docs/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
 

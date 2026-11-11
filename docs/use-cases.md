@@ -73,7 +73,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 1. Uses the kiosk recipe: their web page full screen, no browser bars, starts at boot.
 2. Later, from the hub: "show the poster on the Newline".
 
-**Needs:** kiosk screen recipe, screen-to-screen sending (idea).
+**Needs:** kiosk screen recipe, screen-to-screen sending (focus step 8 for modules; other content: idea).
 
 ---
 

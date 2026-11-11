@@ -1,5 +1,5 @@
 // 3D arm models, independent of any page: build one, add `model.object` to any three.js scene
-// (the desktop view today, the Quest "ghost arm" later), and call `model.setJoints({...degrees})`.
+// (the desktop views and the Quest's ghost arm), and call `model.setJoints({...degrees})`.
 //
 //   loadArmModel("so101", { style: "mesh" | "stick" })   real SO-101 URDF (models/so101/)
 //   loadArmModel("xarm1s", { style: "boxes" | "stick" }) xArm 1S from simple boxes/cylinders

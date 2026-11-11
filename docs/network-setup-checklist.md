@@ -24,7 +24,7 @@ ping -c 4 <first desktop's address>
 
 ## Networks before the router (2026-11-09)
 lab-os needs the screens to reach the brain (the hub on the Newline, modules on other screens). **New devices can't join the lab Wi-Fi without campus IT, and that's slow** (the Raspbots have waited two weeks), so nothing here adds a device to it. Options, best first:
-1. **Test the lab Wi-Fi with what's already on it.** The desktops and the Pis are on it. Do the Step 0 test above between the desktop and a Pi. Replies → no client isolation: Pi screens can open the brain's address directly, and option 2 works. No replies → skip to 3.
+1. **Test the lab Wi-Fi with what's already on it.** The desktops and the Pis are on it. Do the Step 0 test above between the desktop and a Pi. Replies → no client isolation: Pi screens can open the brain's address directly, and option 2 works. No replies → skip to 3. **Replied (2026-11-10)** between `pi01` and the lab desktop, both ways.
 2. **The Newline through a Pi** (your idea): Newline → Ethernet cable → a Pi that's already on the lab Wi-Fi. Set the Pi's wired connection to "Shared to other computers"; it gives the Newline an address and passes on internet and the way to the brain. Only works if test 1 replied. (If the Newline is already on a university network itself, try opening the brain's address from it first.)
    **Works (2026-11-10)** with `pi01` (`pi01.iwu.ai.lab`, user `ai-comp-lab-rp-01`, Debian 13 / NetworkManager; the lab desktop's SSH key is on it). On the Pi, once:
    ```bash
@@ -133,11 +133,11 @@ From here on, Claude Code (on the desktop) can reach every device by name.
 ---
 
 ## Step 7 — The brain's secure address (for voice on every screen)
-Details: `current-focus.md` → "Step 7, concretely".
+**Deferred (decision 2026-11-10):** voice is built first on `localhost` and with Chrome's flag; this section is for later. Details: `current-focus.md` → "Step 7, concretely".
 - **Fixed address for the brain:** a DHCP reservation in the lab router, so `hub.indwesailab.com` keeps pointing to the right computer. (Before the router: the desktop's university address may change; check it before relying on the name.)
 - **Local DNS entry in the router:** `hub.indwesailab.com` → the brain's address, so the name works without internet. On the GL.iNet (OpenWrt) this is a custom DNS / hosts entry.
 - **DNS rebinding protection:** routers and some networks block public names that point to private addresses (like `192.168.x.x`). If the name doesn't resolve on the lab network, allow the domain in the router's rebind protection, or rely on the local DNS entry.
-- **Can the screens reach the brain?** University networks often block devices from talking to each other. Before the router: open the brain's address from the Newline once to check.
+- **Can the screens reach the brain?** University networks often block devices from talking to each other. Before the router it works on the lab Wi-Fi between `pi01` and the desktop, and from the Newline through `pi01` (2026-11-10, "Networks before the router" → options 1–2).
 
 ## Gotchas found so far
 - Wi-Fi MAC ≠ Ethernet MAC.

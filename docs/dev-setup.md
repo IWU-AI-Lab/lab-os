@@ -65,7 +65,7 @@ In the project's `.claude/settings.json` (permission rules):
 - **One folder per Claude session**, so sessions can't switch branches under each other (git worktrees: separate folders, same repo):
   - `~/lab-os` — coding sessions (the task branch).
   - `~/lab-os-design` — design sessions, branch `design` (`docs/design/`, `config/theme.yaml`).
-  - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR now and then (after the current task branch merges, since it was started from `xarm-driver`).
+  - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR after each planning topic.
 - Long-lived branches (`planning`, `design`): GitHub's auto-delete removes them after each merge. Recreate from the planning folder: `git fetch && git merge --ff-only origin/main && git push -u origin planning`.
 - Create another folder when needed: `git worktree add ../lab-os-<name> -b <branch>`; list them: `git worktree list`.
 - **Parallel coding sessions (2026-11-09):** one folder + branch per step (run `uv sync` in each new folder). Only run steps in parallel that don't share files (e.g. typed chat vs. MCP read tools vs. cameras; not chat vs. screens, which both change the hub page). Each session only edits its own step's lines in `docs/current-focus.md`, and merges `main` into its branch and runs the full tests before its PR. Remove a folder when its branch is merged: `git worktree remove ../lab-os-<name>`.
@@ -96,7 +96,7 @@ Build at home against fakes → test in the lab on real hardware → note surpri
 
 ## Standards (to define on the ground)
 To be decided once we've seen what the robot computers look like inside (via the device census):
-- **Device names** (so far: `so101-green` (not ours), `so101-white`, `so101-white-leader`, `xarm1`, `xarm2`; starter: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted)
+- **Device names** (so far: `so101-green` (the training project's), `so101-white`, `so101-white-leader`, `xarm1`, `xarm2`; starter: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted)
 - **User accounts** on robots
 - **Where things live** on each robot (one project folder)
 - **File and folder names** in the repo
