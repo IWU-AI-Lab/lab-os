@@ -287,7 +287,11 @@ async def test_speed_control_stays_within_the_venue_cap(aiohttp_client):
 
 
 async def test_the_teleop_page_switches_relative_and_one_to_one(aiohttp_client):
+    from lab_os.kinematics import so101_kinematics
+
     app, loop = make_app()
+    loop.mapper.kinematics = so101_kinematics()
+    loop.one_to_one_deg_per_s = 180.0  # the lab venue's
     client = await aiohttp_client(app)
     ws = await client.ws_connect("/ws")
     await ws.send_json({"type": "set_mode", "mode": "one_to_one"})

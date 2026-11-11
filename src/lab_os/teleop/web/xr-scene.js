@@ -240,6 +240,7 @@ class StatusPanel {
     const state = this.noController ? [this.source === "hands" ? "NO RIGHT HAND" : "NO CONTROLLER", "#e0662e"]
       : !s ? ["CONNECTING…", "#8a8a84"]
       : feed.frozen ? [s.needs_release ? `FROZEN · release ${this.source === "hands" ? "the pinch" : "grip"}` : "FROZEN", "#e0662e"]
+      : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 · SERVOS WARM, SLOWED", "#e0a52e"]
       : s.clutch ? [s.one_to_one ? "FOLLOWING 1:1" : "FOLLOWING", "#2fbf71"]
       : s.mode === "one_to_one" && s.hand_gap_cm != null && s.hand_gap_cm > s.capture_cm
         ? [`REACH THE GRIPPER · ${Math.round(s.hand_gap_cm)} cm`, "#b8b8b2"]
@@ -249,7 +250,8 @@ class StatusPanel {
       const [lo, hi] = s.limits.gripper;
       gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
     }
-    const speed = s ? `${Math.round(s.speed_scale * 100)}%` : "—";
+    const top = s?.one_to_one_deg_per_s == null ? "max" : `${s.one_to_one_deg_per_s}°/s`;
+    const speed = !s ? "—" : s.mode === "one_to_one" ? `1:1 up to ${top}` : `${Math.round(s.speed_scale * 100)}%`;
     const oneToOne = s?.mode === "one_to_one";
     const key = `${state[0]}|${gripper}|${speed}|${this.noController}|${this.source}|${oneToOne}`;
     if (key === this.key) return;

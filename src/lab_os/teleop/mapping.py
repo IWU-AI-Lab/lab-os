@@ -167,9 +167,12 @@ class ClutchMapper:
         speed_scale: float,
         limits: dict[str, JointLimit] | None = None,
         arm_frame: bool = False,
+        one_to_one_deg_per_s: float | None = None,
     ) -> dict[str, float] | None:
         """Return joint targets for this tick, or None when the arm should hold still.
-        `arm_frame`: the controller's position is measured from the arm's base (1:1 possible)."""
+        `arm_frame`: the controller's position is measured from the arm's base (1:1 possible).
+        `one_to_one_deg_per_s`: a 1:1 grab's top joint speed (the venue's; inf = no cap) instead
+        of `max_deg_per_s` × speed_scale, so the arm keeps up with the hand."""
         cfg = self.config
         if controller is None or not controller.tracked:
             self.engaged = False  # tracking lost = clutch released
@@ -223,7 +226,11 @@ class ClutchMapper:
             if clamped != target and joint in RELATIVE_JOINTS:
                 self._anchor_joints[joint] += clamped - target  # slip: hand moves, arm stays
             desired[joint] = clamped
-        max_step = cfg.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt
+        if self.absolute and one_to_one_deg_per_s is not None:
+            fast = one_to_one_deg_per_s
+            max_step = math.inf if math.isinf(fast) else fast * dt
+        else:
+            max_step = cfg.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt
         deltas = {j: t - self._commanded.get(j, t) for j, t in desired.items()}
         arm = [abs(d) for j, d in deltas.items() if j != "gripper"]
         k = min(1.0, max_step / max(arm)) if arm and max(arm) > 0 else 1.0

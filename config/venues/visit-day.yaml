@@ -4,6 +4,7 @@ active_devices: [so101-white]
 motion_allowed: true
 persona: default   # who the assistant is here: a persona's id (config/personas/), or `default` = the place's (place.yaml)
 max_speed_scale: 0.3   # slower with visitors at the controls
+one_to_one_max_deg_per_s: off   # teleop 1:1 (fast, follows the hand exactly) not with visitors
 ai_tools:              # what an AI tool may do per call (docs/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call

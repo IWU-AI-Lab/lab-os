@@ -34,6 +34,12 @@ class FakeBus:
         self.torque = False
         self.writes = []  # (register, values), in order
         self.fail_reads = 0
+        names = list(positions)
+        self.health = {
+            "Present_Temperature": dict.fromkeys(names, 34),
+            "Present_Load": dict.fromkeys(names, 125),  # 12.5 %
+            "Present_Voltage": dict.fromkeys(names, 121),  # 12.1 V
+        }
 
     def connect(self):
         self.connected = True
@@ -42,7 +48,10 @@ class FakeBus:
     def is_calibrated(self):
         return self.calibrated
 
-    def sync_read(self, register, num_retry=0):
+    def sync_read(self, register, num_retry=0, normalize=True):
+        if register in self.health:  # raw servo units, like LeRobot with normalize=False
+            assert normalize is False
+            return dict(self.health[register])
         assert register == "Present_Position"
         if self.fail_reads:
             self.fail_reads -= 1
@@ -128,6 +137,27 @@ def test_moves_are_speed_capped_and_limited(no_port_check, clock):
     clock[0] += 0.05
     arm.move_joints({"gripper": 500.0}, speed_scale=100.0)  # speed_scale is capped at 1
     assert robot.bus.writes[-1][1] == {"gripper": pytest.approx(35.0)}
+
+
+def test_one_to_one_uses_its_own_speed_not_the_speed_scale(no_port_check, clock):
+    robot = FakeRobot(START)
+    arm = arm_with(robot, allow_motion=True, max_deg_per_s=100.0)
+    arm.connect()
+    clock[0] += 0.05
+    arm.move_joints({"shoulder_pan": 60.0}, speed_scale=0.05, deg_per_s=180.0)  # 180 × 50 ms = 9°
+    assert robot.bus.writes[-1][1] == {"shoulder_pan": pytest.approx(14.0)}
+    clock[0] += 0.0  # the same instant: no cap at all must not turn into 0 × inf
+    arm.move_joints({"shoulder_pan": 60.0}, speed_scale=0.05, deg_per_s=float("inf"))
+    assert robot.bus.writes[-1][1] == {"shoulder_pan": pytest.approx(60.0)}  # straight there
+
+
+def test_servo_health(no_port_check):
+    robot = FakeRobot(START)
+    arm = arm_with(robot, allow_motion=True)
+    arm.connect()
+    h = arm.read_health()
+    assert h["elbow_flex"] == {"temp_c": 34.0, "load_pct": 12.5, "volts": 12.1}
+    assert set(h) == set(START)
 
 
 def test_joint_outside_its_limits_never_jumps(no_port_check, clock):

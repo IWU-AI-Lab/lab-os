@@ -19,6 +19,26 @@ class Venue:
     ai_tools: dict = field(default_factory=dict)  # limits for the AI tools (lab_os.tools.robot)
     public: bool = False  # a public screen: the hub hides internal details (AI spend, later IPs)
     persona: str | None = None  # this venue's persona; None (`default` or left out) = the place's
+    # teleop's 1:1 mode: the fastest a joint may turn (°/s). 0 = no 1:1 here; inf = no software cap
+    # (the servos' own top speed). `one_to_one_max_deg_per_s` in the venue file.
+    one_to_one_deg_per_s: float = 0.0
+
+
+def one_to_one_speed(value) -> float:
+    """`one_to_one_max_deg_per_s`: a number (°/s), `off` (or left out, 0) or `none` (no cap)."""
+    if value is None or value is False:
+        return 0.0
+    text = str(value).strip().lower()
+    if text in ("", "off", "0"):
+        return 0.0
+    if text == "none":
+        return float("inf")
+    speed = float(text)
+    if speed < 0:
+        raise config.ConfigError(
+            f"one_to_one_max_deg_per_s must be ≥ 0, off or none, not {value!r}"
+        )
+    return speed
 
 
 def _persona(value) -> str | None:
@@ -66,4 +86,5 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         ai_tools=dict(raw.get("ai_tools") or {}),
         public=bool(raw.get("public", False)),
         persona=_persona(raw.get("persona")),
+        one_to_one_deg_per_s=one_to_one_speed(raw.get("one_to_one_max_deg_per_s")),
     )

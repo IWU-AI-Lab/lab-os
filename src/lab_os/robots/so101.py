@@ -155,7 +155,9 @@ class SO101Arm:
                     raise
         return dict(self._last)
 
-    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
+    def move_joints(
+        self, targets: dict[str, float], speed_scale: float, deg_per_s: float | None = None
+    ) -> None:
         robot = self._require_connected()
         if not self.allow_motion:
             raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
@@ -166,7 +168,11 @@ class SO101Arm:
             raise KeyError(f"unknown joints: {sorted(unknown)}")
         now = time.monotonic()
         dt = min(now - self._last_write_t, 0.1)
-        step = self.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt
+        # 1:1 mode passes its own cap; inf = none: the goal goes straight to the servos
+        speed = (
+            self.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) if deg_per_s is None else deg_per_s
+        )
+        step = math.inf if math.isinf(speed) else speed * dt
         goal = {}
         for joint, value in targets.items():
             here = self._commanded.get(joint, self._last.get(joint, value))
@@ -180,6 +186,22 @@ class SO101Arm:
 
     def commanded_joints(self) -> dict[str, float]:
         return dict(self._commanded or self._last)
+
+    def read_health(self) -> dict[str, dict[str, float]]:
+        """Per servo: temperature (°C), load (% of max, signed), supply voltage. Three short bus
+        reads (a few ms); the teleop loop asks every few seconds, to see what 1:1 does to them."""
+        bus = self._require_connected().bus
+        temp = bus.sync_read("Present_Temperature", normalize=False, num_retry=1)
+        load = bus.sync_read("Present_Load", normalize=False, num_retry=1)
+        volts = bus.sync_read("Present_Voltage", normalize=False, num_retry=1)
+        return {
+            j: {
+                "temp_c": float(temp[j]),
+                "load_pct": float(load.get(j, 0)) / 10,  # 0.1 % units
+                "volts": float(volts.get(j, 0)) / 10,  # 0.1 V units
+            }
+            for j in temp
+        }
 
     def stop(self) -> None:
         """Freeze: hold where the motors are now (torque stays on)."""

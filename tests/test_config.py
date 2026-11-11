@@ -207,3 +207,17 @@ async def test_the_hub_title_is_the_place_name(aiohttp_client, home):
     assert (await (await client.get("/api/hub")).json())["title"] == "My lab"
     js = (SRC / "hub" / "web" / "hub.js").read_text()
     assert re.search(r"cfg\?\.title", js) and "hubCfg.title" not in js
+
+
+def test_one_to_one_speed_per_venue():
+    from lab_os import REPO_ROOT
+    from lab_os.venues import one_to_one_speed
+
+    assert one_to_one_speed(180) == 180.0
+    assert one_to_one_speed("240") == 240.0
+    assert one_to_one_speed(None) == one_to_one_speed("off") == one_to_one_speed(0) == 0.0
+    assert one_to_one_speed("none") == float("inf")
+    with pytest.raises(config.ConfigError):
+        one_to_one_speed(-5)
+    assert load_venue("lab", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0
+    assert load_venue("visit-day", REPO_ROOT / "config").one_to_one_deg_per_s == 0.0

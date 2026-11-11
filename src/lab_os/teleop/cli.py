@@ -7,11 +7,12 @@ import logging
 import shutil
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import config
+from lab_os import REPO_ROOT, config
 from lab_os.devices import load_registry
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
@@ -24,6 +25,8 @@ from lab_os.teleop.server import create_app
 from lab_os.venues import load_venue
 
 PRINT_HZ = 10
+
+HEALTH_DIR = REPO_ROOT / "logs" / "servo-health"  # what 1:1 does to the servos (not in git)
 
 
 def _fmt_hand(c) -> str:
@@ -152,6 +155,11 @@ def make_loop(args) -> TeleopLoop:
         mapper=ClutchMapper(kinematics=kin),
         speed_scale=speed,
         max_speed_scale=venue.max_speed_scale,
+        one_to_one_deg_per_s=venue.one_to_one_deg_per_s,
+        # real servos: temperature, load and voltage every 5 s, one file per run (not in git)
+        health_log=HEALTH_DIR / f"{datetime.now():%Y-%m-%d_%H%M%S}_{arm.name}.jsonl"
+        if hasattr(arm, "read_health")
+        else None,
         on_tick=None if args.quiet else _make_printer(),
     )
 

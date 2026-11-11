@@ -10,10 +10,14 @@ checks `motion_active`); STOP, like every freeze, ends it.
 """
 
 import asyncio
+import json
 import logging
+import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 
 from lab_os.robots.base import Arm
 from lab_os.teleop.jog import JogMapper
@@ -21,6 +25,11 @@ from lab_os.teleop.mapping import MODES, ClutchMapper
 from lab_os.teleop.messages import JointFrame, XRFrame
 
 log = logging.getLogger(__name__)
+
+# A servo this warm (°C) slows teleop's 1:1 mode down to relative speed. The STS3215 protects
+# itself at its Max_Temperature_Limit (70 °C by default); this keeps well below it. A guess, not
+# measured: the logs (logs/servo-health/) will tell what 1:1 really does.
+HOT_C = 60.0
 
 
 @dataclass
@@ -78,6 +87,15 @@ class TeleopLoop:
     last_command: dict | None = None
     input_kind: str | None = None  # "pose" / "joints": which mapper the latest input used
     motion: Motion | None = None  # the AI tools' move in progress, if any
+    # teleop's 1:1 mode: the venue's top joint speed (°/s; 0 = no 1:1 here, inf = no cap). Not
+    # scaled by speed_scale: 1:1 is about keeping up with the hand.
+    one_to_one_deg_per_s: float = 0.0
+    # Servo health (drivers with read_health: temperature, load, voltage), read every few seconds
+    # and logged, to see what 1:1 does to the motors. Hot servos slow 1:1 down to relative speed.
+    health: dict | None = None
+    health_every_s: float = 5.0
+    health_log: Path | None = None
+    _health_t: float = 0.0
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -119,10 +137,49 @@ class TeleopLoop:
         grip again (released first) to move in the new mode. Returns what was set."""
         if mode not in MODES:
             raise ValueError(f"mode: expected one of {MODES}, got {mode!r}")
+        if mode == "one_to_one" and mode not in self.modes():
+            raise ValueError("1:1 isn't available here (the venue has it off, or no kinematics)")
         if mode != self.mapper.config.mode:
             self.mapper.config.mode = mode
             self.mapper.reset(require_release=True)
         return mode
+
+    def modes(self) -> list[str]:
+        ok = self.mapper.kinematics is not None and self.one_to_one_deg_per_s > 0
+        return list(MODES) if ok else ["relative"]
+
+    @property
+    def servos_hot(self) -> bool:
+        return bool(self.health) and max(h["temp_c"] for h in self.health.values()) >= HOT_C
+
+    def one_to_one_cap(self) -> float:
+        """The top joint speed for a 1:1 grab now: the venue's, or relative speed when hot."""
+        if self.servos_hot:
+            return min(self.one_to_one_deg_per_s, self.mapper.config.max_deg_per_s)
+        return self.one_to_one_deg_per_s
+
+    def check_health(self, now: float) -> None:
+        """Every health_every_s: read the servos (if the driver can) and log it."""
+        read = getattr(self.arm, "read_health", None)
+        if read is None or now - self._health_t < self.health_every_s:
+            return
+        self._health_t = now
+        try:
+            self.health = read()
+        except Exception as e:  # a dropped packet: keep the last reading
+            log.warning("servo health read failed: %s", e)
+            return
+        if self.health_log:
+            entry = {
+                "time": datetime.now().isoformat(timespec="seconds"),
+                "mode": self.mapper.config.mode,
+                "following_1to1": self.mapper.absolute and self.mapper.engaged,
+                "speed_scale": self.speed_scale,
+                "servos": self.health,
+            }
+            self.health_log.parent.mkdir(parents=True, exist_ok=True)
+            with self.health_log.open("a") as f:
+                f.write(json.dumps(entry) + "\n")
 
     def stop(self) -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
@@ -199,6 +256,9 @@ class TeleopLoop:
                 self.speed_scale,
                 self.arm.limits,
                 arm_frame=frame.arm_frame,
+                one_to_one_deg_per_s=self.one_to_one_cap()
+                if "one_to_one" in self.modes()
+                else None,
             )
         if targets is None:
             return
@@ -206,7 +266,10 @@ class TeleopLoop:
             self.arm.resume()
             self.frozen = False
             self._emit({"type": "arm_resume"})
-        self.arm.move_joints(targets, self.speed_scale)
+        if self.mapper.absolute and self.mapper.engaged and kind == "pose":
+            self.arm.move_joints(targets, self.speed_scale, deg_per_s=self.one_to_one_cap())
+        else:
+            self.arm.move_joints(targets, self.speed_scale)
         self._emit(
             {
                 "type": "arm_command",
@@ -234,7 +297,17 @@ class TeleopLoop:
             # hand → arm: "relative" or "one_to_one"; 1:1 only with kinematics (and a Quest page
             # that says where the arm is); while 1:1 waits for a grab: how far the hand is
             "mode": self.mapper.config.mode,
-            "modes": list(MODES) if self.mapper.kinematics else ["relative"],
+            "modes": self.modes(),
+            "one_to_one_deg_per_s": None
+            if math.isinf(self.one_to_one_deg_per_s)
+            else self.one_to_one_deg_per_s,
+            "servos": None
+            if not self.health
+            else {
+                "max_temp_c": max(h["temp_c"] for h in self.health.values()),
+                "hot": self.servos_hot,
+                "joints": self.health,
+            },
             "one_to_one": self.mapper.absolute and self.mapper.engaged,
             "hand_gap_cm": None
             if self.mapper.hand_gap_m is None
@@ -260,6 +333,10 @@ class TeleopLoop:
                 log.exception("teleop step failed; arm frozen")
                 self._freeze()
             last = now
+            try:
+                self.check_health(now)
+            except Exception:  # never let a health reading stop the arm loop
+                log.exception("servo health check failed")
             if self.on_tick:
                 try:
                     self.on_tick(self)
