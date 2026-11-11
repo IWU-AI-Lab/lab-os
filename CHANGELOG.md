@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-11
+- `FEATURES.md`: a list of the features built so far, with their status, plus lab projects not connected to lab-os (xArm + Bluetooth glove, Raspbot voice control, the xArm camera demos).
+
 ## 2026-11-10
 - **Teleop:** the SO-101 stays 1 cm above the table and all joints arrive together; a speed slider + the right thumbstick (capped by the venue); **bare-hand tracking** (right wrist drives, left pinch = clutch, right pinch = gripper); the 3D arm can be moved onto the real one (left grip); `lab-os serve --record`.
 - **Training launcher:** `lab-os green` (a desktop icon, the hub's Training page `/training`, `/api/green`) starts LeLab for so101-green after a port check; lab-os still opens no green port (`docs/green-launcher.md`). `lab-os serve --drive-from <host>` lets another computer drive a real arm.

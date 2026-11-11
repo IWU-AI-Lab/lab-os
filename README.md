@@ -1,6 +1,6 @@
 # lab-os
 
-**Lab JARVIS** for the IWU AI lab: one portable "brain" that connects the lab's robots so AI agents (and people) can see and control them. Working today: the Quest 3 teleop demo (a robot arm follows your controller or bare hand), the hub (a full-screen start page with a typed AI chat that knows the project), and AI tools such as Claude Code driving the `so101-white` arm through the brain, with a person approving every move. What's being worked on: `docs/current-focus.md`.
+**Lab JARVIS** for the IWU AI lab: one portable "brain" that connects the lab's robots so AI agents (and people) can see and control them. Working today: the Quest 3 teleop demo (a robot arm follows your controller or bare hand), the hub (a full-screen start page with a typed AI chat that knows the project), and AI tools such as Claude Code driving the `so101-white` arm through the brain, with a person approving every move. What's being worked on: `docs/current-focus.md`. **Everything that works today, plus lab projects not connected yet: [`FEATURES.md`](FEATURES.md).**
 
 *(Photo / GIF of the demo goes here once it works.)*
 
@@ -36,6 +36,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/hub.md`). Wi
 | `SAFETY.md` | Stop procedures and limits. Read before any motion |
 
 ## Docs
+- `FEATURES.md`: what lab-os can do today (and lab projects not connected to it yet)
 - `docs/current-focus.md`: what's being worked on now
 - `docs/hub.md`: running the hub, the two taps, other screens, the performance test
 - `docs/quest-setup.md`: teleop at home (emulator, replay) and on the real Quest
