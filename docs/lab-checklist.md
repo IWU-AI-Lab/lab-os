@@ -39,6 +39,7 @@ Find the desktop's address: `hostname -I` (the first one). With the brain from p
 - [ ] Touch: the panels' details pages, the commit range buttons, the devices list.
 - [ ] Leave it alone for 30 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 15 minutes). To check it quickly, set a shorter reset in ⚙ → The hub, then set it back.
 - [ ] **`/perf`** full screen for a minute: note the average frames per second (then again with `/perf?res=1` and `/perf?res=0.5`: fewer pixels drawn, scaled up by the screen; `docs/hub.md` → "Performance test"). Once the drawing resolution per screen exists, try it on `/design` too.
+- [ ] **Desktop on the Newline's HDMI** (tried 2026-11-10: as laggy as the Mac): run `/perf` on the desktop's own monitor, then on the Newline. Same number on both but the Newline looks worse → the Newline adds the lag. Things to try on the way: Ubuntu Settings → Displays → the Newline at 1920×1080, 60 Hz; the Newline's picture menu (a "PC" or "Game" mode, motion smoothing / noise reduction off, HDMI 2.0 if it has the setting); another of its HDMI ports. In Chrome, `chrome://gpu` should say "Hardware accelerated" for most lines.
 - [ ] The plain hub's two taps too (`http://<address>:8080/plain`): this checks off focus step 1 (then mark it `(done …)` in `current-focus.md`).
 
 ## 3. Fable drives the real arm (20–30 min, you at the arm)
