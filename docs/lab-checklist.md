@@ -2,6 +2,8 @@
 
 A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works without the next. Note what you find in `docs/current-focus.md` (the step's status) and surprises in `docs/GOTCHAS.md`.
 
+**Done on Tuesday 2026-11-10** (the builder, ~6–7 h): part 1 (the designed hub on the desktop, Gemini answered; `/perf` not run), the hub on `pi01` and the other desktop as well, all full screen except `/teleop` on the Pi (GOTCHAS); the Newline through `pi01` (laggy, part 2); Fable on the real arm (part 3; STOP from other screens not tried). Still open: `/perf` everywhere, STOP from another screen, parts 4–5.
+
 **Never:** the green arm's ports (`…5B41531599`, `…5B41533501`), its calibration, the `lerobot` conda env, the training cameras. The brain refuses them; leave them unplugged or alone either way.
 
 ## 0. Get the latest (2 min)
@@ -17,11 +19,11 @@ uv run pytest -q               # should end "passed"
 uv run lab-os serve --host 0.0.0.0
 ```
 Open **http://localhost:8080/design** in Chrome. Check:
-- [ ] One click: full screen, the unlock sound, the jump, the title, the greeting, the hub.
+- [x] One click: full screen, the unlock sound, the jump, the title, the greeting, the hub. (2026-11-10)
 - [ ] The strip says the venue, the persona and `AI: …` (the key in `~/lab-os/.env`).
-- [ ] Ask something ("What's next?"). Gemini's free key takes 6–15 s.
+- [x] Ask something ("What's next?"). Gemini's free key takes 6–15 s. (2026-11-10: it answered)
 - [ ] Teleop, Monitor and Arm open and close (Back or Esc).
-- [ ] Smooth? If it stutters: `/design?quality=reduced`, or check `/perf` (`docs/hub.md` → "Performance test").
+- [ ] Smooth? If it stutters: `/design?quality=reduced`, or check `/perf` (not run yet) (`docs/hub.md` → "Performance test").
 - [ ] Sound comes out of the speakers you want.
 
 Full screen without the click, as an app window (close it with Alt+F4):
@@ -51,10 +53,11 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [ ] "Go to the home pose" (approve it, watch it).
 - [ ] "Move the gripper 3 cm lower, pointing straight down."
 - [ ] The cube: measure it (cm in front of the base's middle, cm to the left), then the step-2 prompt.
-- [ ] STOP from the Newline stops a move.
+- [ ] STOP from the Newline (or any other screen) stops a move. (Not tried yet.)
 - [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Show on another screen**.
 - Approve every move after reading it; never "always allow". Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
 - Afterwards: `logs/ai-tools/` has the calls. Write in `current-focus.md` step 2 what worked.
+- 2026-11-10: Fable drove the real arm; it clearly needed more to go on than words (cameras, or at least `pose_view`). See `current-focus.md` step 2.
 
 ## 4. The white arm's cameras (5 min, for step 3)
 - [ ] Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
