@@ -13,7 +13,7 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
 
 ### Teleop demo: what's left
 - **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built and tried 2026-11-10:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/quest-setup.md`). It works but is hard to steer (builder). Left: tune it from recordings, per-user thresholds, and a one-handed clutch if two hands feel clumsy.
-- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then the 0.5× hand-to-gripper scale, smoothing, end-to-end delay. Above 0.5 is the builder's call (`config/venues/lab.yaml`).
+- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then smoothing, end-to-end delay. (The hand-to-gripper scale: a 1:1 mode is in the focus since 2026-11-10, `current-focus.md` → "Done on the side".) Above 0.5 is the builder's call (`config/venues/lab.yaml`).
 - **Quest display (step 5).** Visitor hint until the first grab; joints that turn red near their limits (= the workspace warning) on the 3D arm, which can now be moved onto the real one (2026-11-10; the lazy-follow HUD mini-arm of decision 2026-10-28 is the other option); the status panel lazy-follows.
 - **Visitor polish + portability test (step 8).** Script, casting to a monitor, one run from the laptop away from the lab, tag, 60-second clip. The SO-101 port check uses Linux paths (`/dev/serial/by-id/`, sysfs): a Windows/macOS field laptop needs the USB-ID lookup `xarm1` already uses.
 - **`so101-white-leader`.** Build and set it up (spare board `5B41532183`; `python -m lab_os.robots.so101_setup setup-motors --arm so101-white-leader` after its port is in `config/devices.yaml`). For recording training demonstrations (second act B), not needed for the visitor demo.
@@ -35,6 +35,12 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ---
 
 ## Recent ideas (2026-11-10)
+
+### A very light "wow" look for slow screens
+- **What:** a version of the designed hub made for weak screens (the Newline, Pi screens, phones, the portable kit): the same colors, fonts, frame and core, but effects that cost little to draw (few moving dots, no blur, short glows, the startup as a simple line animation instead of 3000 stars), so it stays smooth where `reduced` still lags.
+- **Why:** the Newline lags even at `reduced` (2026-11-10). The focus first measures and lightens the existing look (step 1, "Direction"); this is the next step if that isn't enough.
+- **Watch out:** it's a design change: settle it in a design session (`DESIGN.md`, the concept, the theme together), probably as a quality level below `minimal`'s look but with its own small animations.
+- **Plugs into:** quality levels (theme), "This screen" settings.
 
 ### Teleop with a webcam instead of the Quest
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.

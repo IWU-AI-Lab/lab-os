@@ -36,6 +36,7 @@ Find the desktop's address: `hostname -I` (the first one). With the brain from p
 - [ ] Chrome menu → **Add to Home screen**: does the icon open the hub? (On `http://` it opens as a tab; tap once for full screen.)
 - [ ] Touch: the panels' details pages, the commit range buttons, the devices list.
 - [ ] Leave it alone for 30 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 15 minutes). To check it quickly, set a shorter reset in ⚙ → The hub, then set it back.
+- [ ] **`/perf`** full screen for a minute: note the average frames per second (then again with `/perf?res=1` and `/perf?res=0.5`: fewer pixels drawn, scaled up by the screen; `docs/hub.md` → "Performance test"). Once the drawing resolution per screen exists, try it on `/design` too.
 - [ ] The plain hub's two taps too (`http://<address>:8080/plain`): this checks off focus step 1 (then mark it `(done …)` in `current-focus.md`).
 
 ## 3. Fable drives the real arm (20–30 min, you at the arm)
@@ -55,7 +56,16 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - Approve every move after reading it; never "always allow". Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
 - Afterwards: `logs/ai-tools/` has the calls. Write in `current-focus.md` step 2 what worked.
 
-## 4. If there's time
+## 4. The white arm's cameras (5 min, for step 3)
+- [ ] Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
+- [ ] `ls -l /dev/v4l/by-path/ /dev/v4l/by-id/`: this only lists names, it opens no camera. Paste the output into `current-focus.md` step 3, with which camera is which (top, wrist).
+
+## 5. The training launcher, first try (10 min)
+- [ ] Unplug `so101-white`'s USB (the launcher refuses while any other serial device is plugged in). Plug in both green arms.
+- [ ] The desktop icon "SO-101 Training (LeLab)": every line of the check fine? If one isn't, it says what to change and starts nothing.
+- [ ] LeLab opens at http://127.0.0.1:8000: check once that the follower moves when you move the leader. Note in `current-focus.md` ("Done on the side") how it went.
+
+## 6. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?
