@@ -24,7 +24,7 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 
 ## 3. Permissions: every move asks
 The repo's `.claude/settings.json` sets this for everyone who opens the project:
-- **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click). The project tools (below) are read only too and may be added here; until they are, Claude Code asks once per tool;
+- **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click). The project tools (below) and `pose_view` are read only too and may be added here (`"mcp__lab-os__pose_view"`); until they are, Claude Code asks once per tool;
 - **always asks:** `move_joints`, `gripper`, `move_to`, `go_to_pose`. These are "ask" rules, so they ask even if someone allows them elsewhere. **Never allow-list the move tools.** Approve each move only after reading what it will do.
 
 ## 4. Try it
@@ -43,6 +43,7 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 |---|---|---|
 | `arm_status` | read | Joints, gripper opening (%), gripper position (cm) and tool angle, limits, who has control (`free` / `teleop` / `ai`), held still or not, whether the venue allows motion, the per-call limits |
 | `list_poses` | read | Named poses (`config/poses.yaml`: `home`, `rest`, …) |
+| `pose_view` | read | A **picture** of the arm's 3D model as it is now (side + top, grid in cm, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera: see "Seeing the pose" |
 | `move_joints` | move | Some joints to angles, or by amounts (`relative: true`) |
 | `gripper` | move | 0 = closed … 100 = fully open |
 | `move_to` | move | The gripper point in a **straight line** to (x, y, z), optionally with a tool angle. Says "can't reach" instead of guessing |
@@ -99,6 +100,14 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …
 6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/current-focus.md` (step 2) what worked and what didn't.
 
 Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
+
+## Seeing the pose (`pose_view`)
+Until the cameras (focus step 3), the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
+- **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;
+- **right, top view**, as if standing behind the arm: forward (x) up the picture, the arm's left (+y) on the left;
+- a **red dot** at the gripper point (with a dotted line down to the table), a **magenta ×** at the last `move_to` target, and **blue marks** the AI passes in `marks`, e.g. `[{"x_cm": 15, "y_cm": 5, "z_cm": 1.5, "label": "cube", "size_cm": 3}]` (at most 10). A mark with `size_cm` is a square of that size.
+
+It only knows what the joints say: objects appear only as the AI's own marks. Use it after a move and before gripping: "Look with pose_view, with a mark where the cube is, before you close the gripper." **To see the same picture yourself:** open http://localhost:8080/api/pose-view.png (no marks; reload for a new one). The first picture after the brain starts takes about a second (the meshes load), then about 0.2 s. The hub's own chat doesn't get it (it reads text only). Only arms with a 3D model (the SO-101s); others are refused.
 
 ## "Arrived" or "stopped short"
 After each move the brain holds the target for half a second (so a slow joint can catch up), then reads where the motors really are and compares that with the target. Within 0.5 cm (2° per joint) the result is `arrived`; otherwise `stopped_short` with how far off (`off_by_cm`), which joints fell short (`joints_short_deg`) and a sentence (`message`). A gripper that closes on something says "stopped at 30 % open instead of 0 % (it may be holding something)". The AI Control page (`/ai`) shows these as "short". Why: blind on the real arm, `move_to` used to say "arrived" 1.6 cm short (GOTCHAS 2026-11-10).
