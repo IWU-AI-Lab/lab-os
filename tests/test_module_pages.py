@@ -41,6 +41,38 @@ async def test_the_pages(aiohttp_client):
         assert (await client.get(path)).status == 200, path
 
 
+async def test_every_page_has_the_full_screen_button(aiohttp_client):
+    """Shown while not full screen, says why where the browser can't (focus: "Two taps"; GOTCHAS
+    2026-11-10, /teleop on the Pi). Every page gets it from one helper, /web/fullscreen.js."""
+    client = await aiohttp_client(make_app())
+    kit = await (await client.get("/web/design/kit.js")).text()
+    helper = await (await client.get("/web/fullscreen.js")).text()
+    assert 'from "/web/fullscreen.js"' in kit and "fullscreenButton(btn)" in kit
+    assert "export function whyNot" in helper and "export function fullscreenButton" in helper
+    # kit.js no longer hides the button when the browser says no: the helper explains instead
+    assert "if (!embedded && document.fullscreenEnabled)" not in kit
+    pages = {  # page → what brings the button
+        "/teleop": "/web/design/kit.js",
+        "/monitor": "/web/design/kit.js",
+        "/ai": "/web/design/kit.js",
+        "/settings": "/web/design/kit.js",
+        "/training": "/web/design/kit.js",
+        "/xr": "/web/design/kit.js",
+        "/plain": 'id="fs-btn"',
+        "/design": 'id="fs-btn"',
+        "/classic/teleop": 'import { fullscreenButton } from "/web/fullscreen.js"',
+        "/classic/monitor": 'import { fullscreenButton } from "/web/fullscreen.js"',
+        "/perf": 'id="full"',
+    }
+    for path, part in pages.items():
+        text = await (await client.get(path)).text()
+        assert part in text, (path, part)
+    assert 'import("/web/fullscreen.js")' in await (await client.get("/design")).text()
+    for script in ("/hub/hub.js", "/hub/perf.js"):
+        text = await (await client.get(script)).text()
+        assert 'from "/web/fullscreen.js"' in text and "fullscreenButton(" in text, script
+
+
 async def test_ai_calls_show_what_the_tools_did(aiohttp_client):
     app = make_app()
     client = await aiohttp_client(app)

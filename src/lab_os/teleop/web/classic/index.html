@@ -20,6 +20,7 @@
       <button id="enter" disabled>Checking WebXR…</button>
       <button id="desktop">Desktop control</button>
       <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
+      <button id="fs-btn" type="button" hidden>Full screen</button>
     </div>
     <p id="xr-msg" class="hint"></p>
 
@@ -67,6 +68,11 @@
     <p class="hint" id="monitor-link"><a href="/classic/monitor" target="_blank">Open the arm monitor</a> in another tab (or on the onlooker screen).</p>
   </main>
   <script type="module" src="/static/teleop-page.js"></script>
+  <script type="module">
+    // full screen on its own screen; says why where the browser can't (/web/fullscreen.js)
+    import { fullscreenButton } from "/web/fullscreen.js";
+    if (window.self === window.top) fullscreenButton(document.querySelector("#fs-btn"));
+  </script>
   <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>

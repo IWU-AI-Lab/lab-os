@@ -2,8 +2,10 @@
 //   - the theme's colors and fonts (/theme.json) as CSS variables, like the hub;
 //   - inside the hub (an iframe) or on its own screen: body.embedded drops the page's own frame;
 //   - on its own screen: the place's name and the clock in the bar, and full screen with one press
-//     (a page sent to another screen from the hub, `?screen=…`, asks for that press right away).
+//     (a page sent to another screen from the hub, `?screen=…`, asks for that press right away);
+//     where full screen isn't possible, the button says why (/web/fullscreen.js).
 //   <script type="module" src="/web/design/kit.js"></script>
+import { fullscreenButton, goFullscreen, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 
 const root = document.documentElement.style;
@@ -45,28 +47,29 @@ function tick() {
 tick();
 setInterval(tick, 1000);
 
-// full screen on its own screen: a button, or (sent here from the hub) a press anywhere
+// full screen on its own screen: a button (shown while not full screen; says why when it can't), or
+// (sent here from the hub) a press anywhere
 const params = new URLSearchParams(location.search);
-if (!embedded && document.fullscreenEnabled) {
-  const go = () => document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
-  if (params.has("screen") && !document.fullscreenElement) {
-    const ask = document.createElement("div");
-    ask.id = "fs-ask";
-    ask.innerHTML = `<div>Click or tap for full screen<small>Sent to this screen from the hub. Esc leaves full screen.</small></div>`;
-    ask.addEventListener("click", () => { go(); ask.remove(); });
-    document.body.append(ask);
-  }
+if (!embedded) {
   const btn = document.createElement("button");
   btn.id = "fs-btn";
   btn.type = "button";
   btn.className = "btn small";
   btn.innerHTML = `<svg class="ico"><use href="/web/design/icons.svg#i-open"/></svg>Full screen`;
-  btn.addEventListener("click", go);
   const spot = document.querySelector(".bar .clock");
   if (spot) spot.before(btn); else document.body.append(btn);  // in the bar, out of the content's way
-  const update = () => (btn.hidden = !!document.fullscreenElement);
-  document.addEventListener("fullscreenchange", update);
-  update();
+  const fs = fullscreenButton(btn);
+  if (params.has("screen") && !isFull()) {
+    const ask = document.createElement("div");
+    ask.id = "fs-ask";
+    ask.innerHTML = `<div>Click or tap for full screen<small>Sent to this screen from the hub. Esc leaves full screen.</small></div>`;
+    ask.addEventListener("click", async () => {
+      ask.remove();
+      const why = await goFullscreen();
+      if (why) fs.show(why);
+    });
+    document.body.append(ask);
+  }
 }
 // keep the screen awake while this page shows (localhost / https only; elsewhere nothing happens)
 const wake = () => document.visibilityState === "visible" && navigator.wakeLock?.request("screen").catch(() => {});
