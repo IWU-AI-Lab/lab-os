@@ -223,6 +223,16 @@ SECTIONS: list[Section] = [
             ),
             Field(
                 "venue",
+                "one_to_one_max_deg_per_s",
+                "Teleop 1:1: top joint speed",
+                "choice",
+                "°/s. 1:1 follows the hand as fast as this allows (the top speed above doesn't "
+                "apply). none = the servos' own top speed (~270–310°/s); off = relative only",
+                choices=("off", "90", "120", "180", "240", "none"),
+                applies="restart",
+            ),
+            Field(
+                "venue",
                 "ai_tools.max_joint_change_deg",
                 "AI: largest joint change per move",
                 "number",

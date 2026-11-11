@@ -28,8 +28,12 @@ class Arm(Protocol):
         """Current joint positions in degrees."""
         ...
 
-    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
-        """Move toward `targets` (degrees). Implementations clamp to limits and speed_scale ≤ 1."""
+    def move_joints(
+        self, targets: dict[str, float], speed_scale: float, deg_per_s: float | None = None
+    ) -> None:
+        """Move toward `targets` (degrees). Implementations clamp to limits and speed_scale ≤ 1.
+        `deg_per_s`: this command's top joint speed instead of the driver's own × speed_scale
+        (teleop's 1:1 mode; inf = no cap). A driver may keep a lower hardware cap."""
         ...
 
     def stop(self) -> None:

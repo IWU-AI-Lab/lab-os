@@ -11,7 +11,7 @@ Short and printable. Applies to every robot, every venue, every session.
 The arm **freezes** whenever any of these happens: clutch released · hand/controller tracking lost · headset taken off · connection drops · program crashes. Motion only continues while the operator is actively holding the clutch.
 
 ## Limits
-- **Speed:** capped per venue (`config/venues/*.yaml`, `max_speed_scale`). Visitors get the slowest setting.
+- **Speed:** capped per venue (`config/venues/*.yaml`, `max_speed_scale`). Visitors get the slowest setting. Teleop's **1:1 mode** has its own per-venue cap, `one_to_one_max_deg_per_s` (lab: 180°/s per joint; off on visit days), because it follows the hand as fast as it moves; a servo at 60 °C slows it down.
 - **Workspace:** each joint stays 3° inside its limits (soft limits), and the gripper and wrist stay at least 1 cm above the table (teleop's `floor_m`, the AI tools' `min_z_cm`). A box around the table area is not built yet.
 - **No snapping:** relative (clutch) control, gentle ramps, start from the arm's current pose.
 

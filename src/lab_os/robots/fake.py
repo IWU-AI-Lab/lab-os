@@ -64,7 +64,9 @@ class FakeArm:
         self._require_connected()
         return dict(self.joints)
 
-    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
+    def move_joints(
+        self, targets: dict[str, float], speed_scale: float, deg_per_s: float | None = None
+    ) -> None:
         self._require_connected()
         if self.stopped:
             return

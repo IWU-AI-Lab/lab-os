@@ -103,6 +103,14 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.2 --record recordi
 adb reverse tcp:8080 tcp:8080
 ```
 - [ ] Line up the 3D arm on the real one (left Grip, move and turn until it sits on it, let go), then 1:1 as above. Does the real gripper stay at your hand?
+- [ ] **Speed:** the page says "1:1 follows as fast as 180°/s". Move the hand 10 cm left quickly: does the real gripper arrive about when your hand does? **Wave** (small and slow first): does the arm wave with you? If 180 feels too slow: ⚙ Settings → Robots → **Teleop 1:1: top joint speed** → 240 or `none`, then restart the brain (Ctrl+C, the same command again).
+- [ ] **Motor wear, measured:** do about 5 minutes in **relative**, let the arm rest 10 minutes, then about 5 minutes of the same kind of moves in **1:1**. Then compare the servos' temperatures:
+  ```bash
+  tail -n 3 logs/servo-health/*so101-white.jsonl     # the latest readings: temp_c per servo
+  grep -h '"mode": "one_to_one"' logs/servo-health/*so101-white.jsonl | tail -n 1
+  grep -h '"mode": "relative"' logs/servo-health/*so101-white.jsonl | tail -n 1
+  ```
+  Much warmer in 1:1 (well over 50 °C) → keep relative as the default; about the same → 1:1 can become the default (`docs/current-focus.md`). If the panel says "SERVOS WARM, SLOWED", stop and let them cool.
 - [ ] Note in `current-focus.md` ("Done on the side" → 1:1) how it felt, and whether 1:1 should become the default. At home: `uv run lab-os-teleop replay recordings/quest-1to1-<date>.jsonl` replays it on the fake arm (watch `/monitor`).
 
 ## 8. If there's time

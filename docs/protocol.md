@@ -69,7 +69,7 @@ How the hand drives the arm, from the teleop page's "Hand → arm" choice. From 
 {"type": "set_mode", "mode": "one_to_one"}
 ```
 - `"relative"` (the default): the gripper moves by how far the hand moved since the grab, at half scale (`tip_m_per_hand_m`); limits and the table slip, so hand and arm drift apart over a session.
-- `"one_to_one"` (1:1, arms with kinematics, `xr_input` with `"frame": "arm"`): the gripper point goes where the hand is, at scale 1. The clutch engages only with the hand within `capture_cm` (8) of the gripper point, keeping that small offset (no jump); nothing slips (out of reach, the arm waits as close as it gets). Orientation stays relative.
+- `"one_to_one"` (1:1, arms with kinematics, venues with `one_to_one_max_deg_per_s` set, `xr_input` with `"frame": "arm"`): the gripper point goes where the hand is, at scale 1, as fast as the venue's 1:1 cap allows (not the Speed slider). The clutch engages only with the hand within `capture_cm` (8) of the gripper point, keeping that small offset (no jump); nothing slips (out of reach, the arm waits as close as it gets). Orientation stays relative.
 - A change drops the clutch: release and grip again. `status.mode` says what's set. Doesn't take control.
 
 ### `session_end`
@@ -108,7 +108,7 @@ Broadcast to all clients at 10 Hz.
 - `frozen`: dead-man freeze is active (input stale > 250 ms, disconnected, session ended, or A/X pressed).
 - `needs_release`: after a freeze, the operator must release the grip and press it again before the arm moves.
 - `speed_scale` / `max_speed_scale`: the speed now (`set_speed` changes it) and the venue's cap, the slider's end.
-- `mode` / `modes`: `"relative"` or `"one_to_one"` (`set_mode`), and which ones this arm has (no kinematics: relative only). `one_to_one`: true while a 1:1 grab is following the hand. `hand_gap_cm`: in 1:1 while not holding, how far the hand is from the gripper point (null otherwise); `capture_cm`: how close it must be to grab.
+- `mode` / `modes`: `"relative"` or `"one_to_one"` (`set_mode`), and which ones this arm and venue have (no kinematics, or the venue's 1:1 off: relative only). `one_to_one_deg_per_s`: 1:1's top joint speed (the venue's `one_to_one_max_deg_per_s`; null = no software cap). `servos` (real servos only, else null): `{"max_temp_c", "hot" (≥ 60 °C: 1:1 slowed), "joints": {name: {"temp_c", "load_pct", "volts"}}}`, read every 5 s. `one_to_one`: true while a 1:1 grab is following the hand. `hand_gap_cm`: in 1:1 while not holding, how far the hand is from the gripper point (null otherwise); `capture_cm`: how close it must be to grab.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
 - `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.

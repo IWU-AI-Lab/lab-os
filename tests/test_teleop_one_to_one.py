@@ -133,7 +133,12 @@ def make_loop():
     """The teleop loop as `lab-os serve` builds it for an SO-101: with its kinematics."""
     arm = FakeArm()
     arm.connect()
-    loop = TeleopLoop(arm=arm, inputs=InputState(), mapper=ClutchMapper(kinematics=KIN))
+    loop = TeleopLoop(
+        arm=arm,
+        inputs=InputState(),
+        mapper=ClutchMapper(kinematics=KIN),
+        one_to_one_deg_per_s=180.0,  # the lab venue's
+    )
     loop.speed_scale = 1.0
     return loop, arm
 
@@ -180,3 +185,101 @@ def test_an_arm_without_kinematics_offers_relative_only():
     arm.connect()
     loop = TeleopLoop(arm=arm, inputs=InputState(), mapper=ClutchMapper(kinematics=None))
     assert loop.status()["modes"] == ["relative"]
+
+
+# ---------- speed: 1:1 keeps up with the hand, up to the venue's cap (2026-11-11) ----------
+
+
+def ticks_to_reach(m, goal, joints, cap, speed_scale=0.5, limit=400):
+    """Ticks until the gripper is within 3 mm of a hand that jumped to `goal`."""
+    for n in range(1, limit + 1):
+        out = m.step(hand(goal), joints, DT, speed_scale, LIMITS, True, one_to_one_deg_per_s=cap)
+        joints = joints | (out or {})
+        if math.dist(tip(joints), goal) < 0.003:
+            return n
+    return limit
+
+
+def test_one_to_one_is_not_slowed_by_the_speed_setting():
+    start = dict(SO101_HOME)
+    t0 = tip(start)
+    goal = add(t0, (0.0, 0.10, 0.0))  # 10 cm to the left, at once
+    times = {}
+    for cap, scale in [(180.0, 0.05), (180.0, 1.0), (45.0, 1.0), (math.inf, 0.05)]:
+        m = mapper()
+        joints = follow(m, [t0], start, ticks_per_point=1)
+        times[(cap, scale)] = ticks_to_reach(m, goal, joints, cap, speed_scale=scale)
+    assert times[(180.0, 0.05)] == times[(180.0, 1.0)]  # the slider doesn't matter in 1:1
+    assert times[(180.0, 1.0)] * 3 < times[(45.0, 1.0)]  # today's lab speed was ~45°/s
+    assert times[(math.inf, 0.05)] <= 2  # no cap: there by the next tick
+
+
+def test_a_wave_is_followed_at_the_hands_speed():
+    """A quick wave, 1.5 Hz and 10 cm side to side (the base turns up to ~110°/s): with 180°/s
+    the gripper keeps the whole swing; with the old ~45°/s it gets well under half of it."""
+    start = dict(SO101_HOME)
+    t0 = tip(start)
+
+    def swing(cap):
+        m = mapper()
+        joints = follow(m, [t0], start, ticks_per_point=1)
+        ys, lag = [], 0.0
+        for i in range(150):  # 3 s at 50 Hz
+            p = add(t0, (0.0, 0.05 * math.sin(2 * math.pi * 1.5 * i * DT), 0.0))
+            out = m.step(hand(p), joints, DT, 0.5, LIMITS, True, one_to_one_deg_per_s=cap)
+            joints = joints | (out or {})
+            if i >= 50:  # after the first second
+                ys.append(tip(joints)[1] - t0[1])
+                lag = max(lag, math.dist(tip(joints), p))
+        return (max(ys) - min(ys)) / 0.10, lag
+
+    fast, fast_lag = swing(180.0)
+    slow, _ = swing(45.0)
+    free, free_lag = swing(math.inf)
+    assert fast > 0.9 and fast_lag < 0.02  # most of the wave, under 2 cm behind
+    assert slow < 0.6
+    assert free > 0.98 and free_lag < 0.002
+
+
+def test_the_loop_sends_the_venues_speed_to_the_arm_while_following_1to1():
+    loop, arm = make_loop()
+    seen = []
+    move = arm.move_joints
+    arm.move_joints = lambda t, s, deg_per_s=None: (seen.append(deg_per_s), move(t, s, deg_per_s))
+    loop.set_mode("one_to_one")
+    loop.mapper.needs_release = False
+    t0 = tip(arm.read_joints())
+    for i, p in enumerate([t0] * 3 + [add(t0, (0.02, 0, 0))] * 5):
+        loop.inputs.update(parse_frame(quest(p)), now=i * DT)
+        loop.step(i * DT, DT)
+    assert seen and set(seen) == {180.0}
+    assert loop.status()["one_to_one_deg_per_s"] == 180.0
+
+
+def test_a_venue_with_1to1_off_offers_relative_only():
+    loop, _ = make_loop()
+    loop.one_to_one_deg_per_s = 0.0
+    assert loop.status()["modes"] == ["relative"]
+    with pytest.raises(ValueError, match="isn't available"):
+        loop.set_mode("one_to_one")
+    loop.one_to_one_deg_per_s = math.inf
+    assert loop.status()["one_to_one_deg_per_s"] is None  # "none": no software cap
+
+
+def test_servo_health_is_logged_and_hot_servos_slow_1to1(tmp_path):
+    loop, arm = make_loop()
+    temps = {"elbow_flex": 41.0, "wrist_flex": 38.0}
+    arm.read_health = lambda: {
+        j: {"temp_c": t, "load_pct": 20.0, "volts": 12.0} for j, t in temps.items()
+    }
+    loop.health_log = tmp_path / "health.jsonl"
+    loop.check_health(100.0)
+    loop.check_health(101.0)  # not yet: every 5 s
+    lines = loop.health_log.read_text().splitlines()
+    assert len(lines) == 1 and '"temp_c": 41.0' in lines[0]
+    assert loop.status()["servos"]["max_temp_c"] == 41.0 and not loop.status()["servos"]["hot"]
+    assert loop.one_to_one_cap() == 180.0
+    temps["elbow_flex"] = 61.0
+    loop.check_health(106.0)
+    assert loop.status()["servos"]["hot"]
+    assert loop.one_to_one_cap() == loop.mapper.config.max_deg_per_s  # back to relative speed

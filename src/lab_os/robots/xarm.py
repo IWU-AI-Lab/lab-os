@@ -278,8 +278,11 @@ class XArm:
         return (report[5] << 8 | report[4]) / 1000
 
     # ---- moving -------------------------------------------------------------------------------
-    def move_joints(self, targets: dict[str, float], speed_scale: float) -> None:
-        """Store a new goal; the worker moves there (smoothly, at most max_deg_per_s * speed)."""
+    def move_joints(
+        self, targets: dict[str, float], speed_scale: float, deg_per_s: float | None = None
+    ) -> None:
+        """Store a new goal; the worker moves there (smoothly, at most max_deg_per_s * speed).
+        `deg_per_s` (1:1): as fast as that, but never above this driver's max_deg_per_s."""
         if not self.allow_motion:
             raise MotionDisabled(f"{self.name} is read-only (allow_motion=False)")
         self._require_connected()
@@ -292,6 +295,8 @@ class XArm:
             self._goal.update({j: self._allow(j).clamp(v) for j, v in targets.items()})
             self._goal_seq += 1
             self._speed = min(max(speed_scale, 0.0), 1.0)
+            if deg_per_s is not None:
+                self._speed = min(deg_per_s / self.max_deg_per_s, 1.0)
 
     def commanded_joints(self) -> dict[str, float]:
         """The goal as accepted (after clamping), for viewers; read_joints() is the estimate."""
