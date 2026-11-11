@@ -45,8 +45,8 @@ lab-os needs the screens to reach the brain (the hub on the Newline, modules on 
 ## Step 1 — List every device
 | Name (unique, lowercase) | Device | Wi-Fi MAC address | How I got into it | Notes |
 |---|---|---|---|---|
-| raspbot1 | Yahboom Raspbot v2 | 88:a2:9e:5b:01:c8 | own hotspot + SSH | Order of the two MACs as given 2026-10-27; check `ip link` on raspbot1 if unsure. |
-| raspbot2 | Yahboom Raspbot v2 | 88:a2:9e:5b:01:3f | own hotspot + SSH | |
+| raspbot1 | Yahboom Raspbot v2 (Raspberry Pi 5) | 88:a2:9e:5b:01:3f | own hotspot + SSH, or Ethernet cable (Step 2) | Checked with `ip link` 2026-11-10. Ethernet (eth0) MAC `88:a2:9e:5b:01:3e`. Hostname still `yahboom`, user `pi`. Can't join IWU-AI-LAB yet (Step 5). |
+| raspbot2 | Yahboom Raspbot v2 | 88:a2:9e:5b:01:c8 | own hotspot + SSH | |
 | pi5-1 … | Raspberry Pi 5 (bridges for arms, spares) | | | |
 | jetson1 … jetson5 | Jetson Orin Nano | | | |
 | quest1 … quest3 | Meta Quest 3 | | | |
@@ -62,6 +62,7 @@ Notes:
 
 ### Getting into a device
 - **Raspbot:** connect to its own hotspot ("Raspbot") and SSH in (IP shown on its little screen).
+- **Raspbot by Ethernet cable** (worked for raspbot1, 2026-11-10; no Wi-Fi needed): cable from the desktop's Ethernet port to the Raspbot. On the desktop, set "Wired connection 1" to share (once; Ubuntu Settings → Network → the wired connection → IPv4 → "Shared to other computers", or `nmcli con modify "Wired connection 1" ipv4.method shared`, then `nmcli con up "Wired connection 1"`). The desktop becomes `10.42.0.1` and gives the Raspbot a `10.42.0.x` address. Find it with `ip neigh` (raspbot1 was `10.42.0.84`), then `ssh pi@10.42.0.x`.
 - **Raspberry Pi 5:** monitor + keyboard. ⚠️ The Pi 5 uses **micro-HDMI** — you need a micro-HDMI → HDMI cable or adapter.
 - **Jetson Orin Nano:** monitor + keyboard. ⚠️ The dev kit's video port is **DisplayPort**, not HDMI.
 
@@ -102,6 +103,8 @@ sudo nmcli dev wifi connect "<network name>" password "<password>"
 ```
 - Set the **Wi-Fi country** first if needed (`sudo raspi-config` → Localisation → WLAN Country).
 - **Raspbots start in hotspot mode** — they may need Yahboom's own steps to switch to joining a normal network.
+- **IWU-AI-LAB is an "Enhanced Open" (OWE) network, and the Pi's Wi-Fi chip (brcmfmac) can't do OWE.** Make the saved profile plain open: `sudo nmcli con modify IWU-AI-LAB remove 802-11-wireless-security`. That worked on `pi01`.
+- **raspbot1 still can't join IWU-AI-LAB** (2026-11-10), even with the open profile and both MACs registered by IT: every try ends `ASSOC-REJECT status_code=16`. Suspected cause: its old software (kernel 6.6.31, Wi-Fi firmware 7.45.234 from 2021, NetworkManager 1.42.4); `pi01` joins with kernel 6.18, firmware 7.45.265, NetworkManager 1.52. Untested next step: `sudo apt install firmware-brcm80211` on raspbot1 (the offered version may still not have 7.45.265). Details: `GOTCHAS.md` (2026-11-10, raspbot1 Wi-Fi).
 - Check it worked: `ip addr` should show an address on the `wl…` entry.
 
 ---
@@ -143,4 +146,6 @@ Details: `current-focus.md` → "Step 7, concretely".
 - Duplicate factory hostnames on identical robots.
 - Raspbot ships in hotspot mode; needs WLAN country set.
 - Possible client isolation on managed Wi-Fi.
+- The Pi's Wi-Fi can't do OWE ("Enhanced Open"); save open networks as plain open.
+- raspbot1's clock is set to China time (Asia/Shanghai, UTC+8): its logs look 13 h ahead of the desktop. The clock itself is right.
 - Lab wall Ethernet port works (tested with a Raspbot sharing internet via hotspot) — don't leave a router/hotspot on it without the professor's OK.
