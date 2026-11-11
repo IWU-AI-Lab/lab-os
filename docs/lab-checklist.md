@@ -62,7 +62,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - 2026-11-10: Fable drove the real arm; it clearly needed more to go on than words (cameras, or at least `pose_view`). See `current-focus.md` step 2.
 
 ## 4. The white arm's cameras (5 min, for step 3)
-- [ ] Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
+- [ ] (If the builder picks the USB hub: `current-focus.md` → "Step 3, concretely".) Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
 - [ ] `ls -l /dev/v4l/by-path/ /dev/v4l/by-id/`: this only lists names, it opens no camera. Paste the output into `current-focus.md` step 3, with which camera is which (top, wrist).
 
 ## 5. The training launcher, first try (10 min)

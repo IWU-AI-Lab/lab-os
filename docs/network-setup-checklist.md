@@ -41,12 +41,12 @@ lab-os needs the screens to reach the brain (the hub on the Newline, modules on 
 5. **The lab router (GL.iNet Beryl AX)** solves all of it: devices reach each other, fixed addresses, a local DNS entry for `hub.indwesailab.com`, the Quest over Wi-Fi, no IT registration per device. Waiting on the professor's OK.
 
 ### The ThinkCentres at the front of the room (2026-11-11)
-The ~7 ThinkCentres sit at the front, far from the wall Ethernet ports (at the back, with the rest of the setup). They have no Wi-Fi. There's a network switch next to them but no access point (one was apparently planned; nobody knows what happened to it). Options, cheapest first:
+The 4 ThinkCentres sit at the front on two separate desks, far from the wall Ethernet ports (at the back, with the rest of the setup). The switch is on one of the two desks, so a cable to the switch reaches only that desk: the other desk needs a cable across too. They have no Wi-Fi. There's a network switch next to them but no access point (one was apparently planned; nobody knows what happened to it). Options, cheapest first:
 1. **Ask first:** is there a wall port at the front that's just not switched on (IT can activate one), and what happened to the planned access point?
 2. **A Pi as the bridge** (the same trick as the Newline through `pi01`, option 2 above): a Pi that's on the lab Wi-Fi, its Ethernet into the switch, set to "Shared to other computers". Every ThinkCentre on the switch gets an address and internet. Free and already proven. Limits: the Pi's Wi-Fi speed is shared by all of them, and other computers can't reach the ThinkCentres directly (they're behind the Pi), only through it.
 3. **With the lab router:** a second small router at the front (e.g. a GL.iNet Opal, ~$40) joins the main router's Wi-Fi and feeds the switch by cable ("repeater" or "WDS" mode). Then the ThinkCentres are on the lab network like everything else.
 4. **Powerline adapters** (~$50 a pair): Ethernet through the room's power wiring, one plug at the back, one at the front. Usually fine within one room; ask IT, some campuses don't allow them.
-5. **A USB Wi-Fi adapter per ThinkCentre** (~$15 each): pick one whose chip Linux supports out of the box (e.g. MediaTek MT7612U / MT7921AU). Each still needs IT registration for the lab Wi-Fi, or the lab router's password.
+5. **A USB Wi-Fi adapter per ThinkCentre** (~$15 each, 4 of them; no cables at all, which suits two desks): pick one whose chip Linux supports out of the box (e.g. MediaTek MT7612U / MT7921AU). Each still needs IT registration for the lab Wi-Fi, or the lab router's password.
 6. **One long cable, made tidy:** a single cable from the back to the switch is enough (the switch shares it). Flat Ethernet cable along the wall or under the carpet edge, or in a cable cover, looks much less messy than loose cables.
 
 ---

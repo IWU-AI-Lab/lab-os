@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-11 — The two training cameras share one serial number
+**What:** `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
+**Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (`current-focus.md` → "Step 3, concretely").
+
 ### 2026-11-10 — `/teleop` on the Pi: no Full screen button
 **What:** on `pi01`'s Chromium the hub went full screen, but the `/teleop` page opened on its own didn't, and it showed no Full screen button. The module pages only draw that button when the browser says full screen is available (`document.fullscreenEnabled` in `web/design/kit.js`), so the Pi's Chromium most likely said no there (not checked).
 **Fix:** open. Meanwhile F11 on the Pi. To check: `document.fullscreenEnabled` in the Pi's Chromium console on `/teleop` vs `/design`. The planned full-screen button (focus, "How it fits together") should say why when full screen isn't available instead of just hiding.
