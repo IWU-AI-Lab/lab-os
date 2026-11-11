@@ -47,6 +47,16 @@ link.on("status", (s) => {
   sp.max = Math.round((s.max_speed_scale ?? 1) * 100);
   if (document.activeElement !== sp) sp.value = Math.round(s.speed_scale * 100);
 });
+// hand → arm: relative or 1:1 (the brain keeps it; 1:1 only for arms with kinematics)
+link.on("status", (s) => {
+  const sel = $("mode-set");
+  if (!sel || !s.mode) return;
+  sel.disabled = false;
+  for (const o of sel.options) o.disabled = !(s.modes || ["relative"]).includes(o.value);
+  if (document.activeElement !== sel) sel.value = s.mode;
+  $("mode-hint").hidden = s.mode !== "one_to_one";
+});
+if ($("mode-set")) $("mode-set").onchange = (e) => link.send({ type: "set_mode", mode: e.target.value });
 if ($("speed-set")) $("speed-set").oninput = (e) => link.send({ type: "set_speed", speed_scale: e.target.value / 100 });
 
 // ---- Shared UI helpers for the input sources ---------------------------------------------

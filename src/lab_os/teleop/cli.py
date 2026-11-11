@@ -17,7 +17,7 @@ from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
-from lab_os.teleop.mapping import ClutchMapper
+from lab_os.teleop.mapping import MODES, ClutchMapper
 from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
@@ -193,6 +193,8 @@ async def _feed_replay(loop: TeleopLoop, path: Path, speed: float, repeat: bool)
             loop.inputs.disconnect()
         elif msg.get("type") == "set_speed":
             loop.set_speed(float(msg["speed_scale"]))
+        elif msg.get("type") == "set_mode":
+            loop.set_mode(str(msg["mode"]))
     loop.inputs.disconnect()
     await asyncio.sleep(0.5)  # let the loop register the end (freeze) before exiting
     print("\nreplay finished")
@@ -233,6 +235,11 @@ def main(argv: list[str] | None = None) -> None:
     rep.add_argument("file", type=Path)
     rep.add_argument("--speed", type=float, default=1.0)
     rep.add_argument("--loop", action="store_true", help="repeat forever")
+    rep.add_argument(
+        "--mode",
+        choices=MODES,
+        help="hand → arm mode to start in (a set_mode in the recording still switches it)",
+    )
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
@@ -245,6 +252,8 @@ def main(argv: list[str] | None = None) -> None:
             print(f"recording to {args.record}")
         coro = serve(create_app(loop, recorder), args.port)
     else:
+        if args.mode:
+            loop.set_mode(args.mode)
         app = create_app(loop, accept_input=False)
         coro = serve(app, args.port, _feed_replay(loop, args.file, args.speed, args.loop))
 

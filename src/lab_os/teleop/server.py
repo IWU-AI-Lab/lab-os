@@ -138,6 +138,11 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
         log.info("speed scale set to %s", speed)
         if app[RECORDER]:
             app[RECORDER].write(raw)
+    elif kind == "set_mode":  # hand → arm: relative or 1:1; any input page on this computer
+        mode = loop.set_mode(str(raw.get("mode")))
+        log.info("teleop mode set to %s", mode)
+        if app[RECORDER]:
+            app[RECORDER].write(raw)
     elif kind == "hello":
         log.info("input page connected: %s", raw.get("agent", "?"))
     else:
