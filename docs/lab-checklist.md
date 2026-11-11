@@ -2,7 +2,7 @@
 
 A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works without the next. Note what you find in `docs/current-focus.md` (the step's status) and surprises in `docs/GOTCHAS.md`.
 
-**Done on Tuesday 2026-11-10** (the builder, ~6–7 h): part 1 (the designed hub on the desktop, Gemini answered; `/perf` not run), the hub on `pi01` and the other desktop as well, all full screen except `/teleop` on the Pi (GOTCHAS); the Newline through `pi01` (laggy, part 2); Fable on the real arm (part 3; STOP from other screens not tried). Still open: `/perf` everywhere, STOP from another screen, parts 4–5.
+**Done on Tuesday 2026-11-10** (the builder, ~6–7 h): part 1 (the designed hub on the desktop, Gemini answered; `/perf` not run), the hub on `pi01` and the other desktop as well, all full screen except `/teleop` on the Pi (GOTCHAS); the Newline through `pi01` (laggy, part 2); Fable on the real arm (part 3; STOP from other screens not tried). Still open: `/perf` everywhere, STOP from another screen, parts 4–6.
 
 **Never:** the green arm's ports (`…5B41531599`, `…5B41533501`), its calibration, the `lerobot` conda env, the training cameras. The brain refuses them; leave them unplugged or alone either way.
 
@@ -68,7 +68,11 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [ ] The desktop icon "SO-101 Training (LeLab)": every line of the check fine? If one isn't, it says what to change and starts nothing.
 - [ ] LeLab opens at http://127.0.0.1:8000: check once that the follower moves when you move the leader. Note in `current-focus.md` ("Done on the side") how it went.
 
-## 6. If there's time
+## 6. Quick checks (5 min each)
+- [ ] **raspbot1 on a phone hotspot** (does the lab router fix its Wi-Fi? `network-setup-checklist.md`, Step 5): reach it by cable (Step 2 there), set the phone's hotspot to WPA2 (iPhone: "Maximize Compatibility"; Android: security "WPA2-Personal"), then on the Raspbot: `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. Note in `GOTCHAS.md` (raspbot1 Wi-Fi) whether it joined. While it's connected, its own "Raspbot" hotspot is off; `sudo nmcli con up Raspbot` brings it back.
+- [ ] **The Pi's full screen:** on `pi01`, open `/teleop` and then `/design`, press Ctrl+Shift+J (the console), type `document.fullscreenEnabled` and Enter. Note true/false for each in `GOTCHAS.md` ("`/teleop` on the Pi").
+
+## 7. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?

@@ -71,7 +71,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 | Trained policies | ⚠️ | New lighting/backgrounds; "look, then reach" (ER) generalizes better. |
 
 **Rules:** venue profiles; no hardcoded lab addresses/machines; offline lite mode; ≤10-minute setup checklist; optional "live link to the lab" later.
-**Remote levels:** (1) Claude Code via **Remote Control** — confirmed working; (2) GUI from home via a private overlay network (ask IT first); (3) lab in a bag; (4) cellular robots (much later). **Safety:** remote mode = no motion by default; dead-man stop.
+**Remote levels:** (1) Claude Code via **Remote Control** — confirmed working; (2) GUI from home via a private overlay network (Tailscale; ask IT first; also for demos away from the lab with the brain left in the lab: `ideas.md`, 2026-11-11); (3) lab in a bag; (4) cellular robots (much later). **Safety:** remote mode = no motion by default; dead-man stop.
 
 ---
 
@@ -161,6 +161,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-11 | **Voice adds a spoken greeting** after the jump when voice is on, and **dictation** is wanted (tap the mic, the words appear in the ask line as you talk, it stops on silence or a second tap, then you send it). Both in focus step 7. | The builder: so people know it can speak; dictation like Claude Code's microphone. |
 | 2026-11-10 | **The designed hub keeps one tap** (full screen + start in one); to leave it waiting full screen, press ⏻. The plain hub keeps its two taps. | The builder: "that might be fine, since i can just use the power button to reset it to idle". |
 | 2026-11-10 | **This week's order (until Fable ends 2026-11-16):** the honest "arrived", `pose_view`, the full-screen button, a drawing resolution per screen and teleop's 1:1 mode (no lab), then a lab day (Fable on the real arm, the camera sockets, the training launcher, `/perf` on the Newline), then cameras (step 3), then voice (step 7). **A full-screen button** on the hub and every page, shown while not full screen. | Real-arm AI runs while Fable lasts. Something can always leave full screen (a swipe, a pop-up), and the designed hub doesn't go back to tap 1. |
 | 2026-11-10 | **The Newline: measure, then lighten,** keeping the look where possible (lower drawing resolution, cheaper effects); the desktop + a 32" monitor is the close second; maybe a very light but still "wow" look for the Newline and portable screens. No extra computer on its HDMI for now. | Laggy even at `reduced`, from the laptop and the desktop too (the builder), so the screen itself is the suspect. |
@@ -248,6 +249,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - **AI access (updated 2026-10-30):** OpenAI keys (primary; the professor's account, paid by the university: believed 2026-11-09, not confirmed); free Gemini keys (free tiers may use data for training: check terms); the Anthropic key is out of credits (Gemini Robotics-ER 2 preview is on the Gemini API).
 - **Mics:** 4 weak USB dongle mics; phones/laptops; old Nokias/Pixel C; Quest mic + speakers.
 - **Robots:** Raspbot v2 ×2; SO-101 green set (the training project's); SO-101 white set (lab-os's, built); xArm 1S ×2 (`xarm1` works); Hiwonder glove ×2; TonyBot v1; PiCar Pro ×3 (unbuilt); Air:bit 2 ×3; Quest 3 ×3; card reader. No wheels+arm robot.
+- **Earlier Raspbot work (the builder's, before lab-os):** voice control on a Raspbot: press a button on the IR remote and speak; after 3 seconds it transcribes the speech, and if it hears a known word (forward, backward, left, right) it moves a little that way. Not part of lab-os (where its code lives: to note).
 - **Builder:** CS student; learns with AI; Python + web; dislikes the CLI, likes VS Code + Claude desktop/web UI; 3–7 h/week; graduating May 2027; lives ~5 min from campus.
 
 ---

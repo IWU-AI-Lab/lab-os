@@ -34,6 +34,20 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-11)
+
+### Demo away from the lab with the brain still in the lab (Tailscale)
+- **What:** the brain keeps running on a lab desktop (on the lab network), and the demo happens somewhere else with the travel router. The demo devices (screens, the Quest, a Raspbot) join the travel router, which gets its internet from a phone hotspot (or, less likely, the university Wi-Fi there). **Tailscale** (a free private network across the internet; "remote level 2" in the log) links the two places, so the demo devices open the brain as if it were in the same room. Nothing is opened on the campus network: both ends connect outward.
+- **How, likely:** Tailscale on the desktop (an app; installing it needs `sudo`) and on the travel router (the Beryl AX has it built in). The router lets its own devices through (a "subnet route"), so the Newline and the Quest don't need Tailscale themselves. To check: that the router's devices can reach the desktop this way (GL.iNet's settings mostly describe the other direction); if not, the Tailscale app on the screens that can run it (phones, laptops, Pis, Android screens).
+- **The alternative:** move the brain instead: a laptop as the field brain (the portability plan), or carry the desktop along (the builder would rather not).
+- **Bonus to check:** Tailscale can give the desktop a real certificate for its Tailscale name (`tailscale cert`, e.g. `https://<desktop>.<tailnet>.ts.net`), so pages would be secure (voice, Wake Lock) without the `hub.indwesailab.com` setup. Probably only on devices that run Tailscale themselves (the name is looked up through Tailscale).
+- **Watch out:**
+  - The arms plug into the brain by USB, so with the brain in the lab the arms stay there too: the demo shows a lab arm driven from far away (it needs a camera so people see it move), or a laptop brain comes along for the arm.
+  - Delay: everything goes over the phone's internet (usually ~30–100 ms more, more when Tailscale has to relay). Fine for the hub and chat; teleop will feel it.
+  - Phone data: cameras and video use a lot of it.
+  - Rules: it's a tunnel out of the campus network, so **ask the professor / IT first** (like the router). A lab Tailscale account, not a personal one (the free plan: 3 users, 100 devices).
+- **Plugs into:** places and venues (a venue whose brain is far away), the travel router.
+
 ## Recent ideas (2026-11-10)
 
 ### A very light "wow" look for slow screens
