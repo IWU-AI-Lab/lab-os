@@ -163,6 +163,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 - **One flaky test**, seen once (GOTCHAS): catch its name if it fails again.
 
 ## Hacks to clean up
+- `config/devices.yaml`: `so101-white-cam-a` / `-b` (2026-11-12) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
 - `config/poses.yaml`: the SO-101 `rest` pose comes from forward kinematics only; check it on the real `so101-white` (slowly, builder present) before relying on it.
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 

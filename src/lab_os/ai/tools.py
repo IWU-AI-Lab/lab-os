@@ -11,7 +11,10 @@ from mcp.server.mcpserver.exceptions import ToolError
 log = logging.getLogger(__name__)
 
 NEVER = {"move_joints", "gripper", "move_to", "go_to_pose", "stop"}  # belt and braces
-NOT_FOR_CHAT = {"pose_view"}  # read tools whose answer is a picture: the chat takes text
+NOT_FOR_CHAT = {
+    "pose_view",
+    "camera_snapshot",
+}  # read tools whose answer is a picture: the chat takes text
 MAX_RESULT_CHARS = 14_000
 
 

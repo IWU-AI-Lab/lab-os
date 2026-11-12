@@ -23,6 +23,7 @@ in degrees, 0 = pointing up, 90 = forward, 180 = straight down.
 import asyncio
 import logging
 import math
+import time
 from dataclasses import dataclass, fields
 from pathlib import Path
 
@@ -260,6 +261,19 @@ class RobotTools:
             "from the joint readings, not a camera: objects other than your marks aren't in it.",
             "image_png": png,
         }
+
+    async def camera_snapshot(self, camera: str, width_px: int = 640) -> dict:
+        """One picture from a camera in devices.yaml (read tier): opens it, grabs a frame, closes
+        it. A camera another program has open is refused. The JPEG is under "image_jpeg"."""
+        from lab_os import devices
+
+        width_px = max(160, min(int(width_px), 1280))
+        try:
+            path = devices.camera_device(camera)
+        except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed) as e:
+            raise Refused(str(e)) from e
+        jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
+        return {"camera": camera, "width_px": width_px, "image_jpeg": jpeg}
 
     # ---------- checks shared by every move ----------
 
@@ -557,7 +571,46 @@ class RobotTools:
             else "ok"
         )
         logged = dict(result)
-        if "image_png" in logged:
-            logged["image_png"] = f"{len(logged['image_png'])} bytes"
+        for key in ("image_png", "image_jpeg"):
+            if key in logged:
+                logged[key] = f"{len(logged[key])} bytes"
         self.calls.write(tool, args, outcome, logged)
         return result
+
+
+def _grab_jpeg(path: str, width_px: int) -> bytes:
+    """Open the camera at `path`, take one frame (the first few are dark while it adjusts), close
+    it, and return it as a JPEG `width_px` wide."""
+    import cv2  # headless OpenCV, imported late
+
+    cap = cv2.VideoCapture(path, cv2.CAP_V4L2)
+    try:
+        if not cap.isOpened():
+            raise Refused(f"couldn't open the camera at {path}")
+        frame = None
+        last = None
+        steady = 0
+        start = time.monotonic()
+        # These cameras start black, then auto-exposure overshoots to white: keep reading until
+        # the brightness has held still for a few frames (at most ~6 s).
+        while time.monotonic() - start < 6:
+            ok, got = cap.read()
+            if not ok:
+                continue
+            frame = got
+            level = float(got.mean())
+            steady = steady + 1 if last is not None and abs(level - last) < 3 else 0
+            last = level
+            if steady >= 4 and 8 < level < 245:
+                break
+        if frame is None:
+            raise Refused(f"the camera at {path} gave no picture")
+    finally:
+        cap.release()
+    h, w = frame.shape[:2]
+    if w > width_px:
+        frame = cv2.resize(frame, (width_px, round(h * width_px / w)), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    if not ok:
+        raise Refused("couldn't encode the picture")
+    return buf.tobytes()
