@@ -187,6 +187,16 @@ def test_take_speech_starts_with_the_first_sentence():
 # ---------- the service clients ----------
 
 
+def test_a_streamed_wav_counts_its_real_length():
+    from lab_os.ai.speech import _rewrap
+
+    wav = bytearray(wav_bytes(b"\x00\x00" * 24_000, 24_000))  # 1 s
+    wav[4:8] = wav[40:44] = b"\xff\xff\xff\xff"  # OpenAI's streamed header: "endless"
+    assert wav_seconds(bytes(wav)) == pytest.approx(1.0)
+    fixed = _rewrap(bytes(wav))
+    assert fixed[40:44] == (48_000).to_bytes(4, "little") and wav_seconds(fixed) == 1.0
+
+
 async def test_gemini_hears_while_the_audio_streams(aiohttp_server, key):
     seen = []
     server = await aiohttp_server(fake_voice(seen=seen))

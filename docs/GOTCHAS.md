@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — OpenAI's speech WAV says it's 25 hours long
+**What:** the first live try of the `main` voice setup (OpenAI `gpt-4o-mini-tts`, `response_format: wav`): a 2 s sentence measured 89,478 s. OpenAI streams the WAV, so its header carries the "unknown length" placeholder (0xFFFFFFFF). The spend log prices spoken seconds, so every answer would have been logged at ~$22, and the $20 budget would have paused the chat after the first one. Browsers play such a file fine, so it doesn't show by ear.
+**Fix:** the brain rewrites OpenAI's WAV with a correct header, and `wav_seconds` counts the bytes really there (`ai/speech.py`; a test with the placeholder header). Found before any OpenAI turn was logged.
+
 ### 2026-11-12 — openWakeWord's package doesn't install on Linux with Python 3.12
 **What:** `openwakeword` 0.6.0 requires `tflite-runtime` on Linux (`platform_system == "Linux"`), which has no Python 3.12 build, and it pulls in scipy and scikit-learn. lab-os is Python 3.12 on the lab desktop.
 **Fix:** lab-os runs openWakeWord's ONNX models itself with `onnxruntime` (`src/lab_os/ai/wake.py`, ~100 lines, the same streaming steps). Checked against the package (on the Mac, where it installs): the same scores on the same recordings (0.961 / 0.999 / 0.999 for "hey Jarvis", 0.000 for other speech). The models are in `models/openwakeword/` (non-commercial license).
