@@ -279,6 +279,11 @@ async def test_a_model_over_its_limit_hands_over_to_the_next(aiohttp_server, key
         assert 50 < resting["tts-a"] - time.monotonic() <= 53  # its retry time
         await speak_any(session, setup, "Again.", resting)  # tts-a rests: not asked again
         assert [s["model"] for s in seen if "tts" in s] == ["tts-a", "tts-b", "tts-b"]
+        busy = await aiohttp_server(fake_voice(tts_status=503))
+        stuck = dataclasses.replace(gemini_setup(busy), speak="x", speak_more=("y",))
+        with pytest.raises(VoiceError, match="busy"):
+            await speak_any(session, stuck, "Busy.", {})
+        assert [s for s in resting] == ["tts-a"]  # a busy model doesn't rest
         resting["tts-b"] = time.monotonic() + 60
         with pytest.raises(VoiceError, match="free key has a limit"):
             await speak_any(session, setup, "All resting.", resting)
@@ -334,7 +339,7 @@ async def voice_app(aiohttp_server, tmp_path, words=("It is. ", "Step seven", ":
         TeleopLoop(arm=arm, inputs=InputState()),
         Venue("v", ("fake-arm",), True, 0.5),
         chat=conv,
-        persona=lambda: Persona(id="p", display_name="P", voice="test"),
+        persona=lambda: Persona(id="p", display_name="P", voice="test", wake_word="hey_jarvis"),
         voices=lambda: {"test": setup},
     )
     return app, conv, assistant
@@ -354,7 +359,8 @@ async def test_push_to_talk_turn(aiohttp_client, aiohttp_server, key, tmp_path):
     app, conv, assistant = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     st = await (await client.get("/api/status")).json()
-    assert st["voice"] == {
+    assert st["voice"] | {"wake": None} == {
+        "wake": None,
         "available": True,
         "why": None,
         "setup": "test",

@@ -65,6 +65,8 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 #restore-chat { margin-top: 0.6em; min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; color: inherit; font: inherit; border: 1px dashed #555; border-radius: 6px; }
 .mic { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; color: inherit; touch-action: none; user-select: none; }
 .mic[hidden] { display: none; }
+#f-wake { color: #6c6; opacity: 0.6; }
+#f-wake[hidden] { display: none; }
 .mic.on { background: #2a4a2a; border-color: #8c8; }
 #open-chat { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; }
 #reply { width: min(32em, 80vw); white-space: pre-wrap; }

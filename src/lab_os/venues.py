@@ -22,6 +22,12 @@ class Venue:
     # teleop's 1:1 mode: the fastest a joint may turn (°/s). 0 = no 1:1 here; inf = no software cap
     # (the servos' own top speed). `one_to_one_max_deg_per_s` in the venue file.
     one_to_one_deg_per_s: float = 0.0
+    # the wake word on screens that chose it; None (`default`) = off on a public venue
+    wake_word: bool | None = None
+
+    @property
+    def wake_word_on(self) -> bool:
+        return (not self.public) if self.wake_word is None else self.wake_word
 
 
 def one_to_one_speed(value) -> float:
@@ -39,6 +45,18 @@ def one_to_one_speed(value) -> float:
             f"one_to_one_max_deg_per_s must be ≥ 0, off or none, not {value!r}"
         )
     return speed
+
+
+def _on_off(value, key: str) -> bool | None:
+    """`on` / `off` (YAML may read them as true/false), or `default` / left out → None."""
+    if value is None or str(value).strip().lower() in ("", "default"):
+        return None
+    text = str(value).strip().lower()
+    if text in ("on", "true", "yes"):
+        return True
+    if text in ("off", "false", "no"):
+        return False
+    raise config.ConfigError(f"{key} must be on, off or default, not {value!r}")
 
 
 def _persona(value) -> str | None:
@@ -87,4 +105,5 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         public=bool(raw.get("public", False)),
         persona=_persona(raw.get("persona")),
         one_to_one_deg_per_s=one_to_one_speed(raw.get("one_to_one_max_deg_per_s")),
+        wake_word=_on_off(raw.get("wake_word"), "wake_word"),
     )

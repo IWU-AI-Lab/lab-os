@@ -18,13 +18,15 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 
 **New since 2026-11-12 (step 11, built away from the lab, tested without hardware):** the green arms in lab-os (part 8): `so101-green` drivable like the white arm, its calibration read only, `so101_setup` refusing the greens, "in use by LeLab" refusals, the training cameras by socket. Part 8 goes while the green arms are plugged in, before the swap (step 2 of the order above), or after putting them back.
 
+**New since 2026-11-12 (step 7, voice, built away from the lab, tried on a laptop with recorded voices):** push-to-talk with a spoken answer, the spoken greeting, dictation, the wake word (part 9). Part 0 installs one new library (`onnxruntime`, for the wake word). **Gemini's free key speaks only ~15–20 answers a day** (10 requests per TTS model per day, GOTCHAS): if answers come silent with "…sending too much voice", that's it for the day (it resets at midnight Pacific).
+
 **Never:** change the green arms' motor IDs or firmware, write their calibration, touch the `lerobot` conda env, or open a green port while LeLab is using it (CLAUDE.md, loosened 2026-11-12). Since step 11 the brain follows these rules itself (part 8 checks it does).
 
 ## 0. Get the latest (2 min)
 ```bash
 cd ~/lab-os
 git pull
-uv sync --extra so101          # LeRobot for so101-white (+ Pillow since 2026-11-11); plain `uv sync` would remove LeRobot
+uv sync --extra so101          # LeRobot for so101-white (+ Pillow since 2026-11-11, onnxruntime since 2026-11-12); plain `uv sync` would remove LeRobot
 uv run pytest -q               # should end "passed"
 ```
 Optional, so Claude Code doesn't ask before each `pose_view` (it's read only): in `.claude/settings.json`, under `"allow"`, add the line `"mcp__lab-os__pose_view",` next to `"mcp__lab-os__list_poses",`.
@@ -185,7 +187,45 @@ ls -l /dev/v4l/by-path/
 - [ ] Entries with `usb-0:7` and `usb-0:8` (`so101-green-cam-a` and `-b`). Unplug the **wrist** camera's cable for a moment and run the `ls` again: the socket whose lines vanish is the wrist camera. Plug it back in. Tell Claude which socket is the wrist and which the top camera, so the names can change to `so101-green-cam-wrist` / `-top`. If the sockets aren't 7 and 8 any more, paste the `ls` output.
 - [ ] Note in `current-focus.md` step 11 what worked.
 
-## 9. If there's time
+## 9. Voice (step 7; 20–30 min, the USB microphone and the speakers)
+Needs `GEMINI_API_KEY` in `~/lab-os/.env` (it's there) and the hub on **this desktop's own screen** (`localhost`: other screens by IP get no microphone).
+
+**a. The microphone** (before starting anything):
+- [ ] Plug in the USB microphone (any socket). Ubuntu: Settings → Sound → **Input**: pick it; the level bar moves when you talk. Output: the speakers you want, at a normal volume.
+
+**b. Start** (a fresh brain reads `.env` and the persona):
+```bash
+cd ~/lab-os
+uv run lab-os serve --persona jarvis
+```
+Open **http://localhost:8080/design** in Chrome and press start.
+- [ ] After the jump, the greeting is **spoken** while it's typed, ending "You can talk to me: hold the mic." (No sound at all? ⚙ → This screen → Sound must be on.)
+- [ ] A **mic button** sits next to "Ask anything". If there's none, check what the brain says:
+  ```bash
+  curl -s http://localhost:8080/api/status | python3 -m json.tool | grep -A12 '"voice"'
+  ```
+  (`"available": false` + `"why"` says why; `true` but still no button = the browser sees no microphone: check part a, then reload.)
+
+**c. Push-to-talk:**
+- [ ] **Hold** the mic (or Space) and ask "What's the next step?", then let go. Chrome asks for the microphone the first time: **Allow**. Your words appear above the core while you talk; the core says listening → thinking → speaking and moves with the voice; the answer is spoken (the free key: 3–15 s to the first word).
+- [ ] Ask again while it's speaking (hold the mic): it stops talking and listens. Esc while it speaks: it stops.
+- [ ] Loud speakers: does it hear itself? (It shouldn't: echo cancellation, and it only listens while held.)
+- [ ] Note the time from letting go to the first spoken word: ________
+
+**d. Dictation:** ⚙ (top right) → This screen → **Talking to it → dictation**, then Back.
+- [ ] Tap the mic once, say a sentence, stop talking: the words appear in the ask line and it stops by itself after ~1.5 s. Fix a word, press Enter: it's asked (the answer is text only, like typing).
+
+**e. The wake word:** ⚙ → This screen → Talking to it → **wake word**, then Back.
+- [ ] A small **dot** appears in the status strip (and Chrome's recording sign in the tab). The core stays idle.
+- [ ] From the desk: "Hey Jarvis" … "what time is it?": the core listens after the phrase, the question ends after a short silence, the answer is spoken.
+- [ ] From across the room, and with the fans/AC running: how far does it still work? ________ m. (A weak USB dongle may only work up close: then a conference speakerphone or microphone array is the fix, `docs/voice.md`.)
+- [ ] False wakes: talk normally near it for a minute (say "Jarvis" in a sentence too). Any wake it shouldn't have? ________
+- [ ] While its own answer plays, saying "hey Jarvis" doesn't wake it (expected: it doesn't listen for the phrase while speaking).
+- [ ] When done, set Talking to it back to **push-to-talk** (or keep the wake word for the demo).
+
+**f.** Note the results in `docs/current-focus.md` step 7 (status) and surprises in `docs/GOTCHAS.md`; then step 7 can be marked done.
+
+## 10. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?

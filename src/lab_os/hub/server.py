@@ -551,6 +551,7 @@ def create_brain_app(
         internet=lambda: internet.online if internet else None,
         voices=voices or load_voices,
         greeting=lambda: _opening(chat),
+        venue_wake=lambda: venue.wake_word_on,
     )
     app[BRAIN] = Brain(
         place, venue, internet, assistant, focus_file, repo, chat, persona, project, voice, check_ai

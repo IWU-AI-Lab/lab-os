@@ -9,7 +9,7 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
-import { createVoice, wayIn } from "/web/voice.js";
+import { createVoice, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -160,7 +160,8 @@ async function greet() {
   renderLog();
   showRestore(g.previous);
   // spoken too, where voice works at the brain (with how to talk, where this screen has a microphone)
-  if (voice.greet(voice.can().ok ? wayIn() : "none")) {
+  const way = wayIn() === "wake_word" && !S.status?.voice?.wake?.available ? "push_to_talk" : wayIn();
+  if (voice.greet(voice.can().ok ? way : "none")) {
     VS.greeting = true;
     voice.playHeld();
   }
@@ -170,8 +171,12 @@ function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   closeModule();
   dictateCancel();
+  VW?.cancel();
+  VW = null;
   voice.cancel();
   voice.stopSpeaking();
+  voice.wake(false);
+  renderWakeDot();
   endVoice();
   clearChat(); // the next visitor shouldn't see the last one's questions
   S.screen = "start";
@@ -305,6 +310,7 @@ function renderStatus(st) {
   ai.classList.toggle("off", st.ai.connected !== true || !!st.ai.paused);
   showPaused(st.ai.paused);
   voice.setStatus(st.voice);
+  syncWake();
   if (!S.asking) setAssistant(st.assistant.state, st.assistant.loudness);
   checkStillFull();
 }
@@ -474,8 +480,56 @@ const voice = createVoice({
   onEvent: onVoiceEvent,
   onChange: renderMic,
   onLoud: (l) => (VS.voiced || VS.greeting) && setAssistant("speaking", l),
-  onLevel: dictateLevel,
+  onLevel: (l) => {
+    dictateLevel(l);
+    VW?.level(l);
+  },
 });
+
+// the wake word (Settings → This screen): while the hub is up, no module or conversation page open and the tab
+// in front, the brain listens for the phrase (the dot in the strip). After it, the question ends after a silence.
+let VW = null;
+function syncWake() {
+  const w = S.status?.voice?.wake;
+  const want =
+    wayIn() === "wake_word" && voice.can().ok && !!w?.available && S.screen === "hub" && !S.module &&
+    $("#chat").hidden && document.visibilityState === "visible";
+  voice.wake(want);
+  renderWakeDot();
+}
+function renderWakeDot() {
+  $("#f-wake").hidden = !voice.wakeOn;
+  $("#f-wake").title = `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
+}
+function wakeTurnStart() {
+  VS.greeting = false;
+  if (S.asking && !VS.voiced) {
+    voice.cancel(); // a typed question is being answered
+    return;
+  }
+  if (VS.voiced && !VS.turn) endVoice();
+  S.asking = VS.voiced = true;
+  showError(null);
+  $("#reply .q").textContent = "Listening…";
+  $("#reply .a").textContent = "";
+  setAssistant("listening", 0);
+  VW = silenceWatch(
+    (spoke) => {
+      VW = null;
+      if (spoke) {
+        voice.finish();
+        setAssistant("thinking", 0);
+      } else {
+        voice.cancel();
+        $("#reply .q").textContent = "I didn't hear a question.";
+        endVoice();
+        setAssistant("idle", 0);
+      }
+    },
+    { quietMs: 1500, idleMs: 6000, maxMs: 20_000 },
+  );
+}
+document.addEventListener("visibilitychange", syncWake);
 function renderMic() {
   const dict = wayIn() === "dictation";
   document.querySelectorAll(".mic").forEach((b) => {
@@ -553,7 +607,7 @@ addEventListener(
   true,
 );
 async function talkStart() {
-  if (voice.pressed) return;
+  if (voice.pressed || voice.wakeTurn) return;
   voice.unlock();
   VS.greeting = false;
   if (VS.voiced && !VS.turn) {
@@ -593,6 +647,17 @@ function onVoiceEvent(ev) {
     return;
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
+  if (ev.type === "wake") return wakeTurnStart();
+  if (ev.type === "wake_on" || ev.type === "wake_off" || ev.type === "wake_elsewhere") {
+    renderWakeDot();
+    if (ev.type === "wake_off" && wayIn() === "wake_word") showError(ev.why);
+    return;
+  }
+  if (ev.type === "heard" && !ev.final) VW?.words();
+  if ((ev.type === "error" || ev.type === "mic_error") && VW) {
+    VW.cancel();
+    VW = null;
+  }
   if (ev.type === "heard") {
     if (!VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
     if (!ev.final) return;
@@ -637,8 +702,10 @@ document.querySelectorAll(".mic").forEach((b) => {
 // hold Space to talk (where there's a mic button), unless you're typing something; Esc stops
 document.addEventListener("keydown", (e) => {
   if (S.screen !== "hub" || S.module) return;
-  if (e.key === "Escape" && (voice.pressed || voice.speaking())) {
-    if (voice.pressed) {
+  if (e.key === "Escape" && (voice.pressed || voice.wakeTurn || voice.speaking())) {
+    if (voice.pressed || voice.wakeTurn) {
+      VW?.cancel();
+      VW = null;
       voice.cancel();
       endVoice();
     } else voice.stopSpeaking();

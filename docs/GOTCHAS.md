@@ -4,8 +4,12 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — openWakeWord's package doesn't install on Linux with Python 3.12
+**What:** `openwakeword` 0.6.0 requires `tflite-runtime` on Linux (`platform_system == "Linux"`), which has no Python 3.12 build, and it pulls in scipy and scikit-learn. lab-os is Python 3.12 on the lab desktop.
+**Fix:** lab-os runs openWakeWord's ONNX models itself with `onnxruntime` (`src/lab_os/ai/wake.py`, ~100 lines, the same streaming steps). Checked against the package (on the Mac, where it installs): the same scores on the same recordings (0.961 / 0.999 / 0.999 for "hey Jarvis", 0.000 for other speech). The models are in `models/openwakeword/` (non-commercial license).
+
 ### 2026-11-12 — Gemini's free key: 3 speech requests a minute per TTS model
-**What:** making test recordings, the 3rd `gemini-3.8-flash-lite-tts` request within a minute got HTTP 429, "Generate content requests per minute limit exceeded on Free Tier", `quotaValue: 3`, `retryDelay: 53s`. A spoken answer uses 2 requests and the greeting 1, so the demo would go silent after about one question a minute. The limit is per model; there may be a daily one too (not hit yet).
+**What:** making test recordings, the 3rd `gemini-3.8-flash-lite-tts` request within a minute got HTTP 429, "Generate content requests per minute limit exceeded on Free Tier", `quotaValue: 3`, `retryDelay: 53s`. A spoken answer uses 2 requests and the greeting 1, so the demo would go silent after about one question a minute. The limit is per model. **There's a daily one too: 10 requests a day per model** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, hit the same day while testing; `retryDelay` ~15 h, until midnight Pacific).
 **Fix:** `speak:` in `models.yaml` lists four TTS models that work on the free key (`gemini-3.8-flash-lite-tts`, `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-flash-preview-tts`: 2.7–4.2 s a sentence, same voices); one over its limit rests for its `retryDelay` and the next speaks (`speak_any` in `ai/speech.py`). `gemini-2.5-pro-preview-tts` had no free quota. A paid key (or OpenAI's) doesn't have this.
 
 ### 2026-11-12 — Gemini: hearing through a normal model takes ~10 s; its Live transcription model ~0.4 s

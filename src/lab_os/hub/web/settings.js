@@ -125,8 +125,13 @@ const VOICE = { key: "voice", label: "Talking to it", kind: "choice", choices: [
   value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };
 async function voiceRow() {
   const { screenCanHear } = await import("/web/voice.js");
-  const can = await screenCanHear();
-  const f = can.ok ? VOICE : { ...VOICE, help: `Push-to-talk only, and not here: ${can.why}.` };
+  const [can, status] = await Promise.all([screenCanHear(), fetch("/api/status", { cache: "no-store" }).then((r) => r.json()).catch(() => null)]);
+  const wake = status?.voice?.wake;
+  let f = can.ok ? VOICE : { ...VOICE, help: `Push-to-talk only, and not here: ${can.why}.` };
+  if (can.ok && wake?.available) {
+    f = { ...VOICE, choices: [...VOICE.choices, "wake word"],
+      help: `${VOICE.help}. wake word: say "${wake.phrase}" from anywhere in the room (heard on the brain's computer; this screen's microphone stays open while the hub is up), and push-to-talk still works` };
+  } else if (can.ok && wake) f = { ...VOICE, help: `${VOICE.help}. wake word: not here (${wake.why})` };
   return fieldRow(f, can.ok ? f.value() : "push-to-talk", async (v) => { f.save(v); return { ok: true, message: "Kept on this screen." }; }, !can.ok);
 }
 

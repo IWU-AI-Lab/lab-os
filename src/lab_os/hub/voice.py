@@ -9,6 +9,10 @@ the brain.
 
 The assistant's state follows: `listening` while the mic is held, then the chat's `thinking`, and
 `speaking` (with the loudness the page reports) until the page has played the last word.
+
+The wake word: a page that chose it streams its microphone while the hub is awake; the brain listens
+for the phrase itself (lab_os.ai.wake, nothing leaves the computer) and only then starts hearing,
+like a push-to-talk press. If several screens hear it, the one that heard it best answers.
 """
 
 import asyncio
@@ -17,6 +21,7 @@ import contextlib
 import logging
 import re
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -27,6 +32,7 @@ from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
 from lab_os.ai.speech import VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
+from lab_os.ai.wake import PHRASES, THRESHOLD, WakeDetector, WakeModels
 from lab_os.personas import Persona
 
 log = logging.getLogger(__name__)
@@ -35,12 +41,26 @@ SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
 PLAYBACK_GRACE_S = 120.0  # a page that never says it finished playing doesn't hold `in_use` forever
 GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
+WAKE_UTTERANCE_S = 20.0  # after the wake word: the longest question
+WAKE_WINDOW_S = 0.25  # several screens heard it: wait this long for the others, best one answers
+WAKE_QUIET_S = 2.0  # after a wake, ignore the phrase for this long (the same words, other screens)
+WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from just before the wake goes to the hearing
 HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
     "dictation": "You can talk to me: tap the mic.",
+    "wake_word": "You can talk to me: say {phrase}.",
     "none": "",  # no microphone on this screen: the greeting alone
 }
 SENTENCE_END = re.compile(r"[.!?…](?=[\s\"')\]]|$)|\n")
+
+
+def strip_wake(text: str, phrase: str) -> str:
+    """The question without the wake phrase heard at its start ("Hey Jarvis, what's next?")."""
+    words = [re.escape(w) for w in phrase.split()]
+    if not words:
+        return text
+    optional = "".join(rf"(?:{w}\W+)?" for w in words[:-1])
+    return re.sub(rf"^\W*{optional}{words[-1]}\b\W*", "", text, flags=re.I).strip()
 
 
 def speakable(text: str) -> str:
@@ -79,7 +99,11 @@ class VoiceDesk:
     greeting: Callable[[], str] = lambda: ""
     links: set = field(default_factory=set)
     resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
+    venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
+    wake_models: WakeModels = field(default_factory=WakeModels)
     _session: aiohttp.ClientSession | None = None
+    _wake_candidates: dict | None = None  # screens that heard the phrase in this window → score
+    _wake_quiet_until: float = 0.0
 
     def setup(self) -> VoiceSetup:
         return pick_voice(self.persona().voice, self.voices())
@@ -94,6 +118,26 @@ class VoiceDesk:
             return "No internet, so no voice for now. Typing works when the AI does."
         return self.chat.paused()
 
+    def wake_word(self) -> str:
+        return self.persona().wake_word
+
+    def wake_phrase(self) -> str:
+        return PHRASES.get(self.wake_word(), ("", self.wake_word().replace("_", " ")))[1]
+
+    def wake_why_not(self) -> str | None:
+        """Why no screen can use the wake word now (a sentence), or None."""
+        why = self.why_not()
+        if why:
+            return why
+        if self.wake_word() in ("", "none"):
+            return "This assistant has no wake word (the persona's `wake_word: none`)."
+        if not self.venue_wake():
+            return (
+                "The wake word is off in this venue (`wake_word:` in its file; off by default "
+                "on a public venue)."
+            )
+        return self.wake_models.why_not(self.wake_word())
+
     def status(self) -> dict:
         why = self.why_not()
         try:
@@ -101,7 +145,33 @@ class VoiceDesk:
             where = {"setup": s.name, "where": s.where, "service": s.service}
         except NoVoice:
             where = {"setup": None, "where": None, "service": None}
-        return {"available": why is None, "why": why} | where
+        wake_why = self.wake_why_not()
+        wake = {"available": wake_why is None, "why": wake_why, "phrase": self.wake_phrase()}
+        return {"available": why is None, "why": why} | where | {"wake": wake}
+
+    # ---------- the wake word: several screens may hear it, one answers ----------
+
+    def wake_heard(self, link: "VoiceLink", score: float) -> None:
+        now = time.monotonic()
+        busy = self.chat.busy or any(lk.active() for lk in self.links)
+        if now < self._wake_quiet_until or busy:
+            return
+        if self._wake_candidates is None:
+            self._wake_candidates = {}
+            asyncio.get_running_loop().call_later(WAKE_WINDOW_S, self._wake_pick)
+        self._wake_candidates[link] = max(score, self._wake_candidates.get(link, 0.0))
+
+    def _wake_pick(self) -> None:
+        heard, self._wake_candidates = self._wake_candidates or {}, None
+        heard = {lk: s for lk, s in heard.items() if lk in self.links and lk.wake_on}
+        if not heard:
+            return
+        winner = max(heard, key=heard.get)
+        self._wake_quiet_until = time.monotonic() + WAKE_QUIET_S
+        for lk in self.links:
+            if lk is not winner and lk.wake_on:
+                lk.wake_elsewhere()
+        asyncio.get_running_loop().create_task(winner.woken(heard[winner]))
 
     def active(self) -> bool:
         return any(link.active() for link in self.links)
@@ -191,6 +261,10 @@ class VoiceLink:
         self.mode = "ask"
         self.task: asyncio.Task | None = None  # hearing's end + the turn
         self.playing_until = 0.0  # the page plays audio until it says it's done (or this time)
+        self.wake_on = False  # this page streams its microphone for the wake word
+        self.detector: WakeDetector | None = None
+        self.from_wake = False  # this hearing began with the wake word
+        self._recent: deque[bytes] = deque()  # the last audio before a wake (its tail is kept)
         self.last_greet = 0.0
         self.started_at = 0.0
         self._out: asyncio.Queue = asyncio.Queue()
@@ -248,13 +322,60 @@ class VoiceLink:
             self.played(msg)
         elif kind == "greet":
             self.greet(str(msg.get("way") or "push_to_talk"))
+        elif kind == "wake":
+            await self.wake(bool(msg.get("on")))
 
     def on_audio(self, pcm: bytes) -> None:
-        if self.hearing is None:
+        if self.hearing is not None:
+            self.hearing.feed(pcm)
+            limit = WAKE_UTTERANCE_S if self.from_wake else MAX_UTTERANCE_S
+            if time.monotonic() - self.started_at > limit:
+                self.end()
             return
-        self.hearing.feed(pcm)
-        if time.monotonic() - self.started_at > MAX_UTTERANCE_S:
-            self.end()
+        if not self.wake_on or self.detector is None or self.active():
+            return  # not listening for the phrase (or a turn runs, or the answer plays)
+        self._recent.append(pcm)
+        while sum(map(len, self._recent)) > WAKE_PREROLL_BYTES:
+            self._recent.popleft()
+        if self.detector.feed(pcm) >= THRESHOLD:
+            self.desk.wake_heard(self, self.detector.last)
+
+    # ---------- the wake word ----------
+
+    async def wake(self, on: bool) -> None:
+        """The page starts or stops streaming its microphone for the wake word."""
+        if not on:
+            self.wake_on, self.detector = False, None
+            return
+        why = self.desk.wake_why_not()
+        if why:
+            self.wake_on = False
+            self.send({"type": "wake_off", "why": why})
+            return
+        word = self.desk.wake_word()
+        if self.detector is None or self.detector.word != word:
+            # loading the models the first time takes a moment: not on the brain's main loop
+            self.detector = await asyncio.to_thread(WakeDetector, self.desk.wake_models, word)
+        self.wake_on = True
+        self.send({"type": "wake_on", "phrase": self.desk.wake_phrase()})
+
+    def wake_elsewhere(self) -> None:
+        if self.detector:
+            self.detector.reset()
+        self.send({"type": "wake_elsewhere"})
+
+    async def woken(self, score: float) -> None:
+        """This screen heard the phrase best: hear the question, like a push-to-talk press."""
+        log.info("voice: wake word heard (%.2f)", score)
+        if self.detector:
+            self.detector.reset()
+        preroll, self._recent = list(self._recent), deque()
+        self.send({"type": "wake", "score": round(score, 2)})
+        await self.listen("ask")
+        if self.hearing is not None:
+            self.from_wake = True
+            for pcm in preroll:  # the words right after the phrase may already be here
+                self.hearing.feed(pcm)
 
     async def listen(self, mode: str) -> None:
         if self.hearing is not None or (self.task and not self.task.done()):
@@ -313,6 +434,9 @@ class VoiceLink:
             return
         finally:
             self.desk.log_spend(setup, hearing.seconds, 0, "heard")
+        if self.from_wake:
+            self.from_wake = False
+            text = strip_wake(text, self.desk.wake_phrase())
         self.send({"type": "heard", "text": text, "final": True})
         if self.mode == "dictate" or not text:
             self._settle()
@@ -337,6 +461,7 @@ class VoiceLink:
                 self._settle()
 
     async def cancel(self) -> None:
+        self.from_wake = False
         if self.hearing is not None:
             hearing, self.hearing = self.hearing, None
             if self._starting and not self._starting.done():
@@ -362,7 +487,8 @@ class VoiceLink:
             self.send({"type": "audio_end", "count": 0, "greeting": True})
             return
         self.last_greet = time.monotonic()
-        text = f"{self.desk.greeting()} {HINTS.get(way, HINTS['push_to_talk'])}".strip()
+        hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
+        text = f"{self.desk.greeting()} {hint}".strip()
         if not text:
             self.send({"type": "audio_end", "count": 0, "greeting": True})
             return

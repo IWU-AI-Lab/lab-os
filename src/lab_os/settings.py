@@ -168,6 +168,16 @@ SECTIONS: list[Section] = [
                 applies="next",
             ),
             Field(
+                "venue",
+                "wake_word",
+                "Wake word in this venue",
+                "choice",
+                'screens that chose it listen for "hey jarvis" (⚙ → This screen); '
+                "default = off on a public venue, on otherwise",
+                choices=("default", "on", "off"),
+                applies="restart",
+            ),
+            Field(
                 "place",
                 "ai_budget_usd_month",
                 "Monthly AI budget",

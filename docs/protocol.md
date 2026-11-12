@@ -181,7 +181,7 @@ Polled every 3 s by the hub.
   "ai": {"setup": "main", "where": "OpenAI", "model": "gpt-6-luna", "connected": true,
          "paused": null, "problem": null, "busy": false},
   "voice": {"available": true, "why": null, "setup": "backup", "where": "Gemini, free key",
-            "service": "gemini"},
+            "service": "gemini", "wake": {"available": true, "why": null, "phrase": "hey Jarvis"}},
   "assistant": {"state": "idle", "loudness": 0.0},
   "arm": {"name": "fake-arm", "control": "free"},
   "in_use": [],
@@ -191,7 +191,7 @@ Polled every 3 s by the hub.
 - `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
 - `ai`: the chat's AI setup (`docs/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
-- `voice`: whether this brain can hear and speak now (`docs/voice.md`): `available`, else `why` (a full sentence: the persona has no voice, no key, no internet, the chat is paused), and the voice setup in use. The hub shows the mic button only when it's `available` (and the page is secure and has a microphone).
+- `voice`: whether this brain can hear and speak now (`docs/voice.md`): `available`, else `why` (a full sentence: the persona has no voice, no key, no internet, the chat is paused), the voice setup in use, and `wake`: `{"available", "why", "phrase"}` for the wake word (the persona's `wake_word:`, the venue's `wake_word:`, the models). The hub shows the mic button only when it's `available` (and the page is secure and has a microphone).
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking (a spoken answer: the loudness the page reports). `offline` while no AI is connected; `error` after a failed answer until the service answers again.
 - `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
 - `in_use`: what's in use right now (`"teleop"`, `"ai"`, `"chat"` while an answer streams, `"voice"` from a mic press until the answer's last spoken word); the hub never goes back to the start screen while it isn't empty.
@@ -290,12 +290,14 @@ A WebSocket per page (`docs/voice.md`). The page records and plays; the brain he
 - `{"type": "listen", "mode": "ask" | "dictate"}`: the mic is pressed. Then **binary messages**: the microphone as 16-bit PCM, 16 kHz, mono (little-endian), e.g. 50 ms each. `ask` = push-to-talk (the words become a question); `dictate` = words only, nothing is asked. Held longer than 60 s, the brain ends it itself.
 - `{"type": "end"}`: let go. `{"type": "cancel"}`: stop, ask nothing.
 - `{"type": "played", "loudness": 0.42}` while the answer plays (~5 per second), `{"type": "played", "done": true}` after its last word (or when it was cut short). The assistant's state stays `speaking` until then; `in_use` has `"voice"`.
-- `{"type": "greet", "way": "push_to_talk" | "none"}`: say the greeting (the conversation's first message, set by `POST /api/chat/start`) and a hint how to talk (`none`: no hint, the screen has no microphone). Spoken in one piece. At most every 10 s; a refused greet still gets `audio_end` with `count: 0`.
+- `{"type": "wake", "on": true | false}`: listen for the wake word: the page then streams its microphone (binary, as above) while it isn't playing an answer; the brain runs the detector on it (nothing leaves the brain). Answered with `{"type": "wake_on", "phrase": "hey Jarvis"}` or `{"type": "wake_off", "why": "…"}`.
+- `{"type": "greet", "way": "push_to_talk" | "dictation" | "wake_word" | "none"}`: say the greeting (the conversation's first message, set by `POST /api/chat/start`) and a hint how to talk (`none`: no hint, the screen has no microphone). Spoken in one piece. At most every 10 s; a refused greet still gets `audio_end` with `count: 0`.
 
 **Brain → page**
 - `{"type": "listening", "mode": "ask"}`; `{"type": "heard", "text": "what is the next", "final": false}` while hearing (the words so far), then `{"type": "heard", "text": "…", "final": true}` after `end` (`""`: nothing was said; nothing is asked).
 - Then, for `ask`, the chat's events as in `POST /api/chat` (`state`, `tool`, `text`, `done` or `error`).
 - `{"type": "audio", "seq": 0, "text": "Next is step 7.", "mime": "audio/wav", "data": "<base64>"}`: the spoken answer, a sentence or a few at a time, in order; then `{"type": "audio_end", "count": 2}` (`"greeting": true` for the greeting; `count: 0` when nothing was spoken).
+- `{"type": "wake", "score": 0.98}`: this page heard the wake word best (others got `{"type": "wake_elsewhere"}`); the brain is already hearing (then `listening`, `heard` as above). The page ends the question with `end` (after a silence) or drops it with `cancel`. The wake phrase is taken off the start of the words.
 - `{"type": "voice_error", "message": "…"}`: speaking failed; the answer stays on the screen. `{"type": "error", "message": "…"}`: no voice now, the service refused, or "I'm still on the last one."
 
 ## Recording files (`.jsonl`)
