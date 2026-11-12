@@ -37,6 +37,16 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-12)
 
+### AI picking: height, sag and camera placement
+- **What:** fixes suggested by the missed cube pick (`GOTCHAS.md`, 2026-11-12):
+  1. **Check the height zero:** put the jaw tips on the table by hand (torque off), read `arm_status`, and correct the gripper-point offset or the model if z isn't ~0.
+  2. **Allow for the elbow sag:** add the steady ~3° to the elbow command, or have `move_to` send a small second correction after a short stop. Then `stopped_short` only fires for real misses (e.g. above 1° or 0.5 cm), so the warning means something again.
+  3. **Place the overhead camera:** a printed square marker (AprilTag) at a known spot in front of the arm lets `cam-a` turn a pixel into table cm, so the AI's first guess is close and the wrist camera only fine-tunes.
+  4. **Say before moving:** move tools take a short `plan` sentence that the hub shows (and the voice says) before the arm moves, so people can follow along and the AI can't skip saying it.
+- **Why:** the 2026-11-19 demo has the AI picking things up while people watch. This time it took 10 small moves to get beside the cube, then closed above it.
+- **Watch out:** 1 needs the white arm's torque off and hands on the arm (ask first). Never on the green arms (their calibration is read-only).
+- **Plugs into:** `tools/robot.py`, the SO-101 model, the cameras, the hub's AI view.
+
 ### Our own recording and training page (instead of LeLab)
 - **What:** a lab-os page for recording demonstrations and starting training runs on the SO-101s: all cameras shown at once, episodes listed, start/stop recording, a training run's progress, through LeRobot (the `so101` extra) without its separate web app.
 - **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera.
