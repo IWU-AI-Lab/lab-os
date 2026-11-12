@@ -13,6 +13,7 @@
 // Units: metres in the stage's space (you at the origin, -z ahead).
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
+import { Ask } from "./ask.js";
 import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 
@@ -79,6 +80,11 @@ export class HubView {
     this.group.add(this.frame);
     this.traces = new Traces(D);
     this.group.add(this.traces.group);
+    // the ask line just under the core's ring, the answer under it (xr/ask.js)
+    this.ask = new Ask({ sfx });
+    this.ask.line.mesh.position.set(0, -0.66, -D + 0.01);
+    this.ask.reply.mesh.position.set(0, -0.9, -D + 0.01);
+    this.group.add(this.ask.line.mesh, this.ask.reply.mesh);
     // the details page (unfolds from its callout)
     this.page = new DetailsPage(2.7, 1.6);
     this.page.mesh.visible = false;
@@ -124,7 +130,7 @@ export class HubView {
   targets() {
     if (this.mode === "details") return [this.page.mesh];
     if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
-    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh];
+    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh, this.ask.mesh];
   }
 
   /** The startup is over: everything flies to its place and the panels unfold out from the core. */
@@ -165,7 +171,7 @@ export class HubView {
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
-    if (w.kind === "tab") return null;
+    if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
     if (w.kind === "page" || w.kind === "card") return null;
     const c = hit.obj.userData.hit;
     if (w.kind === "control" && c.id === "commits") { c.days = +w.id.slice(4); this.sfx.blip(); return null; }
@@ -249,7 +255,7 @@ export class HubView {
     this.page.hover = null;
     this.tab.hover = null;
     for (const b of this.buttons) b.hover = false;
-    let powerHover = false;
+    let powerHover = false, askHover = false;
     for (const h of hits) {
       const o = h.obj.userData.hit;
       if (o instanceof Callout) o.hover = h.what;
@@ -257,6 +263,7 @@ export class HubView {
       else if (o === this.tab) this.tab.hover = h.what;
       else if (h.what.kind === "module") o.hover = true;
       else if (h.what.kind === "power") powerHover = true;
+      else if (h.what.kind === "ask") askHover = true;
     }
     // a module: the hub steps back (hidden), the module's view and its tab come forward
     const inModule = this.mode === "module";
@@ -295,6 +302,9 @@ export class HubView {
     this.paintStrip(now); this.strip.opacity = early;
     this.paintPower(powerHover); this.power.opacity = early;
     this.stepLog(now); this.log.opacity = early;
+    this.ask.step(now, askHover);
+    this.ask.line.opacity = clamp((t - 700) / 400, 0, 1) * this._dim;
+    if (this._dim < 1) this.ask.reply.opacity = Math.min(this.ask.reply.opacity, this._dim);
     this.card.p.opacity = this.card.dev ? this._dim : 0;
     this.frame.userData.set(clamp(t / 700, 0, 1) * (0.4 + 0.6 * this._dim));
     this.traces.step(dt, now, clamp((t - 450) / 800, 0, 1) * this._dim, this.core.state);
@@ -325,13 +335,19 @@ export class HubView {
     if (st?.persona?.display_name) items.push(["i-user", st.persona.display_name, true]);
     if (st) items.push(["i-globe", st.internet ? "online" : "offline", !!st.internet]);
     if (ai) items.push(["i-chip", ai.paused ? "AI paused" : ai.connected ? `AI: ${ai.setup}` : "AI not connected", !!ai.connected && !ai.paused]);
-    const key = JSON.stringify([items, clock]);
+    const wake = this.ask.wakeOn; // listening for the wake word: a small dot, separate from the core
+    const key = JSON.stringify([items, clock, wake, wake && Math.floor(now / 250)]);
     this.strip.paint((g, w, h) => {
       g.textBaseline = "middle";
       // right to left: the clock, then the facts
       g.font = `${h * 0.42}px ${FONT.digits}`; g.textAlign = "right"; g.fillStyle = C.primary;
       g.fillText(clock, w - h * 0.2, h / 2);
       let x = w - h * 0.2 - g.measureText(clock).width - h * 0.75;
+      if (wake) {
+        g.fillStyle = rgba(C.primary, 0.15 + 0.35 * (0.5 + 0.5 * Math.cos((now / 4000) * Math.PI * 2)));
+        g.beginPath(); g.arc(x - h * 0.1, h / 2, h * 0.09, 0, Math.PI * 2); g.fill();
+        x -= h * 0.6;
+      }
       g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
       for (const [ico, text, ok] of items.reverse()) {
         const tw = g.measureText(text).width;
@@ -420,7 +436,7 @@ export class Traces {
     this.pulses = [];
     this.next = 0;
     // up to the strip, down to the log: the hub's vertical line through the core
-    this.base = [[new THREE.Vector3(0, 0.56, -D), new THREE.Vector3(0, 0.98, -D)], [new THREE.Vector3(0, -0.56, -D), new THREE.Vector3(0, -0.98, -D)]];
+    this.base = [[new THREE.Vector3(0, 0.56, -D), new THREE.Vector3(0, 0.98, -D)], [new THREE.Vector3(0, -0.56, -D), new THREE.Vector3(0, -0.61, -D)]];
     this.set(this.base);
   }
   /** The traces to the module buttons (plus the vertical ones). */

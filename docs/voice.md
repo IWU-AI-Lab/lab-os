@@ -34,6 +34,14 @@ After "hey Jarvis", the core listens like a push-to-talk press: say the question
 - **The models** (`models/openwakeword/`, README there): openWakeWord's, run with `onnxruntime` directly (its own package doesn't install on Linux with Python 3.12). Non-commercial license (CC BY-NC-SA 4.0).
 - **The room microphone:** from across the room it needs a decent microphone (a conference speakerphone or a microphone array; weak USB dongles only hear you up close). Not tried at the lab yet.
 
+## In VR (`/xr`)
+The hub in VR is a screen like the others, with the headset's own microphone and speakers:
+- **Push-to-talk:** point at the ask line under the core and hold the trigger (or a pinch); let go when you're done. The answer types out under the core as it's spoken.
+- **The wake word:** on whenever the brain offers it (no per-screen setting in VR: the headset is personal), while the hub is up with no page or module open; the dot in the strip says it's listening.
+- **Another screen's turns:** a question heard by the desktop (its push-to-talk or its wake word) shows under the core in VR too, from the brain's conversation (`/api/chat`); the desktop speaks the answer, and the core follows the brain's state.
+- **The microphone permission** is asked on the page before entering VR ("Allow the microphone"): a browser prompt inside VR is easy to miss. The Quest's browser reaches the brain as `http://localhost:8080` (adb reverse), a secure page, so the microphone is allowed.
+- No voice (no key, no internet, paused): the ask line says why when held.
+
 ## The spoken greeting
 After the start tap, the greeting ("Good morning." + one line of real news, `docs/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
 - Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.

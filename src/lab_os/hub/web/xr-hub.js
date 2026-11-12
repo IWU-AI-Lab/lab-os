@@ -100,6 +100,7 @@ class Show {
     this.hub.hide();
     this.flyAt = null;
     this.title.reset(); this.greet.reset(); this.checks.reset();
+    this.hub.ask.syncWake(false);
     this.title.mesh.position.set(0, 1.02, -D); this.title.mesh.scale.setScalar(1); this.title.mesh.rotation.set(0, 0, 0);
     this.greet.mesh.position.set(0, 0.84, -D);
     this.checks.mesh.position.set(0, -1.02, -D); this.checks.mesh.scale.setScalar(1);
@@ -111,6 +112,7 @@ class Show {
     this.sfx.unlockAudio();
     if (this.phase === "ignite") {
       this.ign.unlock(now); this.sfx.unlock();
+      this.hub.ask.greet(); // the spoken greeting: asked for now, played as it's typed
       this.phase = "unlock";
       this.wantPlace = true;
     } else if (this.phase === "jump" || this.phase === "boot") this.finishBoot();
@@ -172,6 +174,7 @@ class Show {
     this.sfx.title();
     this.greet.text = this.facts.greeting || this.greetingWord();
     this.greet.start(clockNow());
+    this.hub.ask.playGreeting();
     await wait(this.greet.text.length * 22);
     await typing;
     if (this.skip) return;
@@ -237,7 +240,11 @@ class Show {
     this.stars.step(dt, now, { v, trail, bright: bright * starShow, k, jump: P === "jump" || P === "boot", frozen: impact });
     this.stars.visible = starShow > 0.01;
     this.sky.step(now, tint, impact);
-    const state = this.facts.status?.assistant?.state || "offline";
+    // the assistant's state: this headset's own voice turn, else the brain's (another screen's turn too)
+    const ask = this.hub.ask;
+    const state = ask.state || this.facts.status?.assistant?.state || "offline";
+    this.core.voiceLoud = ask.state === "speaking" ? ask.loud || 0 : null;
+    this.core.micLevel = ask.state === "listening" ? ask.level || 0 : null;
     this.core.state = P === "hub" || P === "boot" ? state : "idle";
     if (P === "boot" || P === "hub") this.core.step(dt, now);
     if (P !== "hub") { this.core.group.scale.setScalar(coreScale); this.core.group.position.set(0, 0, -D); }
@@ -305,10 +312,13 @@ async function pollPanels(show) {
   Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
 }
 async function poll(show) {
+  show.hub.ask.syncWake(show.phase === "hub" && show.hub.mode === "hub");
+  if (show.phase === "hub") show.hub.ask.pollChat(clockNow());
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
   if (st) show.facts.status = st; else if (show.facts.status) show.facts.status = { ...show.facts.status, assistant: { state: "offline" } };
   if (arm) show.facts.arm = arm;
   show.hub.facts.status = show.facts.status;
+  show.hub.ask.setStatus(show.facts.status);
 }
 
 /* ---------- pointing in the headset: each controller's (or hand's) ray, B / Y = back ---------- */
@@ -346,6 +356,7 @@ async function start(mode) {
   const ar = mode === "immersive-ar", show = new Show(ar);
   window.__xrShow = show; // for tests and the console
   window.__xrNow = clockNow;
+  show.hub.ask.now = clockNow;
   await Promise.all([loadFacts(show), loadFonts(), loadIcons()]);
   show.title.text = show.facts.title;
   await pollPanels(show);
@@ -375,14 +386,18 @@ async function start(mode) {
     const size = () => { r.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
     size(); addEventListener("resize", size);
     // drag to look around; a click without a drag presses what the mouse is on
-    let drag = null, yaw = 0, pitch = 0;
+    let drag = null, yaw = 0, pitch = 0, holding = false;
     const mouse = new THREE.Vector2(), rc = new THREE.Raycaster();
     const aim = (e) => {
       mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
       rc.setFromCamera(mouse, camera);
       show.pointer.update("mouse", rc.ray.origin, rc.ray.direction, false);
     };
-    r.domElement.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; });
+    r.domElement.addEventListener("pointerdown", (e) => {
+      aim(e);
+      if (show.phase === "hub" && show.pointer.hitOf("mouse")?.what.kind === "ask") { holding = true; show.hub.ask.pressStart(clockNow()); return; }
+      drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false };
+    });
     addEventListener("pointermove", (e) => {
       aim(e);
       if (!drag) return;
@@ -391,7 +406,7 @@ async function start(mode) {
       yaw = drag.yaw + dx * 0.004; pitch = clamp(drag.pitch + dy * 0.004, -1.2, 1.2);
       camera.rotation.set(pitch, yaw, 0, "YXZ");
     });
-    addEventListener("pointerup", (e) => { if (drag && !drag.moved) { aim(e); show.press(clockNow(), show.pointer.hitOf("mouse")); } drag = null; });
+    addEventListener("pointerup", (e) => { if (holding) { holding = false; show.hub.ask.pressEnd(); return; } if (drag && !drag.moved) { aim(e); show.press(clockNow(), show.pointer.hitOf("mouse")); } drag = null; });
     addEventListener("keydown", (e) => {
       if (e.key === "Escape") return show.hub.mode !== "hub" ? show.back(clockNow(), "right") : location.reload();
       if (show.phase !== "hub") show.press(clockNow());
@@ -414,6 +429,13 @@ async function start(mode) {
   session.addEventListener("inputsourceschange", hands);
   hands();
   // trigger, or a pinch: presses what that controller or hand points at
+  // hold the trigger (or a pinch) on the ask line: push-to-talk
+  const holds = new Set();
+  session.addEventListener("selectstart", (e) => {
+    const key = e.inputSource.handedness;
+    if (show.phase === "hub" && show.hub.mode === "hub" && show.pointer.hitOf(key)?.what.kind === "ask") { holds.add(key); show.hub.ask.pressStart(clockNow()); }
+  });
+  session.addEventListener("selectend", (e) => { if (holds.delete(e.inputSource.handedness)) show.hub.ask.pressEnd(); });
   session.addEventListener("select", (e) => {
     const key = e.inputSource.handedness;
     if (show.hub.module?.id === "teleop" && key === "left") return; // the left hand is teleop's clutch
@@ -439,5 +461,25 @@ async function init() {
   vr.onclick = go("immersive-vr");
   ar.onclick = go("immersive-ar");
   if (params.has("preview")) preview.click();
+  micButton();
+}
+// Talking in VR needs the microphone; a browser's question about it inside VR is easy to miss, so it's
+// asked here, on the page, once (the browser remembers). Only where voice works at the brain.
+async function micButton() {
+  const st = await getJSON("/api/status");
+  if (!st?.voice?.available || !window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return;
+  const state = await navigator.permissions?.query({ name: "microphone" }).then((p) => p.state).catch(() => "prompt");
+  if (state === "granted") return;
+  const b = document.createElement("button");
+  b.className = "btn"; b.type = "button"; b.textContent = "Allow the microphone (to talk in VR)";
+  b.onclick = async () => {
+    try {
+      (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop());
+      b.remove();
+    } catch {
+      $("#msg").textContent = "The browser didn't allow the microphone: in VR, the ask line says why. Typing on a screen still works.";
+    }
+  };
+  $(".actions").append(b);
 }
 init();

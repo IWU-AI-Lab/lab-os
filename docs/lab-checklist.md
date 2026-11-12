@@ -20,6 +20,8 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 
 **New since 2026-11-12 (step 7, voice, built away from the lab, tried on a laptop with recorded voices):** push-to-talk with a spoken answer, the spoken greeting, dictation, the wake word (part 9). Part 0 installs one new library (`onnxruntime`, for the wake word). **Gemini's free key speaks only ~15–20 answers a day** (10 requests per TTS model per day, GOTCHAS): if answers come silent with "…sending too much voice", that's it for the day (it resets at midnight Pacific).
 
+**New since 2026-11-12 (step 10, the hub in VR, tried only in an emulated Quest):** the jump matching the main hub's, the hub around you with callouts, ⏻, module buttons (Teleop without leaving VR, Monitor and AI Control holograms) and asking by voice (part 10).
+
 **Never:** change the green arms' motor IDs or firmware, write their calibration, touch the `lerobot` conda env, or open a green port while LeLab is using it (CLAUDE.md, loosened 2026-11-12). Since step 11 the brain follows these rules itself (part 8 checks it does).
 
 ## 0. Get the latest (2 min)
@@ -225,7 +227,24 @@ Open **http://localhost:8080/design** in Chrome and press start.
 
 **f.** Note the results in `docs/current-focus.md` step 7 (status) and surprises in `docs/GOTCHAS.md`; then step 7 can be marked done.
 
-## 10. If there's time
+## 10. The hub in VR (step 10; 20–30 min, the Quest on USB)
+Built 2026-11-12 away from the lab, tried in Meta's emulated Quest (iwer), never in the headset. Fake arm first:
+```bash
+uv run lab-os serve
+adb reverse tcp:8080 tcp:8080          # re-run after every re-plug
+```
+In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** shows, press it and allow (once). Then **Enter VR**. (`docs/quest-setup.md` → "The hub in VR".)
+- [ ] **Start:** the small core with "Pull the trigger or pinch to start" floats ahead. Pull the trigger: the bolts pull back, the ring opens, then the jump. Do the lines grow out of the stars you were looking at? Cyan with whiter heads (not black and white)? Comfortable, or too fast / too bright (note it)?
+- [ ] **Arrival:** the flash, the network streaking in, the core's rings locking on, the checks, the place's name, the greeting (spoken if voice works). Then everything flies to its place and the callouts unfold.
+- [ ] **Reading:** can you read the callouts, the strip and the log without leaning in? Is anything too far to the side (you shouldn't need to turn your head much)? Note sizes that feel off.
+- [ ] **Pointing:** each controller has a thin beam and a ring where it lands. Point at a callout and pull the trigger: its page unfolds, the core docks in its corner; **B** closes it. Try 7d/14d/30d on Commits, **List all** and a device on Devices. Then bare hands: point and pinch.
+- [ ] **The trigger on empty space does nothing**; **⏻** (top right) goes back to the start screen; the trigger there starts the jump again.
+- [ ] **Teleop** (left of the core): the arm room opens, the TELEOP tab top left. Grip and move: does the fake arm follow (watch `/monitor` on the desktop)? A/X stops; left grip moves the 3D arm; Y puts it back. **B** (or the right controller on ← and the trigger) goes back to the hub; the desktop's `/teleop` can take control again.
+- [ ] **Monitor / AI Control:** the arm hologram with joint angles; move the arm from the desktop's `/teleop` and watch the hologram follow; **STOP** stops it. AI Control lists tool calls if Claude Code drives the arm meanwhile.
+- [ ] **Asking:** point at "Ask anything", hold the trigger, ask "what's next?", let go: the answer types out under the core and is spoken. Then say "hey Jarvis, what's next?" without pressing anything (the dot in the strip should be on). Then ask on the desktop (its mic): does the question and answer show in VR?
+- [ ] Note what felt wrong in `docs/current-focus.md` step 10 and surprises in `docs/GOTCHAS.md`. With time: the real `so101-white` through Teleop in VR (you at the arm, `--speed 0.2`, part 7's setup).
+
+## 11. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?
