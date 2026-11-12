@@ -104,22 +104,39 @@ def test_shared_files_fall_back_to_the_repo(home):
     assert config.shared_path("poses.yaml") == home / "poses.yaml"
 
 
-def test_the_lab_off_limits_devices_stay_off_limits_at_every_place(home):
+def test_the_lab_borrowed_devices_stay_borrowed_at_every_place(home):
     (home / "devices.yaml").write_text(
         "devices:\n"
         "  fake-arm: {kind: fake}\n"
         "  so101-green: {kind: so101, ports: [/dev/serial/by-id/usb-1a86_x-if00]}\n"
     )
     reg = load_registry()
-    assert reg.devices["so101-green"].off_limits  # the home entry can't make it openable
-    assert reg.devices["training-cameras"].off_limits
+    green = reg.devices["so101-green"]
+    assert green.borrowed and green.calibration == "lerobot"  # the home entry can't drop the rules
+    assert green.ports[0].endswith("5B41533501-if00")
+    assert reg.devices["so101-green-cam-a"].borrowed
     assert "so101-white" not in reg.devices  # the lab's other devices don't come along
+
+
+def test_the_repos_off_limits_devices_stay_off_limits_at_every_place(home, tmp_path, monkeypatch):
+    repo = tmp_path / "repo-config"
+    repo.mkdir()
+    (repo / "devices.yaml").write_text(
+        "devices:\n  locked-arm: {kind: so101, off_limits: true, "
+        "ports: [/dev/serial/by-id/usb-1a86_LOCKED-if00]}\n"
+    )
+    monkeypatch.setattr(config, "DEFAULT_DIR", repo)
+    (home / "devices.yaml").write_text(
+        "devices:\n  locked-arm: {kind: so101, ports: [/dev/serial/by-id/usb-1a86_x-if00]}\n"
+    )
+    reg = load_registry()
+    assert reg.devices["locked-arm"].off_limits  # the home entry can't make it openable
     with pytest.raises(PortNotAllowed):
-        serial_port("so101-green", reg)
+        serial_port("locked-arm", reg)
 
 
 def test_default_device_is_the_only_usable_one():
-    assert default_device(("so101",)) == "so101-white"  # green is off limits
+    assert default_device(("so101",)) == "so101-white"  # green is borrowed: name it
     assert default_device(("xarm1s",)) == "xarm1"  # xarm2 has no port or USB entry
     with pytest.raises(LookupError, match="which camera"):
         default_device(("camera",))
@@ -188,10 +205,24 @@ def test_arm_must_be_in_the_device_list(home, no_run, monkeypatch):
     at_home = ["serve", "--config", str(home), "--quiet"]
     with pytest.raises(SystemExit, match="fake, fake-xarm1 or an arm from devices.yaml: none"):
         cli.main([*at_home, "--arm", "so101-white"])  # the lab's arm isn't at this place
+    with pytest.raises(SystemExit, match="so101-green is not active in venue 'home'"):
+        cli.main([*at_home, "--arm", "so101-green"])  # the lab's green arm isn't here either
+    assert no_run == []
+
+
+def test_the_green_follower_is_driven_like_the_white_one_at_the_lab(no_run, monkeypatch):
+    made = []
+
+    def driver(**kw):
+        made.append(kw)
+        raise RuntimeError("stop here: no real arm in tests")
+
+    monkeypatch.setattr("lab_os.robots.so101.SO101Arm", driver)
+    with pytest.raises(RuntimeError, match="stop here"):
+        cli.main(["serve", "--quiet", "--arm", "so101-green"])
+    assert made == [{"name": "so101-green", "allow_motion": True}]
     with pytest.raises(SystemExit, match="not an arm lab-os can drive"):
-        cli.main([*at_home, "--arm", "so101-green"])
-    with pytest.raises(SystemExit, match="not an arm lab-os can drive"):
-        cli.main(["serve", "--quiet", "--arm", "so101-green"])  # nor at the lab
+        cli.main(["serve", "--quiet", "--arm", "so101-green-leader"])  # a leader isn't driven
     assert no_run == []
 
 
@@ -221,3 +252,21 @@ def test_one_to_one_speed_per_venue():
         one_to_one_speed(-5)
     assert load_venue("lab", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0
     assert load_venue("visit-day", REPO_ROOT / "config").one_to_one_deg_per_s == 0.0
+
+
+def test_a_port_in_use_stops_serve_with_a_sentence(no_run, monkeypatch):
+    from lab_os.devices import InUse
+
+    class Busy:
+        name = "so101-green"
+
+        def __init__(self, **kw):
+            pass
+
+        def connect(self):
+            raise InUse("so101-green is in use by lelab (pid 42): one program per port. …")
+
+    monkeypatch.setattr("lab_os.robots.so101.SO101Arm", Busy)
+    with pytest.raises(SystemExit, match="--arm so101-green: not opened. so101-green is in use"):
+        cli.main(["serve", "--quiet", "--arm", "so101-green"])
+    assert no_run == []

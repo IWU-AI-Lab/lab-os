@@ -19,3 +19,28 @@ def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
     monkeypatch.delenv("LAB_OS_PERSONA", raising=False)
     for key in ("OPENAI_API_KEY", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"):
         monkeypatch.delenv(key, raising=False)  # a key in the shell never reaches a test
+
+
+@pytest.fixture
+def locked():
+    """A registry with off-limits devices: the lab has none since step 11 (the green arms are
+    borrowed now), but another place may, and off_limits must keep refusing them."""
+    from lab_os.devices import Device, Registry, UsbId
+
+    port = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_LOCKED0001-if00"
+    return Registry(
+        {
+            "locked-arm": Device(
+                "locked-arm",
+                "so101",
+                off_limits=True,
+                ports=(port,),
+                usb=(UsbId(0x1A86, serial="LOCKED0001"),),
+                notes="someone else's",
+            ),
+            "locked-cams": Device(
+                "locked-cams", "camera", off_limits=True, usb=(UsbId(0x0C45, 0x6366),)
+            ),
+            "xarm1": Device("xarm1", "xarm1s", usb=(UsbId(0x0483, 0x5750, "xArm", "X1"),)),
+        }
+    )

@@ -17,7 +17,7 @@ Setup and conventions: `docs/dev-setup.md`, `docs/project-scaffold.md`. Safety: 
 - **Never modify the `lerobot` conda env** (`~/miniforge3/envs/lerobot`) or the `~/lerobot` checkout. Don't install into it, don't activate it for lab-os work.
 - **One program per port:** never open a green port while LeLab or a training or recording run is using it; check first, and refuse with a sentence if it's busy.
 
-The green arms may be unplugged during lab-os testing. Don't assume they're there or gone. The training launcher (`lab-os green`, `docs/green-launcher.md`) keeps its own checks. **Until step 11 lands, the code, `config/devices.yaml` and the hook (`.claude/hooks/guard.sh`) still refuse the green ports and the training cameras**; step 11 changes them to match these rules.
+The green arms may be unplugged during lab-os testing. Don't assume they're there or gone. The training launcher (`lab-os green`, `docs/green-launcher.md`) keeps its own checks. **How the code keeps the rules (step 11, 2026-11-12):** the greens and their two cameras are `borrowed: true` in `config/devices.yaml` (never `off_limits` now); `lab_os.robots.so101_setup` refuses borrowed arms (by name and board serial); the driver reads the calibration through a temporary copy; `lab_os.devices.check_not_in_use` refuses a port or camera another program has open; the hook (`.claude/hooks/guard.sh`) and `.claude/settings.json` deny writes to LeRobot's cache and changes to the `lerobot` env.
 
 ## Environment
 - lab-os has its **own uv environment** (`.venv/`, Python 3.12, uv-managed — never conda). `uv sync` to set up; `uv run …` to run.

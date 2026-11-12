@@ -1,32 +1,52 @@
 # Robot registry. Names follow docs/lab-jarvis-log.md.
 #
 # Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/GOTCHAS.md).
-# off_limits: true  -> lab_os.devices refuses to hand out the port. Never remove this for so101-green.
+# Cameras are listed ONLY by USB socket (/dev/v4l/by-path/): identical cameras share a serial.
+# off_limits: true -> lab_os.devices refuses to hand out the port.
+# borrowed: true   -> another project's device (CLAUDE.md, "Hard rules"): lab-os may drive or use
+#                     it, but never sets it up (no motor IDs, baud rate, firmware, calibration),
+#                     reads its calibration only from LeRobot's cache, and never opens it while
+#                     another program has it open. Never remove this for the green ones.
 
 devices:
   so101-green:
     kind: so101
-    off_limits: true
+    borrowed: true
+    calibration: lerobot   # ~/.cache/huggingface/lerobot/calibration/robots/…, read only
+    # calibration_id: …    # only if that folder holds several follower files (<id>.json)
     notes: >-
-      Another project's training arm (leader + follower). Never open, never recalibrate.
-      Ports confirmed as so101-green by the owner on 2026-10-24.
+      Follower of the SO-101 training set (the builder's training project, LeLab). Drivable by
+      lab-os since 2026-11-12 with four rules: no motor setup, calibration read only, the lerobot
+      env untouched, never while LeLab or a run has its port open.
+    ports:
+      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00
+    usb:
+      - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "5B41533501"}
+
+  so101-green-leader:
+    kind: so101-leader
+    borrowed: true
+    calibration: lerobot
+    notes: Leader of the SO-101 training set (same rules as so101-green).
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00
-      - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00
-    # USB serial numbers: blocks the arm on every OS (COM ports / macOS paths differ, serials don't).
     usb:
-      - {vendor_id: 0x1a86, serial: "5B41531599"}
-      - {vendor_id: 0x1a86, serial: "5B41533501"}
+      - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "5B41531599"}
 
-  training-cameras:
+  # The training set's two cameras (Innomaker U20CAM-1080p, 0c45:6366, both serial SN0001):
+  # sockets from `ls -l /dev/v4l/by-path/` on 2026-11-11. Which one is the wrist camera and which
+  # sees from above isn't written down yet: check at the lab, then rename (docs/lab-checklist.md).
+  so101-green-cam-a:
     kind: camera
-    off_limits: true
-    notes: >-
-      The two USB cameras of so101-green's training setup (Innomaker U20CAM-1080p, lsusb
-      "Microdia Webcam Vitade AF"). Both report serial SN0001, so the whole model is blocked.
-      A camera can only be used by one program; opening it can break a training recording.
-    usb:
-      - {vendor_id: 0x0c45, product_id: 0x6366}
+    borrowed: true
+    socket: usb-0:7
+    notes: Training camera in the lab desktop's USB socket 7 (what it sees is still to check).
+
+  so101-green-cam-b:
+    kind: camera
+    borrowed: true
+    socket: usb-0:8
+    notes: Training camera in the lab desktop's USB socket 8 (what it sees is still to check).
 
   so101-white:
     kind: so101

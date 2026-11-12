@@ -38,7 +38,7 @@ READ_TOOLS = {
 
 @pytest.fixture
 def repo(tmp_path):
-    """A tiny project: docs (one hidden design doc), README, two commits."""
+    """A tiny project: docs (one design doc), README, two commits."""
     (tmp_path / "docs" / "design").mkdir(parents=True)
     (tmp_path / "docs" / "current-focus.md").write_text(
         "# Current Focus: tiny\n## Steps\n1. **First** (done 2026-11-01).\n2. **Second.** x\n"
@@ -47,7 +47,7 @@ def repo(tmp_path):
         "# Ideas\n## On hold\n- The router.\n- Roll call.\n## Later\n- Voice wake word.\n"
         "```\n# not a heading\n```\n"
     )
-    (tmp_path / "docs" / "design" / "DESIGN.md").write_text("# Secret design\n")
+    (tmp_path / "docs" / "design" / "DESIGN.md").write_text("# The design\n")
     (tmp_path / "docs" / "long.md").write_text("# Long\n## Part A\n" + "a" * (MAX_CHARS + 50))
     (tmp_path / "README.md").write_text("# Tiny project\n")
     git = ["git", "-C", str(tmp_path), "-c", "user.name=T", "-c", "user.email=t@example.com"]
@@ -69,11 +69,10 @@ def robot_tools():
 # ---------- the tools ----------
 
 
-def test_docs_are_listed_without_the_design(repo):
+def test_docs_are_listed_with_the_design(repo):
     names = [d["name"] for d in ProjectTools(repo).list_docs()["docs"]]
-    assert names == ["current-focus", "ideas", "long", "README"]
-    with pytest.raises(NotFound, match="no doc 'design/DESIGN'"):
-        ProjectTools(repo).read_doc("design/DESIGN")  # the reveal stays a surprise
+    assert names == ["current-focus", "design/DESIGN", "ideas", "long", "README"]
+    assert ProjectTools(repo).read_doc("design/DESIGN")["text"] == "# The design\n"  # no surprise
 
 
 def test_read_doc_whole_section_and_cut_off(repo):
@@ -118,7 +117,8 @@ def test_git(repo):
 
 def test_list_devices():
     devices = {d["name"]: d for d in ProjectTools(REPO, VENUE).list_devices()["devices"]}
-    assert devices["so101-green"]["off_limits"] is True
+    assert devices["so101-green"]["borrowed"] is True
+    assert devices["so101-green"]["off_limits"] is False
     assert devices["fake-arm"]["active_in_venue"] is True
     assert devices["so101-white"]["active_in_venue"] is False
 
@@ -127,7 +127,7 @@ def test_the_real_docs():
     tools = ProjectTools(REPO)
     names = {d["name"] for d in tools.list_docs()["docs"]}
     assert {"current-focus", "ideas", "GOTCHAS", "lab-jarvis-log", "CLAUDE"} <= names
-    assert not any(n.startswith("design/") for n in names)
+    assert "design/DESIGN" in names
     assert "On hold" in tools.read_doc("ideas", section="On hold")["text"]
 
 

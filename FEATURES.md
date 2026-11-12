@@ -59,12 +59,14 @@ http://127.0.0.1:8081/mcp · `docs/ai-control.md`
 | Safety built into the tools: soft limits, max 30° / 10 cm per call, table floor, "can't reach" instead of guessing, "stopped short" with by how much | ✅ | Every call logged to `logs/ai-tools/` |
 | `pose_view`: a picture of the arm's 3D model in its current pose, with the AI's marks for where it thinks things are | 🧪 | Stands in for cameras until they're added; also at `/api/pose-view.png` |
 | AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |
-| Project read tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, … | ✅ | |
+| Project read tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, … | ✅ | `docs/design/` included since 2026-11-12 |
 
 ## Robots and drivers
 | Robot | Status | Notes |
 |---|---|---|
 | `so101-white` (SO-101 arm, LeRobot) | ✅ | Driver, guarded motor setup and calibration, read-only `--watch` mode. `uv sync --extra so101` |
+| `so101-green` (the training set's follower, borrowed) | 🧪 | `--arm so101-green`: same driver, calibration read only from LeRobot's cache, motor setup refused, refused while LeLab has the port. Tested without hardware only. `docs/ai-control.md` → "The green arm" |
+| The training cameras (`so101-green-cam-a`, `-b`) | 🧪 | Listed by USB socket; a camera another program uses is refused. Nothing takes pictures yet (focus step 3) |
 | `xarm1` (Hiwonder xArm 1S, USB) | ✅ | Driver, jogging, inverse kinematics, hand calibration of the limits. `--arm xarm1` |
 | Fake arm | ✅ | Every feature runs on it first; no hardware needed |
 | 3D models: SO-101 (from its URDF) and the xArm 1S (rebuilt from Hiwonder's drawing) | ✅ | Bundled, work offline |
@@ -81,7 +83,7 @@ http://127.0.0.1:8081/mcp · `docs/ai-control.md`
 ## Training launcher (so101-green)
 | Feature | Status | Notes |
 |---|---|---|
-| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab | 🧪 | Not yet tried with the green arms plugged in. lab-os never opens the green arm's ports. `docs/green-launcher.md` |
+| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab | 🧪 | Not yet tried with the green arms plugged in. The launcher opens no green port; it refuses while another program (e.g. the brain driving `so101-green`) has one open. `docs/green-launcher.md` |
 
 ---
 

@@ -14,8 +14,8 @@ def lelab_installed(monkeypatch):
     monkeypatch.setattr(green, "_lelab", lambda: "/usr/local/bin/lelab")  # CI has no LeLab
 
 
-FOLLOWER = "usb-1a86_USB_Single_Serial_5B41531599-if00"  # which green is which: made up here
-LEADER = "usb-1a86_USB_Single_Serial_5B41533501-if00"
+FOLLOWER = "usb-1a86_USB_Single_Serial_5B41533501-if00"  # as in devices.yaml (CLAUDE.md)
+LEADER = "usb-1a86_USB_Single_Serial_5B41531599-if00"
 WHITE = "usb-1a86_USB_Single_Serial_5B41532410-if00"
 
 
@@ -33,14 +33,20 @@ def setup(tmp_path, plugged, saved=("ttyACM0", "ttyACM1")):
     (home / "robots/SO-101_Green_Follower.json").write_text(
         json.dumps({"leader_port": leader, "follower_port": follower})
     )
-    return {"by_id": by_id, "home": home, "last_good": tmp_path / "last.json"}
+    (tmp_path / "proc").mkdir()  # no program has anything open
+    return {
+        "by_id": by_id,
+        "home": home,
+        "last_good": tmp_path / "last.json",
+        "proc": tmp_path / "proc",
+    }
 
 
 def test_both_greens_alone_and_saved_right_is_ok(tmp_path):
     paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
     c = check(**paths)
     assert c.ok, c.lines
-    assert (c.follower, c.leader) == ("5B41531599", "5B41533501")
+    assert (c.follower, c.leader) == ("5B41533501", "5B41531599")
 
 
 def test_white_plugged_in_refuses(tmp_path):
@@ -70,3 +76,28 @@ def test_swapped_since_last_start_refuses(tmp_path):
     c = check(**(swapped | {"last_good": paths["last_good"]}))
     assert not c.ok
     assert any("swapped" in t for ok, t in c.lines if not ok)
+
+
+def hold(paths, tty, program="python3", pid="4321"):
+    """A program (lab-os driving so101-green, say) has this fake tty open."""
+    fd = paths["proc"] / pid / "fd"
+    fd.mkdir(parents=True)
+    (paths["proc"] / pid / "comm").write_text(program + "\n")
+    (fd / "9").symlink_to(paths["by_id"].parent / "dev" / tty)
+
+
+def test_a_green_port_open_in_another_program_refuses(tmp_path, monkeypatch):
+    monkeypatch.setattr(green, "_answers", lambda port: False)  # LeLab not running
+    paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
+    hold(paths, "ttyACM1")
+    c = check(**paths)
+    assert not c.ok
+    assert any("…3501 is open in python3 (pid 4321)" in t for ok, t in c.lines if not ok)
+
+
+def test_lelab_already_running_may_hold_the_ports(tmp_path, monkeypatch):
+    monkeypatch.setattr(green, "_answers", lambda port: True)  # LeLab answers: the ports are its
+    paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
+    hold(paths, "ttyACM1", program="lelab")
+    c = check(**paths)
+    assert c.ok and c.running, c.lines

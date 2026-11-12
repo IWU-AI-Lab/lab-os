@@ -30,4 +30,4 @@ Remote sessions (from home, Remote Control, any off-site connection) = **no moti
 Excluded from AI, voice and visitor control.
 
 ## The green arms (the training set)
-`so101-green` is the builder's training set. Since 2026-11-12 lab-os may drive it like `so101-white` (once focus step 11 is built), with four rules (`CLAUDE.md`): never change its motor IDs or firmware, its calibration is read-only, never touch the `lerobot` conda env, and never open a port that LeLab or a training run is using. Same safety as every arm: ask before it moves, STOP from every screen.
+`so101-green` is the builder's training set. Since 2026-11-12 lab-os may drive it like `so101-white` (focus step 11, built the same day), with four rules (`CLAUDE.md`): never change its motor IDs or firmware, its calibration is read-only, never touch the `lerobot` conda env, and never open a port that LeLab or a training run is using. Same safety as every arm: ask before it moves, STOP from every screen.

@@ -17,6 +17,8 @@
       "Bash(rsync *)",
       "Bash(ls /dev/serial/by-id*)",
       "Bash(lsusb*)",
+      "Bash(ls /dev/v4l*)",
+      "Read(//home/ai-comp-lab-ubuntu-76358/.cache/huggingface/lerobot/calibration/**)",
       "mcp__lab-os__arm_status",
       "mcp__lab-os__list_poses",
       "mcp__lab-os__stop"
@@ -39,7 +41,9 @@
     "deny": [
       "Edit(//home/ai-comp-lab-ubuntu-76358/miniforge3/envs/lerobot/**)",
       "Edit(//home/ai-comp-lab-ubuntu-76358/lerobot/**)",
-      "Edit(//home/ai-comp-lab-ubuntu-76358/.cache/huggingface/lerobot/**)"
+      "Edit(//home/ai-comp-lab-ubuntu-76358/.cache/huggingface/lerobot/**)",
+      "Bash(lerobot-calibrate*)",
+      "Bash(lerobot-setup-motors*)"
     ]
   },
   "hooks": {

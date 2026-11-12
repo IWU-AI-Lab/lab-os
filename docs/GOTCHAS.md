@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — The old guard hook blocked even *reading about* the calibration
+**What:** building step 11, every shell command whose text contained `huggingface/lerobot/calibration` was denied, even a `python3 script.py` heredoc that only edited lab-os's own source files, and so were commands that merely mentioned a green serial number. The rule was "never touch the calibration", and a text match can't tell reading from writing.
+**Fix:** since step 11 the hook (`.claude/hooks/guard.sh`, tests in `tests/test_guard_hook.py`) allows reads (`ls`, `cat`, `jq`, `diff`, `sha256sum`) under `~/.cache/huggingface/lerobot` and denies anything that could write, move or delete there (`rm`, `mv`, `cp`, `>`, `tee`, `sed -i`, `python`, `lerobot-*`, …); the green serials aren't blocked any more. Still a text match: `jq '.x > 1' <file there>` is denied too (the `>`). Edits with the editor tools aren't checked by the hook; `.claude/settings.json` denies `Edit(…/.cache/huggingface/lerobot/**)` for those.
+
 ### 2026-11-11 — The two training cameras share one serial number
 **What:** `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
 **Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (`current-focus.md` → "Step 3, concretely").
@@ -210,7 +214,7 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 
 ### 2026-10-28 — The two training cameras have the same serial number
 **What:** Both USB cameras (Innomaker U20CAM-1080p, USB ID `0c45:6366`, `lsusb` calls them "Microdia Webcam Vitade AF") belong to the so101-green training setup. Both report serial `SN0001`, so a serial number can't tell them apart. On the lab desktop they sit in USB sockets `1-7` and `1-8` (each shows up as two `/dev/video*` entries).
-**Rule:** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Today `config/devices.yaml` blocks that camera model entirely. The white arm's cameras are the same model, so focus step 3 switches to blocking by USB socket (`/dev/v4l/by-path/`). Identified from `/sys` only, without opening them.
+**Rule (until 2026-11-12; since step 11 they're `borrowed` cameras, by socket, refused while another program uses them):** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Today `config/devices.yaml` blocks that camera model entirely. The white arm's cameras are the same model, so focus step 3 switches to blocking by USB socket (`/dev/v4l/by-path/`). Identified from `/sys` only, without opening them.
 
 ### 2026-10-27 — xArm driver: the `hidapi` wheel can't open the arm on Linux; use `hid`
 **What:** PyPI's `hidapi` ships wheels for Linux/Windows/macOS, but its Linux build uses the *libusb* backend: it needs access to `/dev/bus/usb/…` (root-only), so `enumerate()` returns empty serial/product strings and `open()` fails ("open failed"). Our udev rule only covers `/dev/hidraw*`. The `xarm` PyPI package is an unmaintained 5-file wrapper (imports `hid` without declaring it), so we don't use it.
@@ -238,6 +242,7 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 **Fix:** `SIGNS` in `robots/xarm.py`: pan −1, lift +1, elbow −1, wrist_flex +1, wrist_roll +1 (shared convention: +pan to the arm's right, +lift/elbow/wrist_flex forward, +roll counter-clockwise from above). Gripper mapped 750 → 0° (closed), 302 → 90° (open).
 
 ### 2026-10-27 — Hook blocks shell commands that merely contain green's serial numbers
+**(Gone since step 11, 2026-11-12: the hook doesn't look for the green serials any more.)**
 **What:** `guard.sh` denies any Bash command containing so101-green's serials, even when only writing them into the block list. Editing `config/devices.yaml` and the tests with the editor tools (not shell heredocs) works.
 
 ### 2026-10-27 — The xArm 1S is a HID device, and `lsusb` calls it an "LED badge"
@@ -278,6 +283,7 @@ Then unplug and re-plug the xArm's USB.
 - `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00`
 
 They're `off_limits` in `config/devices.yaml`; `lab_os.devices` refuses them, and a Claude Code hook blocks commands that name them. The arm may be unplugged at times; that doesn't change the rule.
+**Since 2026-11-12 (step 11):** loosened by the builder. lab-os may open them, but never while another program (LeLab, a run) has them open; they're `borrowed`, not `off_limits` (CLAUDE.md, "Hard rules").
 
 ### 2026-10-24 — ttyACM0/ttyACM1 swap
 **What:** `/dev/ttyACM0` and `/dev/ttyACM1` are numbered in plug-in order, so they can swap after a reboot or re-plug.

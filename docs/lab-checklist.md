@@ -13,10 +13,12 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 4. Part 7, teleop 1:1 on the real arm.
 5. Voice prep: plug in the microphone, check Ubuntu Settings → Sound → Input shows it and the level moves when you talk; check the speakers too.
 6. Part 1's `/perf` on the desktop's monitor (the demo screen for now), then the Newline (part 2) if there's time.
-7. Part 4, the white cameras: list their socket names (they go in the green cameras' sockets). lab-os uses them only once step 11 removes the camera-model block (decision 2026-11-12).
+7. Part 4, the white cameras: list their socket names (they go in the green cameras' sockets). Since step 11 the camera-model block is gone; cameras go in `config/devices.yaml` by socket (`docs/places.md`).
 8. Put the green arms and cameras back as they were.
 
-**Never:** change the green arms' motor IDs or firmware, write their calibration, touch the `lerobot` conda env, or open a green port while LeLab is using it (CLAUDE.md, loosened 2026-11-12). Until step 11 is built, the brain still refuses the green ports and the training cameras.
+**New since 2026-11-12 (step 11, built away from the lab, tested without hardware):** the green arms in lab-os (part 8): `so101-green` drivable like the white arm, its calibration read only, `so101_setup` refusing the greens, "in use by LeLab" refusals, the training cameras by socket. Part 8 goes while the green arms are plugged in, before the swap (step 2 of the order above), or after putting them back.
+
+**Never:** change the green arms' motor IDs or firmware, write their calibration, touch the `lerobot` conda env, or open a green port while LeLab is using it (CLAUDE.md, loosened 2026-11-12). Since step 11 the brain follows these rules itself (part 8 checks it does).
 
 ## 0. Get the latest (2 min)
 ```bash
@@ -123,7 +125,67 @@ adb reverse tcp:8080 tcp:8080
   Much warmer in 1:1 (well over 50 °C) → keep relative as the default; about the same → 1:1 can become the default (`docs/current-focus.md`). If the panel says "SERVOS WARM, SLOWED", stop and let them cool.
 - [ ] Note in `current-focus.md` ("Done on the side" → 1:1) how it felt, and whether 1:1 should become the default. At home: `uv run lab-os-teleop replay recordings/quest-1to1-<date>.jsonl` replays it on the fake arm (watch `/monitor`).
 
-## 8. If there's time
+## 8. The green arms in lab-os (step 11; 30–40 min, you at the arm)
+Green follower, green leader and both training cameras plugged in as for training; `so101-white` unplugged. Part 0 first (`git pull`, `uv sync --extra so101`, `uv run pytest -q`).
+
+**a. Which green is the follower?** `config/devices.yaml` says the follower is `…3501` and the leader `…1599` (from `CLAUDE.md`). The training launcher remembered which one LeLab uses as the follower (only if part 5 started it once):
+```bash
+cd ~/lab-os
+cat logs/green-last-start.json        # {"follower": "5B41533501", ...} = devices.yaml is right
+ls -l /dev/serial/by-id/              # both greens there: …3501 and …1599
+```
+- [ ] If the file names `…1599` as the follower, **stop here** and tell Claude: the two green entries in `config/devices.yaml` swap their ports and serials.
+
+**b. The calibration file** (only listed, nothing opened or changed):
+```bash
+ls -l ~/.cache/huggingface/lerobot/calibration/robots/*/
+sha256sum ~/.cache/huggingface/lerobot/calibration/robots/*/*.json > /tmp/green-cal-before.txt
+```
+- [ ] Exactly one `.json` in there? Then nothing to do. Several: note which is the green follower's (LeLab's robot name) and tell Claude, which adds `calibration_id: <that name without .json>` to `so101-green` in `config/devices.yaml`.
+
+**c. Refusals, with LeLab running** (start it with the desktop icon "SO-101 Training (LeLab)", open its page, press **teleop** so it opens the ports, leave it running):
+```bash
+uv run --extra so101 python -m lab_os.robots.so101 so101-green
+```
+- [ ] It says `Not opening anything: so101-green is in use by … (pid …): one program per port …` and nothing else happens. (If it reads joints instead, LeLab hadn't opened the port yet: say so, that's worth knowing.)
+- [ ] Stop LeLab's teleop, Ctrl+C in LeLab's terminal (LeLab closed).
+
+**d. The motor setup tool refuses the greens** (opens nothing, by name and by board):
+```bash
+uv run --extra so101 python -m lab_os.robots.so101_setup check --arm so101-green
+uv run --extra so101 python -m lab_os.robots.so101_setup calibrate --arm so101-green-leader
+```
+- [ ] Both say `Not opening anything: … is borrowed from another project …`.
+
+**e. Read only, LeLab closed:**
+```bash
+uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch
+```
+- [ ] It connects (no "different calibration" message). Move each joint **by hand** (the arm is limp): the numbers follow, about 0 at the middle pose, and the same directions as the white arm (`docs/GOTCHAS.md` → joint directions). Ctrl+C.
+
+**f. Moving, slowly** (ask before it moves; you at the arm, hand near STOP):
+```bash
+uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
+```
+- [ ] Open http://localhost:8080/teleop on the desktop: the 3D arm matches the real one. Small jog moves with the desktop controls; STOP works.
+- [ ] In Claude Code (`/mcp` → `lab-os` → reconnect): "Use the lab-os tools. Read so101-green's status, then go to the home pose." Approve each move after reading it. Is `home` a safe pose for the green arm too? (It comes from the white arm's kinematics.)
+- [ ] **The launcher refuses while the brain has the port:** with the brain still running, the desktop icon "SO-101 Training (LeLab)". One line says `green arm …3501 is open in …: stop it first`, and LeLab doesn't start. Press Enter to close it.
+- [ ] Ctrl+C in the brain's terminal (the arm goes limp: hold it if it's lifted).
+
+**g. The calibration is untouched, and LeLab still works:**
+```bash
+sha256sum -c /tmp/green-cal-before.txt     # every line should say OK
+```
+- [ ] Every line `OK`. Then start LeLab with the icon and check teleop there once (the follower follows the leader), as before.
+
+**h. Which training camera is which** (only lists names; nothing opens a camera):
+```bash
+ls -l /dev/v4l/by-path/
+```
+- [ ] Entries with `usb-0:7` and `usb-0:8` (`so101-green-cam-a` and `-b`). Unplug the **wrist** camera's cable for a moment and run the `ls` again: the socket whose lines vanish is the wrist camera. Plug it back in. Tell Claude which socket is the wrist and which the top camera, so the names can change to `so101-green-cam-wrist` / `-top`. If the sockets aren't 7 and 8 any more, paste the `ls` output.
+- [ ] Note in `current-focus.md` step 11 what worked.
+
+## 9. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?

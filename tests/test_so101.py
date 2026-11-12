@@ -1,10 +1,13 @@
 """SO-101 driver tests: no hardware and no LeRobot, the LeRobot robot + bus are faked."""
 
+import json
+import stat
 from dataclasses import dataclass
 
 import pytest
 
-from lab_os.devices import PortNotAllowed
+from lab_os import devices
+from lab_os.devices import InUse, load_registry
 from lab_os.robots import so101
 from lab_os.robots.base import Arm  # noqa: F401  (interface the driver follows)
 from lab_os.robots.fake import SO101_JOINTS, so101_limits
@@ -100,7 +103,7 @@ def clock(monkeypatch):
 
 
 def arm_with(robot, **kw):
-    return SO101Arm(make_robot=lambda name, port: robot, **kw)
+    return SO101Arm(make_robot=lambda name, port, calibration_dir: robot, **kw)
 
 
 def test_read_only_writes_nothing(no_port_check):
@@ -221,11 +224,91 @@ def test_limits_are_the_urdf_narrowed_by_the_calibration():
     assert limits["gripper"] == urdf["gripper"]
 
 
-def test_green_is_refused_before_lerobot_is_touched():
-    def must_not_run(name, port):
-        raise AssertionError("no robot object for green")
+# ---- the green follower: borrowed, calibration read only (step 11) ------------------------------
+GREEN_CAL = {"shoulder_pan": {"id": 1, "range_min": 1048, "range_max": 3048}}
 
-    with pytest.raises(PortNotAllowed):
+
+@pytest.fixture
+def lerobot_cache(tmp_path, monkeypatch):
+    """A LeRobot calibration cache like the training project's, made READ ONLY (files and
+    folders), so any write into it would fail."""
+    root = tmp_path / "lerobot-calibration"
+    folder = root / "robots" / "so101_follower"
+    folder.mkdir(parents=True)
+    source = folder / "green_follower.json"
+    source.write_text(json.dumps(GREEN_CAL))
+    (root / "teleoperators" / "so101_leader").mkdir(parents=True)
+    (root / "teleoperators" / "so101_leader" / "green_leader.json").write_text("{}")
+    for path in (source, folder, folder.parent, root):
+        path.chmod(stat.S_IRUSR | (stat.S_IXUSR if path.is_dir() else 0))
+    monkeypatch.setattr(so101, "lerobot_calibration_root", lambda: root)
+    green = load_registry().devices["so101-green"]
+    monkeypatch.setattr(so101, "guarded_port", lambda name: (green, PORT))
+    yield source
+    for path in (root, folder.parent, folder, source):
+        path.chmod(0o700)
+
+
+def test_green_reads_lerobots_calibration_through_a_copy(lerobot_cache):
+    before = (lerobot_cache.read_bytes(), lerobot_cache.stat().st_mtime_ns)
+    seen = {}
+
+    def make_robot(name, port, calibration_dir):
+        copy = calibration_dir / f"{name}.json"
+        seen["dir"], seen["data"] = calibration_dir, json.loads(copy.read_text())
+        copy.write_text("{}")  # LeRobot saving its calibration would land in the copy only
+        return FakeRobot(START)
+
+    arm = SO101Arm(name="so101-green", make_robot=make_robot)
+    arm.connect()
+    assert seen["data"] == GREEN_CAL  # the training project's file, as is
+    assert seen["dir"] != lerobot_cache.parent  # LeRobot never learns the real folder
+    assert not seen["dir"].exists()  # the copy is gone once the robot has loaded it
+    assert (lerobot_cache.read_bytes(), lerobot_cache.stat().st_mtime_ns) == before
+    assert arm.limits["shoulder_pan"].high == pytest.approx(87.9, abs=0.1)
+    arm.close()
+
+
+def test_green_with_a_different_calibration_in_its_motors_is_not_fixed_by_lab_os(lerobot_cache):
+    robot = FakeRobot(START, calibrated=False)
+    arm = SO101Arm(name="so101-green", make_robot=lambda n, p, d: robot, allow_motion=True)
+    with pytest.raises(RuntimeError, match="never writes a borrowed arm's calibration"):
+        arm.connect()
+    assert robot.bus.writes == [] and not robot.bus.connected
+
+
+def test_the_calibration_file_must_be_unambiguous(tmp_path):
+    green = load_registry().devices["so101-green"]
+    folder = tmp_path / "robots" / "so101_follower"
+    folder.mkdir(parents=True)
+    with pytest.raises(LookupError, match="found: none"):
+        so101.lerobot_calibration_file(green, tmp_path)
+    (folder / "a.json").write_text("{}")
+    (folder / "b.json").write_text("{}")
+    with pytest.raises(LookupError, match="Set calibration_id"):
+        so101.lerobot_calibration_file(green, tmp_path)
+    picked = devices.Device(**{**green.__dict__, "calibration_id": "b"})
+    assert so101.lerobot_calibration_file(picked, tmp_path) == folder / "b.json"
+    leader = load_registry().devices["so101-green-leader"]
+    (tmp_path / "teleoperators" / "x").mkdir(parents=True)
+    (tmp_path / "teleoperators" / "x" / "l.json").write_text("{}")
+    assert so101.lerobot_calibration_file(leader, tmp_path).parent.parent.name == "teleoperators"
+
+
+def test_white_still_uses_lab_os_calibration_folder(no_port_check):
+    seen = []
+    SO101Arm(make_robot=lambda n, p, d: seen.append(d) or FakeRobot(START)).connect()
+    assert seen == [so101.CALIBRATION_DIR / "so101-white"]
+
+
+def test_a_port_in_use_is_refused_before_lerobot_is_touched(monkeypatch):
+    def must_not_run(*a):
+        raise AssertionError("the port must not open")
+
+    monkeypatch.setattr("lab_os.robots.so101_setup.os.path.exists", lambda p: True)
+    monkeypatch.setattr("lab_os.robots.so101_setup.usb_serial_of", lambda p, root=None: None)
+    monkeypatch.setattr(devices, "users_of", lambda path, proc=None: ["lelab (pid 42)"])
+    with pytest.raises(InUse, match="so101-green is in use by lelab \\(pid 42\\)"):
         SO101Arm(name="so101-green", make_robot=must_not_run).connect()
 
 
