@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# PreToolUse hook for Bash: protects so101-green and the shared lerobot conda env.
-# See CLAUDE.md "Hard rules". Denies outright; asks when a raw ttyACM/ttyUSB name is used.
+# PreToolUse hook for Bash: protects the green arms' calibration and the shared lerobot conda env.
+# See CLAUDE.md "Hard rules". Since focus step 11 (2026-11-12) the green ports aren't blocked here:
+# lab-os may open them, and lab_os.devices refuses a port another program (LeLab) has open.
+# Denies outright; asks when a raw ttyACM/ttyUSB name is used. Tests: tests/test_guard_hook.py.
 cmd=$(jq -r '.tool_input.command // empty')
 
 decide() {
@@ -9,19 +11,13 @@ decide() {
   exit 0
 }
 
-# so101-green serial ports (by-id serial numbers).
-if grep -qE '5B41531599|5B41533501' <<<"$cmd"; then
-  # Anything that could open a port or run a driver: deny. Otherwise it's probably just text
-  # (editing config/tests/docs that list the serials): ask, so the builder confirms with one click.
-  if grep -qE '\b(screen|minicom|picocom|stty|socat|dd|lerobot|serial|uv run|python3?)\b|/dev/(tty|serial)[^ ]* *(<|>)|(<|>) */dev/|cat +/dev' <<<"$cmd"; then
-    decide deny "That is so101-green's serial port. Never open it (CLAUDE.md)."
+# LeRobot's cache: the green arms' calibration (and LeLab's saved ports). Reading is fine
+# (ls, cat, jq, diff, ...); anything that could write, move or delete there is denied.
+if grep -qE 'huggingface/lerobot' <<<"$cmd"; then
+  quiet=$(sed -E 's/[0-9]?>&[0-9]//g; s#[0-9&]?> */dev/null##g' <<<"$cmd") # 2>/dev/null, 2>&1: fine
+  if grep -qE '(^|[;&|( ]) *(rm|mv|cp|tee|touch|truncate|chmod|chown|ln|install|rsync|dd|shred|unlink|mkdir|rmdir|python3?|uv|lerobot[-_a-z]*|lelab)\b|\bsed +(-[a-zA-Z]*i|--in-place)|\bperl +-[a-zA-Z]*i|-delete|-exec|>' <<<"$quiet"; then
+    decide deny "The green arms' calibration in LeRobot's cache is read only (CLAUDE.md): read it, never write, move or delete there."
   fi
-  decide ask "Command mentions so101-green's serial number. Confirm it only edits text and opens no port."
-fi
-
-# Green calibration files.
-if grep -qE 'huggingface/lerobot/calibration' <<<"$cmd"; then
-  decide deny "LeRobot calibration cache belongs to so101-green's training project. Don't touch it."
 fi
 
 # Modifying the shared lerobot conda env or its source checkout.
@@ -32,7 +28,7 @@ fi
 
 # Raw tty names can point at any arm after a re-plug.
 if grep -qE '/dev/tty(ACM|USB)[0-9]' <<<"$cmd"; then
-  decide ask "Raw ttyACM/ttyUSB names swap between boots; use /dev/serial/by-id/. Confirm this is not so101-green."
+  decide ask "Raw ttyACM/ttyUSB names swap between boots; use /dev/serial/by-id/. Confirm which arm this is and that LeLab isn't using it."
 fi
 
 exit 0

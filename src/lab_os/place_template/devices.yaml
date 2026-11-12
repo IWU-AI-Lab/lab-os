@@ -1,7 +1,9 @@
 # The devices at this place (docs/places.md). The software arm is always there.
 # Real serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap).
-# off_limits: true -> lab-os refuses to open it. The lab's off-limits devices (lab-os's own
-# config/devices.yaml) are refused at every place too.
+# Cameras ONLY by USB socket (socket: usb-0:7, from /dev/v4l/by-path/ names).
+# off_limits: true -> lab-os refuses to open it. borrowed: true -> another project's: usable, but
+# never set up or recalibrated (docs/places.md). The lab's off-limits and borrowed devices (lab-os's
+# own config/devices.yaml) keep their rules at every place too.
 
 devices:
   fake-arm:

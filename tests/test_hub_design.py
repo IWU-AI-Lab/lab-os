@@ -39,7 +39,8 @@ async def test_devices_from_config_with_the_brains_arm_linked(aiohttp_client):
     devs = {d["name"]: d for d in (await (await client.get("/api/devices")).json())["devices"]}
     assert devs["fake-arm"]["linked"] is True
     green = devs["so101-green"]
-    assert green["off_limits"] is True and green["linked"] is False  # listed, never opened
+    assert green["borrowed"] is True and green["off_limits"] is False  # drivable since step 11
+    assert green["linked"] is False  # not the arm this brain drives
     assert "ports" not in green  # nothing about where it's plugged in reaches the page
 
 

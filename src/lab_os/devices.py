@@ -2,15 +2,23 @@
 
 Every real robot driver must get its port through `serial_port()` (or at least pass it through
 `check_port_allowed()`), or its USB device through `find_usb_device()`, before opening it. That's
-what keeps so101-green closed. Devices are identified by USB ID + serial number, which is the same
-on Linux, Windows and macOS (decision 2026-10-27); OS paths are only resolved at run time.
+what keeps off-limits devices closed. Devices are identified by USB ID + serial number, the same on
+Linux, Windows and macOS (decision 2026-10-27); OS paths are only resolved at run time.
 
-The registry is the place's devices.yaml (lab_os.config). The off-limits devices of the repo's own
-config/devices.yaml (the lab: so101-green, the training cameras) are added at every place, so
-switching to another config folder can never make them openable.
+The registry is the place's devices.yaml (lab_os.config). The off-limits and borrowed devices of
+the repo's own config/devices.yaml are added at every place, so switching to another config folder
+can never make them openable or take their rules away.
+
+**Borrowed** devices (`borrowed: true`: the green arms and their cameras, another project's) may be
+driven and used, with CLAUDE.md's rules: no motor setup or calibration (lab_os.robots.so101_setup
+refuses them), their calibration read only from LeRobot's cache, and never a port or camera that
+another program has open (`check_not_in_use`, used for every device we open, borrowed or not).
 """
 
+import logging
 import os
+import shutil
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,11 +27,18 @@ import yaml
 
 from lab_os import config
 
+log = logging.getLogger(__name__)
+
 BY_ID_DIR = "/dev/serial/by-id/"
+BY_PATH_DIR = "/dev/v4l/by-path/"  # cameras by USB socket: identical cameras share a serial
 
 
 class PortNotAllowed(RuntimeError):
     """Raised when code tries to use a port it must not open."""
+
+
+class InUse(PortNotAllowed):
+    """Raised when another program has the port or camera open (LeLab, a recording, ...)."""
 
 
 @dataclass(frozen=True)
@@ -53,6 +68,10 @@ class Device:
     ports: tuple[str, ...] = ()
     usb: tuple[UsbId, ...] = ()
     notes: str = ""
+    borrowed: bool = False  # another project's: drive/use it, never set it up (CLAUDE.md)
+    calibration: str = ""  # "lerobot" = LeRobot's cache, read only; "" = lab-os's calibration/
+    calibration_id: str = ""  # which file there (<id>.json); "" = the only one
+    socket: str = ""  # cameras: the USB socket in /dev/v4l/by-path/ names, e.g. "usb-0:7"
 
 
 @dataclass(frozen=True)
@@ -65,6 +84,11 @@ class Registry:
     def off_limits_serials(self) -> set[str]:
         """USB serial numbers of off-limits arms: the same on every OS, unlike port names."""
         return {u.serial for d in self.devices.values() if d.off_limits for u in d.usb if u.serial}
+
+    def borrowed_serials(self) -> set[str]:
+        """USB serial numbers of borrowed boards: the motor setup tool refuses them by serial too,
+        whatever name a config gives them."""
+        return {u.serial for d in self.devices.values() if d.borrowed for u in d.usb if u.serial}
 
     def off_limits_owner(self, info: dict) -> str | None:
         """Name of the off-limits device this USB device belongs to, or None. An entry without a
@@ -95,13 +119,18 @@ def _read_devices(path: Path) -> dict[str, Device]:
             ports=tuple(spec.get("ports") or ()),
             usb=tuple(UsbId(**u) for u in (spec.get("usb") or ())),
             notes=spec.get("notes", ""),
+            borrowed=bool(spec.get("borrowed", False)),
+            calibration=spec.get("calibration", ""),
+            calibration_id=str(spec.get("calibration_id", "")),
+            socket=spec.get("socket", ""),
         )
         for name, spec in (raw.get("devices") or {}).items()
     }
 
 
 def load_registry(path: Path | None = None) -> Registry:
-    """The place's devices, plus the lab's off-limits ones (always: never weakened by a config)."""
+    """The place's devices, plus the lab's off-limits and borrowed ones (always: a config never
+    weakens them)."""
     path = path or config.place_path("devices.yaml")
     if not path.is_file():
         raise config.ConfigError(
@@ -111,24 +140,24 @@ def load_registry(path: Path | None = None) -> Registry:
     lab = config.DEFAULT_DIR / "devices.yaml"
     if lab.is_file() and lab.resolve() != path.resolve():
         for name, device in _read_devices(lab).items():
-            if not device.off_limits:
+            if not (device.off_limits or device.borrowed):
                 continue
             mine = devices.get(name)
             if mine and mine.off_limits and mine != device:
-                devices[f"{name} (repo config)"] = device  # both entries stay off limits
+                devices[f"{name} (repo config)"] = device  # both entries stay protected
             else:
-                devices[name] = device  # added, or replaces an entry that wasn't off limits
+                devices[name] = device  # added, or replaces a weaker entry
     return Registry(devices)
 
 
 def default_device(kinds: tuple[str, ...], registry: Registry | None = None) -> str:
     """The name of the place's only usable device of these kinds (for command-line defaults), or
-    a LookupError that lists the choices."""
+    a LookupError that lists the choices. Borrowed devices are never a default: name them."""
     registry = registry or load_registry()
     names = [
         d.name
         for d in registry.devices.values()
-        if d.kind in kinds and not d.off_limits and (d.ports or d.usb)
+        if d.kind in kinds and not d.off_limits and not d.borrowed and (d.ports or d.usb)
     ]
     if len(names) != 1:
         found = ", ".join(names) or "none"
@@ -153,7 +182,7 @@ def check_port_allowed(port: str, registry: Registry | None = None) -> None:
     forbidden = registry.off_limits_ports()
     forbidden_targets = {os.path.realpath(p) for p in forbidden if os.path.exists(p)}
     if port in forbidden or (os.path.exists(port) and os.path.realpath(port) in forbidden_targets):
-        raise PortNotAllowed(f"{port!r} belongs to an off-limits arm (so101-green). Never open it.")
+        raise PortNotAllowed(f"{port!r} belongs to an off-limits device. Never open it.")
 
 
 def serial_port(name: str, registry: Registry | None = None) -> str:
@@ -169,6 +198,122 @@ def serial_port(name: str, registry: Registry | None = None) -> str:
     port = device.ports[0]
     check_port_allowed(port, registry)
     return port
+
+
+# ---- one program per port ---------------------------------------------------------------------
+def _users_from_proc(target: str, proc: Path) -> list[str]:
+    """Programs with `target` open, from /proc/<pid>/fd links (Linux; opens nothing). Processes
+    we may not look into (other users, root) are skipped: on the lab desktop LeLab and training
+    runs are the builder's own."""
+    users = []
+    me = str(os.getpid())
+    for pid_dir in proc.iterdir():
+        if not pid_dir.name.isdigit() or pid_dir.name == me:
+            continue
+        try:
+            fds = list((pid_dir / "fd").iterdir())
+        except OSError:
+            continue
+        for fd in fds:
+            try:
+                if os.path.realpath(os.readlink(fd)) == target:
+                    break
+            except OSError:
+                continue
+        else:
+            continue
+        try:
+            name = (pid_dir / "comm").read_text().strip()
+        except OSError:
+            name = "a program"
+        users.append(f"{name} (pid {pid_dir.name})")
+    return users
+
+
+def _users_from_lsof(target: str) -> list[str] | None:
+    """macOS and others without /proc: `lsof -F pc <file>` (lists, opens nothing)."""
+    lsof = shutil.which("lsof")
+    if not lsof:
+        return None
+    try:
+        out = subprocess.run(
+            [lsof, "-F", "pc", target], capture_output=True, text=True, timeout=5
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    users, pid = [], ""
+    for line in out.splitlines():
+        if line.startswith("p"):
+            pid = line[1:]
+        elif line.startswith("c") and pid != str(os.getpid()):
+            users.append(f"{line[1:]} (pid {pid})")
+    return users
+
+
+def users_of(path: str, proc: Path = Path("/proc")) -> list[str] | None:
+    """Which other programs have this device open: ["lelab (pid 4242)", ...], [] for none, None
+    when this computer can't tell. Follows symlinks (by-id / by-path names)."""
+    target = os.path.realpath(path)
+    if proc.is_dir():
+        return _users_from_proc(target, proc)
+    return _users_from_lsof(target)
+
+
+def check_not_in_use(name: str, paths: list[str], proc: Path = Path("/proc")) -> None:
+    """Raise InUse with a sentence if another program has any of these device files open.
+    Run right before opening a port or a camera (CLAUDE.md: one program per port)."""
+    for path in paths:
+        users = users_of(path, proc)
+        if users is None:
+            log.warning("%s: can't tell here whether another program uses %s", name, path)
+        elif users:
+            raise InUse(
+                f"{name} is in use by {', '.join(users)}: one program per port. Stop that program "
+                "(LeLab, a recording or a training run) first, then try again."
+            )
+
+
+# ---- cameras (by USB socket) ------------------------------------------------------------------
+def camera_paths(
+    name: str, registry: Registry | None = None, by_path: str = BY_PATH_DIR
+) -> list[str]:
+    """Every /dev/v4l/by-path/ name of camera `name` (a camera has two: its picture and its
+    metadata), picture first. Lists a directory; opens nothing."""
+    registry = registry or load_registry()
+    device = registry.devices.get(name)
+    if device is None:
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
+    if device.off_limits:
+        raise PortNotAllowed(f"{name} is off limits: {device.notes}")
+    if device.kind != "camera" or not device.socket:
+        raise LookupError(f"{name} needs kind: camera and a socket (e.g. usb-0:7) in devices.yaml")
+    try:
+        entries = sorted(os.listdir(by_path))
+    except OSError:
+        entries = []
+    # "pci-0000:00:14.0-usb-0:7:1.0-video-index0" (newer udev also adds "usbv2-0:7:...")
+    socket = device.socket.removeprefix("usb-")
+    mine = [e for e in entries if any(f"-{u}-{socket}:" in e for u in ("usb", "usbv2", "usbv3"))]
+    controllers = {e.split("-usb")[0] for e in mine}
+    if not mine:
+        raise LookupError(f"{name}: no camera in socket {device.socket} (plugged in? ls {by_path})")
+    if len(controllers) > 1:
+        raise LookupError(f"{name}: socket {device.socket} matches several USB controllers")
+    pictures = [e for e in mine if e.endswith("index0")]
+    return [os.path.join(by_path, e) for e in pictures + [e for e in mine if e not in pictures]]
+
+
+def camera_device(
+    name: str,
+    registry: Registry | None = None,
+    by_path: str = BY_PATH_DIR,
+    proc: Path = Path("/proc"),
+) -> str:
+    """The by-path name to open for camera `name`'s picture, after the checks: listed, not off
+    limits, plugged in, and no other program using it (LeLab, a recording)."""
+    paths = camera_paths(name, registry, by_path)
+    check_not_in_use(name, paths, proc)
+    return paths[0]
 
 
 def hid_enumerate(vendor_id: int, product_id: int) -> list[dict]:

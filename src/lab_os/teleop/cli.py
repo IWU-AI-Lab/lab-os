@@ -13,7 +13,7 @@ from pathlib import Path
 from aiohttp import web
 
 from lab_os import REPO_ROOT, config
-from lab_os.devices import load_registry
+from lab_os.devices import PortNotAllowed, load_registry
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
@@ -99,10 +99,12 @@ def _make_arm(name: str, venue) -> Arm:
         )
     device = load_registry().devices.get(name)
     if device is None or device.off_limits or device.kind not in DRIVERS:
-        usable = [
+        usable = [  # a borrowed arm (the lab's green one, at every place) only where it's active
             d.name
             for d in load_registry().devices.values()
-            if d.kind in DRIVERS and not d.off_limits
+            if d.kind in DRIVERS
+            and not d.off_limits
+            and (not d.borrowed or d.name in venue.active_devices)
         ]
         raise SystemExit(
             f"--arm {name}: not an arm lab-os can drive here. Choose {', '.join(SOFTWARE_ARMS)} "
@@ -140,7 +142,10 @@ def make_loop(args) -> TeleopLoop:
         raise SystemExit(str(e)) from None
     speed = min(args.speed, venue.max_speed_scale) if args.speed else venue.max_speed_scale
     arm = _make_arm(args.arm, venue)
-    arm.connect()
+    try:
+        arm.connect()
+    except (PortNotAllowed, LookupError) as e:  # in use by LeLab, unplugged, no calibration file
+        raise SystemExit(f"--arm {args.arm}: not opened. {e}") from None
     print(
         f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
         f"(joints: {', '.join(arm.joint_names)})"

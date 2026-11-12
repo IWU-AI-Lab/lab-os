@@ -153,12 +153,12 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 | Tool | Arguments | Returns |
 |---|---|---|
 | `project_status` | — | the current focus: `focus`, `step`, `of`, `next`, `steps` (`n`, `title`, `done`, `done_on`) |
-| `list_docs` | — | `docs`: `name`, `file`, `title` (docs/**, README, CHANGELOG, SAFETY, CLAUDE; never `docs/design/`) |
+| `list_docs` | — | `docs`: `name`, `file`, `title` (docs/** incl. `docs/design/`, README, CHANGELOG, SAFETY, CLAUDE) |
 | `read_doc` | `name`, `section?` | `text` (≤ 12,000 characters; `truncated` + `sections` when cut off) |
 | `search_docs` | `text` | `hits`: `doc`, `line`, `heading`, `text` (≤ 30) |
 | `git_status` | — | `branch` (with ahead/behind as of the last fetch), `changed`, `last_commit` |
 | `git_log` | `count?` (15, ≤ 50), `path?` | `commits`: `hash`, `date`, `author`, `subject` |
-| `list_devices` | — | the place's devices: `name`, `kind`, `off_limits`, `active_in_venue`, `notes` |
+| `list_devices` | — | the place's devices: `name`, `kind`, `off_limits`, `borrowed`, `active_in_venue`, `notes` |
 
 Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`, and not `pose_view` (its answer is a picture).
 
@@ -241,10 +241,10 @@ The training launcher (`docs/green-launcher.md`). `GET /api/green` → `{"ok": f
 The place's devices from `devices.yaml` (no ports, nothing opened or probed):
 ```json
 {"arm": "fake-arm",
- "devices": [{"name": "so101-green", "kind": "so101", "off_limits": true, "active_in_venue": false, "notes": "…", "linked": false},
-             {"name": "fake-arm", "kind": "fake", "off_limits": false, "active_in_venue": true, "notes": "…", "linked": true}]}
+ "devices": [{"name": "so101-green", "kind": "so101", "off_limits": false, "borrowed": true, "active_in_venue": true, "notes": "…", "linked": false},
+             {"name": "fake-arm", "kind": "fake", "off_limits": false, "borrowed": false, "active_in_venue": true, "notes": "…", "linked": true}]}
 ```
-`linked`: the arm this brain drives. Whether a device is switched on isn't known until the roll call (lab router).
+`linked`: the arm this brain drives. `borrowed`: another project's device that lab-os may use with its rules (`docs/places.md`). Whether a device is switched on isn't known until the roll call (lab router).
 
 ### `/api/hub`
 ```json

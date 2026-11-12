@@ -40,27 +40,23 @@ def test_find_missing_device():
         find_usb_device("xarm1", enumerate_fn=lambda v, p: [])
 
 
-def test_find_refuses_green_by_name():
+def test_find_refuses_an_off_limits_device_by_name(locked):
     with pytest.raises(PortNotAllowed):
-        find_usb_device("so101-green", enumerate_fn=lambda v, p: [])
+        find_usb_device("locked-arm", locked, enumerate_fn=lambda v, p: [])
 
 
-def test_find_refuses_a_device_with_greens_serial():
-    green_serial = sorted(load_registry().off_limits_serials())[0]
-    evil = xarm_info(serial_number=green_serial)
+def test_find_refuses_a_device_with_an_off_limits_serial(locked):
+    evil = xarm_info(serial_number="LOCKED0001", product_string="xArm")
     with pytest.raises(PortNotAllowed):
-        find_usb_device("xarm1", enumerate_fn=lambda v, p: [evil])
+        find_usb_device("xarm1", locked, enumerate_fn=lambda v, p: [evil])
 
 
-def test_green_serials_are_blocked_on_every_os():
+def test_off_limits_serials_are_blocked_on_every_os(locked):
     from lab_os.devices import check_port_allowed
 
-    serials = load_registry().off_limits_serials()
-    assert len(serials) == 2
-    for serial in serials:
-        for path in (f"/dev/cu.usbmodem{serial}1", f"/dev/serial/by-id/x_{serial}-if00"):
-            with pytest.raises(PortNotAllowed):
-                check_port_allowed(path)
+    for path in ("/dev/cu.usbmodemLOCKED00011", "/dev/serial/by-id/x_LOCKED0001-if00"):
+        with pytest.raises(PortNotAllowed):
+            check_port_allowed(path, locked)
 
 
 def reply(positions: dict[int, int]) -> bytes:
