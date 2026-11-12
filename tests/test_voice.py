@@ -176,6 +176,8 @@ def test_take_speech_starts_with_the_first_sentence():
     assert take_speech("One. Two. Thr", False, False) == ("One. Two.", " Thr")
     assert take_speech("It's 3.5 cm", True, False) == ("", "It's 3.5 cm")  # not a sentence end
     assert take_speech("Last bit", False, True) == ("Last bit", "")
+    assert take_speech("Done. All here.", True, True) == ("Done.", " All here.")  # still split
+    assert take_speech("Done.", True, False) == ("", "Done.")  # the answer may go on
 
 
 # ---------- the service clients ----------

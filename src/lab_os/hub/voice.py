@@ -50,16 +50,18 @@ def speakable(text: str) -> str:
 
 
 def take_speech(buf: str, first: bool, final: bool) -> tuple[str, str]:
-    """Split off what to speak now: the first sentence alone (to start soon), later every finished
-    sentence, at the end everything. Returns (to speak, the rest)."""
+    """Split off what to speak now: the first sentence alone (so speech starts soon, even when the
+    whole answer is already there), later every finished sentence, at the end everything. Returns
+    (to speak, the rest)."""
+    ends = [m.end() for m in SENTENCE_END.finditer(buf)]
+    ends = [e for e in ends if buf[:e].strip() and buf[e:].strip()]  # a sentence with more after it
+    if first and ends:
+        return buf[: ends[0]].strip(), buf[ends[0] :]
     if final:
         return buf.strip(), ""
-    ends = [m.end() for m in SENTENCE_END.finditer(buf)]
-    ends = [e for e in ends if buf[:e].strip()]
     if not ends:
         return "", buf
-    cut = ends[0] if first else ends[-1]
-    return buf[:cut].strip(), buf[cut:]
+    return buf[: ends[-1]].strip(), buf[ends[-1] :]
 
 
 @dataclass
@@ -121,8 +123,9 @@ class Speaker:
     """Speaks an answer while it's still being written: text in with `add()`, WAVs out to the page
     in order. One request at a time, so at most a sentence waits for the service."""
 
-    def __init__(self, link: "VoiceLink", setup: VoiceSetup):
-        self.link, self.setup = link, setup
+    def __init__(self, link: "VoiceLink", setup: VoiceSetup, split_first: bool = True):
+        """`split_first=False`: no hurry (the greeting): one request for all of it."""
+        self.link, self.setup, self.split_first = link, setup, split_first
         self.buf, self.said_chars, self.sent, self.seconds = "", 0, 0, 0.0
         self.closed = self.stopped = False
         self.cut = False  # a drafted prompt began: the rest is for the screen
@@ -147,7 +150,8 @@ class Speaker:
             await self._wake.wait()
             self._wake.clear()
             while True:
-                text, self.buf = take_speech(self.buf, self.sent == 0, self.closed)
+                first = self.sent == 0 and self.split_first
+                text, self.buf = take_speech(self.buf, first, self.closed)
                 text = speakable(text)
                 if not text:
                     break
@@ -359,7 +363,7 @@ class VoiceLink:
 
     async def _greet(self, text: str) -> None:
         setup = self.desk.setup()
-        speaker = Speaker(self, setup)
+        speaker = Speaker(self, setup, split_first=False)
         speaker.add(text)
         speaker.close()
         await speaker.task
