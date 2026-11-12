@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — Custom three.js shaders mix colors in linear light; the hub's canvas mixes in sRGB
+**What:** the VR jump's star lines and sky (custom `ShaderMaterial`s) used the theme colors as `THREE.Color`s, which three converts to linear light, and the output was converted back to sRGB. A 15 % cyan tint (the hub's `rgba(primary, 0.15)` over black) came out as a strong teal fog, the flash as gray, and faint line tails much too bright: "mostly black and white" in the headset.
+**Fix:** the shaders mix in sRGB numbers, like the hub's canvas (`srgb()` in `hub/web/xr/stars.js`), and hand three `pow(color, 2.2)` before its `colorspace_fragment`. Also: WebGL draws lines 1 pixel wide whatever `linewidth` says (and the Quest the same), so the stars are camera-facing quads with soft edges, not `LineSegments`.
+
 ### 2026-11-12 — OpenAI's speech WAV says it's 25 hours long
 **What:** the first live try of the `main` voice setup (OpenAI `gpt-4o-mini-tts`, `response_format: wav`): a 2 s sentence measured 89,478 s. OpenAI streams the WAV, so its header carries the "unknown length" placeholder (0xFFFFFFFF). The spend log prices spoken seconds, so every answer would have been logged at ~$22, and the $20 budget would have paused the chat after the first one. Browsers play such a file fine, so it doesn't show by ear.
 **Fix:** the brain rewrites OpenAI's WAV with a correct header, and `wav_seconds` counts the bytes really there (`ai/speech.py`; a test with the placeholder header). Found before any OpenAI turn was logged.
