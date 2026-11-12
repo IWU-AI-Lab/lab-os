@@ -9,7 +9,12 @@ config/devices.yaml, after checking the board's USB serial and waiting for you t
 Nothing here turns torque on, so no motor moves: setup writes each motor's ID and baud rate,
 calibration reads positions while you move the arm by hand. Same steps as the Seeed Studio wiki
 (https://wiki.seeedstudio.com/lerobot_so100m_new/) and LeRobot, but never the shared conda env or
-~/.cache/huggingface (calibration files live in calibration/<arm>/ and travel with the arm).
+LeRobot's cache in ~/.cache/huggingface (calibration files live in calibration/<arm>/ and travel
+with the arm).
+
+Borrowed arms (`borrowed: true` in devices.yaml: the green training set) are refused by all three
+commands, by name and by board serial: lab-os never changes their motor IDs, baud rate, firmware
+or calibration (CLAUDE.md).
 """
 
 import argparse
@@ -24,6 +29,7 @@ from lab_os.devices import (
     Device,
     PortNotAllowed,
     Registry,
+    check_not_in_use,
     default_device,
     load_registry,
     serial_port,
@@ -69,10 +75,14 @@ def usb_serial_of(port: str, sys_root: Path = Path("/sys")) -> str | None:
 
 
 def guarded_port(
-    name: str, registry: Registry | None = None, sys_root: Path = Path("/sys")
+    name: str,
+    registry: Registry | None = None,
+    sys_root: Path = Path("/sys"),
+    proc: Path = Path("/proc"),
 ) -> tuple[Device, str]:
     """The arm's by-id port, after every check that needs no opening: known SO-101, not off
-    limits, a by-id path, plugged in, and (Linux) the board behind it has the expected serial."""
+    limits, a by-id path, plugged in, (Linux) the board behind it has the expected serial, and no
+    other program has it open (LeLab, a recording, a training run)."""
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
@@ -83,7 +93,27 @@ def guarded_port(
     if not os.path.exists(port):
         raise LookupError(f"{port} isn't there: is {name}'s board plugged in? ls -l {BY_ID_DIR}")
     check_board_serial(port, device, registry, sys_root)
+    check_not_in_use(name, [port], proc)
     return device, port
+
+
+class Borrowed(PortNotAllowed):
+    """The motor setup tool was pointed at another project's arm."""
+
+
+def refuse_borrowed(
+    device: Device, port: str, registry: Registry, sys_root: Path = Path("/sys")
+) -> None:
+    """Raise Borrowed for a borrowed arm, by its devices.yaml entry or by the serial of the board
+    behind the port (so another name for the same board doesn't get past)."""
+    board = usb_serial_of(port, sys_root)
+    serials = {u.serial for u in device.usb if u.serial} | ({board} if board else set())
+    if device.borrowed or serials & registry.borrowed_serials():
+        raise Borrowed(
+            f"{device.name} is borrowed from another project (the SO-101 training set): lab-os "
+            "never changes its motor IDs, baud rate, firmware or calibration (CLAUDE.md). "
+            "Do that in its own project (LeLab)."
+        )
 
 
 def check_board_serial(
@@ -121,6 +151,8 @@ def describe_serial_ports(registry: Registry, by_id_dir: str = BY_ID_DIR) -> lis
             label = "unknown"
         elif owner.off_limits:
             label = f"{owner.name}  OFF LIMITS (won't be opened)"
+        elif owner.borrowed:
+            label = f"{owner.name}  (borrowed: no setup or calibration)"
         else:
             label = owner.name
         lines.append(f"{entry}  ->  {label}")
@@ -268,7 +300,9 @@ def arm_class_and_config(device: Device, port: str):
 def calibrate(device: Device, port: str) -> None:
     """Run LeRobot's calibration without its connect(): that would also write the PID settings
     and switch torque on. Here the bus only opens (checks all six motors answer), calibrate()
-    switches torque off first, and the port closes with torque off."""
+    switches torque off first, and the port closes with torque off. Never a borrowed arm."""
+    if device.borrowed:
+        raise Borrowed(f"{device.name} is borrowed: lab-os never calibrates it (CLAUDE.md)")
     cls, config = arm_class_and_config(device, port)
     arm = cls(config)
     arm.bus.connect()
@@ -297,7 +331,11 @@ def main(argv: list[str] | None = None, ask: Ask = input, say: Say = print) -> i
     registry = load_registry()
     try:
         name = args.arm or default_device(("so101",), registry)
+        if registry.devices.get(name) and registry.devices[name].borrowed:
+            # before the port checks: a borrowed arm is refused even when it's busy or unplugged
+            refuse_borrowed(registry.devices[name], "", registry)
         device, port = guarded_port(name, registry)
+        refuse_borrowed(device, port, registry)
     except (KeyError, LookupError, PortNotAllowed) as e:
         say(f"Not opening anything: {e}")
         return 1

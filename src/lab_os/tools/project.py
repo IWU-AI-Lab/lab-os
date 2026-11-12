@@ -3,9 +3,8 @@
 Plain logic with no MCP in it; lab_os.tools.mcp_server offers these as MCP tools (read tier), and
 the hub's chat uses the same ones. Nothing here writes, runs a fetch or opens a device.
 
-The docs are `docs/**/*.md` plus README, CHANGELOG, SAFETY and CLAUDE at the top, **except
-`docs/design/`**: the approved design is a surprise until the reveal (step 10), and anyone at a hub
-screen can ask the chat.
+The docs are `docs/**/*.md` plus README, CHANGELOG, SAFETY and CLAUDE at the top, `docs/design/`
+included (the design stopped being a surprise on 2026-11-12).
 """
 
 import re
@@ -18,7 +17,6 @@ from lab_os.hub.project import project_summary
 from lab_os.venues import Venue
 
 TOP_DOCS = ("README.md", "CHANGELOG.md", "SAFETY.md", "CLAUDE.md")
-HIDDEN_DIRS = ("design",)  # under docs/: not served (the reveal is a surprise)
 MAX_CHARS = 12_000  # one doc or section per call (the AI pays per token)
 MAX_HITS = 30
 GIT_TIMEOUT_S = 10
@@ -89,10 +87,7 @@ class ProjectTools:
         docs = {}
         root = self.repo / "docs"
         for path in sorted(root.rglob("*.md")):
-            rel = path.relative_to(root)
-            if rel.parts[0] in HIDDEN_DIRS:
-                continue
-            docs[rel.with_suffix("").as_posix()] = path
+            docs[path.relative_to(root).with_suffix("").as_posix()] = path
         for name in TOP_DOCS:
             if (self.repo / name).is_file():
                 docs[Path(name).stem] = self.repo / name
@@ -200,14 +195,16 @@ class ProjectTools:
     # ---------- devices ----------
 
     def list_devices(self) -> dict:
-        """The place's device list: name, kind, off limits, active in this venue, notes. Whether a
-        device is switched on isn't known yet (the roll call comes with the lab router)."""
+        """The place's device list: name, kind, off limits, borrowed (another project's, drivable
+        with CLAUDE.md's rules), active in this venue, notes. Whether a device is switched on isn't
+        known yet (the roll call comes with the lab router)."""
         active = set(self.venue.active_devices) if self.venue else set()
         devices = [
             {
                 "name": d.name,
                 "kind": d.kind,
                 "off_limits": d.off_limits,
+                "borrowed": d.borrowed,
                 "active_in_venue": d.name in active,
                 "notes": " ".join(d.notes.split()),
             }

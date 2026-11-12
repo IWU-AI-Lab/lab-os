@@ -153,7 +153,8 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
     def list_docs() -> dict:
         """The project's docs: name, file, title. Includes current-focus (what's being worked on),
         ideas (the backlog, incl. "On hold"), lab-jarvis-log (plan, decisions, devices), GOTCHAS
-        (surprises and fixes), protocol, places, chat, personas, hub, ai-control, CHANGELOG."""
+        (surprises and fixes), protocol, places, chat, personas, hub, ai-control, CHANGELOG,
+        design/DESIGN (the hub's design)."""
         return run("list_docs")
 
     @server.tool(annotations=READ)
@@ -183,7 +184,8 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
 
     @server.tool(annotations=READ)
     def list_devices() -> dict:
-        """The place's devices (config): name, kind, off limits, active in this venue, notes.
+        """The place's devices (config): name, kind, off limits, borrowed (another project's:
+        usable, but never set up or recalibrated by lab-os), active in this venue, notes.
         Whether a device is switched on isn't known yet."""
         return run("list_devices")
 

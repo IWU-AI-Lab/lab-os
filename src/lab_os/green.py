@@ -1,13 +1,16 @@
 """One click to start the SO-101 training setup (so101-green + LeLab) on the lab desktop.
 
-lab-os itself still never opens the green arm's ports (CLAUDE.md). This only *looks*: at the
-names in /dev/serial/by-id/ (a directory listing; no port is opened) and at LeLab's saved settings.
+The launcher never opens a green port itself (lab-os may drive the green follower since step 11,
+but not here). This only *looks*: at the names in /dev/serial/by-id/ (a directory listing; no port
+is opened), at which programs have them open (/proc), and at LeLab's saved settings.
 It starts LeLab (`lelab`, Hugging Face's web page for LeRobot, its own uv tool) only when:
 - both green ports are plugged in;
 - nothing else is on a serial port, the white arm above all: LeLab saves raw ttyACM names, and those
   are handed out in plug-in order, so another arm can take a green arm's number;
 - LeLab's saved leader and follower ports are exactly the two green arms, one each;
-- they're the same way round as at the last good start (otherwise the leader and follower swapped).
+- they're the same way round as at the last good start (otherwise the leader and follower swapped);
+- no other program has a green port open (lab-os driving so101-green, say), unless LeLab is
+  already running: then it's LeLab's.
 LeLab opens the ports when you press teleop or record in its page. `lab-os green` in a terminal,
 the desktop icon (docs/green-launcher.md) and the hub's Training page all run this.
 """
@@ -22,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from lab_os import REPO_ROOT
-from lab_os.devices import load_registry
+from lab_os.devices import load_registry, users_of
 
 BY_ID = Path("/dev/serial/by-id")
 # LeLab's ports/ and robots/ (its calibration/ is never read or touched)
@@ -30,7 +33,7 @@ LELAB_HOME = Path.home() / ".cache/huggingface/lerobot"
 LAST_GOOD = REPO_ROOT / "logs/green-last-start.json"  # which green serial was the follower
 LELAB_PORT = 8000
 LELAB_URL = f"http://127.0.0.1:{LELAB_PORT}"
-GREEN = "so101-green"
+GREEN = ("so101-green", "so101-green-leader")  # the follower and the leader
 
 
 @dataclass
@@ -93,19 +96,23 @@ def _answers(port: int) -> bool:
 
 
 def check(
-    by_id: Path = BY_ID, home: Path = LELAB_HOME, last_good: Path = LAST_GOOD, registry=None
+    by_id: Path = BY_ID,
+    home: Path = LELAB_HOME,
+    last_good: Path = LAST_GOOD,
+    registry=None,
+    proc: Path = Path("/proc"),
 ) -> Check:
     """Is it safe to start LeLab for the green arms right now? Opens nothing."""
     c = Check()
     registry = registry or load_registry()
-    green = registry.devices.get(GREEN)
-    if not green or len(green.ports) != 2:
-        c.add(False, f"{GREEN} isn't in devices.yaml with its two ports")
+    green = [registry.devices.get(name) for name in GREEN]
+    if not all(d and len(d.ports) == 1 for d in green):
+        c.add(False, f"{' and '.join(GREEN)} aren't in devices.yaml with a port each")
         return c
     # compared by name, so a test can pass another folder as /dev/serial/by-id
     names = {Path(p).name: d.name for d in registry.devices.values() for p in d.ports}
     present = sorted(p.name for p in by_id.iterdir()) if by_id.is_dir() else []
-    mine = [Path(p).name for p in green.ports]
+    mine = [Path(d.ports[0]).name for d in green]
     for port in mine:
         c.add(
             port in present,
@@ -161,6 +168,15 @@ def check(
         c.add(True, "first start: this leader/follower pairing is remembered from now on")
     c.add(_lelab() is not None, "LeLab installed" if _lelab() else "LeLab (`lelab`) not found")
     c.running = _answers(LELAB_PORT)
+    if not c.running:  # LeLab not there: nobody else may have a green port (one program per port)
+        for port in mine:
+            users = users_of(str(by_id / port), proc) or []
+            if users:
+                c.add(
+                    False,
+                    f"green arm …{_serial(port)[-4:]} is open in {', '.join(users)}: stop it "
+                    "first (one program per port)",
+                )
     return c
 
 

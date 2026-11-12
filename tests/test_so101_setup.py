@@ -1,13 +1,16 @@
 """SO-101 motor setup / calibration command, against a fake motor bus (no hardware, no LeRobot)."""
 
+import os
+
 import pytest
 
-from lab_os.devices import PortNotAllowed, load_registry
+from lab_os.devices import Device, InUse, PortNotAllowed, Registry, UsbId, load_registry
 from lab_os.robots import so101_setup as setup
 from lab_os.robots.so101_setup import MOTORS
 
 WHITE = "/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00"
-GREEN = "usb-1a86_USB_Single_Serial_5B41531599-if00"
+GREEN = "usb-1a86_USB_Single_Serial_5B41533501-if00"  # the green follower
+GREEN_SERIAL = "5B41533501"
 FRESH = (1_000_000, 1)  # a new STS3215: ID 1 at 1 Mbaud
 
 
@@ -58,9 +61,54 @@ def answers(*replies, before=None):
 
 
 # ---- port guard ---------------------------------------------------------------------------------
-def test_green_is_refused_before_anything_opens():
-    with pytest.raises(PortNotAllowed):
-        setup.guarded_port("so101-green")
+@pytest.mark.parametrize("command", ["setup-motors", "check", "calibrate"])
+@pytest.mark.parametrize("arm", ["so101-green", "so101-green-leader"])
+def test_the_green_arms_are_refused_before_anything_opens(monkeypatch, command, arm):
+    def must_not(*a, **kw):
+        raise AssertionError("nothing may be looked up or opened for a borrowed arm")
+
+    for name in ("guarded_port", "make_bus", "calibrate", "_require_lerobot", "confirm"):
+        monkeypatch.setattr(setup, name, must_not)
+    said = []
+    assert setup.main([command, "--arm", arm], ask=must_not, say=said.append) == 1
+    assert "borrowed" in said[0] and "never changes its motor IDs" in said[0]
+
+
+def test_greens_board_under_another_name_is_refused_by_its_serial(monkeypatch, tmp_path):
+    """Another place's devices.yaml calls the green follower's board "my-arm": still refused."""
+    mine = Device("my-arm", "so101", ports=(WHITE,), usb=(UsbId(0x1A86, serial=GREEN_SERIAL),))
+    reg = Registry({"my-arm": mine} | {"so101-green": load_registry().devices["so101-green"]})
+    with pytest.raises(setup.Borrowed):
+        setup.refuse_borrowed(mine, WHITE, reg, tmp_path)
+    # no serial in the entry, but the kernel says the board behind the port is green's
+    bare = Device("my-arm", "so101", ports=(WHITE,))
+    with pytest.raises(setup.Borrowed):
+        setup.refuse_borrowed(bare, WHITE, reg, fake_sysfs(tmp_path, WHITE, GREEN_SERIAL))
+    white = load_registry().devices["so101-white"]
+    setup.refuse_borrowed(white, WHITE, load_registry(), tmp_path / "no-sysfs")  # white: fine
+
+
+def test_calibrate_itself_refuses_a_borrowed_arm():
+    with pytest.raises(setup.Borrowed):
+        setup.calibrate(load_registry().devices["so101-green"], "/dev/serial/by-id/x")
+
+
+def test_the_white_arm_is_still_the_default(monkeypatch):
+    seen = []
+    monkeypatch.setattr(setup, "guarded_port", lambda name, reg: seen.append(name) or 1 / 0)
+    with pytest.raises(ZeroDivisionError):
+        setup.main(["check"], ask=quiet, say=quiet)
+    assert seen == ["so101-white"]
+
+
+def test_a_port_another_program_has_open_is_refused(monkeypatch, tmp_path):
+    proc = tmp_path / "proc"
+    (proc / "77" / "fd").mkdir(parents=True)
+    (proc / "77" / "comm").write_text("lelab\n")
+    os.symlink(WHITE, proc / "77" / "fd" / "5")
+    monkeypatch.setattr(setup.os.path, "exists", lambda p: True)
+    with pytest.raises(InUse, match="so101-white is in use by lelab \\(pid 77\\)"):
+        setup.guarded_port("so101-white", sys_root=tmp_path, proc=proc)
 
 
 def test_a_non_so101_device_is_refused():
@@ -101,11 +149,15 @@ def test_unknown_sysfs_skips_the_second_check(tmp_path):
     setup.check_board_serial(WHITE, reg.devices["so101-white"], reg, tmp_path)
 
 
-def test_port_list_labels_green_as_off_limits(tmp_path):
+def test_port_list_labels_green_as_borrowed_and_off_limits_ones(tmp_path, locked):
     for name in (GREEN, WHITE.rsplit("/", 1)[-1], "usb-other_thing-if00"):
         (tmp_path / name).touch()
     lines = setup.describe_serial_ports(load_registry(), str(tmp_path) + "/")
-    assert any("so101-green" in line and "OFF LIMITS" in line for line in lines)
+    assert any(line.endswith("so101-green  (borrowed: no setup or calibration)") for line in lines)
+    (tmp_path / "usb-1a86_USB_Single_Serial_LOCKED0001-if00").touch()
+    lines = setup.describe_serial_ports(locked, str(tmp_path) + "/")
+    assert any("locked-arm" in line and "OFF LIMITS" in line for line in lines)
+    lines = setup.describe_serial_ports(load_registry(), str(tmp_path) + "/")
     assert any(line.endswith("->  so101-white") for line in lines)
     assert any(line.endswith("->  unknown") for line in lines)
 
