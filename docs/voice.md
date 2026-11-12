@@ -44,6 +44,7 @@ After the start tap, the greeting ("Good morning." + one line of real news, `doc
 - **The page records and plays; the brain hears, thinks and speaks** (`/ws/voice`, `docs/protocol.md` → "Voice"). API keys never leave the brain.
 - The page sends the microphone as 16 kHz audio while the mic is held (with the browser's echo cancellation, so the speakers stay out of it). The brain passes it to the voice service, which **hears while you talk**: the words come back as they're recognized.
 - On release, the words go into **the same conversation as typing**: the persona, the read tools, the history, the spend cap, the assistant's states. Spoken questions show up in History like typed ones.
+- **The text appears as it's said:** a spoken answer's words show up under the core while that part is spoken, not when the AI writes them (the core stays `thinking` until the voice starts). If no voice comes (an error, the limit), the text shows anyway.
 - The answer is spoken **sentence by sentence**: the first sentence as soon as it's written, the rest while that one plays. A drafted prompt ("Prompt: …") isn't read out ("The prompt is on the screen."), links neither; after about 900 characters it says "The rest is on the screen."
 - If the voice service fails (e.g. the free key's limit), the answer stays on the screen and a short note says why.
 
@@ -51,11 +52,12 @@ After the start tap, the greeting ("Good morning." + one line of real news, `doc
 Like the chat's setups: the persona picks one by name (`voice: main` in `config/personas/<id>.yaml`; `none` = no voice), `fallback` is used when a setup's key is missing, and switching is a config edit.
 | Setup | Service | Hears | Speaks | Key |
 |---|---|---|---|---|
-| `main` | OpenAI | `gpt-4o-mini-transcribe` (after the release) | `gpt-4o-mini-tts`, voice `onyx` | `OPENAI_API_KEY` |
+| `main` | OpenAI | `gpt-4o-mini-transcribe` (after the release) | `gpt-4o-mini-tts`, voice `fable`, British and lively, speed 1.15 | `OPENAI_API_KEY` |
 | `backup` | Gemini, free key | `gemini-3.5-transcribe-live` (while you talk) | `gemini-3.8-flash-lite-tts` (then 3 more), voice `Charon` | `GEMINI_API_KEY` |
 
 - `main` falls back to `backup` while there's no OpenAI key, so today the free Gemini key does everything. When the professor's OpenAI key is in `.env`, `main` is used: no code change.
 - `speak` can be a list: when a model is over its limit, the next one speaks. **Gemini's free key allows only 3 speech requests a minute per model**, and an answer uses 2 (the first sentence, then the rest), the greeting 1. With the four free TTS models listed, that's ~12 a minute, about 6 spoken answers. Past that, the answer stays on the screen with a note until a model is free again (the brain waits out each model's retry time, ~1 minute). **And only 10 a day per model** (checked 2026-11-12): ~40 spoken pieces a day, about 15–20 answers with the greeting. Testing uses them up too. A paid Gemini key or the OpenAI key (`main`) has no such limit. A model that's busy or stuck (no answer in 15 s) is skipped once.
+- **How it sounds** (OpenAI): `style` is sent with every request as instructions (accent, mood, manner: the lab's is "a lively, warm British accent …"); `speed` sets the pace (1 = normal; the style alone doesn't change it). Gemini ignores both for now.
 - `speaker` is the service's voice name. Gemini: `Charon`, `Kore`, `Puck`, `Fenrir`, `Aoede`, …; OpenAI: `onyx`, `alloy`, `nova`, ….
 - `price_per_min` (`heard`, `spoken`) feeds the spend log: each voice turn adds lines with `kind: voice`, the seconds heard and spoken, and the cost. The free key costs $0, but Google may use the audio to improve its products, and it has limits per minute and per day.
 - **Timing on the free key** (2026-11-12): the words are final ~0.4 s after you let go; the chat's answer takes 3–11 s (`gemini-3.5-flash-lite`, GOTCHAS); speaking a sentence ~2–3 s. The paid OpenAI chat is usually faster.

@@ -124,6 +124,8 @@ def openai_setup(server) -> VoiceSetup:
         speak="test-tts",
         speaker="onyx",
         key_env="LAB_TEST_KEY",
+        style="Lively, British.",
+        speed=1.15,
         price_heard=0.006,
         price_spoken=0.06,
     )
@@ -139,6 +141,7 @@ def key(monkeypatch):
 
 def test_models_yaml_voices():
     voices = load_voices()
+    assert "British" in voices["main"].style and voices["main"].speed == 1.15
     assert voices["main"].service == "openai" and voices["main"].fallback == "backup"
     assert voices["backup"].service == "gemini" and voices["backup"].key_env == "GEMINI_API_KEY"
     assert voices["main"].cost(60, 60) == pytest.approx(0.018)
@@ -326,6 +329,8 @@ async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):
         "input": "Hello.",
         "response_format": "wav",
         "voice": "onyx",
+        "instructions": "Lively, British.",
+        "speed": 1.15,
     }
 
 

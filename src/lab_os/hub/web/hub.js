@@ -9,7 +9,7 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
-import { createVoice, silenceWatch, wayIn } from "/web/voice.js";
+import { createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -409,7 +409,9 @@ function beginTurn(text) {
   $("#reply .q").textContent = text;
   $("#reply .a").textContent = "";
   renderLog();
-  return (ev) => onChatEvent(ev, answer);
+  const handle = (ev) => onChatEvent(ev, answer, handle.paced);
+  handle.answer = answer;
+  return handle;
 }
 
 async function ask(text) {
@@ -456,13 +458,16 @@ const TOOL_WORDS = {
   list_poses: "the arm's poses",
 };
 
-function onChatEvent(ev, answer) {
-  if (ev.type === "state") setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
+// paced: a spoken answer, whose text the voice reveals as it's said (revealPacer), not as it's written
+function onChatEvent(ev, answer, paced = false) {
+  if (ev.type === "state") {
+    if (!paced) setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
+  }
   else if (ev.type === "tool") $("#state-word").textContent = `looking up: ${TOOL_WORDS[ev.name] || ev.name}`;
   else if (ev.type === "text") {
     if (!answer.content) S.chat.push(answer);
     answer.content += ev.text;
-    $("#reply .a").textContent = answer.content;
+    if (!paced) $("#reply .a").textContent = answer.content;
     $("#reply .a").scrollTop = $("#reply .a").scrollHeight;
     renderLog();
   } else if (ev.type === "error") {
@@ -475,7 +480,7 @@ function onChatEvent(ev, answer) {
 /* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
    no microphone or no voice at the brain: no mic button, typing unchanged. */
-const VS = { turn: null, voiced: false, greeting: false };
+const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0 };
 const voice = createVoice({
   onEvent: onVoiceEvent,
   onChange: renderMic,
@@ -629,7 +634,14 @@ function talkEnd() {
   voice.release();
   setAssistant("thinking", 0);
 }
+// the spoken answer's text: shown as it's said; all of it once the voice is done (or never came)
+function freeText() {
+  clearTimeout(VS.freeTimer);
+  VS.shown?.free();
+  VS.shown = null;
+}
 function endVoice() {
+  freeText();
   VS.voiced = false;
   VS.turn = null;
   S.asking = false;
@@ -666,15 +678,26 @@ function onVoiceEvent(ev) {
       endVoice();
       return;
     }
-    VS.turn = beginTurn(ev.text);
+    const turn = (VS.turn = beginTurn(ev.text));
+    turn.paced = true;
+    VS.shown = revealPacer(
+      () => turn.answer.content.length,
+      (n) => ($("#reply .a").textContent = turn.answer.content.slice(0, n)),
+    );
   } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
-    if (ev.type === "state" && ev.state === "idle") return; // not yet: the answer is still to be spoken
     VS.turn(ev);
     if (ev.type === "done" || ev.type === "error") {
       VS.turn = null;
+      if (ev.type === "error") freeText();
+      else VS.freeTimer = setTimeout(freeText, 15_000); // no voice after all: show it anyway
       getJSON("/api/spend").then(renderSpend);
     }
+  } else if (ev.type === "playing" && VS.shown) {
+    clearTimeout(VS.freeTimer);
+    VS.shown.pace(ev.text.length, ev.duration * 1000);
+    setAssistant("speaking", 0.5);
   } else if (ev.type === "error" || ev.type === "mic_error" || ev.type === "voice_error") {
+    if (ev.type === "voice_error") freeText();
     if (ev.type !== "voice_error" && VS.voiced) endVoice();
     showError(ev.message);
   } else if (ev.type === "played" && VS.greeting) {
