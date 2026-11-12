@@ -74,12 +74,25 @@ def wav_bytes(pcm: bytes, rate: int = RATE) -> bytes:
 
 
 def wav_seconds(data: bytes) -> float:
-    """How long a WAV plays (0 if it can't be read)."""
+    """How long a WAV plays (0 if it can't be read). Counted from the bytes really there: a streamed
+    WAV (OpenAI's) says "as long as possible" in its header (GOTCHAS)."""
     try:
         with wave.open(io.BytesIO(data)) as w:
-            return w.getnframes() / float(w.getframerate())
+            frame = w.getsampwidth() * w.getnchannels()
+            return len(w.readframes(w.getnframes())) / frame / float(w.getframerate())
     except (wave.Error, EOFError, ZeroDivisionError):
         return 0.0
+
+
+def _rewrap(data: bytes) -> bytes:
+    """A WAV with a correct header (a streamed one's says it's endless)."""
+    try:
+        with wave.open(io.BytesIO(data)) as w:
+            if w.getsampwidth() != 2 or w.getnchannels() != 1:
+                return data
+            return wav_bytes(w.readframes(w.getnframes()), w.getframerate())
+    except (wave.Error, EOFError):
+        return data
 
 
 def _who(setup: VoiceSetup) -> str:
@@ -393,7 +406,7 @@ async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) ->
         ) as resp:
             if resp.status != 200:
                 raise _http_error(setup, resp.status, await resp.text())
-            return await resp.read()
+            return _rewrap(await resp.read())
     except VoiceError:
         raise
     except TimeoutError:

@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-12
+- Voice fix: OpenAI's streamed WAV (header says "endless") made a spoken answer count as ~25 h in the spend log; the brain now rewrites the header and counts the real length.
 - **The wake word** (step 7): "hey jarvis" heard on the brain itself (openWakeWord's models in `models/openwakeword/`, run with `onnxruntime`; nothing sent until the phrase), on screens that choose it (⚙ → This screen → Talking to it → wake word); a small dot in the status strip while it listens; after the phrase the core listens and the question ends after a silence. The persona's `wake_word:`, the venue's `wake_word:` (default: off on public venues). Several screens: the best one answers. A stuck or busy TTS model is skipped once (15 s timeout).
 - Voice: `speak:` in a voice setup can list several TTS models; one over its limit (HTTP 429) rests until its retry time and the next one speaks. The Gemini setup lists four (the free key allows 3 requests a minute per model).
 - **Dictation** and the per-screen **way in** (step 7): ⚙ → This screen → "Talking to it": push-to-talk (default) or dictation (tap the mic, the words go into the ask line while you talk, it stops after a short silence or a second tap; Enter sends, Esc or any key stops and keeps it). Greyed out with the reason where the screen can't listen. The greeting's hint follows the choice.
