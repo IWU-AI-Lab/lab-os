@@ -15,8 +15,15 @@ The first press asks the browser for the microphone; allow it once. The micropho
 - the browser lists a **microphone** (it reacts to plugging and unplugging);
 - the brain has **voice**: the persona's `voice:` isn't `none`, a voice setup has its key, there's internet, and the chat isn't paused (no key, budget used up).
 
+## The way in, per screen
+⚙ → **This screen** → **Talking to it**: how this screen listens. Kept in this screen's browser, like its level of detail, so each screen has its own.
+- **push-to-talk** (the default): hold the mic (or Space), talk, let go; it answers aloud.
+- **dictation**: tap the mic (or tap Space with the ask line empty). The words go **into the ask line** while you talk. It stops after a short silence (~1.6 s once you've said something; 8 s if you say nothing), a second tap, or Space. **Enter** stops and sends; **Esc** or any other key stops and keeps what's there. Then fix it and send it like typing. The answer comes as text, like a typed question.
+
+The choice is greyed out, with the reason, where the screen can't listen at all (not a secure page, no microphone). The mic button's tooltip says which way is on.
+
 ## The spoken greeting
-After the start tap, the greeting ("Good morning." + one line of real news, `docs/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic."). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
+After the start tap, the greeting ("Good morning." + one line of real news, `docs/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", or "tap the mic." with dictation). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
 - Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.
 - A screen without a microphone (or not a secure page) hears the greeting without the hint.
 - Holding the mic (or Space) during the greeting cuts it short.

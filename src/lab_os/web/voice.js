@@ -17,6 +17,30 @@
 // it plays (the core follows it). onLevel(0..1): the microphone's level while listening.
 // onChange(): the mic button should be shown or hidden (plugging, unplugging, the brain's status).
 
+// The way in, chosen per screen (Settings → This screen, kept in this browser): push-to-talk (the
+// default) or dictation. The setting's words → the brain's names (the greeting's hint).
+export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation" };
+export function wayIn() {
+  try {
+    return WAYS[JSON.parse(localStorage.getItem("lab-os.screen"))?.voice] || "push_to_talk";
+  } catch {
+    return "push_to_talk";
+  }
+}
+
+// Can this screen hear at all? (A secure page and a microphone; the brain's side is in /api/status.)
+export async function screenCanHear() {
+  if (!window.isSecureContext) return { ok: false, why: "not a secure page: the microphone works only on https or this computer's localhost" };
+  if (!navigator.mediaDevices?.getUserMedia) return { ok: false, why: "this browser gives pages no microphone" };
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    if (!devices.some((d) => d.kind === "audioinput")) return { ok: false, why: "no microphone is plugged in" };
+  } catch {
+    return { ok: false, why: "the browser won't list the microphones" };
+  }
+  return { ok: true, why: null };
+}
+
 const MIC_KEEP_MS = 60_000; // keep the microphone open this long after the last use (no lost words)
 const QUEUE_MAX = 400; // audio pieces kept while the connection opens (20 s)
 
