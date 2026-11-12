@@ -482,3 +482,25 @@ def test_the_pages_have_the_voice_parts():
     assert (SRC / "web" / "voice-worklet.js").is_file()
     for page in ("hub/web/design.html", "hub/web/index.html"):
         assert 'id="mic"' in (SRC / page).read_text(), page
+
+
+async def test_the_greeting_without_a_microphone_has_no_hint(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path)
+    conv.clear(opening="Good morning. Step 7, Voice, was finished today.")
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "greet", "way": "none"})
+    events = []
+    await until(ws, "audio_end", events)
+    said = [e["text"] for e in events if e["type"] == "audio"]
+    assert said == ["Good morning. Step 7, Voice, was finished today."]  # one piece, no hint
+    await ws.close()
+
+
+def test_the_hubs_speak_the_greeting():
+    design = (SRC / "hub/web/design.html").read_text()
+    assert "spokenGreeting" in design and "V.playHeld()" in design
+    assert "S.sound" in design.split("function spokenGreeting")[1][:200]  # this screen's sound
+    assert "voice.playHeld()" in (SRC / "hub/web/hub.js").read_text()

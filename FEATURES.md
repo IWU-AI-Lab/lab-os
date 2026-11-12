@@ -32,6 +32,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | Spend log per answer and a monthly budget that pauses the chat | ✅ | $20/month at the lab |
 | The chat knows the project: reads the docs, git history and device list; drafts prompts for Claude Code / Codex (Copy button) | ✅ | Read-only: the chat can never move a robot |
 | **Push-to-talk:** hold the mic button (or Space), talk, let go; the words appear while you talk, the answer is spoken sentence by sentence and the core follows its loudness. Same conversation as typing (tools, history, budget) | 🧪 | On the free Gemini key; tried on a laptop in Chrome with a recorded voice, not yet with a person at the lab's USB microphone. No mic button without a secure page (localhost/https), a microphone, or voice at the brain |
+| **Spoken greeting** after the start tap: the greeting's text plus "You can talk to me: hold the mic." (no hint without a microphone); on the designed hub it plays while the greeting is typed after the jump | 🧪 | Silent where there's no voice, no internet, or the screen's sound is off |
 | Voice setups in `config/models.yaml` (`voices:`): OpenAI falls back to Gemini's free key; the persona's `voice:` picks one | 🧪 | OpenAI's voice untested without its key |
 | Personas: `lab-assistant` (default) and `jarvis`, picked per place, per venue or with `--persona` | ✅ | |
 | A greeting with real news (a step finished, the calendar, a busy day of commits) | ✅ | |

@@ -159,6 +159,11 @@ async function greet() {
   if (!S.chat.some((m) => m.role === "user")) S.chat = [{ role: "assistant", content: g.text }];
   renderLog();
   showRestore(g.previous);
+  // spoken too, where voice works at the brain (with how to talk, where this screen has a microphone)
+  if (voice.greet(voice.can().ok ? "push_to_talk" : "none")) {
+    VS.greeting = true;
+    voice.playHeld();
+  }
 }
 
 function toStart(why) {
@@ -463,15 +468,16 @@ function onChatEvent(ev, answer) {
 /* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
    no microphone or no voice at the brain: no mic button, typing unchanged. */
-const VS = { turn: null, voiced: false };
+const VS = { turn: null, voiced: false, greeting: false };
 const voice = createVoice({
   onEvent: onVoiceEvent,
   onChange: () => document.querySelectorAll(".mic").forEach((b) => (b.hidden = !voice.can().ok)),
-  onLoud: (l) => VS.voiced && setAssistant("speaking", l),
+  onLoud: (l) => (VS.voiced || VS.greeting) && setAssistant("speaking", l),
 });
 async function talkStart() {
   if (voice.pressed) return;
   voice.unlock();
+  VS.greeting = false;
   if (VS.voiced && !VS.turn) {
     voice.stopSpeaking(); // talking over the last answer cuts it short
     endVoice();
@@ -518,6 +524,9 @@ function onVoiceEvent(ev) {
   } else if (ev.type === "error" || ev.type === "mic_error" || ev.type === "voice_error") {
     if (ev.type !== "voice_error" && VS.voiced) endVoice();
     showError(ev.message);
+  } else if (ev.type === "played" && VS.greeting) {
+    VS.greeting = false;
+    if (!S.asking) setAssistant("idle", 0);
   } else if (ev.type === "played" && VS.voiced && !VS.turn && !voice.pressed) {
     endVoice();
     setAssistant("idle", 0);

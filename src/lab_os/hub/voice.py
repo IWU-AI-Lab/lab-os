@@ -35,8 +35,9 @@ SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
 PLAYBACK_GRACE_S = 120.0  # a page that never says it finished playing doesn't hold `in_use` forever
 GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
-HINTS = {
+HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
+    "none": "",  # no microphone on this screen: the greeting alone
 }
 SENTENCE_END = re.compile(r"[.!?…](?=[\s\"')\]]|$)|\n")
 
@@ -359,6 +360,9 @@ class VoiceLink:
             return
         self.last_greet = time.monotonic()
         text = f"{self.desk.greeting()} {HINTS.get(way, HINTS['push_to_talk'])}".strip()
+        if not text:
+            self.send({"type": "audio_end", "count": 0, "greeting": True})
+            return
         self.task = asyncio.create_task(self._greet(text))
 
     async def _greet(self, text: str) -> None:
