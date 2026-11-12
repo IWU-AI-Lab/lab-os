@@ -48,8 +48,14 @@ def test_a_borrowed_arm_is_never_a_default():
 def test_the_training_cameras_by_socket_and_the_model_block_is_gone():
     reg = load_registry()
     cams = {d.name: d.socket for d in reg.devices.values() if d.kind == "camera"}
-    assert cams == {"so101-green-cam-a": "usb-0:7", "so101-green-cam-b": "usb-0:8"}
-    assert all(reg.devices[n].borrowed for n in cams)
+    # HACK: the white-cam names are a temporary alias of the same two sockets (devices.yaml)
+    assert cams == {
+        "so101-green-cam-a": "usb-0:7",
+        "so101-green-cam-b": "usb-0:8",
+        "so101-white-cam-a": "usb-0:7",
+        "so101-white-cam-b": "usb-0:8",
+    }
+    assert all(reg.devices[n].borrowed for n in cams if "green" in n)
     check_usb_allowed({"vendor_id": 0x0C45, "product_id": 0x6366, "serial_number": "SN0001"})
 
 

@@ -48,6 +48,20 @@ devices:
     socket: usb-0:8
     notes: Training camera in the lab desktop's USB socket 8 (what it sees is still to check).
 
+  # HACK (2026-11-12, temporary, for today's camera test with the AI): the two cameras plugged in
+  # now are the WHITE arm's, but they sit in sockets 7 and 8, which are registered above as the
+  # green set's. These two names point at the same sockets so the AI can use them. Clean up:
+  # real names per setup, see docs/current-focus.md -> "Hacks to clean up".
+  so101-white-cam-a:
+    kind: camera
+    socket: usb-0:7
+    notes: White arm's camera, in the lab desktop's USB socket 7. Fixed above the table, behind the arm, looking forward over it.
+
+  so101-white-cam-b:
+    kind: camera
+    socket: usb-0:8
+    notes: White arm's camera, in the lab desktop's USB socket 8. On the wrist, looking along the jaws.
+
   so101-white:
     kind: so101
     notes: >-

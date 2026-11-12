@@ -112,6 +112,9 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 
 Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
 
+## Looking through a camera (`camera_snapshot`)
+`camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. Today's names: `so101-white-cam-a` (looks down from above) and `so101-white-cam-b` (the wrist camera), a temporary alias (`current-focus.md` → "Hacks to clean up").
+
 ## Seeing the pose (`pose_view`)
 Until the cameras (focus step 3), the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
 - **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;

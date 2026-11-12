@@ -35,6 +35,7 @@ call again to continue. Every move returns where the arm really ended up: check 
 move. "result": "stopped_short" means the arm didn't get there (off_by_cm, joints_short_deg and a
 message say how far): don't grip or carry on as if it had. Refusals say why; don't retry a
 refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
+camera_snapshot takes a real picture from a camera.
 The user approves each move. pose_view draws the arm as it is now (no camera): look at it after
 a move, with marks where you think the objects are, before you grip.
 
@@ -83,6 +84,18 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
         r = await run("pose_view", marks=marks, arm=arm)
         png = r.pop("image_png")
         return [Image(data=png, format="png"), r]
+
+    @server.tool(annotations=READ)
+    async def camera_snapshot(camera: str, width_px: int = 640) -> list:
+        """One picture from a camera (names in list_devices; the white arm's two:
+        so101-white-cam-a, fixed above the table behind the arm, and so101-white-cam-b, on the
+        wrist looking along the jaws). Returns a JPEG `width_px` wide (160-1280). If a picture is
+        very dark or washed out, take another. Use it to look before you reach
+        and after you move; pose_view is drawn from the joints, this is real. A camera another
+        program is using is refused."""
+        r = await run("camera_snapshot", camera=camera, width_px=width_px)
+        jpeg = r.pop("image_jpeg")
+        return [Image(data=jpeg, format="jpeg"), r]
 
     @server.tool(annotations=MOVE)
     async def move_joints(
