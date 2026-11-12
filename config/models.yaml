@@ -43,3 +43,33 @@ setups:
     price_per_mtok: {input: 0, cached_input: 0, output: 0}
     options:
       max_tokens: 800
+
+# Voice setups (focus step 7, docs/voice.md): who hears (speech-to-text) and who speaks
+# (text-to-speech). A persona picks one by name (`voice: main`; `voice: none` = no voice).
+# `fallback` works like the chat's: no key in .env → the next setup.
+# `hear`: Gemini's is a Live API transcription model (the words arrive while you talk);
+# OpenAI's hears the recording after the release. `speaker`: the service's voice name.
+# Prices: US dollars per minute of audio, checked 2026-11-10 (current-focus.md, step 7).
+voices:
+  main:
+    where: OpenAI
+    service: openai
+    base_url: https://api.openai.com/v1
+    hear: gpt-4o-mini-transcribe
+    speak: gpt-4o-mini-tts
+    speaker: onyx
+    key_env: OPENAI_API_KEY
+    price_per_min: {heard: 0.003, spoken: 0.015}
+    fallback: backup           # no OPENAI_API_KEY in .env → Gemini's free key
+
+  backup:
+    where: Gemini, free key
+    service: gemini
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    hear: gemini-3.5-transcribe-live   # streamed: ~0.4 s after you let go (checked 2026-11-12);
+    # plain gemini-3.5-flash-lite took ~10 s to transcribe the same 4 s of speech
+    speak: gemini-3.8-flash-lite-tts   # ~2 s for a sentence; answers with a WAV
+    speaker: Charon                    # Gemini's voices: Charon, Kore, Puck, Fenrir, Aoede, …
+    key_env: GEMINI_API_KEY
+    # Free tier: $0, but Google may use the audio to improve its products; limits per minute/day.
+    price_per_min: {heard: 0, spoken: 0}

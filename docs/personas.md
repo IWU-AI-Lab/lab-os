@@ -1,6 +1,6 @@
 # Personas: who the assistant is
 
-A persona is a config file, `config/personas/<id>.yaml`, plus a short text file for how it talks. It changes the name on screen, the personality, which AI setup answers, and later the picture, voice and sounds. **The theme (colors, fonts) is the same for every persona.**
+A persona is a config file, `config/personas/<id>.yaml`, plus a short text file for how it talks. It changes the name on screen, the personality, which AI setup answers, the voice, and later the picture and sounds. **The theme (colors, fonts) is the same for every persona.**
 
 There are two:
 | id | Name on screen | What it's for |
@@ -29,7 +29,7 @@ id: jarvis                    # plain name: the same as the file name
 display_name: "J.A.R.V.I.S."  # show name (on screen)
 personality: jarvis.md        # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml; main falls back to backup)
-voice: none                   # step 7
+voice: main                   # voice setup (models.yaml → voices; docs/voice.md); none = no voice
 wake_word: none               # later
 picture: { type: orb, style: calm-ring, color: primary }   # read by the designed hub (step 10)
 lines:

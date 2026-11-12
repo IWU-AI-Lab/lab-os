@@ -4,7 +4,7 @@ id: lab-assistant             # plain name (code, files): the same as the file n
 display_name: "Lab Assistant" # show name (on screen)
 personality: lab-assistant.md # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml)
-voice: none                   # step 7
+voice: main                   # voice setup (models.yaml → voices); none = no voice
 wake_word: none               # later
 picture: { type: orb, style: plain, color: primary }
 lines:                        # things it says

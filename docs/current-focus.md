@@ -66,6 +66,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 6. **Project helper** (done 2026-11-10). Read tools for the docs, git and the device list on the MCP server; the hub's chat uses them and drafts prompts. **Left:** add them to the allow-list in `.claude/settings.json` (the builder).
 
 7. **Voice.** Push-to-talk (the default), a spoken answer, the spoken greeting, dictation, and the wake word; the core follows `listening` / `speaking` + loudness. Typing never suffers; no microphone, no voice button. Details: "Step 7, concretely".
+   - **Status:** push-to-talk with a spoken answer built (2026-11-12, `docs/voice.md`): on the free Gemini key, tried on a laptop in Chrome with a recorded voice. **Left:** the spoken greeting, dictation, the wake word; a person at the lab's USB microphone.
 
 8. **Screens.** Send a page to another screen, and one tap opens the hub on any screen. Details: "Step 8, concretely".
    - **Status (2026-11-10):** done for **monitors on the brain's own computer** ("Show on another screen", Chrome's Window Management API; `docs/hub.md` → "Other monitors"). Over the lab Wi-Fi, `pi01` and the other desktop open the hub by the desktop's IP address, and `--drive-from` lets one of them drive. **Left:** named screens and "open on…" through the brain; the one-tap icons.

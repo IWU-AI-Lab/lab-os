@@ -7,7 +7,7 @@ The assistant under the hub's circle answers typed questions (focus step 5). It 
    - `OPENAI_API_KEY=…`: the `main` setup (OpenAI).
    - `GEMINI_API_KEY=…`: the `backup` setup (Gemini). Used automatically when there's no OpenAI key.
 2. `uv run lab-os serve`, open http://localhost:8080/, start the hub.
-3. Type anywhere (it lands in "Ask anything"), press Enter. The answer streams in under the circle; **History** (or a tap on the answer) opens the whole conversation; Back or Esc closes it.
+3. Type anywhere (it lands in "Ask anything"), press Enter. Or hold the mic (or Space) and talk: `docs/voice.md`. The answer streams in under the circle; **History** (or a tap on the answer) opens the whole conversation; Back or Esc closes it.
 
 The status strip says which setup answers (`AI: main (OpenAI)`), or `AI not connected` / `AI: paused`. The brain checks the service every minute by listing its models (costs nothing). Without internet the assistant shows `offline`, and everything else keeps working.
 

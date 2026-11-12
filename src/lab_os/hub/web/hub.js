@@ -9,6 +9,7 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
+import { createVoice } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -123,6 +124,7 @@ function onStartPress() {
     goFull();
   } else {
     unlockSound();
+    voice.unlock();
     start();
   }
 }
@@ -162,6 +164,9 @@ async function greet() {
 function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   closeModule();
+  voice.cancel();
+  voice.stopSpeaking();
+  endVoice();
   clearChat(); // the next visitor shouldn't see the last one's questions
   S.screen = "start";
   body.classList.add("waiting");
@@ -280,7 +285,8 @@ function renderStatus(st) {
     net.classList.add("off");
     ai.textContent = "AI not connected";
     ai.classList.add("off");
-    setAssistant("offline", 0);
+    voice.setStatus(null);
+    if (!S.asking) setAssistant("offline", 0);
     return;
   }
   S.clockOffset = st.time_ms - Date.now();
@@ -292,7 +298,8 @@ function renderStatus(st) {
   ai.textContent = aiText(st.ai);
   ai.classList.toggle("off", st.ai.connected !== true || !!st.ai.paused);
   showPaused(st.ai.paused);
-  setAssistant(st.assistant.state, st.assistant.loudness);
+  voice.setStatus(st.voice);
+  if (!S.asking) setAssistant(st.assistant.state, st.assistant.loudness);
   checkStillFull();
 }
 
@@ -381,9 +388,8 @@ function copyButton(text) {
   return b;
 }
 
-async function ask(text) {
-  text = text.trim();
-  if (!text || S.asking) return;
+// a turn: the question on screen, then the answer as it streams in (typed here, spoken: voice below)
+function beginTurn(text) {
   S.asking = true;
   showError(null);
   const answer = { role: "assistant", content: "" };
@@ -391,6 +397,13 @@ async function ask(text) {
   $("#reply .q").textContent = text;
   $("#reply .a").textContent = "";
   renderLog();
+  return (ev) => onChatEvent(ev, answer);
+}
+
+async function ask(text) {
+  text = text.trim();
+  if (!text || S.asking) return;
+  const onEvent = beginTurn(text);
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -407,10 +420,10 @@ async function ask(text) {
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop();
-      for (const line of lines) if (line.trim()) onChatEvent(JSON.parse(line), answer);
+      for (const line of lines) if (line.trim()) onEvent(JSON.parse(line));
     }
   } catch (e) {
-    onChatEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." }, answer);
+    onEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." });
     console.warn(`hub: chat failed (${e.message})`);
   }
   S.asking = false;
@@ -446,6 +459,98 @@ function onChatEvent(ev, answer) {
     renderLog();
   }
 }
+
+/* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
+   web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
+   no microphone or no voice at the brain: no mic button, typing unchanged. */
+const VS = { turn: null, voiced: false };
+const voice = createVoice({
+  onEvent: onVoiceEvent,
+  onChange: () => document.querySelectorAll(".mic").forEach((b) => (b.hidden = !voice.can().ok)),
+  onLoud: (l) => VS.voiced && setAssistant("speaking", l),
+});
+async function talkStart() {
+  if (voice.pressed) return;
+  voice.unlock();
+  if (VS.voiced && !VS.turn) {
+    voice.stopSpeaking(); // talking over the last answer cuts it short
+    endVoice();
+  }
+  if (S.asking) return;
+  S.asking = VS.voiced = true;
+  showError(null);
+  $("#reply .q").textContent = "Listening…";
+  $("#reply .a").textContent = "";
+  document.querySelectorAll(".mic").forEach((b) => b.classList.add("on"));
+  setAssistant("listening", 0);
+  if (!(await voice.press("ask")) && !VS.turn) endVoice();
+}
+function talkEnd() {
+  if (!voice.pressed) return;
+  document.querySelectorAll(".mic").forEach((b) => b.classList.remove("on"));
+  voice.release();
+  setAssistant("thinking", 0);
+}
+function endVoice() {
+  VS.voiced = false;
+  VS.turn = null;
+  S.asking = false;
+  document.querySelectorAll(".mic").forEach((b) => b.classList.remove("on"));
+  noteInput();
+}
+function onVoiceEvent(ev) {
+  if (ev.type === "heard") {
+    if (!VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
+    if (!ev.final) return;
+    if (!ev.text) {
+      $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk.";
+      endVoice();
+      return;
+    }
+    VS.turn = beginTurn(ev.text);
+  } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
+    if (ev.type === "state" && ev.state === "idle") return; // not yet: the answer is still to be spoken
+    VS.turn(ev);
+    if (ev.type === "done" || ev.type === "error") {
+      VS.turn = null;
+      getJSON("/api/spend").then(renderSpend);
+    }
+  } else if (ev.type === "error" || ev.type === "mic_error" || ev.type === "voice_error") {
+    if (ev.type !== "voice_error" && VS.voiced) endVoice();
+    showError(ev.message);
+  } else if (ev.type === "played" && VS.voiced && !VS.turn && !voice.pressed) {
+    endVoice();
+    setAssistant("idle", 0);
+  }
+}
+document.querySelectorAll(".mic").forEach((b) => {
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    b.setPointerCapture?.(e.pointerId);
+    talkStart();
+  });
+  for (const t of ["pointerup", "pointercancel"]) b.addEventListener(t, talkEnd);
+  b.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+// hold Space to talk (where there's a mic button), unless you're typing something; Esc stops
+document.addEventListener("keydown", (e) => {
+  if (S.screen !== "hub" || S.module) return;
+  if (e.key === "Escape" && (voice.pressed || voice.speaking())) {
+    if (voice.pressed) {
+      voice.cancel();
+      endVoice();
+    } else voice.stopSpeaking();
+    return;
+  }
+  const ae = document.activeElement;
+  const emptyLine = (ae.id === "quick" || ae.id === "ask") && !ae.value;
+  if (e.code !== "Space" || !voice.can().ok || (!emptyLine && /INPUT|SELECT|TEXTAREA|BUTTON/.test(ae.tagName))) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  if (!e.repeat) talkStart();
+});
+document.addEventListener("keyup", (e) => e.code === "Space" && voice.pressed && talkEnd());
+addEventListener("blur", talkEnd);
 
 function clearChat() {
   S.chat = [];

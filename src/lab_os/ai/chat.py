@@ -127,6 +127,10 @@ class Conversation:
         if self._session:
             await self._session.close()
 
+    def settle(self) -> None:
+        """Back to rest (also after a voice turn's last spoken word)."""
+        self._settle()
+
     def _settle(self) -> None:
         """Back to rest: idle when the AI is reachable, else offline (error stays until it is)."""
         if self.busy:
