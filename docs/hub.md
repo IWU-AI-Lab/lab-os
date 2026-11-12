@@ -18,7 +18,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/design`, `/plain` | each look by name, whatever `hub.look` says |
 | `/ai` | AI Control: what an AI tool is doing with the arm (below) |
 | `/settings` | the settings (also the gear in the hub's strip) |
-| `/xr` | the hub in VR/AR for the Quest: the designed hub's startup around you (ignition, hyperspace jump, the core assembling, the checks, the title and greeting), then the network and the core (watch-only); "Preview on this screen" elsewhere (drag to look around). `?slow=10` plays it ten times slower. The designed hub's strip shows a headset button where VR works |
+| `/xr` | the hub in VR/AR for the Quest: the designed hub's startup around you (ignition, hyperspace jump, the core assembling, the checks, the title and greeting), then the hub around you: the core, the four callouts (with their controls and details pages), the strip with ⏻, the typed log, the frame; point with a controller or hand and pull the trigger (or pinch) to press, B or Y closes a page, ⏻ goes back to the start (and the jump). Nothing in it moves a robot. "Preview on this screen" elsewhere (drag to look around, click to press). `?slow=10` plays it ten times slower. The designed hub's strip shows a headset button where VR works |
 | `/training` | start the SO-101 training setup (green arms + LeLab) after a port check, on the brain's computer (`docs/green-launcher.md`) |
 | `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
 | `/teleop` | the teleop page (the Quest opens this one under `lab-os serve`; `lab-os-teleop` still serves it at `/`) |

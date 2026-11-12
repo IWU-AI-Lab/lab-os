@@ -108,7 +108,7 @@ export class Stars {
     });
     this.mesh = new THREE.Mesh(g, this.mat);
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 1;
+    this.mesh.renderOrder = -2;
     this.group = new THREE.Group();
     this.group.add(this.mesh);
   }
@@ -191,7 +191,7 @@ export class Sky {
       new THREE.ShaderMaterial({ vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, uniforms: this.uniforms, side: THREE.BackSide, depthWrite: false, depthTest: false, transparent: true, blending: THREE.AdditiveBlending }),
     );
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 0;
+    this.mesh.renderOrder = -3;
     this.flashAt = -1e9;
   }
   flash(now) { this.flashAt = now; }

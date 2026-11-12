@@ -13,7 +13,7 @@ The features that are built and working today, plus a few lab robot projects tha
 |---|---|---|
 | Plain hub: start screen, status strip, module buttons, assistant circle, Current Project and Commits panels | ✅ | Ran on the lab desktop, `pi01` and the Newline. On the Newline it's laggy (`docs/current-focus.md` → step 1) |
 | Designed hub preview (`/design`): hyperspace startup, network and core, panels with details pages, sounds | ✅ | Lab desktop and Pi screens. `/` still shows the plain hub by default (`hub.look: plain`), just in case; the design is no longer a surprise (2026-11-12) |
-| The hub in VR (`/xr`): the designed hub's startup around you (ignition, the hyperspace jump, the core assembling, checks, title, greeting), then the network and the core | 🟡 | Matches `/design`'s startup since 2026-11-12, tried in Meta's emulated Quest; watch-only for now: no buttons or chat inside VR |
+| The hub in VR (`/xr`): the designed hub's startup around you (ignition, the hyperspace jump, the core assembling, checks, title, greeting), then the hub around you: callouts with their details, strip, ⏻, log | 🟡 | Matches `/design` since 2026-11-12, tried in Meta's emulated Quest; module buttons and asking inside VR still to come |
 | Settings page (⚙, `/settings`): writes the YAML config, keeps its comments; "This screen" settings per browser | 🧪 | Can only be changed from the brain's own computer |
 | Drawing resolution per screen (`?res=`), detail levels (`?quality=`) for slow screens | 🧪 | Still to try on the Newline |
 | Full-screen button on every page; Esc = Back without leaving full screen (Chrome/Edge) | ✅ | |

@@ -49,11 +49,12 @@ export class Network {
     this.streaks = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.group = new THREE.Group();
     this.group.add(this.links, this.dots, this.streaks);
-    for (const o of [this.links, this.dots, this.streaks]) o.frustumCulled = false;
+    for (const o of [this.links, this.dots, this.streaks]) { o.frustumCulled = false; o.renderOrder = -1; } // the far layer: under everything
     this.from = this.home.map(() => new THREE.Vector3(rand(-1.5, 1.5), rand(-1, 1), -rand(30, 60))); // ahead, in the middle
     this.pulses = Array.from({ length: 12 }, () => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: new THREE.Color(C.hot), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
       s.scale.setScalar(0.28);
+      s.renderOrder = -1;
       this.group.add(s);
       return { s, e: null, t: 0, dir: 1, hops: 0, wait: rand(0, 4) };
     });

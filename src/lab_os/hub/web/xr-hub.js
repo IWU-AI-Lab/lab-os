@@ -7,18 +7,24 @@
 //   boot   → the flash, a long brake: the network streaks in white-hot and cools (xr/network.js), the core
 //            arrives big and settles while its rings lock on one by one (xr/core.js), the real checks type
 //            out under it, the place's name decodes above it, the brain's greeting types out
-//   hub    → the network drifts with pulses, the core shows the assistant's real state (/api/status)
-// The trigger (or a pinch) starts it, and skips the startup while it plays. Units: metres; the stage
-// (everything) is placed where your head is, facing where you look, at the start and at each jump.
-// "Preview on this screen" runs the same scene without a headset (drag to look around).
+//   hub    → the hub around you (xr/hub.js): the title flies to its corner, the core settles, the
+//            callouts unfold out from it; the strip, the log, the frame; the network drifts with pulses
+//            and the core shows the assistant's real state (/api/status)
+// The trigger (or a pinch) starts it and skips the startup while it plays; on the hub it presses what
+// the controller or hand points at (xr/pointer.js). ⏻ in the strip goes back to the start (and the
+// jump), B or Y closes a page. Units: metres; the stage (everything) is placed where your head is,
+// facing where you look, at the start and at each jump.
+// "Preview on this screen" runs the same scene without a headset (drag to look around, click to press).
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { Checks, Greeting, Title } from "./xr/boottext.js";
 import { Core, RING_ORDER } from "./xr/core.js";
-import { C, clamp, loadFonts, loadIcons } from "./xr/draw.js";
+import { C, arrive, clamp, loadFonts, loadIcons } from "./xr/draw.js";
 import { Ignition } from "./xr/ignition.js";
 import { Network } from "./xr/network.js";
 import { Sfx } from "./xr/sfx.js";
+import { HubView } from "./xr/hub.js";
+import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
 
 const $ = (s) => document.querySelector(s);
@@ -65,8 +71,11 @@ class Show {
     this.greet.mesh.position.set(0, 0.84, -D);
     this.checks = new Checks();
     this.checks.mesh.position.set(0, -1.02, -D);
-    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh);
     this.sfx = new Sfx(T);
+    this.hub = new HubView({ core: this.core, sfx: this.sfx, D });
+    this.hub.clock = () => this.clock();
+    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh);
+    this.pointer = new Pointer(this.scene);
     this.facts = { title: "Lab", greeting: "", status: null, arm: null, display: "" };
     this.phase = "ignite";
     this.t0 = 0;
@@ -87,20 +96,29 @@ class Show {
     this.phase = "ignite";
     this.ign.reset(); this.ign.group.visible = true;
     this.core.group.visible = false;
+    this.hub.hide();
+    this.flyAt = null;
     this.title.reset(); this.greet.reset(); this.checks.reset();
+    this.title.mesh.position.set(0, 1.02, -D); this.title.mesh.scale.setScalar(1); this.title.mesh.rotation.set(0, 0, 0);
+    this.greet.mesh.position.set(0, 0.84, -D);
+    this.checks.mesh.position.set(0, -1.02, -D); this.checks.mesh.scale.setScalar(1);
     this.stars.visible = true;
   }
 
-  /** The trigger or a pinch. */
-  press(now) {
+  /** The trigger or a pinch (or a click on a screen); `hit`: what that pointer is on. */
+  press(now, hit) {
     this.sfx.unlockAudio();
     if (this.phase === "ignite") {
       this.ign.unlock(now); this.sfx.unlock();
       this.phase = "unlock";
       this.wantPlace = true;
     } else if (this.phase === "jump" || this.phase === "boot") this.finishBoot();
-    else if (this.phase === "hub") this.toIgnite(); // (part 2 replaces this with the hub's buttons)
+    else if (this.phase === "hub" && now > this.hubAt + 600) {
+      if (this.hub.press(hit, now) === "power") this.toIgnite(); // ⏻: back to the start screen
+    }
   }
+  /** B or Y: back (closes an open page). */
+  back(now) { if (this.phase === "hub") this.hub.closeDetails(now); }
 
   startJump(now) {
     this.phase = "jump";
@@ -175,6 +193,10 @@ class Show {
     if (!this.greet.text) this.greet.text = this.facts.greeting || this.greetingWord();
     if (this.greet.t0 == null) this.greet.start(now - 1e5);
     this.sfx.land();
+    // the startup's pieces travel to their places on the hub; the panels unfold
+    this.flyAt = now;
+    this.flyFrom = { title: this.title.mesh.position.clone(), checks: this.checks.mesh.position.clone() };
+    this.hub.arrive(now);
   }
 
   step(dt, now, camera) {
@@ -208,8 +230,8 @@ class Show {
       starShow = 1 - e;
       arriveK = e;
       coreScale = BOOT_SCALE * (2.8 / 1.3 - (2.8 / 1.3 - 1) * settle(b));
-      if (P === "hub") coreScale = BOOT_SCALE; // (part 2: the core settles to 1 on the hub)
     }
+    if (P === "hub") this.toPlaces(dt, now);
     this.stars.impact = impact;
     this.stars.step(dt, now, { v, trail, bright: bright * starShow, k, jump: P === "jump" || P === "boot", frozen: impact });
     this.stars.visible = starShow > 0.01;
@@ -217,12 +239,39 @@ class Show {
     const state = this.facts.status?.assistant?.state || "offline";
     this.core.state = P === "hub" || P === "boot" ? state : "idle";
     if (P === "boot" || P === "hub") this.core.step(dt, now);
-    this.core.group.scale.setScalar(coreScale);
+    if (P !== "hub") { this.core.group.scale.setScalar(coreScale); this.core.group.position.set(0, 0, -D); }
     this.net.step(dt, { arrive: P === "boot" || P === "hub" ? arriveK : 0, show: P === "boot" || P === "hub" ? 1 : 0, state, loud: this.core.loud });
     if (this.title.step(now)) this.sfx.decode();
     this.greet.step(now);
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
+    this.pointer.setTargets(P === "hub" ? this.hub.targets() : []);
+    this.hub.step(dt, now, P === "hub" ? this.pointer.all() : []);
+  }
+
+  /** On the hub: the title flies into its corner, the checks toward the strip, the greeting leaves, and
+   *  the core settles from the startup's size to the hub's (or docks beside an open page). */
+  toPlaces(dt, now) {
+    const k = arrive((now - this.flyAt) / 1000);
+    const brand = this.hub.brand.mesh, to = new THREE.Vector3(), q = new THREE.Quaternion();
+    brand.getWorldPosition(to); this.stage.worldToLocal(to);
+    brand.getWorldQuaternion(q);
+    // the title's text starts at the brand's left edge: line their left ends up
+    const titleW = this.title.p.w * 0.46, brandLeft = to.clone().add(new THREE.Vector3(-this.hub.brand.w / 2 + titleW / 2 + 0.01, 0, 0).applyQuaternion(q));
+    this.title.mesh.position.lerpVectors(this.flyFrom.title, brandLeft, k);
+    this.title.mesh.scale.setScalar(1 - 0.54 * k);
+    this.title.mesh.quaternion.slerpQuaternions(new THREE.Quaternion(), q.premultiply(this.stage.quaternion.clone().invert()), k);
+    this.title.fade = k >= 1 ? 0 : 1;
+    this.greet.fade = Math.max(0, 1 - (now - this.flyAt) / 500);
+    this.greet.mesh.position.y = 0.84 + 0.05 * clamp((now - this.flyAt) / 500, 0, 1);
+    const sk = clamp((now - this.flyAt) / 800, 0, 1);
+    this.checks.mesh.position.lerpVectors(this.flyFrom.checks, new THREE.Vector3(0.9, 0.9, -D), arrive(sk));
+    this.checks.mesh.scale.setScalar(1 - 0.6 * arrive(sk));
+    const tgt = this.hub.coreTarget(), start = BOOT_SCALE + (1 - BOOT_SCALE) * k;
+    const s = this.flyAt != null && now - this.flyAt < 1000 ? start * tgt.scale : tgt.scale;
+    const cur = this.core.group.scale.x;
+    this.core.group.scale.setScalar(now - this.flyAt < 1000 ? s : cur + (s - cur) * Math.min(1, dt * 6));
+    this.core.group.position.lerp(tgt.pos, Math.min(1, dt * 6));
   }
   clock() {
     const d = new Date(Date.now() + (this.facts.offset || 0));
@@ -243,10 +292,34 @@ async function loadFacts(show) {
   if (st?.time_ms) show.facts.offset = st.time_ms - Date.now();
   show.ign.place = st?.venue || "";
 }
+async function pollPanels(show) {
+  const [project, spend, commits, devices] = await Promise.all([getJSON("/api/project"), getJSON("/api/spend"), getJSON("/api/commits?days=30"), getJSON("/api/devices")]);
+  Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
+}
 async function poll(show) {
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
   if (st) show.facts.status = st; else if (show.facts.status) show.facts.status = { ...show.facts.status, assistant: { state: "offline" } };
   if (arm) show.facts.arm = arm;
+  show.hub.facts.status = show.facts.status;
+}
+
+/* ---------- pointing in the headset: each controller's (or hand's) ray, B / Y = back ---------- */
+const FWD = new THREE.Vector3();
+const backWas = {};
+function xrPointers(show, frame, r, now) {
+  const ref = r.xr.getReferenceSpace(), on = show.phase === "hub";
+  for (const src of frame.session.inputSources) {
+    const key = src.handedness;
+    if (key !== "left" && key !== "right") continue;
+    const pose = src.targetRaySpace && frame.getPose(src.targetRaySpace, ref);
+    if (!pose || !on) { show.pointer.hide(key); continue; }
+    const p = pose.transform.position, o = pose.transform.orientation;
+    FWD.set(0, 0, -1).applyQuaternion(new THREE.Quaternion(o.x, o.y, o.z, o.w));
+    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), true);
+    const b = !!src.gamepad?.buttons[5]?.pressed; // B (right) / Y (left)
+    if (b && !backWas[key]) show.back(now);
+    backWas[key] = b;
+  }
 }
 
 /* ---------- running it: in the headset, or on this screen ---------- */
@@ -263,17 +336,20 @@ async function start(mode) {
   window.__xrNow = clockNow;
   await Promise.all([loadFacts(show), loadFonts(), loadIcons()]);
   show.title.text = show.facts.title;
-  const timer = setInterval(() => poll(show), 1500);
+  await pollPanels(show);
+  show.hub.facts.status = show.facts.status;
+  const timer = setInterval(() => poll(show), 1500), timer2 = setInterval(() => pollPanels(show), 20000);
   const r = makeRenderer(ar);
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 400);
   let last = performance.now();
   vnow = 0;
-  const frame = () => {
+  const frame = (time, xrFrame) => {
     const real = performance.now(), dt = Math.min(0.05, (real - last) / 1000) / SLOW;
     last = real;
     vnow += dt * 1000;
     runTimers();
     const now = vnow;
+    if (xrFrame) xrPointers(show, xrFrame, r, now);
     show.step(dt, now, camera); // in the headset, three keeps `camera` on the head's pose
     r.render(show.scene, camera);
   };
@@ -286,18 +362,28 @@ async function start(mode) {
     Object.assign(r.domElement.style, { position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 50, cursor: "grab" });
     const size = () => { r.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); };
     size(); addEventListener("resize", size);
-    // drag to look around; a click without a drag presses
+    // drag to look around; a click without a drag presses what the mouse is on
     let drag = null, yaw = 0, pitch = 0;
+    const mouse = new THREE.Vector2(), rc = new THREE.Raycaster();
+    const aim = (e) => {
+      mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+      rc.setFromCamera(mouse, camera);
+      show.pointer.update("mouse", rc.ray.origin, rc.ray.direction, false);
+    };
     r.domElement.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, yaw, pitch, moved: false }; });
     addEventListener("pointermove", (e) => {
+      aim(e);
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
       yaw = drag.yaw + dx * 0.004; pitch = clamp(drag.pitch + dy * 0.004, -1.2, 1.2);
       camera.rotation.set(pitch, yaw, 0, "YXZ");
     });
-    addEventListener("pointerup", () => { if (drag && !drag.moved) show.press(clockNow()); drag = null; });
-    addEventListener("keydown", (e) => (e.key === "Escape" ? location.reload() : show.press(clockNow())));
+    addEventListener("pointerup", (e) => { if (drag && !drag.moved) { aim(e); show.press(clockNow(), show.pointer.hitOf("mouse")); } drag = null; });
+    addEventListener("keydown", (e) => {
+      if (e.key === "Escape") return show.hub.mode === "details" ? show.back(clockNow()) : location.reload();
+      if (show.phase !== "hub") show.press(clockNow());
+    });
     r.setAnimationLoop(frame);
     return;
   }
@@ -314,8 +400,9 @@ async function start(mode) {
   const hands = () => { show.hasHands = [...session.inputSources].some((s) => s.hand || (s.profiles || []).some((p) => p.includes("hand"))); };
   session.addEventListener("inputsourceschange", hands);
   hands();
-  session.addEventListener("select", () => show.press(clockNow())); // trigger, or a pinch
-  session.addEventListener("end", () => { r.setAnimationLoop(null); clearInterval(timer); $("#msg").textContent = "Left VR. Press a button to go back in."; });
+  // trigger, or a pinch: presses what that controller or hand points at
+  session.addEventListener("select", (e) => show.press(clockNow(), show.pointer.hitOf(e.inputSource.handedness)));
+  session.addEventListener("end", () => { r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2); $("#msg").textContent = "Left VR. Press a button to go back in."; });
   r.setAnimationLoop(frame);
 }
 

@@ -48,7 +48,7 @@ async def test_the_vr_hub_loads_only_its_own_files(aiohttp_client):
     assert '<script type="module" src="/hub/xr-hub.js">' in page
     assert '"three": "/web/vendor/three/three.module.js"' in page
     graph = await _module_graph(client, "/hub/xr-hub.js")
-    parts = {"/hub/xr/stars.js", "/hub/xr/core.js", "/hub/xr/ignition.js", "/hub/xr/network.js"}
+    parts = {f"/hub/xr/{m}.js" for m in ("stars", "core", "hub", "panels", "pointer")}
     assert parts <= set(graph)
     for url, src in [("/xr", page), *graph.items()]:  # works offline: no internet-loaded code
         assert not re.search(r"""["'](https?:)?//""", src), f"{url} loads from the internet"
@@ -65,3 +65,25 @@ async def test_the_vr_jump_follows_the_theme_and_keeps_its_stars(aiohttp_client)
     assert "spawn" not in start_jump
     stars = await (await client.get("/hub/xr/stars.js")).text()
     assert "pow(along, 1.8)" in stars  # faint tail → bright head, like design.html's drawStars
+
+
+async def test_the_trigger_presses_what_you_point_at(aiohttp_client):
+    """On the hub the trigger no longer replays the jump (the builder, 2026-11-12): it presses what
+    the controller or hand points at; only ⏻ goes back to the start screen."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr-hub.js")).text()
+    press = hub.split("press(now, hit) {", 1)[1].split("\n  }", 1)[0]
+    assert 'this.hub.press(hit, now) === "power"' in press
+    assert press.count("this.toIgnite()") == 1
+    assert "e.inputSource.handedness" in hub  # each controller presses what its own ray is on
+
+
+async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client):
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr-hub.js")).text()
+    for api in ("/api/project", "/api/spend", "/api/commits?days=30", "/api/devices"):
+        assert api in hub, api
+    panels = await (await client.get("/hub/xr/panels.js")).text()
+    for title in ("Current Project", "AI Spend", "Commits", "Devices"):
+        assert title in (await (await client.get("/hub/xr/hub.js")).text()), title
+    assert "get available()" in panels  # hidden when the brain has no facts

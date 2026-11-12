@@ -93,7 +93,7 @@ A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow
 - `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
 - The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
-**The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Watch-only.
+**The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Then the hub is around you: point at a callout with a controller (or your hand) and pull the trigger (or pinch) to open its details; 7d/14d/30d, List all and a device's card work too. **B** or **Y** closes a page. The trigger no longer replays the jump: ⏻ (top right) goes back to the start screen. Nothing in it moves a robot.
 
 Troubleshooting:
 - Page doesn't load → `adb reverse --list` should show `tcp:8080 tcp:8080`; re-run it after re-plugging.
