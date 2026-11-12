@@ -15,8 +15,9 @@
 //                               (silenceWatch), v.cancel() to drop it
 //
 // onEvent gets everything the brain sends (heard, state, text, tool, done, error, audio_end,
-// voice_error), plus {type: "played"} once the last word has played and {type: "mic_error",
-// message} when the browser won't give the microphone. onLoud(0..1): the answer's loudness while
+// voice_error), plus {type: "playing", seq, text, duration} as each spoken piece starts (so the page
+// can show the text as it's said: revealPacer), {type: "played"} once the last word has played and
+// {type: "mic_error", message} when the browser won't give the microphone. onLoud(0..1): the answer's loudness while
 // it plays (the core follows it). onLevel(0..1): the microphone's level while listening.
 // onChange(): the mic button should be shown or hidden (plugging, unplugging, the brain's status).
 
@@ -48,6 +49,36 @@ export async function screenCanHear() {
     // no permission query (Firefox): the first press asks
   }
   return { ok: true, why: null };
+}
+
+// Shows a spoken answer at the pace it's said, instead of before it: render(n, typing) shows the
+// first n characters of the answer (length() of them so far). pace(chars, ms): the next `chars` are
+// being said over `ms`. free(): nothing more will be said (the end, or no voice): show the rest
+// quickly; `finished` resolves when all is shown.
+export function revealPacer(length, render) {
+  let shown = 0, target = 0, rate = 0, free = false, last = performance.now(), resolve;
+  const finished = new Promise((r) => (resolve = r));
+  const timer = setInterval(() => {
+    const now = performance.now(), dt = Math.min(100, now - last), total = length();
+    last = now;
+    if (free) shown = Math.min(total, shown + Math.max(2, dt * 0.25)); // ~250 characters/s
+    else shown = Math.min(target, total, shown + rate * dt);
+    render(Math.floor(shown), !(free && shown >= total));
+    if (free && shown >= total) {
+      clearInterval(timer);
+      resolve();
+    }
+  }, 16);
+  return {
+    pace(chars, ms) {
+      target = Math.max(target, shown) + chars;
+      rate = (target - shown) / Math.max(1, ms);
+    },
+    free() {
+      free = true;
+    },
+    finished,
+  };
 }
 
 // Stop listening after a short silence once something was said, or after a while with nothing said.
@@ -329,6 +360,9 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
         src.start(at);
         st.playEnd = at + buf.duration;
         st.playing.push(src);
+        setTimeout(() => {  // say when this piece is heard, so its text can appear with it
+          if (st.playing.includes(src)) onEvent({ type: "playing", seq: ev.seq, text: ev.text || "", duration: buf.duration });
+        }, Math.max(0, (at - ctx.currentTime) * 1000));
         src.onended = () => {
           st.playing = st.playing.filter((s) => s !== src);
           checkPlayed();

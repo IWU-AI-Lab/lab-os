@@ -398,6 +398,10 @@ async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) ->
         body = {"model": setup.speak, "input": text, "response_format": "wav"}
         if setup.speaker:
             body["voice"] = setup.speaker
+        if setup.style:
+            body["instructions"] = setup.style  # accent, mood (gpt-4o-mini-tts and newer)
+        if setup.speed:
+            body["speed"] = setup.speed
         async with session.post(
             f"{setup.base_url}/audio/speech",
             json=body,
