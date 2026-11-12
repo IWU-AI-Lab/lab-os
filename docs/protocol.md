@@ -290,7 +290,7 @@ A WebSocket per page (`docs/voice.md`). The page records and plays; the brain he
 - `{"type": "listen", "mode": "ask" | "dictate"}`: the mic is pressed. Then **binary messages**: the microphone as 16-bit PCM, 16 kHz, mono (little-endian), e.g. 50 ms each. `ask` = push-to-talk (the words become a question); `dictate` = words only, nothing is asked. Held longer than 60 s, the brain ends it itself.
 - `{"type": "end"}`: let go. `{"type": "cancel"}`: stop, ask nothing.
 - `{"type": "played", "loudness": 0.42}` while the answer plays (~5 per second), `{"type": "played", "done": true}` after its last word (or when it was cut short). The assistant's state stays `speaking` until then; `in_use` has `"voice"`.
-- `{"type": "greet", "way": "push_to_talk"}`: say the greeting (the conversation's first message) and a hint how to talk. At most every 10 s.
+- `{"type": "greet", "way": "push_to_talk" | "none"}`: say the greeting (the conversation's first message, set by `POST /api/chat/start`) and a hint how to talk (`none`: no hint, the screen has no microphone). Spoken in one piece. At most every 10 s; a refused greet still gets `audio_end` with `count: 0`.
 
 **Brain → page**
 - `{"type": "listening", "mode": "ask"}`; `{"type": "heard", "text": "what is the next", "final": false}` while hearing (the words so far), then `{"type": "heard", "text": "…", "final": true}` after `end` (`""`: nothing was said; nothing is asked).

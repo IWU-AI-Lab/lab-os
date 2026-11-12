@@ -7,7 +7,8 @@
 //   v.unlock()                  in a press (the start tap): lets the page play sound
 //   v.press("ask" | "dictate")  start listening (push-to-talk / dictation); v.release() to stop
 //   v.cancel()                  stop listening, ask nothing
-//   v.greet(way)                the spoken greeting after the jump
+//   v.greet(way)                the spoken greeting: asked for at the start press, held until
+//   v.playHeld()                ... the page plays it (after the jump); talking first drops it
 //   v.stopSpeaking()            cut the answer short
 //
 // onEvent gets everything the brain sends (heard, state, text, tool, done, error, audio_end,
@@ -39,6 +40,8 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     decoding: Promise.resolve(),
     playEnd: 0,
     awaitingEnd: false, // audio of this turn may still come (until audio_end)
+    holding: false, // the greeting: keep its audio until playHeld()
+    held: [],
     analyser: null,
     loudTimer: 0,
     lastReport: 0,
@@ -180,6 +183,8 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     if (st.pressed || !can().ok) return false;
     const id = ++st.pressId;
     st.pressed = true;
+    st.holding = false;
+    st.held = [];
     stopSpeaking();
     st.awaitingEnd = false;
     send({ type: "listen", mode });
@@ -211,6 +216,10 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
 
   // ---------- playing the answer ----------
   function play(ev) {
+    if (st.holding) {
+      st.held.push(ev);
+      return;
+    }
     const bytes = Uint8Array.from(atob(ev.data), (c) => c.charCodeAt(0));
     // decode one after another, so the pieces play in order
     st.decoding = st.decoding.then(async () => {
@@ -258,7 +267,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.loudTimer = requestAnimationFrame(stepLoud);
   }
   function checkPlayed() {
-    if (st.playing.length || st.awaitingEnd) return;
+    if (st.playing.length || st.awaitingEnd || st.holding) return;
     send({ type: "played", done: true });
     onEvent({ type: "played" });
   }
@@ -281,9 +290,18 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   const speaking = () => st.playing.length > 0;
 
   function greet(way = "push_to_talk") {
-    if (!st.brain?.available) return;
+    if (!st.brain?.available || st.pressed) return false;
     st.awaitingEnd = true;
+    st.holding = true;
+    st.held = [];
     send({ type: "greet", way });
+    return true;
+  }
+  function playHeld() {
+    if (!st.holding) return;
+    st.holding = false;
+    for (const ev of st.held.splice(0)) play(ev);
+    st.decoding.then(checkPlayed);
   }
 
   return {
@@ -294,6 +312,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     release,
     cancel,
     greet,
+    playHeld,
     stopSpeaking,
     speaking,
     get pressed() {

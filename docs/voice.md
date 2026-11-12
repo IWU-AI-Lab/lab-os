@@ -15,6 +15,12 @@ The first press asks the browser for the microphone; allow it once. The micropho
 - the browser lists a **microphone** (it reacts to plugging and unplugging);
 - the brain has **voice**: the persona's `voice:` isn't `none`, a voice setup has its key, there's internet, and the chat isn't paused (no key, budget used up).
 
+## The spoken greeting
+After the start tap, the greeting ("Good morning." + one line of real news, `docs/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic."). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
+- Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.
+- A screen without a microphone (or not a secure page) hears the greeting without the hint.
+- Holding the mic (or Space) during the greeting cuts it short.
+
 ## How it works
 - **The page records and plays; the brain hears, thinks and speaks** (`/ws/voice`, `docs/protocol.md` → "Voice"). API keys never leave the brain.
 - The page sends the microphone as 16 kHz audio while the mic is held (with the browser's echo cancellation, so the speakers stay out of it). The brain passes it to the voice service, which **hears while you talk**: the words come back as they're recognized.
