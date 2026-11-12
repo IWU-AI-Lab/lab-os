@@ -57,7 +57,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 **Who:** the builder recording SmolVLA demonstrations on `so101-green`.
 1. Hub shows the green arm and training cameras as locked to "SO-101 training"; GPU busy.
 2. Someone tries a local model in the hub: warned that the GPU is busy.
-3. Later: the green arm joins lab-os to compare VLA vs. LLM/VLM control (future idea).
+3. The green arm in lab-os (since 2026-11-12, focus step 11) to compare VLA vs. LLM/VLM control.
 
 **Needs:** projects module (locks), GPU-busy indicator, model router check, off-limits rules.
 

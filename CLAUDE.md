@@ -1,28 +1,27 @@
 # CLAUDE.md — lab-os
 
-Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub and an AI driving `so101-white` through the brain's tools (`docs/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
+Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub, voice, and AI driving the SO-101 arms through the brain's tools, for a demo of every feature on 2026-11-19 (`docs/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
 
 ## Read first, every session
 1. `docs/current-focus.md` — what to work on now (and "Up next").
 2. `docs/lab-jarvis-log.md` — plan, decisions, device names.
 3. `docs/GOTCHAS.md` — surprises already found.
-4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). **Until the reveal step in `docs/current-focus.md`, keep pages plain and don't apply the design** (it's a surprise; people see the screens). Do copy the concept's structure. At the reveal, build to match them; the numbers come from `config/theme.yaml`.
+4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). New and changed pages follow the design (the designed hub is at `/design`; the numbers come from `config/theme.yaml`). It's no longer a surprise (2026-11-12), but `/` still shows the plain hub by default (`hub.look: plain`), just in case.
 
 Setup and conventions: `docs/dev-setup.md`, `docs/project-scaffold.md`. Safety: `SAFETY.md`.
 
 ## Hard rules: so101-green and the shared LeRobot setup
-`so101-green` belongs to the SO-101 training project (the builder's own, separate from lab-os). It is **not lab-os's** until its integration is planned (`docs/ideas.md`).
-- **Never open the green arm's ports.** Serial devices `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00` and `…5B41533501-if00`. No reading, no probing, no "just checking" — opening the port can disturb a running training session. They're marked `off_limits` in `config/devices.yaml`, and `lab_os.devices` refuses to return them.
-- **Never recalibrate it** or touch `~/.cache/huggingface/lerobot/calibration/`.
+`so101-green` is the builder's SO-101 training set (leader `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00`, follower `…5B41533501-if00`, two training cameras). **Since 2026-11-12 (the builder) lab-os may drive the green arms and use their cameras**, like `so101-white` (focus step 11). Four rules stay:
+- **Never change the greens' motor IDs, baud rates or firmware.** No motor setup on them.
+- **Their calibration is read-only.** lab-os may read `~/.cache/huggingface/lerobot/calibration/` to drive them; it never writes there and never recalibrates the greens.
 - **Never modify the `lerobot` conda env** (`~/miniforge3/envs/lerobot`) or the `~/lerobot` checkout. Don't install into it, don't activate it for lab-os work.
-- The green arm may be unplugged during lab-os testing. Don't assume it's there or gone.
-- **One exception (the builder's decision, 2026-11-10): the training launcher.** `lab-os green` (desktop icon, hub Training page) may *start LeLab* (the training project's own web page) after its check passes: both green ports present, nothing else on a serial port, LeLab's saved ports exactly the green ones, the same way round as last time. lab-os still opens no green port itself (it only lists `/dev/serial/by-id/` names) and never edits LeLab's settings or the calibration. `docs/green-launcher.md`.
+- **One program per port:** never open a green port while LeLab or a training or recording run is using it; check first, and refuse with a sentence if it's busy.
 
-A hook (`.claude/hooks/guard.sh`) blocks the obvious violations, but these rules apply even where the hook can't see them.
+The green arms may be unplugged during lab-os testing. Don't assume they're there or gone. The training launcher (`lab-os green`, `docs/green-launcher.md`) keeps its own checks. **Until step 11 lands, the code, `config/devices.yaml` and the hook (`.claude/hooks/guard.sh`) still refuse the green ports and the training cameras**; step 11 changes them to match these rules.
 
 ## Environment
 - lab-os has its **own uv environment** (`.venv/`, Python 3.12, uv-managed — never conda). `uv sync` to set up; `uv run …` to run.
-- LeRobot for `so101-white` is the **optional extra `so101`** of this project (`uv sync --extra so101`), never the shared conda env. CI and other machines don't install it; import it lazily.
+- LeRobot for the SO-101s is the **optional extra `so101`** of this project (`uv sync --extra so101`), never the shared conda env. CI and other machines don't install it; import it lazily.
 - Refer to serial devices **only by `/dev/serial/by-id/…`** names. `ttyACM0/1` swap after reboots/re-plugging.
 
 ## Project rules

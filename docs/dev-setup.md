@@ -96,7 +96,7 @@ Build at home against fakes → test in the lab on real hardware → note surpri
 
 ## Standards (to define on the ground)
 To be decided once we've seen what the robot computers look like inside (via the device census):
-- **Device names** (so far: `so101-green` (the training project's), `so101-white`, `so101-white-leader`, `xarm1`, `xarm2`; starter: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted)
+- **Device names** (so far: `so101-green` (the training set, drivable by lab-os since 2026-11-12), `so101-white`, `so101-white-leader`, `xarm1`, `xarm2`; starter: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted)
 - **User accounts** on robots
 - **Where things live** on each robot (one project folder)
 - **File and folder names** in the repo
