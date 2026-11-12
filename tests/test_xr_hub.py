@@ -48,8 +48,9 @@ async def test_the_vr_hub_loads_only_its_own_files(aiohttp_client):
     assert '<script type="module" src="/hub/xr-hub.js">' in page
     assert '"three": "/web/vendor/three/three.module.js"' in page
     graph = await _module_graph(client, "/hub/xr-hub.js")
-    parts = {f"/hub/xr/{m}.js" for m in ("stars", "core", "hub", "panels", "pointer", "modules")}
-    parts |= {"/static/xr.js", "/static/arm/arm-model.js"}  # Teleop and the holograms
+    ours = ("stars", "core", "hub", "panels", "pointer", "modules", "ask")
+    parts = {f"/hub/xr/{m}.js" for m in ours}
+    parts |= {"/static/xr.js", "/static/arm/arm-model.js", "/web/voice.js"}  # teleop, arm, voice
     assert parts <= set(graph)
     for url, src in [("/xr", page), *graph.items()]:  # works offline: no internet-loaded code
         assert not re.search(r"""["'](https?:)?//""", src), f"{url} loads from the internet"
@@ -107,3 +108,19 @@ async def test_the_vr_modules(aiohttp_client):
     )
     page = await (await client.get("/xr")).text()
     assert '"three/examples/jsm/"' in page  # the arm's URDF loader needs it
+
+
+async def test_asking_in_vr(aiohttp_client):
+    """Push-to-talk on the ask line (hold the trigger), the wake word on the headset's microphone,
+    and turns heard by another screen shown too (decision 2026-11-12, the builder)."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr-hub.js")).text()
+    assert '"selectstart"' in hub and '"selectend"' in hub and "ask.pressStart(" in hub
+    ask = await (await client.get("/hub/xr/ask.js")).text()
+    assert 'import("/web/voice.js")' in ask and 'V.press("ask")' in ask
+    assert "this.V.wake(" in ask and 'fetch("/api/chat"' in ask
+    # the microphone is asked for on the page, not in VR (a prompt there is easy to miss) and not
+    # right before requestSession (it would use up the click that enters VR)
+    before = hub.split("navigator.xr.requestSession(", 1)[0].rsplit("async function start(", 1)[1]
+    assert "getUserMedia" not in before
+    assert "Allow the microphone" in hub
