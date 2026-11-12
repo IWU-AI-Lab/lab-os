@@ -93,7 +93,9 @@ A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow
 - `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
 - The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
-**The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Then the hub is around you: point at a callout with a controller (or your hand) and pull the trigger (or pinch) to open its details; 7d/14d/30d, List all and a device's card work too. **B** or **Y** closes a page. The trigger no longer replays the jump: ⏻ (top right) goes back to the start screen. Nothing in it moves a robot.
+**The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Then the hub is around you: point at a callout with a controller (or your hand) and pull the trigger (or pinch) to open its details; 7d/14d/30d, List all and a device's card work too. **B** or **Y** closes a page. The trigger no longer replays the jump: ⏻ (top right) goes back to the start screen.
+- **Teleop** (left of the core) opens the arm scene without leaving VR: everything above works the same (grip = clutch, trigger = gripper, A/X = stop, left grip moves the 3D arm, Y puts it back). Back: **B**, or point the right controller at ← on the TELEOP tab (top left) and pull the trigger. The left hand's pinch and Y stay teleop's.
+- **Monitor** and **AI Control** show the arm as a hologram (watch-only), with each joint's angle, who has control, STOP; AI Control adds the robot-tool calls as they happen. Back: B or Y, or ←.
 
 Troubleshooting:
 - Page doesn't load → `adb reverse --list` should show `tcp:8080 tcp:8080`; re-run it after re-plugging.

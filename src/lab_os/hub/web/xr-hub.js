@@ -74,7 +74,8 @@ class Show {
     this.sfx = new Sfx(T);
     this.hub = new HubView({ core: this.core, sfx: this.sfx, D });
     this.hub.clock = () => this.clock();
-    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh);
+    this.hub.scene = this.scene; this.hub.ar = ar;
+    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh);
     this.pointer = new Pointer(this.scene);
     this.facts = { title: "Lab", greeting: "", status: null, arm: null, display: "" };
     this.phase = "ignite";
@@ -117,8 +118,8 @@ class Show {
       if (this.hub.press(hit, now) === "power") this.toIgnite(); // ⏻: back to the start screen
     }
   }
-  /** B or Y: back (closes an open page). */
-  back(now) { if (this.phase === "hub") this.hub.closeDetails(now); }
+  /** B or Y: back (closes an open page or module; in Teleop only B, Y is teleop's). */
+  back(now, key) { if (this.phase === "hub") this.hub.back(now, key); }
 
   startJump(now) {
     this.phase = "jump";
@@ -246,6 +247,12 @@ class Show {
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
     this.pointer.setTargets(P === "hub" ? this.hub.targets() : []);
+    camera.getWorldPosition(this.hub.cameraPos ||= new THREE.Vector3());
+    this.stage.worldToLocal(this.hub.cameraPos);
+    // teleop's own room replaces the far layer while it's open
+    const teleop = this.hub.module?.id === "teleop";
+    this.net.group.visible = !teleop;
+    if (teleop) this.stars.visible = false;
     this.hub.step(dt, now, P === "hub" ? this.pointer.all() : []);
   }
 
@@ -287,6 +294,7 @@ async function getJSON(url) {
 async function loadFacts(show) {
   const [hub, hello, st, arm] = await Promise.all([getJSON("/api/hub"), getJSON("/api/greeting"), getJSON("/api/status"), getJSON("/api/arm")]);
   if (hub?.title) { show.facts.title = hub.title; show.title.text = hub.title; }
+  show.hub.setModules((hub?.modules || []).map((m) => m.id));
   if (hello?.text) show.facts.greeting = hello.text;
   show.facts.status = st; show.facts.arm = arm;
   if (st?.time_ms) show.facts.offset = st.time_ms - Date.now();
@@ -308,16 +316,20 @@ const FWD = new THREE.Vector3();
 const backWas = {};
 function xrPointers(show, frame, r, now) {
   const ref = r.xr.getReferenceSpace(), on = show.phase === "hub";
+  const teleop = on && show.hub.module?.id === "teleop";
+  // Teleop open: its own session reads the controllers and drives the arm; only the right ray can
+  // reach the tab (Back), with no beam in the way (its trigger or pinch only grips while the clutch is held)
+  if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
   for (const src of frame.session.inputSources) {
     const key = src.handedness;
     if (key !== "left" && key !== "right") continue;
     const pose = src.targetRaySpace && frame.getPose(src.targetRaySpace, ref);
-    if (!pose || !on) { show.pointer.hide(key); continue; }
+    if (!pose || !on || (teleop && key === "left")) { show.pointer.hide(key); continue; }
     const p = pose.transform.position, o = pose.transform.orientation;
     FWD.set(0, 0, -1).applyQuaternion(new THREE.Quaternion(o.x, o.y, o.z, o.w));
-    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), true);
+    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), !teleop);
     const b = !!src.gamepad?.buttons[5]?.pressed; // B (right) / Y (left)
-    if (b && !backWas[key]) show.back(now);
+    if (b && !backWas[key]) show.back(now, key);
     backWas[key] = b;
   }
 }
@@ -381,7 +393,7 @@ async function start(mode) {
     });
     addEventListener("pointerup", (e) => { if (drag && !drag.moved) { aim(e); show.press(clockNow(), show.pointer.hitOf("mouse")); } drag = null; });
     addEventListener("keydown", (e) => {
-      if (e.key === "Escape") return show.hub.mode === "details" ? show.back(clockNow()) : location.reload();
+      if (e.key === "Escape") return show.hub.mode !== "hub" ? show.back(clockNow(), "right") : location.reload();
       if (show.phase !== "hub") show.press(clockNow());
     });
     r.setAnimationLoop(frame);
@@ -393,6 +405,7 @@ async function start(mode) {
   let refType = "local-floor";
   try { await session.requestReferenceSpace("local-floor"); } catch { refType = "local"; }
   r.xr.setReferenceSpaceType(refType);
+  show.hub.refType = refType;
   await r.xr.setSession(session);
   const bl = session.renderState.baseLayer;
   show.facts.display = bl ? `${Math.round(bl.framebufferWidth / 2)}×${bl.framebufferHeight} per eye` : "headset";
@@ -401,7 +414,11 @@ async function start(mode) {
   session.addEventListener("inputsourceschange", hands);
   hands();
   // trigger, or a pinch: presses what that controller or hand points at
-  session.addEventListener("select", (e) => show.press(clockNow(), show.pointer.hitOf(e.inputSource.handedness)));
+  session.addEventListener("select", (e) => {
+    const key = e.inputSource.handedness;
+    if (show.hub.module?.id === "teleop" && key === "left") return; // the left hand is teleop's clutch
+    show.press(clockNow(), show.pointer.hitOf(key));
+  });
   session.addEventListener("end", () => { r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2); $("#msg").textContent = "Left VR. Press a button to go back in."; });
   r.setAnimationLoop(frame);
 }

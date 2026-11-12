@@ -3,17 +3,21 @@
 // (Current Project and AI Spend left, Commits and Devices right); the place's name top left, the status
 // strip top right with ⏻ (back to the start screen: the jump plays again from there); the typed log
 // bottom left; the screen frame (cut corners, tabs, notches) around it all; thin traces from the core
-// up to the strip and down to the log. Module buttons go between the core and the callouts.
+// up to the strip and down to the log. Module buttons (xr/modules.js) between the core and the
+// callouts, alternating left and right in the theme's order (hub.modules), traces running to them:
+// Teleop opens the arm scene without leaving VR; Monitor and AI Control their holograms; Back (or B)
+// closes them and the hub comes back.
 // Pointing and pressing (xr/pointer.js): a callout opens its details page (it unfolds from the callout,
 // the core docks in its corner, Back closes it); its own controls work (7d / 14d / 30d, List all, a
 // device opens its card).
 // Units: metres in the stage's space (you at the origin, -z ahead).
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
+import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 
 const R = 2.4; // the curve's radius = the core's distance
-const AZ_COL = 37; // degrees: the callout columns' centres (all of the hub fits the Quest's view)
+const AZ_COL = 39; // degrees: the callout columns' centres (all of the hub fits the Quest's view)
 const DEG = Math.PI / 180;
 const CALLOUT_GAP = 1.9 * REM_M;
 
@@ -82,13 +86,45 @@ export class HubView {
     this.pageFrom = new THREE.Vector3();
     this.pageAt = -1e9; this.pageClosing = false;
     this.hovered = [];
+    // module buttons: the ones with a VR version, in the theme's order (/api/hub)
+    this.buttons = [];
+    this.tab = new ModuleTab();
+    this.tab.mesh.visible = false;
+    this.tab.mesh.position.set(-0.62, 0.42, -1.35); // the stage adds it (it stays when the hub hides)
+    this.tab.mesh.rotation.y = 0.4;
+    this.module = null; // {id, view}
+    this.views = {};
+  }
+
+  /** The module buttons, from the hub's list (Training has no VR version). */
+  setModules(ids) {
+    for (const b of this.buttons) this.group.remove(b.mesh);
+    const ids2 = (ids || []).filter((id) => VR_MODULES[id]);
+    this.buttons = ids2.map((id) => new ModuleButton(id));
+    const cols = { left: [], right: [] };
+    this.buttons.forEach((b, i) => { b.side = i % 2 ? "right" : "left"; cols[b.side].push(b); });
+    const paths = [];
+    for (const [side, list] of Object.entries(cols)) {
+      const s = side === "left" ? -1 : 1, gap = 0.07, total = list.length * 0.2 + (list.length - 1) * gap;
+      list.forEach((b, i) => {
+        const y = total / 2 - 0.1 - i * (0.2 + gap);
+        onCurve(b.mesh, s * 20.5, y, R - 0.02);
+        this.group.add(b.mesh);
+        // a trace from the core's ring: out, a 45° bend, then into the button's inner edge
+        const edge = b.mesh.position.clone().add(new THREE.Vector3(-s * (b.w / 2 + 0.005), 0, 0).applyEuler(b.mesh.rotation));
+        const x0 = s * 0.56, x1 = s * 0.62, x2 = x1 + s * Math.abs(y) * 0.9;
+        paths.push([new THREE.Vector3(x0, 0, -this.D), new THREE.Vector3(x1, 0, -this.D), new THREE.Vector3(x2, y, (edge.z - this.D) / 2), edge]);
+      });
+    }
+    this.traces.setModules(paths);
   }
 
   get callout() { return this.callouts; }
   /** What the pointer can land on. */
   targets() {
     if (this.mode === "details") return [this.page.mesh];
-    return [...Object.values(this.callouts).map((c) => c.mesh), this.power.mesh, this.card.mesh];
+    if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
+    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh];
   }
 
   /** The startup is over: everything flies to its place and the panels unfold out from the core. */
@@ -101,7 +137,7 @@ export class HubView {
     this.nextLog = now + 1500;
     this.logRows = [];
   }
-  hide() { this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; }
+  hide() { this.closeModule(); this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; }
 
   /** Lay the callout columns out from their drawn heights (centred around the core's height). */
   _layout() {
@@ -126,7 +162,10 @@ export class HubView {
     if (!hit) return null;
     const w = hit.what;
     if (w.kind === "power") { this.sfx.blip(); return "power"; }
-    if (w.kind === "back") { this.closeDetails(now); return null; }
+    if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else this.closeDetails(now); return null; }
+    if (w.kind === "module") { this.openModule(w.id, now); return null; }
+    if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
+    if (w.kind === "tab") return null;
     if (w.kind === "page" || w.kind === "card") return null;
     const c = hit.obj.userData.hit;
     if (w.kind === "control" && c.id === "commits") { c.days = +w.id.slice(4); this.sfx.blip(); return null; }
@@ -151,8 +190,49 @@ export class HubView {
     this.mode = "hub";
     this.sfx.close();
   }
-  /** Where the core should be: in the middle, or docked in the open page's corner. */
+  /** A module opens: the hub steps back, the module's view comes forward, the core docks small. */
+  async openModule(id, now) {
+    if (this.module) return;
+    this.sfx.blip(); this.sfx.open();
+    this.mode = "module";
+    this.card.show(null);
+    this.tab.title = VR_MODULES[id][0]; this.tab.ico = VR_MODULES[id][1];
+    let view;
+    if (id === "teleop") {
+      view = this.views.teleop ||= new TeleopModule({ ar: this.ar, refType: this.refType });
+      this.module = { id, view, at: now };
+      const scene = await view.open();
+      if (this.module?.view !== view) return view.close(); // closed meanwhile
+      this.module.scene = scene;
+      this.scene.add(scene);
+    } else {
+      view = this.views[id] ||= new ArmHologram(id);
+      view.group.position.set(0, -0.62, -1.55);
+      this.group.parent.add(view.group);
+      view.open(now);
+      this.module = { id, view, at: now };
+    }
+  }
+  closeModule(now) {
+    const m = this.module;
+    if (!m) return;
+    this.module = null;
+    this.mode = "hub";
+    if (m.scene) this.scene.remove(m.scene);
+    if (m.view.group) m.view.group.parent?.remove(m.view.group);
+    m.view.close();
+    this.sfx.close();
+    this.t0 = Math.min(this.t0, (now ?? 0) - 5000); // the hub comes straight back
+  }
+  /** B (or Y, but not while teleop uses Y) closes what's open. */
+  back(now, key) {
+    if (this.mode === "module") { if (!(this.module.id === "teleop" && key === "left")) this.closeModule(now); }
+    else this.closeDetails(now);
+  }
+
+  /** Where the core should be: in the middle, docked in the open page's corner, or small beside a module. */
   coreTarget() {
+    if (this.mode === "module") return { pos: new THREE.Vector3(0.62, -0.42, -1.3), scale: 0.13 };
     return this.page.mesh.visible && !this.pageClosing ? { pos: new THREE.Vector3(1.18, -0.66, -2.17), scale: 0.26 } : { pos: new THREE.Vector3(0, 0, -this.D), scale: 1 };
   }
 
@@ -167,13 +247,30 @@ export class HubView {
     // hover: what any pointer is on
     for (const c of Object.values(this.callouts)) c.hover = null;
     this.page.hover = null;
+    this.tab.hover = null;
+    for (const b of this.buttons) b.hover = false;
     let powerHover = false;
     for (const h of hits) {
       const o = h.obj.userData.hit;
       if (o instanceof Callout) o.hover = h.what;
       else if (o === this.page) this.page.hover = h.what;
+      else if (o === this.tab) this.tab.hover = h.what;
+      else if (h.what.kind === "module") o.hover = true;
       else if (h.what.kind === "power") powerHover = true;
     }
+    // a module: the hub steps back (hidden), the module's view and its tab come forward
+    const inModule = this.mode === "module";
+    this.tab.mesh.visible = inModule;
+    if (inModule) {
+      this.tab.paint();
+      const v = this.module?.view;
+      if (v?.step) v.step(dt, now, this.cameraPos || new THREE.Vector3(), hits);
+      this.traces.group.visible = false;
+      for (const o of this.group.children) o.visible = false;
+      this.group.visible = true;
+      return;
+    }
+    for (const o of this.group.children) if (o !== this.page.mesh) o.visible = true;
     const hoverKey = hits.map((h) => `${h.obj.id}:${h.what.kind}:${h.what.id || ""}`).join("|");
     if (hoverKey !== this._hoverKey) { if (hoverKey) this.sfx.hover(); this._hoverKey = hoverKey; }
     for (const c of Object.values(this.callouts)) c.paint(now);
@@ -188,6 +285,12 @@ export class HubView {
       c.p.opacity = clamp((t - delay) / 300, 0, 1) * this._dim;
     }
     const early = clamp((t - 300) / 600, 0, 1) * this._dim;
+    this.buttons.forEach((b, i) => { // the buttons unfold after the core settles, nearest first
+      const k = arrive((t - 600 - i * 60) / 600);
+      b.mesh.scale.set(Math.max(0.001, k), Math.max(0.001, k), 1);
+      b.p.opacity = clamp((t - 600 - i * 60) / 300, 0, 1) * this._dim;
+      b.step(dt);
+    });
     this.paintBrand(); this.brand.opacity = clamp((t - 900) / 300, 0, 1) * this._dim;
     this.paintStrip(now); this.strip.opacity = early;
     this.paintPower(powerHover); this.power.opacity = early;
@@ -317,8 +420,11 @@ export class Traces {
     this.pulses = [];
     this.next = 0;
     // up to the strip, down to the log: the hub's vertical line through the core
-    this.set([[new THREE.Vector3(0, 0.56, -D), new THREE.Vector3(0, 0.98, -D)], [new THREE.Vector3(0, -0.56, -D), new THREE.Vector3(0, -0.98, -D)]]);
+    this.base = [[new THREE.Vector3(0, 0.56, -D), new THREE.Vector3(0, 0.98, -D)], [new THREE.Vector3(0, -0.56, -D), new THREE.Vector3(0, -0.98, -D)]];
+    this.set(this.base);
   }
+  /** The traces to the module buttons (plus the vertical ones). */
+  setModules(paths) { this.set(this.base, paths); }
   /** Replace the traces with these polylines (stage space). */
   set(paths, extra = []) {
     for (const o of [...this.group.children]) this.group.remove(o);

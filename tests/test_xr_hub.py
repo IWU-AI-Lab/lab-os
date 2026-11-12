@@ -26,8 +26,8 @@ async def _module_graph(client, entry: str) -> dict[str, str]:
         seen[url] = await res.text()
         for a, b in IMPORT.findall(seen[url]):
             spec = a or b
-            if spec == "three":  # the import map in xr.html
-                spec = "/web/vendor/three/three.module.js"
+            if spec == "three" or spec.startswith("three/"):  # the import map in xr.html: vendored
+                continue
             if spec.startswith("."):
                 base = url.rsplit("/", 1)[0]
                 parts = []
@@ -48,7 +48,8 @@ async def test_the_vr_hub_loads_only_its_own_files(aiohttp_client):
     assert '<script type="module" src="/hub/xr-hub.js">' in page
     assert '"three": "/web/vendor/three/three.module.js"' in page
     graph = await _module_graph(client, "/hub/xr-hub.js")
-    parts = {f"/hub/xr/{m}.js" for m in ("stars", "core", "hub", "panels", "pointer")}
+    parts = {f"/hub/xr/{m}.js" for m in ("stars", "core", "hub", "panels", "pointer", "modules")}
+    parts |= {"/static/xr.js", "/static/arm/arm-model.js"}  # Teleop and the holograms
     assert parts <= set(graph)
     for url, src in [("/xr", page), *graph.items()]:  # works offline: no internet-loaded code
         assert not re.search(r"""["'](https?:)?//""", src), f"{url} loads from the internet"
@@ -87,3 +88,22 @@ async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client)
     for title in ("Current Project", "AI Spend", "Commits", "Devices"):
         assert title in (await (await client.get("/hub/xr/hub.js")).text()), title
     assert "get available()" in panels  # hidden when the brain has no facts
+
+
+async def test_the_vr_modules(aiohttp_client):
+    """Teleop runs the teleop page's own XR session code inside the hub's session (one copy of the
+    controller handling); Monitor and AI Control are watch-only holograms with STOP; Training
+    (LeLab on the desktop) has no VR version, so no button (decision 2026-11-12, the builder)."""
+    client = await aiohttp_client(make_app())
+    teleop = await (await client.get("/static/xr.js")).text()
+    assert "export class TeleopSession" in teleop and "new TeleopSession(link" in teleop
+    mods = await (await client.get("/hub/xr/modules.js")).text()
+    assert 'import("/static/xr.js")' in mods and 'new TeleopSession(getLink("input")' in mods
+    vr_list = mods.split("export const VR_MODULES = {", 1)[1].split("};", 1)[0]
+    assert "teleop" in vr_list and "monitor" in vr_list and "ai:" in vr_list
+    assert "training" not in vr_list
+    assert 'getLink("monitor")' in mods and '{ type: "stop" }' in (
+        await (await client.get("/hub/xr/hub.js")).text()
+    )
+    page = await (await client.get("/xr")).text()
+    assert '"three/examples/jsm/"' in page  # the arm's URDF loader needs it

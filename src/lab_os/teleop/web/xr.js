@@ -156,30 +156,57 @@ async function start(mode, link, ui) {
   renderer.xr.setReferenceSpaceType(refType);
   // ?xrarm=stick on the page URL = light arm model in the headset (testing, or if frames drop)
   const style = new URLSearchParams(location.search).get("xrarm") || undefined;
-  const feed = getArmFeed(link);
-  const xrScene = new XRScene(feed, { ar, style });
-  if (refType === "local") xrScene.setFloorOffset(-1.4);
-  let place = loadPlace();
-  xrScene.setPlacement(place);
-  let drag = null; // while the left grip moves the 3D arm: where it and the controller started
-  let yWas = false, flick = 0;
+  const tele = new TeleopSession(link, { ar, style, refType });
   const camera = new THREE.PerspectiveCamera(70, 1, 0.01, 50); // replaced by the headset's cameras
   await renderer.xr.setSession(session);
 
   ui.setActive("xr");
   session.addEventListener("end", () => {
     renderer.setAnimationLoop(null);
-    link.send({ type: "session_end" });
+    tele.end();
     ui.setActive(null);
     ui.showHands({}, "XR session ended");
   });
 
   renderer.setAnimationLoop((t, frame) => {
     if (!frame) return;
-    const refSpace = renderer.xr.getReferenceSpace();
+    const { hands, source } = tele.frame(t, frame, renderer.xr.getReferenceSpace());
+    ui.showHands(hands, source === "hands" ? "hands: left pinch = move, right pinch = gripper" : source ? "" : "no controllers or hands in view");
+    renderer.render(tele.scene, camera);
+  });
+}
+
+/**
+ * One teleop session's work per XR frame: read the controllers (or hands), move the 3D arm with the
+ * left grip, speed with the right thumbstick, send `xr_input` to the brain, update the scene. Used by
+ * this page and by the hub in VR (its Teleop button), which renders `scene` inside its own session.
+ */
+export class TeleopSession {
+  /** @param {{ar: boolean, style?: string, refType: string}} opts */
+  constructor(link, { ar, style, refType }) {
+    this.link = link;
+    this.feed = getArmFeed(link);
+    this.xrScene = new XRScene(this.feed, { ar, style });
+    if (refType === "local") this.xrScene.setFloorOffset(-1.4);
+    this.place = loadPlace();
+    this.xrScene.setPlacement(this.place);
+    this.drag = null; // while the left grip moves the 3D arm: where it and the controller started
+    this.yWas = false;
+    this.flick = 0;
+  }
+  get scene() {
+    return this.xrScene.scene;
+  }
+  /** The session is over (or the hub's Teleop closed): the arm freezes and control is free again. */
+  end() {
+    this.link.send({ type: "session_end" });
+  }
+  /** Returns {hands, source} (what was read, for a readout). */
+  frame(t, frame, refSpace) {
+    const { link, feed, xrScene } = this;
     let hands = {};
     const bare = {};
-    for (const src of session.inputSources) {
+    for (const src of frame.session.inputSources) {
       if (src.handedness !== "left" && src.handedness !== "right") continue;
       if (isHand(src)) bare[src.handedness] = readHand(src, frame, refSpace);
       else if (src.gamepad) hands[src.handedness] = readController(src, frame, refSpace);
@@ -192,40 +219,40 @@ async function start(mode, link, ui) {
     if (source === "controllers") {
       // left grip: drag and turn the 3D arm (not while the right clutch is held: no jumps)
       if (left?.pos && left.grip > 0.6 && !(right && right.grip > 0.4)) {
-        if (!drag) drag = { place: { ...place }, pos: left.pos, yaw: yawOf(left.quat) };
-        place = {
-          x: drag.place.x + left.pos[0] - drag.pos[0],
-          y: drag.place.y + left.pos[1] - drag.pos[1],
-          z: drag.place.z + left.pos[2] - drag.pos[2],
-          yaw: drag.place.yaw + yawOf(left.quat) - drag.yaw,
+        if (!this.drag) this.drag = { place: { ...this.place }, pos: left.pos, yaw: yawOf(left.quat) };
+        const d = this.drag;
+        this.place = {
+          x: d.place.x + left.pos[0] - d.pos[0],
+          y: d.place.y + left.pos[1] - d.pos[1],
+          z: d.place.z + left.pos[2] - d.pos[2],
+          yaw: d.place.yaw + yawOf(left.quat) - d.yaw,
         };
-        xrScene.setPlacement(place);
-      } else if (drag) {
-        drag = null;
-        savePlace(place);
+        xrScene.setPlacement(this.place);
+      } else if (this.drag) {
+        this.drag = null;
+        savePlace(this.place);
       }
       const y = !!left?.buttons.b;
-      if (y && !yWas) {
-        place = { x: 0, y: 0, z: 0, yaw: 0 };
-        xrScene.setPlacement(place);
-        savePlace(place);
+      if (y && !this.yWas) {
+        this.place = { x: 0, y: 0, z: 0, yaw: 0 };
+        xrScene.setPlacement(this.place);
+        savePlace(this.place);
       }
-      yWas = y;
+      this.yWas = y;
       // right thumbstick up/down: speed, one step per flick
       const sy = right ? right.thumbstick[1] : 0;
       const dir = sy < -0.7 ? 1 : sy > 0.7 ? -1 : 0; // pushed up = negative y
-      if (dir && dir !== flick && feed.status) {
+      if (dir && dir !== this.flick && feed.status) {
         link.send({ type: "set_speed", speed_scale: feed.status.speed_scale + dir * SPEED_STEP });
       }
-      flick = dir;
+      this.flick = dir;
     }
 
     const sent = {};
     const base = xrScene.armBase();
-    for (const [side, c] of Object.entries(hands)) sent[side] = toArmFrame(c, place.yaw, base);
+    for (const [side, c] of Object.entries(hands)) sent[side] = toArmFrame(c, this.place.yaw, base);
     link.send({ type: "xr_input", t, frame: "arm", hands: sent, ...(source === "hands" ? { source } : {}) });
-    ui.showHands(hands, source === "hands" ? "hands: left pinch = move, right pinch = gripper" : source ? "" : "no controllers or hands in view");
     xrScene.updateHands(hands, source, source === "hands" ? { left: bare.left?.pinch || 0, right: bare.right?.pinch || 0 } : null);
-    renderer.render(xrScene.scene, camera);
-  });
+    return { hands, source };
+  }
 }
