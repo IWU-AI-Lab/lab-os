@@ -44,7 +44,7 @@ Lab checks for each step: `docs/lab-checklist.md`.
 5. **The hub's built-in assistant never changes anything.** It reads and answers. The **move tools** are for a developer's AI tool on this computer only: same safety layer as teleop, **ask every time** (move tier). Writing code by AI only via branch → tests → the builder's approval.
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable**: Linux, Windows, macOS. **Plain names** in code, show names in persona files.
-8. **The green arms** (decision 2026-11-12): lab-os may drive them and use the training cameras, with CLAUDE.md's four rules (no motor ID/firmware changes, calibration read-only, the `lerobot` env untouched, never a port that LeLab or a training run is using). Until step 11 lands, the code still refuses them.
+8. **The green arms** (decision 2026-11-12): lab-os may drive them and use the training cameras, with CLAUDE.md's four rules (no motor ID/firmware changes, calibration read-only, the `lerobot` env untouched, never a port that LeLab or a training run is using). Step 11 (built 2026-11-12) makes the code follow them.
 9. **Nothing place-specific in code**: the lab's name, devices, what's off limits, venues and personas live in config; another place = another config folder (`--config`, `docs/places.md`).
 
 ## Steps (each one is a small, testable win)
@@ -77,6 +77,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
     - Bugs from the 2026-11-12 demo check (the builder to list); alerts from real events; how a page sent to another screen looks (keep it plain if there's no time).
 
 11. **Green arms.** lab-os drives `so101-green` and uses its two cameras, like `so101-white` (decision 2026-11-12). Details: "Step 11, concretely".
+   - **Status:** built 2026-11-12, tested without hardware (`docs/ai-control.md` → "The green arm"). **Left:** on the lab desktop, with LeLab closed: the read-only `--watch`, then the green follower moving with the builder present, then the AI driving it (`docs/lab-checklist.md` → part 8); which camera is which (`so101-green-cam-a`/`-b` until then).
 
 12. **Newline.** Find out whether the Newline can show the hub smoothly; not blocking anything (the demo is on the desktop). Details: "Step 12, concretely".
 

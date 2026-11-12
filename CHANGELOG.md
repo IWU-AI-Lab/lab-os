@@ -2,6 +2,10 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-12
+- **The green arms in lab-os** (focus step 11): `so101-green` (follower) and `so101-green-leader` are `borrowed` devices, no longer off limits: `lab-os serve --arm so101-green` drives the follower like the white arm (lab venue), its calibration read only from LeRobot's cache (through a temporary copy); `so101_setup` refuses the greens; a port or camera another program has open (LeLab, a recording) is refused with a sentence; the two training cameras are listed by USB socket (the camera-model block is gone). The guard hook and `.claude/settings.json` allow the green ports and reading the calibration, and still deny writes there and changes to the `lerobot` env. The training launcher also refuses while another program has a green port open.
+- The read tools include `docs/design/` (the design isn't a surprise any more).
+
 ## 2026-11-11
 - `FEATURES.md`: a list of the features built so far, with their status, plus lab projects not connected to lab-os (xArm + Bluetooth glove, Raspbot voice control, the xArm camera demos).
 

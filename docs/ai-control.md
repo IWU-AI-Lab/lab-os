@@ -54,9 +54,9 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | Tool | What it does |
 |---|---|
 | `project_status` | The current focus: every step, done or not, and the next one |
-| `list_docs` / `read_doc` / `search_docs` | The docs (one doc, or one section of it, e.g. `read_doc("ideas", "On hold")`), and a search. `docs/design/` is left out until the reveal |
+| `list_docs` / `read_doc` / `search_docs` | The docs (one doc, or one section of it, e.g. `read_doc("ideas", "On hold")`), and a search. Includes `docs/design/` (since 2026-11-12) |
 | `git_status` / `git_log` | Branch, changed files, recent commits (nothing is fetched) |
-| `list_devices` | The place's device list (off limits, active in the venue) |
+| `list_devices` | The place's device list (off limits, borrowed, active in the venue) |
 
 For example: "Use the lab-os tools: what's next, and what's on hold? Then draft a plan for the next step."
 
@@ -71,12 +71,12 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 - **Stopping:** `stop`, STOP on any page, or the tool call being cancelled mid-move all freeze the arm.
 
 ## 5. On the real arm (`so101-white`, in the lab)
-Only with the builder at the arm, hand near STOP. Ask before the first real move (CLAUDE.md). The green arm (`so101-green`) is never touched: the brain refuses its ports.
+Only with the builder at the arm, hand near STOP. Ask before the first real move (CLAUDE.md). The green follower works the same way (below: "The green arm").
 
 **Once, on the lab desktop** (the `so101` extra is LeRobot, ~5 GB; plain `uv sync` removes it again):
 ```bash
 cd ~/lab-os && git pull && uv sync --extra so101
-ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …1599 and …3501 ones (green) alone
+ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green follower …3501, its leader …1599
 ```
 
 **Each time:**
@@ -98,6 +98,17 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; leave the …
    > There's a cube 15 cm in front of the base and 5 cm to the left. Pick it up and put it down 10 cm to the left of where it was. Go slowly, one move at a time, and tell me before each move what you'll do.
 5. **Stop:** STOP on any page (or Esc on the teleop page) stops it at once; Ctrl+C in the brain's terminal stops the brain (the SO-101 then goes limp, so hold it if it's lifted). **Never "always allow"** a move tool.
 6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/current-focus.md` (step 2) what worked and what didn't.
+
+### The green arm (`so101-green`, since step 11)
+The training set's follower, borrowed from the training project (CLAUDE.md, "Hard rules"). The same tools and safety as the white arm, plus:
+```bash
+uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
+```
+- **Close LeLab first** (and any recording or training run). If another program has the green port open, the brain refuses with a sentence naming it ("so101-green is in use by lelab (pid …): one program per port") and opens nothing.
+- **Its calibration is LeRobot's**, read from `~/.cache/huggingface/lerobot/calibration/robots/<type>/<id>.json` (the only file there, or the one named by `calibration_id` in `devices.yaml`). lab-os copies it into a temporary folder and gives LeRobot the copy, so the original can't be written. If the motors disagree with the file, the brain stops and says to check the arm in LeLab: lab-os never recalibrates it, and `so101_setup` refuses the green arms outright.
+- **Name it:** the green arm is never a default (`--arm` without a name, `python -m lab_os.robots.so101`), so the white arm can't be swapped for it by accident. Read-only check: `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`.
+- It's active in the `lab` venue only (`config/venues/lab.yaml`), not on visit days.
+- Connecting with motion on writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, like LeLab does when it connects. Never IDs, baud rate, firmware or calibration.
 
 Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
 
