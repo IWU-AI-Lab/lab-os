@@ -22,8 +22,8 @@ The features that are built and working today, plus a few lab robot projects tha
 | Other computers on the network can view; only the brain's computer drives (`--drive-from <host>` lets one other computer drive) | ✅ | Tried with `pi01` and a second lab desktop |
 | Performance test page (`/perf`) | 🧪 | Numbers from the Newline still missing |
 
-## Talking to it (typed chat and personas)
-`docs/chat.md`, `docs/personas.md`
+## Talking to it (typed chat, voice and personas)
+`docs/chat.md`, `docs/voice.md`, `docs/personas.md`
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -31,6 +31,8 @@ The features that are built and working today, plus a few lab robot projects tha
 | Swap AI setups in `config/models.yaml` (OpenAI, Gemini, local Ollama); falls back to Gemini without an OpenAI key | ✅ | |
 | Spend log per answer and a monthly budget that pauses the chat | ✅ | $20/month at the lab |
 | The chat knows the project: reads the docs, git history and device list; drafts prompts for Claude Code / Codex (Copy button) | ✅ | Read-only: the chat can never move a robot |
+| **Push-to-talk:** hold the mic button (or Space), talk, let go; the words appear while you talk, the answer is spoken sentence by sentence and the core follows its loudness. Same conversation as typing (tools, history, budget) | 🧪 | On the free Gemini key; tried on a laptop in Chrome with a recorded voice, not yet with a person at the lab's USB microphone. No mic button without a secure page (localhost/https), a microphone, or voice at the brain |
+| Voice setups in `config/models.yaml` (`voices:`): OpenAI falls back to Gemini's free key; the persona's `voice:` picks one | 🧪 | OpenAI's voice untested without its key |
 | Personas: `lab-assistant` (default) and `jarvis`, picked per place, per venue or with `--persona` | ✅ | |
 | A greeting with real news (a step finished, the calendar, a busy day of commits) | ✅ | |
 | The conversation is kept for 30 minutes; "Bring back the last conversation" after a reset or restart | ✅ | |

@@ -4,7 +4,7 @@ id: jarvis
 display_name: "J.A.R.V.I.S."
 personality: jarvis.md
 model: main
-voice: none                   # step 7
+voice: main                   # voice setup (models.yaml → voices); none = no voice
 wake_word: none               # later
 picture: { type: orb, style: calm-ring, color: primary }
 lines:

@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — Gemini: hearing through a normal model takes ~10 s; its Live transcription model ~0.4 s
+**What:** sending 4 s of speech to `gemini-3.5-flash-lite` (`generateContent` with the audio inline, "transcribe this") took 7–10 s for the words, far over voice's 2–3 s budget. `gemini-3.1-flash-lite` and `gemini-3.8-flash` were overloaded (503) on the free key, `gemini-omni-1.2-flash` over quota (429). Gemini's OpenAI-compatible address has no `/audio/transcriptions` (404).
+**Fix:** `gemini-3.5-transcribe-live`, a transcription model on the Live API (a WebSocket, `bidiGenerateContent`; the key goes in the `x-goog-api-key` header): the words arrive while the audio streams in, and the final words ~0.4 s after the audio ends. Each pause ends a segment with its own final text, and the next segment starts fresh, so the brain joins them (`ai/speech.py`). Also: `gemini-3.8-flash-lite-tts` answers with a whole WAV (`audio/wav`), not raw samples; the code wraps raw ones only when the type says so.
+
+### 2026-11-12 — Headless Chrome's fake microphone was silent on macOS
+**What:** for a browser check of voice, Chrome ran with `--use-fake-device-for-media-stream --use-file-for-fake-audio-capture=<question.wav>`. The page got the microphone, but every sample was 0 (also with a plain `getUserMedia({audio: true})`), so the brain "didn't catch that". Without the file, the fake device's beep came through.
+**Fix:** add `--disable-features=AudioServiceOutOfProcess,AudioServiceSandbox` (the audio service then runs inside the browser and can read the file). A 48 kHz WAV, with a second of silence before the speech. Then the whole push-to-talk turn worked headless with the real Gemini key.
+
 ### 2026-11-11 — The two training cameras share one serial number
 **What:** `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
 **Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (`current-focus.md` → "Step 3, concretely").

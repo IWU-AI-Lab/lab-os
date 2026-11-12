@@ -174,6 +174,15 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #ask-btn:focus-within .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
 #open-chat { display: flex; align-items: center; gap: 0.25rem; min-width: 2.2rem; min-height: 2rem; justify-content: center; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
 #open-chat b { font: 0.7rem/1 var(--f-digits); color: var(--c); }
+/* the mic (step 7): hold it (or Space) and talk; only where this screen has a microphone and voice works */
+.mic { position: relative; display: flex; align-items: center; justify-content: center; min-width: 2.4rem; min-height: 2rem; padding: 0 0.45rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1.1rem; touch-action: none; user-select: none; -webkit-user-select: none; }
+.mic[hidden] { display: none; }
+.mic:hover, .mic:focus-visible { color: var(--hot); outline: none; }
+.mic::after { content: ""; position: absolute; inset: 0.15rem 0.3rem; border: 1px solid var(--c); opacity: 0; scale: calc(0.7 + var(--lvl, 0) * 0.6); transition: opacity 0.2s; pointer-events: none; }
+.mic.on { color: var(--hot); filter: drop-shadow(0 0 6px var(--c)); }
+.mic.on::after { opacity: 0.8; }
+.ask .mic { border-left: 0; }
+#reply .q.heard { color: var(--text); }
 #open-chat:hover, #open-chat:focus-visible { color: var(--hot); outline: none; }
 /* the latest answer, under the core: typed out, then fades after a while; tap it to see the whole conversation */
 #reply { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(34rem, 80vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
@@ -682,6 +691,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12M11 11V5a1.5 1.5 0 0 1 3 0v6M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 4-2.5 6.5-6 6.5-2.6 0-4.2-1.4-5.4-3.6L4 14a1.5 1.5 0 0 1 2.6-1.5L8 14.5"/></symbol>
     <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12"/><path d="M9 20h6M12 16.5V20M6.5 13l3.5-3.5 3 3 4.5-4.5"/></symbol>
     <symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12l1.5-2.2M18.5 12l2.4.6"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-4 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
     <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z"/><circle cx="12" cy="12" r="2"/></symbol>
     <symbol id="i-test" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z" stroke-dasharray="2.5 2.5"/></symbol>
@@ -768,6 +778,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div id="ask-btn" class="panel"><div class="cut"><div class="in">
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
+      <button id="mic" class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation"><svg class="ico"><use href="#i-hist"/></svg><b id="chat-n"></b></button>
       <button id="restore-chat" type="button" hidden><svg class="ico"><use href="#i-undo"/></svg></button>
     </div></div></div>
@@ -780,7 +791,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div class="cut" style="height:100%"><div class="in">
       <button id="restore-line" type="button" hidden></button>
       <div id="log-chat" aria-live="polite"></div>
-      <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"></form>
+      <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"><button class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button></form>
     </div></div>
   </section>
 
@@ -880,7 +891,8 @@ const S = {
   modules: [], impact: true,
   // all from the brain: /theme.json, /api/hub, /api/status, /api/arm, /api/project, /api/spend, /api/commits, /api/devices
   themeOk: false, status: null, arm: null, project: null, spend: null, recent: [], page: {}, clockOffset: 0,
-  chat: [], asking: false, greet: null, greetP: null, readyP: null, errorUntil: 0,
+  chat: [], asking: false, greet: null, greetP: null, readyP: null, errorUntil: 0, noteUntil: 0,
+  voiceLoud: 0, micLevel: 0,  // voice (step 7): the answer's real loudness while it plays, the mic's level
   sleepAfterMs: 900_000, resetAfterMs: 1_800_000, startGuardUntil: 0, resetting: false,
 };
 body.dataset.alert = "none"; body.dataset.mood = "room"; body.dataset.layout = S.layout;
@@ -1412,10 +1424,16 @@ function stepOrb(dt, now) {
   rings.arcs.el.setAttribute("transform", `rotate(${rings.arcs.a}) scale(${scaleNow})`);
   // breathing / loudness
   let s = 1, op = 1;
-  if (S.state === "speaking") {
+  if (S.state === "speaking" && VS.voiced) {
+    S.loud += (S.voiceLoud - S.loud) * Math.min(1, dt * 18);  // a spoken answer: its real loudness
+    s = 1 + S.loud * 0.16;
+  } else if (S.state === "speaking") {
     if (!S.nextSyl || now > S.nextSyl) { S.loudTarget = Math.random() < 0.15 ? 0 : rand(0.25, 1); S.nextSyl = now + rand(70, 160); }
     S.loud += ((S.loudTarget || 0) - S.loud) * Math.min(1, dt * 14);
     s = 1 + S.loud * 0.16;
+  } else if (S.state === "listening" && V?.pressed) {
+    S.loud += (Math.min(1, S.micLevel * 8) - S.loud) * Math.min(1, dt * 12);  // follows the voice it hears
+    s = 0.9 + S.loud * 0.12;
   } else {
     S.loud += (0 - S.loud) * Math.min(1, dt * 6);
     if (m.breathe) s = 1 + 0.07 * Math.sin((now / 1000) * (TAU / m.breathe));
@@ -1921,11 +1939,10 @@ function typewriter(render) {
   }, 16);
   return { add: (text) => (full += text), end: () => (done = true), finished };
 }
-// one way in for questions, from the chat page or from the core
+// one way in for questions, from the chat page or from the core (typed), or spoken (voice, below): a turn
+// shows the question, then the answer as it streams in
 let replyTimer = null;
-async function ask(q, fromCore) {
-  q = (q || "").trim();
-  if (!q || S.asking) return;
+function beginTurn(q, fromCore) {
   S.asking = true;
   S.chat.push({ role: "user", content: q });
   renderChat();
@@ -1934,6 +1951,7 @@ async function ask(q, fromCore) {
   setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
   let live = null;  // the answer's bubble in the conversation
   const typer = typewriter((text, typing) => {
+    if (!live) return;  // no answer came (an error)
     live.innerHTML = richText(text); live.classList.toggle("typing", typing); $("#log-chat").scrollTop = 1e9;
     if (fromCore) { a.innerHTML = richText(text); a.classList.toggle("typing", typing); a.scrollTop = 1e9; }
   });
@@ -1951,6 +1969,25 @@ async function ask(q, fromCore) {
       showError(ev.message);
     }
   };
+  // voiced: the answer is also spoken, so the turn lasts until its last word has played (endVoice)
+  async function end(voiced) {
+    typer.end();
+    if (live) await typer.finished;
+    renderChat();
+    if (!voiced) {
+      S.asking = false;
+      if (S.state === "thinking" || S.state === "speaking") setState("idle");
+    }
+    if (fromCore) replyTimer = setTimeout(() => r.classList.remove("on"), 14000);
+    S.lastInput = performance.now();
+    getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
+  }
+  return { onEvent, end };
+}
+async function ask(q, fromCore) {
+  q = (q || "").trim();
+  if (!q || S.asking) return;
+  const { onEvent, end } = beginTurn(q, fromCore);
   try {
     const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q }) });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -1968,15 +2005,76 @@ async function ask(q, fromCore) {
     console.warn(`hub: chat failed (${e.message})`);
     onEvent({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." });
   }
-  typer.end();
-  if (live) await typer.finished;
-  S.asking = false;
-  renderChat();
-  if (S.state === "thinking" || S.state === "speaking") setState("idle");
-  if (fromCore) replyTimer = setTimeout(() => r.classList.remove("on"), 14000);
-  S.lastInput = performance.now();
-  getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
+  await end(false);
 }
+
+/* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
+   web/voice.js records and plays; the brain hears, thinks (the same conversation as typing) and speaks. No
+   secure page, no microphone or no voice at the brain: no mic button, typing unchanged. */
+let V = null;  // the voice module (loaded below)
+const VS = { turn: null, fromCore: true, voiced: false, heard: "" };
+function renderMic() {
+  const ok = !!V?.can().ok;
+  document.querySelectorAll(".mic").forEach((b) => { b.hidden = !ok; });
+}
+function micOn(on) { document.querySelectorAll(".mic").forEach((b) => b.classList.toggle("on", on)); }
+async function talkStart(fromCore) {
+  if (!V || V.pressed) return;
+  V.unlock();
+  if (VS.voiced && !VS.turn) { V.stopSpeaking(); endVoice(); }  // talking over the last answer cuts it short
+  if (S.asking) return;
+  S.asking = true; VS.fromCore = fromCore; VS.heard = ""; VS.voiced = true;
+  clearTimeout(replyTimer);
+  const r = $("#reply");
+  if (fromCore) { r.querySelector(".q").textContent = "Listening…"; r.querySelector(".q").classList.add("heard"); r.querySelector(".a").innerHTML = ""; r.classList.add("on"); }
+  micOn(true); setState("listening");
+  if (!(await V.press("ask"))) { micOn(false); if (!VS.turn) endVoice(); }
+}
+function talkEnd() {
+  if (!V?.pressed) return;
+  micOn(false);
+  V.release();
+  setState("thinking");
+}
+function endVoice() {
+  VS.voiced = false; VS.turn = null; S.asking = false; S.voiceLoud = 0; micOn(false);
+  $("#reply .q").classList.remove("heard");
+  if (S.state === "listening" || S.state === "thinking" || S.state === "speaking") setState("idle");
+  S.lastInput = performance.now();
+}
+function voiceNote(msg) { S.noteUntil = performance.now() + 7000; showNote(msg); }
+function onVoiceEvent(ev) {
+  if (ev.type === "heard") {
+    VS.heard = ev.text;
+    if (VS.fromCore && !VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
+    if (!ev.final) return;
+    if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
+    $("#reply .q").classList.remove("heard");
+    VS.turn = beginTurn(ev.text, VS.fromCore);
+  } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
+    VS.turn.onEvent(ev);
+    if (ev.type === "done" || ev.type === "error") { const t = VS.turn; VS.turn = null; t.end(true); }
+  } else if (ev.type === "error" || ev.type === "mic_error") {
+    if (VS.voiced) endVoice();
+    errBox(ev.type === "mic_error" ? "Can't listen" : "No answer", ev.message);
+    S.errorUntil = performance.now() + 9000; setState("error");
+  } else if (ev.type === "voice_error") voiceNote(ev.message);
+  else if (ev.type === "audio" && VS.voiced && S.state !== "speaking") setState("speaking");
+  else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) endVoice();
+}
+import("/web/voice.js").then(({ createVoice }) => {
+  V = createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), onLevel: (l) => {
+    S.micLevel = l;
+    if (V?.pressed) document.querySelectorAll(".mic").forEach((b) => b.style.setProperty("--lvl", Math.min(1, l * 8).toFixed(2)));
+  } });
+  if (S.status) V.setStatus(S.status.voice);
+}).catch((e) => console.warn(`hub: no voice (${e.message})`));
+document.querySelectorAll(".mic").forEach((b) => {
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); b.setPointerCapture?.(e.pointerId); talkStart(b.id === "mic"); });
+  for (const t of ["pointerup", "pointercancel"]) b.addEventListener(t, (e) => { e.stopPropagation(); talkEnd(); });
+  b.addEventListener("click", (e) => e.stopPropagation());
+  b.addEventListener("contextmenu", (e) => e.preventDefault());  // a long press on a touch screen
+});
 $("#ask-form").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#ask").value.trim(); $("#ask").value = ""; ask(q, false); });
 $("#quick-form").addEventListener("submit", (e) => { e.preventDefault(); const q = $("#quick").value.trim(); $("#quick").value = ""; ask(q, true); });
 $("#quick").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); $("#quick").blur(); } });
@@ -2519,6 +2617,14 @@ addEventListener("keydown", (e) => {
   if ($("#ignite")) { e.preventDefault(); ignite(); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
   if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
+  if (e.key === "Escape" && V && (V.pressed || V.speaking())) { if (V.pressed) { V.cancel(); endVoice(); } else V.stopSpeaking(); return; }
+  // hold Space to talk (where there's a mic button), unless you're typing something
+  const ae = document.activeElement, emptyLine = (ae.id === "quick" || ae.id === "ask") && !ae.value;
+  if (e.code === "Space" && S.booted && !S.moduleOpen && V?.can().ok && (emptyLine || !/INPUT|SELECT|TEXTAREA|BUTTON/.test(ae.tagName))) {
+    e.preventDefault();
+    if (!e.repeat) talkStart(S.layout === "launcher");
+    return;
+  }
   // just start typing: the ask line under the core catches the letter (the conversation page stays closed)
   const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || (document.activeElement.tagName === "BUTTON" && e.key === " ");
   if (S.booted && !inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !S.moduleOpen) {
@@ -2527,6 +2633,8 @@ addEventListener("keydown", (e) => {
     else { $("#ask").focus(); $("#ask").value += e.key; }
   }
 });
+addEventListener("keyup", (e) => { if (e.code === "Space" && V?.pressed) { e.preventDefault(); talkEnd(); } });
+addEventListener("blur", () => { if (V?.pressed) talkEnd(); });  // the window lost the key's release
 function onPointer(e) {
   pointer.x = e.clientX; pointer.y = e.clientY;
   S.lastInput = performance.now();
@@ -2646,6 +2754,7 @@ async function pollStatus() {
   S.status = st;
   if (!st) {
     setFact("#f-net", "brain not reachable", true); setFact("#f-ai", "AI not connected", true);
+    V?.setStatus(null);
     if (!S.asking) setState("offline");
     return st;
   }
@@ -2654,7 +2763,8 @@ async function pollStatus() {
   const iv = $("#ign-venue"); if (iv) iv.textContent = st.venue;
   setFact("#f-net", st.internet === true ? "online" : st.internet === false ? "offline" : "checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
-  showNote(st.ai.paused);
+  if (performance.now() > S.noteUntil) showNote(st.ai.paused);
+  V?.setStatus(st.voice);
   if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {
     // the brain's error is a standing one (e.g. a refused key), not an unanswered question
     if (st.assistant.state === "error") errBox("AI not connected", st.ai.problem);
@@ -2795,6 +2905,7 @@ function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   if (S.moduleOpen) closeModule();
   hideDevice();
+  if (V) { V.cancel(); V.stopSpeaking(); endVoice(); }
   fetch("/api/chat/clear", { method: "POST" }).catch(() => {});
   S.chat = []; renderChat();
   $("#reply").classList.remove("on");

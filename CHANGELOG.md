@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-12
+- **Voice, push-to-talk** (focus step 7, `docs/voice.md`): a mic button next to "Ask anything" (hold it, or Space, and talk). The page streams the microphone to the brain (`/ws/voice`), the brain hears it while you talk (Gemini's `gemini-3.5-transcribe-live` on the free key), asks the same conversation as typing, and speaks the answer sentence by sentence (`gemini-3.8-flash-lite-tts`); the core follows `listening` / `thinking` / `speaking` and the real loudness. Voice setups in `config/models.yaml` → `voices:` (`main` OpenAI → `backup` Gemini), picked by the persona's `voice:` (both personas: `main`). No secure page, no microphone or no voice at the brain: no mic button. `/api/status` has `voice`; `in_use` has `"voice"` until the last spoken word; voice lines in the spend log.
+
 ## 2026-11-11
 - `FEATURES.md`: a list of the features built so far, with their status, plus lab projects not connected to lab-os (xArm + Bluetooth glove, Raspbot voice control, the xArm camera demos).
 

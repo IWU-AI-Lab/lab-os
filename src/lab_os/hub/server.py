@@ -28,6 +28,7 @@ GET /api/chat            the conversation so far and the chat's status
 POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/protocol.md)
 POST /api/chat/clear     put the conversation aside (the hub's reset; kept chat_keep_minutes)
 POST /api/chat/restore   bring back the conversation put aside
+GET /ws/voice            voice: the page's microphone in, spoken answers out (hub/voice.py)
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
@@ -50,10 +51,12 @@ from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
+from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
+from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
@@ -96,6 +99,7 @@ class Brain:
     chat: Conversation
     persona: Callable[[], Persona]  # the chosen persona, re-read each time (edit + reload)
     project: ProjectTools  # the read tools' device list, docs, git (shared with the MCP server)
+    voice: VoiceDesk
     check_ai: bool = False  # check the AI service in the background (off in tests)
 
 
@@ -125,7 +129,8 @@ def reset_after_s(theme: dict, venue: Venue) -> float:
 
 def in_use(app: web.Application) -> list[str]:
     """What's in use right now; the hub never goes back to the start screen while this isn't
-    empty: teleop has the arm, the AI tools are moving it. Later: a voice turn runs."""
+    empty: teleop has the arm, the AI tools are moving it, an answer streams, a voice turn runs
+    (from the press until the last spoken word)."""
     used = []
     if app[CONTROL].get("ws") is not None:
         used.append("teleop")
@@ -133,6 +138,8 @@ def in_use(app: web.Application) -> list[str]:
         used.append("ai")
     if app[BRAIN].chat.busy:
         used.append("chat")
+    if app[BRAIN].voice.active():
+        used.append("voice")
     return used
 
 
@@ -260,6 +267,7 @@ async def api_status(request: web.Request) -> web.Response:
             "persona": brain.persona().public(),
             "internet": brain.internet.online if brain.internet else None,  # None = not known
             "ai": brain.chat.status(),
+            "voice": brain.voice.status(),
             "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
             "arm": {
                 "name": loop.arm.name,
@@ -380,6 +388,12 @@ async def api_hub(request: web.Request) -> web.Response:
     )
 
 
+def _opening(chat: Conversation) -> str:
+    """The greeting the conversation started with (the start press), for the spoken greeting."""
+    first = chat.messages[0] if chat.messages else None
+    return first["content"] if first and first["role"] == "assistant" else ""
+
+
 def _greeting(brain: Brain) -> dict:
     line = brain.persona().lines.get("greeting", "")
     return greeting(line, brain.focus_file, brain.repo, list(brain.place.calendar))
@@ -429,6 +443,10 @@ async def api_chat_restore(request: web.Request) -> web.Response:
     return web.json_response({"ok": ok, "messages": chat.messages, "previous": chat.previous()})
 
 
+async def api_voice_ws(request: web.Request) -> web.WebSocketResponse:
+    return await voice_ws(request, request.app[BRAIN].voice)
+
+
 async def api_spend(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
     if brain.venue.public:
@@ -450,6 +468,7 @@ async def _ai_task(app: web.Application):
     if task:
         task.cancel()
     await brain.chat.close()
+    await brain.voice.close()
 
 
 async def _internet_task(app: web.Application):
@@ -493,12 +512,13 @@ def create_brain_app(
     local_control_only: bool = False,
     recorder: Recorder | None = None,
     drive_from: frozenset[str] = frozenset(),
+    voices: Callable[[], dict[str, VoiceSetup]] | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml. `local_control_only`: only pages on this
     computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
-    input (`lab-os serve --record`)"""
+    input (`lab-os serve --record`). `voices`: the voice setups (default: models.yaml's)."""
     app = create_app(
         loop,
         recorder,
@@ -524,8 +544,16 @@ def create_brain_app(
         tools=ChatTools(server),
         store=_chat_store(place),
     )
+    voice = VoiceDesk(
+        chat,
+        assistant,
+        persona,
+        internet=lambda: internet.online if internet else None,
+        voices=voices or load_voices,
+        greeting=lambda: _opening(chat),
+    )
     app[BRAIN] = Brain(
-        place, venue, internet, assistant, focus_file, repo, chat, persona, project, check_ai
+        place, venue, internet, assistant, focus_file, repo, chat, persona, project, voice, check_ai
     )
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
@@ -554,6 +582,7 @@ def create_brain_app(
     app.router.add_post("/api/chat/clear", api_chat_clear)
     app.router.add_post("/api/chat/restore", api_chat_restore)
     app.router.add_get("/api/spend", api_spend)
+    app.router.add_get("/ws/voice", api_voice_ws)
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)

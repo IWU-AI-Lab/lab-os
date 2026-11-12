@@ -1,0 +1,38 @@
+# Voice: talk to the hub
+
+The hub's assistant hears and answers aloud (focus step 7). **Typing never changes:** where voice can't work, there's simply no mic button.
+
+## Try it (push-to-talk)
+1. A key in `.env` in the repo's top folder: `GEMINI_API_KEY=…` is enough (the free key). Restart the brain after editing `.env`.
+2. `uv run lab-os serve`, open **http://localhost:8080/** (or `/design`) **on the brain's own computer**, start the hub.
+3. A **mic button** appears next to "Ask anything". **Hold it (or hold Space) and talk; let go.** Your words appear above the answer while you talk; the answer streams in under the core and is spoken. The core shows `listening` while you hold, then `thinking`, then `speaking`, moving with the real loudness of the voice.
+4. Esc while it listens: nothing is asked. Esc (or holding the mic again) while it speaks: it stops talking.
+
+The first press asks the browser for the microphone; allow it once. The microphone stays open for a minute after the last press (so the next question's first word isn't lost), then the browser's recording sign goes away.
+
+**No mic button?** It shows only when all of these are true; hover the place where it would be, or see `voice` in `/api/status` for the brain's reason:
+- the page is **secure**: `http://localhost` or `https://`. From another computer by the brain's IP address (`http://192.168…`), browsers refuse the microphone (`current-focus.md` → "Secure pages" for the ways around it);
+- the browser lists a **microphone** (it reacts to plugging and unplugging);
+- the brain has **voice**: the persona's `voice:` isn't `none`, a voice setup has its key, there's internet, and the chat isn't paused (no key, budget used up).
+
+## How it works
+- **The page records and plays; the brain hears, thinks and speaks** (`/ws/voice`, `docs/protocol.md` → "Voice"). API keys never leave the brain.
+- The page sends the microphone as 16 kHz audio while the mic is held (with the browser's echo cancellation, so the speakers stay out of it). The brain passes it to the voice service, which **hears while you talk**: the words come back as they're recognized.
+- On release, the words go into **the same conversation as typing**: the persona, the read tools, the history, the spend cap, the assistant's states. Spoken questions show up in History like typed ones.
+- The answer is spoken **sentence by sentence**: the first sentence as soon as it's written, the rest while that one plays. A drafted prompt ("Prompt: …") isn't read out ("The prompt is on the screen."), links neither; after about 900 characters it says "The rest is on the screen."
+- If the voice service fails (e.g. the free key's limit), the answer stays on the screen and a short note says why.
+
+## Voice setups (`config/models.yaml` → `voices:`)
+Like the chat's setups: the persona picks one by name (`voice: main` in `config/personas/<id>.yaml`; `none` = no voice), `fallback` is used when a setup's key is missing, and switching is a config edit.
+| Setup | Service | Hears | Speaks | Key |
+|---|---|---|---|---|
+| `main` | OpenAI | `gpt-4o-mini-transcribe` (after the release) | `gpt-4o-mini-tts`, voice `onyx` | `OPENAI_API_KEY` |
+| `backup` | Gemini, free key | `gemini-3.5-transcribe-live` (while you talk) | `gemini-3.8-flash-lite-tts`, voice `Charon` | `GEMINI_API_KEY` |
+
+- `main` falls back to `backup` while there's no OpenAI key, so today the free Gemini key does everything. When the professor's OpenAI key is in `.env`, `main` is used: no code change.
+- `speaker` is the service's voice name. Gemini: `Charon`, `Kore`, `Puck`, `Fenrir`, `Aoede`, …; OpenAI: `onyx`, `alloy`, `nova`, ….
+- `price_per_min` (`heard`, `spoken`) feeds the spend log: each voice turn adds lines with `kind: voice`, the seconds heard and spoken, and the cost. The free key costs $0, but Google may use the audio to improve its products, and it has limits per minute and per day.
+- **Timing on the free key** (2026-11-12): the words are final ~0.4 s after you let go; the chat's answer takes 3–11 s (`gemini-3.5-flash-lite`, GOTCHAS); speaking a sentence ~2–3 s. The paid OpenAI chat is usually faster.
+
+## Privacy
+Voice goes to the voice service only while the mic is held. Questions asked by voice are kept like typed ones (`docs/chat.md` → "Kept for a while"). On a public screen, anyone can hold the mic.

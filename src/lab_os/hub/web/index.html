@@ -37,6 +37,8 @@
     <!-- ask from the core: type here (or anywhere on the hub); the answer appears under it -->
     <div id="ask-btn" class="panel">
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
+      <!-- voice (step 7): hold to talk; only where this screen has a microphone and voice works -->
+      <button id="mic" class="mic" type="button" hidden title="Hold to talk (or hold Space)">Talk</button>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation">History <b id="chat-n"></b></button>
     </div>
     <!-- a reset or a restart keeps the last conversation for a while (place.yaml chat_keep_minutes) -->
@@ -88,7 +90,7 @@
     <div class="tab">Conversation</div>
   </div>
   <div id="log-chat" aria-live="polite"></div>
-  <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"></form>
+  <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"><button class="mic" type="button" hidden title="Hold to talk (or hold Space)">Talk</button></form>
 </section>
 <!-- while a module is open, the assistant's picture sits here (the core never disappears) -->
 <div id="orb-dock" data-state="offline" aria-hidden="true"></div>
