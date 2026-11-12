@@ -1947,7 +1947,8 @@ function typewriter(render) {
 // one way in for questions, from the chat page or from the core (typed), or spoken (voice, below): a turn
 // shows the question, then the answer as it streams in
 let replyTimer = null;
-function beginTurn(q, fromCore) {
+// voiced: a spoken answer. Its text appears as it's said (the pieces' "playing"), not as it's written.
+function beginTurn(q, fromCore, voiced = false) {
   S.asking = true;
   S.chat.push({ role: "user", content: q });
   renderChat();
@@ -1955,20 +1956,22 @@ function beginTurn(q, fromCore) {
   if (fromCore) { clearTimeout(replyTimer); r.querySelector(".q").textContent = q; a.innerHTML = ""; r.classList.add("on"); }
   setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
   let live = null;  // the answer's bubble in the conversation
-  const typer = typewriter((text, typing) => {
+  const show = (text, typing) => {
     if (!live) return;  // no answer came (an error)
     live.innerHTML = richText(text); live.classList.toggle("typing", typing); $("#log-chat").scrollTop = 1e9;
     if (fromCore) { a.innerHTML = richText(text); a.classList.toggle("typing", typing); a.scrollTop = 1e9; }
-  });
+  };
+  const typer = voiced ? null : typewriter(show);
+  const pacer = voiced ? VM.revealPacer(() => answer.content.length, (n, typing) => show(answer.content.slice(0, n), typing)) : null;
   const onEvent = (ev) => {
-    if (ev.type === "state") { if (!(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out
+    if (ev.type === "state") { if (!voiced && !(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out; spoken: the voice decides
     else if (ev.type === "tool") {
       if (!answer.content && fromCore) a.innerHTML = `<span class="look">Looking up ${esc(TOOL_WORDS[ev.name] || ev.name)}…</span>`;
       if (traces.length) pulseTrace(traces[Math.floor(Math.random() * traces.length)], true, 320);
     } else if (ev.type === "text") {
-      if (!answer.content) { S.chat.push(answer); live = addMsg(false); setState("speaking"); }
+      if (!answer.content) { S.chat.push(answer); live = addMsg(false); if (!voiced) setState("speaking"); }
       answer.content += ev.text;
-      typer.add(ev.text);
+      typer?.add(ev.text);
     } else if (ev.type === "error") {
       S.chat.push({ role: "error", content: ev.message });
       showError(ev.message);
@@ -1976,8 +1979,8 @@ function beginTurn(q, fromCore) {
   };
   // voiced: the answer is also spoken, so the turn lasts until its last word has played (endVoice)
   async function end(voiced) {
-    typer.end();
-    if (live) await typer.finished;
+    if (pacer) await pacer.finished;  // all said (or the voice failed: then shown at once)
+    else { typer.end(); if (live) await typer.finished; }
     renderChat();
     if (!voiced) {
       S.asking = false;
@@ -1987,7 +1990,7 @@ function beginTurn(q, fromCore) {
     S.lastInput = performance.now();
     getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
   }
-  return { onEvent, end };
+  return { onEvent, end, pace: (chars, ms) => pacer?.pace(chars, ms), free: () => pacer?.free() };
 }
 async function ask(q, fromCore) {
   q = (q || "").trim();
@@ -2017,7 +2020,9 @@ async function ask(q, fromCore) {
    web/voice.js records and plays; the brain hears, thinks (the same conversation as typing) and speaks. No
    secure page, no microphone or no voice at the brain: no mic button, typing unchanged. */
 let V = null, VM = null;  // the voice (loaded below) and its module
-const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: false };
+const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: false, shown: null, freeTimer: 0 };
+// the spoken answer's text: shown as it's said; all of it once the voice is done (or never came)
+function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = null; }
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
 const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This screen)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
@@ -2088,6 +2093,7 @@ function talkEnd() {
   setState("thinking");
 }
 function endVoice() {
+  freeText();
   VS.voiced = false; VS.turn = null; S.asking = false; S.voiceLoud = 0; micOn(false);
   $("#reply .q").classList.remove("heard");
   if (S.state === "listening" || S.state === "thinking" || S.state === "speaking") setState("idle");
@@ -2154,18 +2160,26 @@ function onVoiceEvent(ev) {
     if (!ev.final) return;
     if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
     $("#reply .q").classList.remove("heard");
-    VS.turn = beginTurn(ev.text, VS.fromCore);
+    VS.turn = VS.shown = beginTurn(ev.text, VS.fromCore, true);
   } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
     VS.turn.onEvent(ev);
-    if (ev.type === "done" || ev.type === "error") { const t = VS.turn; VS.turn = null; t.end(true); }
+    if (ev.type === "done" || ev.type === "error") {
+      const t = VS.turn; VS.turn = null; t.end(true);
+      if (ev.type === "error") freeText();
+      else VS.freeTimer = setTimeout(freeText, 15_000);  // no voice after all: show it anyway
+    }
   } else if (ev.type === "error" || ev.type === "mic_error") {
     if (VS.voiced) endVoice();
     errBox(ev.type === "mic_error" ? "Can't listen" : "No answer", ev.message);
     S.errorUntil = performance.now() + 9000; setState("error");
-  } else if (ev.type === "voice_error") voiceNote(ev.message);
-  else if (ev.type === "audio" && VS.voiced && S.state !== "speaking") setState("speaking");
+  } else if (ev.type === "voice_error") { voiceNote(ev.message); freeText(); }
+  else if (ev.type === "playing" && VS.shown) {
+    clearTimeout(VS.freeTimer);
+    VS.shown.pace(ev.text.length, ev.duration * 1000);
+    if (S.state !== "speaking") setState("speaking");
+  }
   else if (ev.type === "played" && VS.greeting) { VS.greeting = false; if (S.state === "speaking" && !S.asking) setState("idle"); }
-  else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) endVoice();
+  else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) { freeText(); endVoice(); }
 }
 import("/web/voice.js").then((m) => {
   VM = m;

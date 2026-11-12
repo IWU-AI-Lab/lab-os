@@ -27,6 +27,8 @@ VOICE_FIELDS = {
     "hear",
     "speak",
     "speaker",
+    "style",
+    "speed",
     "key_env",
     "price_per_min",
     "fallback",
@@ -47,6 +49,8 @@ class VoiceSetup:
     price_spoken: float = 0.0  # ... per minute of audio spoken
     fallback: str | None = None
     speak_more: tuple[str, ...] = ()  # more TTS models, tried when one is over its limit
+    style: str = ""  # how to speak (accent, mood), sent with each request (OpenAI's `instructions`)
+    speed: float | None = None  # OpenAI: 0.25–4 (1 = normal)
 
     @property
     def speak_models(self) -> tuple[str, ...]:
@@ -94,6 +98,8 @@ def load_voices(path: Path | None = None) -> dict[str, VoiceSetup]:
             hear=str(spec["hear"]),
             speak=str(speak[0]),
             speak_more=tuple(str(m) for m in speak[1:]),
+            style=" ".join(str(spec.get("style") or "").split()),
+            speed=float(spec["speed"]) if spec.get("speed") else None,
             speaker=str(spec.get("speaker") or ""),
             key_env=None if key_env in (None, "none", "") else str(key_env),
             where=str(spec.get("where", "")),
