@@ -29,5 +29,5 @@ Remote sessions (from home, Remote Control, any off-site connection) = **no moti
 ## Drones
 Excluded from AI, voice and visitor control.
 
-## Arms that aren't ours
-`so101-green` belongs to the SO-101 training project, not to lab-os: lab-os never opens its ports and never recalibrates it (see `CLAUDE.md`; the one exception, starting LeLab after a port check: `docs/green-launcher.md`).
+## The green arms (the training set)
+`so101-green` is the builder's training set. Since 2026-11-12 lab-os may drive it like `so101-white` (once focus step 11 is built), with four rules (`CLAUDE.md`): never change its motor IDs or firmware, its calibration is read-only, never touch the `lerobot` conda env, and never open a port that LeLab or a training run is using. Same safety as every arm: ask before it moves, STOP from every screen.

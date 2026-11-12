@@ -2,7 +2,7 @@
 
 The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. It comes in two looks:
 - **plain** (`/plain`, and `/` by default): simple on purpose, the same parts and names as the approved concept without its looks;
-- **designed** (`/design`): the approved concept (`docs/design/hub-concept.html`) made real, the reveal (`current-focus.md` step 10), previewed since 2026-11-10. Below: "The designed hub".
+- **designed** (`/design`): the approved concept (`docs/design/hub-concept.html`) made real (`current-focus.md` step 10), since 2026-11-10; the one demoed (the plain hub stays the default at `/`). Below: "The designed hub".
 
 `hub.look` in `config/theme.yaml` (`plain` or `design`) picks which one `/` shows; flip it when the design should be what everyone sees.
 

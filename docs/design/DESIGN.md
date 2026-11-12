@@ -210,7 +210,7 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 | `hud_elements_cyberpunk_2.jpg` | Text panels: title tab, chevrons, dot rows, soft neon glow on outlines with readable text inside. |
 
 ## Building the real hub
-When the hub is implemented (focus step 10, the reveal, in one sitting; until then the pages stay plain), **this design is the spec**: `hub-concept.html` shows how it should look, move and sound, this page says why, and `config/theme.yaml` holds the numbers. Open the concept next to the real page and compare them side by side.
+For the designed hub (`/design`, built since 2026-11-10) and every new page (no longer a surprise, 2026-11-12), **this design is the spec**: `hub-concept.html` shows how it should look, move and sound, this page says why, and `config/theme.yaml` holds the numbers. Open the concept next to the real page and compare them side by side.
 - **Take from the concept:** the layout, every animation and its timing, the sounds (WebAudio recipes in its `SFX` object), the startup (unlock, hyperspace, assembly, checks, greeting), the callouts and their details pages, the device panel, the ask line under the core, the module pages and the docked core. Lift code where it fits; it's one file, written to be read.
 - **Don't take:** the concept controls (`#dock`), the fake data (canned answers, `ANSWERS`, the example computers, `GREET_EXAMPLES`, the simulated arm), and the Google Fonts link. The real pages work offline: fonts are bundled (see `font.bundled` in the theme) and vendored like the three.js copy in `src/lab_os/web/vendor/`.
 - **Read every number from the theme** (`/theme.json`), not from constants in the page. The concept hard-codes them; where a token exists, the token wins.

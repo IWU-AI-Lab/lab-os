@@ -13,10 +13,10 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 4. Part 7, teleop 1:1 on the real arm.
 5. Voice prep: plug in the microphone, check Ubuntu Settings → Sound → Input shows it and the level moves when you talk; check the speakers too.
 6. Part 1's `/perf` on the desktop's monitor (the demo screen for now), then the Newline (part 2) if there's time.
-7. Part 4, the white cameras, only if the builder has OK'd the camera block change (`current-focus.md` → "Step 3, concretely"); they need the green cameras' sockets.
+7. Part 4, the white cameras: list their socket names (they go in the green cameras' sockets). lab-os uses them only once step 11 removes the camera-model block (decision 2026-11-12).
 8. Put the green arms and cameras back as they were.
 
-**Never:** the green arm's ports (`…5B41531599`, `…5B41533501`), its calibration, the `lerobot` conda env, the training cameras. The brain refuses them; leave them unplugged or alone either way.
+**Never:** change the green arms' motor IDs or firmware, write their calibration, touch the `lerobot` conda env, or open a green port while LeLab is using it (CLAUDE.md, loosened 2026-11-12). Until step 11 is built, the brain still refuses the green ports and the training cameras.
 
 ## 0. Get the latest (2 min)
 ```bash

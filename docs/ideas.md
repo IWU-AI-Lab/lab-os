@@ -37,9 +37,15 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-12)
 
+### Our own recording and training page (instead of LeLab)
+- **What:** a lab-os page for recording demonstrations and starting training runs on the SO-101s: all cameras shown at once, episodes listed, start/stop recording, a training run's progress, through LeRobot (the `so101` extra) without its separate web app.
+- **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera.
+- **Watch out:** recording uses the same ports and cameras as lab-os's own control (one program per port); training uses the shared GPU; never touches the `lerobot` conda env.
+- **Plugs into:** a hub module, the robot slot, the green launcher (could replace it).
+
 ### Two arms at once
 - **What:** drive two arms at the same time: in the Quest, the left controller (or hand) drives one arm and the right the other; on the desktop, perhaps one arm on the keyboard and one on the mouse, or a quick switch between them. Two-handed tasks become possible (pass a block from one arm to the other).
-- **Which arms:** `so101-white` + an xArm, or both xArms. The green arms are only for the training project (CLAUDE.md), so not through lab-os unless that rule changes.
+- **Which arms:** both SO-101 followers (`so101-white` + `so101-green`, the builder's choice 2026-11-12, once step 11 makes the greens drivable); xArms also possible.
 - **Watch out:** today each hand has a job (left pinch = clutch for the right hand, right pinch = gripper), so two-arm control needs its own controls; the 3D scene shows both arms; the brain desktop's USB sockets are full (an arm on another computer: "Robots report in" above); STOP stops both.
 - **Plugs into:** teleop (one session, two arms), the Quest scene, the robot slot.
 
@@ -133,7 +139,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Projects module
 - **What:** an expandable list of the lab's active and past projects: name, people, devices it uses, status (active / paused / done), maybe a link to its repo or docs.
-- **Why:** shows what the lab is doing; explains to visitors and the next student why a device is "locked" (today: the green SO-101 + training cameras → the SO-101 training project).
+- **Why:** shows what the lab is doing; explains to visitors and the next student why a device is "locked" (e.g. the green SO-101 + training cameras while a training run uses them).
 - **Idea for later:** devices get locked *by* a project entry (`config/projects.yaml`) instead of a separate flag.
 - **Plugs into:** a hub module (button); the device card ("Used by: SO-101 training"). Different from the hub's "Current Project" panel, which shows lab-os's own focus.
 - **Open questions:** who edits the list (a config file, or a form in the hub)? People's names are fine internally, but check before showing it to visitors.
@@ -160,9 +166,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
-- **Started 2026-11-09 on `so101-white`** (`current-focus.md` steps 2–3: MCP robot tools, Fable 5.2 in Claude Code, blind first, then the white arm's cameras). The green arm stays this entry's future goal.
-- **What:** bring `so101-green` and its cameras into lab-os later, e.g. to test general AI models that see and reason (LLMs/VLMs, like the "look, then reach" route) driving the arm, compared with the trained VLA (SmolVLA).
-- **Status:** future goal. **The hard rules stay unchanged** (CLAUDE.md, `config/devices.yaml`: never open its ports) until this integration is planned as a focus.
+- **In the focus since 2026-11-12:** the green arms become drivable in lab-os (step 11). What stays here: comparing general AI models that see and reason (LLMs/VLMs, the "look, then reach" route) with the trained VLA (SmolVLA, first round done 2026-11) on the same tasks, through the call logs.
+- **Also to try:** **Physical Intelligence's API** (their π robot models; waitlist opened 2026-11, the builder heard), Gemini Robotics-ER 2, and more VLA training rounds.
 - **Plugs into:** robots slot (SO-101 driver exists for so101-white); cameras/vision; AI models; the projects module (the device moves from "locked" to shared).
 
 ## Recent ideas (2026-10-30)
@@ -191,7 +196,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** each device plug-in declares what extra readings it offers; the troubleshooting suite, startup status and HUD read them. Safety: reading sensors is fine; anything that powers or moves stays under the safety rules.
 
 ### Startup sequence ("systems coming online")
-- **In the focus now (2026-10-30):** the startup *animation* itself (designed; built in `current-focus.md` step 10, the reveal, with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
+- **In the focus now (2026-10-30):** the startup *animation* itself (designed; built at `/design` (`current-focus.md` step 10), with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
 - **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
 - **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
