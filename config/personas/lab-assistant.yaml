@@ -5,7 +5,7 @@ display_name: "Lab Assistant" # show name (on screen)
 personality: lab-assistant.md # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml)
 voice: main                   # voice setup (models.yaml → voices); none = no voice
-wake_word: none               # later
+wake_word: hey_jarvis         # the wake word (docs/voice.md); none = no wake word
 picture: { type: orb, style: plain, color: primary }
 lines:                        # things it says
   greeting: "Everything is running. Ask me anything about the lab."  # when there's no news

@@ -120,6 +120,10 @@ body[data-layout="panels"] #hub {
 .fact { display: flex; align-items: center; gap: 0.45rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text); }
 .fact .ico { color: var(--c); font-size: 0.9rem; }
 .fact.off, .fact.off .ico { color: var(--offline); }
+/* listening for the wake word: a small dot, separate from the core's own `listening` */
+#f-wake[hidden] { display: none; }
+#f-wake .wdot { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--c); opacity: 0.5; animation: wdot 4s ease-in-out infinite; }
+@keyframes wdot { 50% { opacity: 0.15; } }
 .clock { font-family: var(--f-digits); font-size: 1.05rem; color: var(--c); letter-spacing: 0.04em; }
 .ampm { font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.12em; color: var(--c); margin-left: 0.3rem; }
 
@@ -738,6 +742,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
     <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>checking</span></div>
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
+    <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">listening for the wake word</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
       <button class="tool" id="fs-btn" type="button" title="Full screen" aria-label="Full screen" hidden><svg class="ico"><use href="#i-full"/></svg></button>
@@ -2019,16 +2024,52 @@ const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Setti
 // after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
 function spokenGreeting() {
   if (!V || !S.sound || !S.greet) return;
-  VS.greeting = V.greet(V.can().ok ? WAY() : "none");
+  const way = WAY() === "wake_word" && !S.status?.voice?.wake?.available ? "push_to_talk" : WAY();
+  VS.greeting = V.greet(V.can().ok ? way : "none");
+}
+
+/* the wake word: on screens that chose it (Settings → This screen), while the hub is up and awake (not asleep,
+   no module open, the tab in front). The brain listens for the phrase; the dot in the strip says so. After the
+   phrase the core listens like a push-to-talk press, and the question ends after a short silence. */
+let VW = null;  // the silence watch of a question after the wake word
+let wakeNoted = null;
+function syncWake() {
+  if (!V) return;
+  const w = S.status?.voice?.wake;
+  const want = WAY() === "wake_word" && V.can().ok && !!w?.available && S.booted && !S.sleeping && !S.moduleOpen && document.visibilityState === "visible";
+  V.wake(want);
+  if (WAY() === "wake_word" && w && !w.available && w.why !== wakeNoted && S.booted) { wakeNoted = w.why; voiceNote(w.why); }
+  renderWakeDot();
+}
+function renderWakeDot() {
+  const on = !!V?.wakeOn, f = $("#f-wake");
+  f.hidden = !on;
+  if (on) f.title = `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
+}
+function wakeTurnStart() {
+  VS.greeting = false;
+  if (S.asking && !VS.voiced) { V.cancel(); return; }  // a typed question is being answered
+  if (VS.voiced && !VS.turn) endVoice();
+  S.asking = true; VS.fromCore = true; VS.voiced = true; VS.heard = "";
+  clearTimeout(replyTimer);
+  const r = $("#reply");
+  r.querySelector(".q").textContent = "Listening…"; r.querySelector(".q").classList.add("heard"); r.querySelector(".a").innerHTML = ""; r.classList.add("on");
+  setState("listening");
+  VW = VM.silenceWatch((spoke) => {
+    VW = null;
+    if (spoke) { V.finish(); setState("thinking"); }
+    else { V.cancel(); r.querySelector(".q").textContent = "I didn't hear a question."; endVoice(); }
+  }, { quietMs: 1500, idleMs: 6000, maxMs: 20_000 });
 }
 function renderMic() {
-  const ok = !!V?.can().ok, dict = WAY() === "dictation";
-  const title = dict ? "Tap to dictate (or tap Space): the words go into the ask line" : "Hold to talk (or hold Space)";
+  const ok = !!V?.can().ok, dict = WAY() === "dictation", phrase = S.status?.voice?.wake?.phrase;
+  const title = dict ? "Tap to dictate (or tap Space): the words go into the ask line"
+    : WAY() === "wake_word" && phrase ? `Hold to talk (or hold Space), or say "${phrase}"` : "Hold to talk (or hold Space)";
   document.querySelectorAll(".mic").forEach((b) => { b.hidden = !ok; b.title = title; b.setAttribute("aria-label", dict ? "Dictate" : "Hold to talk"); });
 }
 function micOn(on) { document.querySelectorAll(".mic").forEach((b) => b.classList.toggle("on", on)); }
 async function talkStart(fromCore) {
-  if (!V || V.pressed) return;
+  if (!V || V.pressed || V.wakeTurn) return;
   V.unlock();
   VS.greeting = false;
   if (VS.voiced && !VS.turn) { V.stopSpeaking(); endVoice(); }  // talking over the last answer cuts it short
@@ -2102,6 +2143,11 @@ function onVoiceEvent(ev) {
     return;
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
+  if (ev.type === "wake") { wakeTurnStart(); return; }
+  if (ev.type === "wake_on" || ev.type === "wake_off") { renderWakeDot(); if (ev.type === "wake_off" && WAY() === "wake_word") voiceNote(ev.why); return; }
+  if (ev.type === "wake_elsewhere") return;  // another screen heard it better and answers
+  if (ev.type === "heard" && !ev.final) VW?.words();
+  if ((ev.type === "error" || ev.type === "mic_error") && VW) { VW.cancel(); VW = null; }
   if (ev.type === "heard") {
     VS.heard = ev.text;
     if (VS.fromCore && !VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
@@ -2124,7 +2170,7 @@ function onVoiceEvent(ev) {
 import("/web/voice.js").then((m) => {
   VM = m;
   V = m.createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), onLevel: (l) => {
-    S.micLevel = l; dictateLevel(l);
+    S.micLevel = l; dictateLevel(l); VW?.level(l);
     if (V?.pressed) document.querySelectorAll(".mic").forEach((b) => b.style.setProperty("--lvl", Math.min(1, l * 8).toFixed(2)));
   } });
   if (S.status) V.setStatus(S.status.voice);
@@ -2684,7 +2730,7 @@ addEventListener("keydown", (e) => {
   if ($("#ignite")) { e.preventDefault(); ignite(); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
   if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
-  if (e.key === "Escape" && V && (V.pressed || V.speaking())) { if (V.pressed) { V.cancel(); endVoice(); } else V.stopSpeaking(); return; }
+  if (e.key === "Escape" && V && (V.pressed || V.wakeTurn || V.speaking())) { if (V.pressed || V.wakeTurn) { VW?.cancel(); VW = null; V.cancel(); endVoice(); } else V.stopSpeaking(); return; }
   // hold Space to talk (where there's a mic button), unless you're typing something
   const ae = document.activeElement, emptyLine = (ae.id === "quick" || ae.id === "ask") && !ae.value;
   if (e.code === "Space" && S.booted && !S.moduleOpen && V?.can().ok && (emptyLine || !/INPUT|SELECT|TEXTAREA|BUTTON/.test(ae.tagName))) {
@@ -2701,6 +2747,7 @@ addEventListener("keydown", (e) => {
   }
 });
 addEventListener("keyup", (e) => { if (e.code === "Space" && V?.pressed && !VD) { e.preventDefault(); talkEnd(); } });
+document.addEventListener("visibilitychange", () => syncWake());
 addEventListener("blur", () => { if (V?.pressed && !VD) talkEnd(); });  // the window lost the key's release
 function onPointer(e) {
   pointer.x = e.clientX; pointer.y = e.clientY;
@@ -2804,6 +2851,7 @@ async function reapply() {
     setModules(t?.hub?.modules, hub.modules || []);
   }
   renderMic();  // the way in may have changed
+  syncWake();
   pollStatus();
 }
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
@@ -2833,6 +2881,7 @@ async function pollStatus() {
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
   if (performance.now() > S.noteUntil) showNote(st.ai.paused);
   V?.setStatus(st.voice);
+  syncWake();
   if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {
     // the brain's error is a standing one (e.g. a refused key), not an unanswered question
     if (st.assistant.state === "error") errBox("AI not connected", st.ai.problem);
@@ -2973,7 +3022,7 @@ function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   if (S.moduleOpen) closeModule();
   hideDevice();
-  if (V) { dictateCancel(); V.cancel(); V.stopSpeaking(); endVoice(); VS.greeting = false; }
+  if (V) { dictateCancel(); VW?.cancel(); VW = null; V.cancel(); V.stopSpeaking(); endVoice(); VS.greeting = false; V.wake(false); renderWakeDot(); }
   fetch("/api/chat/clear", { method: "POST" }).catch(() => {});
   S.chat = []; renderChat();
   $("#reply").classList.remove("on");

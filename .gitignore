@@ -28,6 +28,8 @@ outputs/
 *.pth
 *.safetensors
 *.onnx
+# the wake word's models (3.7 MB) are needed offline (models/openwakeword/README.md)
+!models/openwakeword/*.onnx
 wandb/
 
 # Claude Code (per-machine)

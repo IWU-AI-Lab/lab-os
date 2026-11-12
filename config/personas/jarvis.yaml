@@ -5,7 +5,7 @@ display_name: "J.A.R.V.I.S."
 personality: jarvis.md
 model: main
 voice: main                   # voice setup (models.yaml → voices); none = no voice
-wake_word: none               # later
+wake_word: hey_jarvis         # the wake word (docs/voice.md); none = no wake word
 picture: { type: orb, style: calm-ring, color: primary }
 lines:
   greeting: "All local systems are up."

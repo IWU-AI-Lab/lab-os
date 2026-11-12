@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 RATE = 16_000  # audio from the page: samples per second (16-bit, mono)
 CONNECT_TIMEOUT_S = 10.0
-SPEAK_TIMEOUT_S = 30.0
+SPEAK_TIMEOUT_S = 15.0  # a sentence takes 2–4 s; longer = that model is stuck (the next one tries)
 FINISH_TIMEOUT_S = 6.0  # after the release, the longest wait for the last words
 NO_SPEECH_WAIT_S = 1.5  # ... when the service hasn't noticed any speech at all
 GEMINI_LIVE_PATH = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
@@ -46,6 +46,10 @@ class OverLimit(VoiceError):
     def __init__(self, message: str, retry_s: float = 60.0):
         super().__init__(message)
         self.retry_s = retry_s
+
+
+class ModelTrouble(VoiceError):
+    """This model is busy (HTTP 5xx) or didn't answer in time: another model may."""
 
 
 def _retry_s(body: str) -> float:
@@ -93,7 +97,7 @@ def _http_error(setup: VoiceSetup, status: int, body: str) -> VoiceError:
             _retry_s(body),
         )
     if status in (500, 502, 503, 504):
-        return VoiceError(f"{who}'s voice is busy or having trouble right now (HTTP {status}).")
+        return ModelTrouble(f"{who}'s voice is busy or having trouble right now (HTTP {status}).")
     if status == 404:
         return VoiceError(f"{who} doesn't know the voice model (models.yaml → voices).")
     log.warning("%s voice: HTTP %s: %s", setup.name, status, body[:500])
@@ -331,8 +335,9 @@ async def speak_any(
 ) -> bytes:
     """Like `speak()`, trying the setup's TTS models in order: one over its limit (HTTP 429) rests
     until its retry time (`resting`: model → time.monotonic() it may be used again, kept by the
-    caller across calls). Gemini's free key allows 3 requests a minute per model (GOTCHAS)."""
-    last: OverLimit | None = None
+    caller across calls); a busy or stuck one (5xx, no answer in time) is skipped this once.
+    Gemini's free key allows 3 requests a minute and 10 a day per model (GOTCHAS)."""
+    last: VoiceError | None = None
     for model in setup.speak_models:
         if resting.get(model, 0) > time.monotonic():
             continue
@@ -341,6 +346,9 @@ async def speak_any(
         except OverLimit as e:
             log.info("%s voice: %s is over its limit for %.0f s", setup.name, model, e.retry_s)
             resting[model] = time.monotonic() + e.retry_s
+            last = e
+        except ModelTrouble as e:
+            log.info("%s voice: %s: %s", setup.name, model, e)
             last = e
     raise last or _http_error(setup, 429, "")
 
@@ -388,5 +396,7 @@ async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) ->
             return await resp.read()
     except VoiceError:
         raise
-    except (aiohttp.ClientError, TimeoutError):
+    except TimeoutError:
+        raise ModelTrouble(f"{_who(setup)}'s voice didn't answer in time.") from None
+    except aiohttp.ClientError:
         raise _unreachable(setup) from None

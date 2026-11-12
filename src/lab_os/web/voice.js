@@ -10,6 +10,9 @@
 //   v.greet(way)                the spoken greeting: asked for at the start press, held until
 //   v.playHeld()                ... the page plays it (after the jump); talking first drops it
 //   v.stopSpeaking()            cut the answer short
+//   v.wake(on)                  stream the microphone for the wake word (the brain listens for it);
+//                               on "wake", the brain hears the question: v.finish() when it's said
+//                               (silenceWatch), v.cancel() to drop it
 //
 // onEvent gets everything the brain sends (heard, state, text, tool, done, error, audio_end,
 // voice_error), plus {type: "played"} once the last word has played and {type: "mic_error",
@@ -18,8 +21,8 @@
 // onChange(): the mic button should be shown or hidden (plugging, unplugging, the brain's status).
 
 // The way in, chosen per screen (Settings → This screen, kept in this browser): push-to-talk (the
-// default) or dictation. The setting's words → the brain's names (the greeting's hint).
-export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation" };
+// default), dictation or the wake word. The setting's words → the brain's names (the greeting's hint).
+export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation", "wake word": "wake_word" };
 export function wayIn() {
   try {
     return WAYS[JSON.parse(localStorage.getItem("lab-os.screen"))?.voice] || "push_to_talk";
@@ -38,7 +41,31 @@ export async function screenCanHear() {
   } catch {
     return { ok: false, why: "the browser won't list the microphones" };
   }
+  try {
+    const p = await navigator.permissions?.query({ name: "microphone" });
+    if (p?.state === "denied") return { ok: false, why: "the browser blocks the microphone for this page (site settings)" };
+  } catch {
+    // no permission query (Firefox): the first press asks
+  }
   return { ok: true, why: null };
+}
+
+// Stop listening after a short silence once something was said, or after a while with nothing said.
+// level(l): the microphone's level (onLevel); words(): the brain heard words (counts as speech).
+export function silenceWatch(onStop, { quietMs = 1600, idleMs = 8000, maxMs = 45_000 } = {}) {
+  const t0 = performance.now();
+  let spoke = false, quietSince = t0, floor = 0.005, done = false;
+  const stop = () => { if (!done) { done = true; onStop(spoke); } };
+  return {
+    level(l) {
+      if (done) return;
+      const now = performance.now();
+      if (l > Math.max(0.02, floor * 3)) { spoke = true; quietSince = now; } else floor = floor * 0.95 + l * 0.05;
+      if ((spoke && now - quietSince > quietMs) || (!spoke && now - t0 > idleMs) || now - t0 > maxMs) stop();
+    },
+    words() { spoke = true; quietSince = performance.now(); },
+    cancel() { done = true; },
+  };
 }
 
 const MIC_KEEP_MS = 60_000; // keep the microphone open this long after the last use (no lost words)
@@ -66,6 +93,9 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     awaitingEnd: false, // audio of this turn may still come (until audio_end)
     holding: false, // the greeting: keep its audio until playHeld()
     held: [],
+    wakeWanted: false, // the page wants the wake word on (the brain may say no: wake_off)
+    wakeOn: false, // the brain listens for it
+    wakeTurn: false, // the brain heard it and hears the question
     analyser: null,
     loudTimer: 0,
     lastReport: 0,
@@ -109,6 +139,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.ws = ws;
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
+      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true })); // again after a reconnect
       for (const m of st.pending.splice(0)) ws.send(m);
     };
     ws.onmessage = (e) => {
@@ -119,6 +150,12 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
         return;
       }
       if (ev.type === "audio") play(ev);
+      else if (ev.type === "wake_on") st.wakeOn = true;
+      else if (ev.type === "wake_off") st.wakeOn = false;
+      else if (ev.type === "wake") {
+        stopSpeaking();
+        st.wakeTurn = true;
+      }
       else if (ev.type === "audio_end") {
         st.awaitingEnd = false;
         st.decoding.then(checkPlayed);
@@ -127,6 +164,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     };
     ws.onclose = () => {
       st.ws = null;
+      st.wakeOn = st.wakeTurn = false;
       if (st.pressed) {
         st.pressed = st.sending = false;
         onEvent({ type: "error", message: "Lost the connection to the brain." });
@@ -175,7 +213,9 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     });
     const node = new AudioWorkletNode(ctx, "lab-os-mic");
     node.port.onmessage = (e) => {
-      if (st.sending) send(e.data.pcm);
+      // pressed, or the wake word (not while the answer plays: its own voice shouldn't wake it)
+      const forWake = st.wakeOn && !st.playing.length && st.ws?.readyState === WebSocket.OPEN;
+      if (st.sending || forWake || st.wakeTurn) send(e.data.pcm);
       onLevel(e.data.level);
     };
     ctx.createMediaStreamSource(stream).connect(node);
@@ -224,18 +264,50 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.sending = true;
     return true;
   }
+  // the wake word: the microphone stays open while it's on (the browser shows its recording sign)
+  async function wake(on) {
+    if (on === st.wakeWanted) return true;
+    st.wakeWanted = on;
+    if (!on) {
+      st.wakeOn = false;
+      send({ type: "wake", on: false });
+      if (!st.pressed && !st.wakeTurn) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+      return true;
+    }
+    try {
+      await openMic();
+    } catch (e) {
+      st.wakeWanted = false;
+      onEvent({ type: "mic_error", message: micWhy(e) });
+      return false;
+    }
+    send({ type: "wake", on: true });
+    return true;
+  }
+  function finish() {  // the question after the wake word is said
+    if (!st.wakeTurn) return;
+    st.wakeTurn = false;
+    st.awaitingEnd = true;
+    send({ type: "end" });
+  }
+
   function release() {
     if (!st.pressed) return;
     st.pressed = st.sending = false;
     st.awaitingEnd = true;
     send({ type: "end" });
-    st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+    if (!st.wakeWanted) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
   }
   function cancel() {
+    if (st.wakeTurn) {
+      st.wakeTurn = false;
+      send({ type: "cancel" });
+      return;
+    }
     if (!st.pressed) return;
     st.pressed = st.sending = false;
     send({ type: "cancel" });
-    st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+    if (!st.wakeWanted) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
   }
 
   // ---------- playing the answer ----------
@@ -339,6 +411,14 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     playHeld,
     stopSpeaking,
     speaking,
+    wake,
+    finish,
+    get wakeOn() {
+      return st.wakeOn;
+    },
+    get wakeTurn() {
+      return st.wakeTurn;
+    },
     get pressed() {
       return st.pressed;
     },
