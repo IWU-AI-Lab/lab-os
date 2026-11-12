@@ -35,6 +35,14 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-12)
+
+### Two arms at once
+- **What:** drive two arms at the same time: in the Quest, the left controller (or hand) drives one arm and the right the other; on the desktop, perhaps one arm on the keyboard and one on the mouse, or a quick switch between them. Two-handed tasks become possible (pass a block from one arm to the other).
+- **Which arms:** `so101-white` + an xArm, or both xArms. The green arms are only for the training project (CLAUDE.md), so not through lab-os unless that rule changes.
+- **Watch out:** today each hand has a job (left pinch = clutch for the right hand, right pinch = gripper), so two-arm control needs its own controls; the 3D scene shows both arms; the brain desktop's USB sockets are full (an arm on another computer: "Robots report in" above); STOP stops both.
+- **Plugs into:** teleop (one session, two arms), the Quest scene, the robot slot.
+
 ## Recent ideas (2026-11-11)
 
 ### Demo away from the lab with the brain still in the lab (Tailscale)
