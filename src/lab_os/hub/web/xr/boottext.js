@@ -13,10 +13,11 @@ export class Title {
     this.text = "";
     this.t0 = null; // decoding started
     this.shown = "";
+    this.fade = 1; // set by the hub as it leaves
   }
   get mesh() { return this.p.mesh; }
   start(now) { this.t0 = now; }
-  reset() { this.t0 = null; this.shown = ""; this.p.opacity = 0; }
+  reset() { this.t0 = null; this.shown = ""; this.p.opacity = 0; this.fade = 1; }
   /** returns true on each new decoding frame (for the tick sound) */
   step(now) {
     if (this.t0 == null) { this.p.opacity = 0; return false; }
@@ -24,7 +25,7 @@ export class Title {
     const done = Math.floor((f / 24) * up.length);
     const frame = f >= 24 ? up : [...up].map((ch, i) => (i < done || ch === " " ? ch : GLYPHS[Math.floor(Math.random() * GLYPHS.length)])).join("");
     const k = arrive(t / 900), sp = 0.7 - 0.54 * k;
-    this.p.opacity = k;
+    this.p.opacity = k * this.fade;
     const key = `${frame}|${sp.toFixed(3)}`;
     const changed = frame !== this.shown;
     this.shown = frame;
@@ -42,14 +43,15 @@ export class Greeting {
     this.p = new CanvasPlane(w, h, 1000);
     this.text = "";
     this.t0 = null;
+    this.fade = 1;
   }
   get mesh() { return this.p.mesh; }
   start(now) { this.t0 = now; }
-  reset() { this.t0 = null; this.p.opacity = 0; }
+  reset() { this.t0 = null; this.p.opacity = 0; this.fade = 1; }
   get done() { return this.t0 != null && this.n >= this.text.length; }
   step(now) {
     if (this.t0 == null) { this.p.opacity = 0; return; }
-    this.p.opacity = 1;
+    this.p.opacity = this.fade;
     this.n = Math.min(this.text.length, Math.floor((now - this.t0) / 22));
     const cursor = this.n < this.text.length || Math.floor(now / 500) % 2 === 0;
     this.p.paint((g, w, h) => {
