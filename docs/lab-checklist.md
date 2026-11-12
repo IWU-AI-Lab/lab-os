@@ -6,6 +6,16 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 
 **New since 2026-11-11 (built away from the lab, not tried on hardware yet):** honest "arrived" (part 3), `pose_view` (part 3), the Full screen button that says why (parts 1, 2 and 6), the drawing resolution per screen (part 2), teleop's 1:1 mode (part 7). Part 0 installs one new library (Pillow, for `pose_view`).
 
+**Thursday 2026-11-12, in this order** (Fable ends Monday 2026-11-16, so the real-arm parts first; the white arm and its cameras only fit by unplugging the green ones):
+1. Part 5, the training launcher, while the green arms are still plugged in.
+2. Swap: unplug the green arms, plug in `so101-white` (and the leader for teleop).
+3. Part 3, Fable with `pose_view` and the honest "arrived", plus STOP from another screen.
+4. Part 7, teleop 1:1 on the real arm.
+5. Voice prep: plug in the microphone, check Ubuntu Settings → Sound → Input shows it and the level moves when you talk; check the speakers too.
+6. Part 1's `/perf` on the desktop's monitor (the demo screen for now), then the Newline (part 2) if there's time.
+7. Part 4, the white cameras, only if the builder has OK'd the camera block change (`current-focus.md` → "Step 3, concretely"); they need the green cameras' sockets.
+8. Put the green arms and cameras back as they were.
+
 **Never:** the green arm's ports (`…5B41531599`, `…5B41533501`), its calibration, the `lerobot` conda env, the training cameras. The brain refuses them; leave them unplugged or alone either way.
 
 ## 0. Get the latest (2 min)
