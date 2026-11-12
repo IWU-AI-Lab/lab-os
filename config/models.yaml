@@ -68,7 +68,10 @@ voices:
     base_url: https://generativelanguage.googleapis.com/v1beta
     hear: gemini-3.5-transcribe-live   # streamed: ~0.4 s after you let go (checked 2026-11-12);
     # plain gemini-3.5-flash-lite took ~10 s to transcribe the same 4 s of speech
-    speak: gemini-3.8-flash-lite-tts   # ~2 s for a sentence; answers with a WAV
+    # The free key allows only 3 speech requests a minute per model (checked 2026-11-12), so the
+    # next model takes over while one is over its limit (~12 a minute in all; an answer uses 2).
+    speak: [gemini-3.8-flash-lite-tts, gemini-3.8-flash-tts, gemini-3.1-flash-tts-preview,
+            gemini-2.5-flash-preview-tts]   # ~2–4 s for a sentence; they answer with a WAV
     speaker: Charon                    # Gemini's voices: Charon, Kore, Puck, Fenrir, Aoede, …
     key_env: GEMINI_API_KEY
     # Free tier: $0, but Google may use the audio to improve its products; limits per minute/day.

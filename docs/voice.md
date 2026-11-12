@@ -40,9 +40,10 @@ Like the chat's setups: the persona picks one by name (`voice: main` in `config/
 | Setup | Service | Hears | Speaks | Key |
 |---|---|---|---|---|
 | `main` | OpenAI | `gpt-4o-mini-transcribe` (after the release) | `gpt-4o-mini-tts`, voice `onyx` | `OPENAI_API_KEY` |
-| `backup` | Gemini, free key | `gemini-3.5-transcribe-live` (while you talk) | `gemini-3.8-flash-lite-tts`, voice `Charon` | `GEMINI_API_KEY` |
+| `backup` | Gemini, free key | `gemini-3.5-transcribe-live` (while you talk) | `gemini-3.8-flash-lite-tts` (then 3 more), voice `Charon` | `GEMINI_API_KEY` |
 
 - `main` falls back to `backup` while there's no OpenAI key, so today the free Gemini key does everything. When the professor's OpenAI key is in `.env`, `main` is used: no code change.
+- `speak` can be a list: when a model is over its limit, the next one speaks. **Gemini's free key allows only 3 speech requests a minute per model**, and an answer uses 2 (the first sentence, then the rest), the greeting 1. With the four free TTS models listed, that's ~12 a minute, about 6 spoken answers. Past that, the answer stays on the screen with a note until a model is free again (the brain waits out each model's retry time, ~1 minute).
 - `speaker` is the service's voice name. Gemini: `Charon`, `Kore`, `Puck`, `Fenrir`, `Aoede`, …; OpenAI: `onyx`, `alloy`, `nova`, ….
 - `price_per_min` (`heard`, `spoken`) feeds the spend log: each voice turn adds lines with `kind: voice`, the seconds heard and spoken, and the cost. The free key costs $0, but Google may use the audio to improve its products, and it has limits per minute and per day.
 - **Timing on the free key** (2026-11-12): the words are final ~0.4 s after you let go; the chat's answer takes 3–11 s (`gemini-3.5-flash-lite`, GOTCHAS); speaking a sentence ~2–3 s. The paid OpenAI chat is usually faster.
