@@ -32,7 +32,7 @@ HEARD = "what is the next step"
 # ---------- a fake voice service ----------
 
 
-def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None):
+def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=()):
     """Gemini's Live transcription (WebSocket) and TTS (generateContent), OpenAI's audio endpoints.
     The Live fake sends the words so far after each audio frame, and the final words after the
     audio ends, like the real one (checked 2026-11-12)."""
@@ -71,7 +71,11 @@ def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None):
 
     async def tts(request):
         body = await request.json()
-        seen.append({"tts": body, "key": request.headers.get("x-goog-api-key")})
+        model = request.match_info["model"].split(":")[0]
+        seen.append({"tts": body, "key": request.headers.get("x-goog-api-key"), "model": model})
+        if model in limited:  # like Gemini's free key after 3 requests in a minute
+            details = [{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "53s"}]
+            return web.json_response({"error": {"code": 429, "details": details}}, status=429)
         if tts_status != 200:
             return web.json_response({"error": {"message": "nope"}}, status=tts_status)
         text = body["contents"][0]["parts"][0]["text"]
@@ -256,6 +260,36 @@ async def test_tts_rate_limit_is_a_sentence(aiohttp_server, key):
     async with __import__("aiohttp").ClientSession() as session:
         with pytest.raises(VoiceError, match="free key has a limit"):
             await speak(session, gemini_setup(server), "Hello.")
+
+
+async def test_a_model_over_its_limit_hands_over_to_the_next(aiohttp_server, key):
+    import dataclasses
+    import time
+
+    from lab_os.ai.speech import speak_any
+
+    seen = []
+    server = await aiohttp_server(fake_voice(seen=seen, limited=("tts-a",)))
+    setup = dataclasses.replace(gemini_setup(server), speak="tts-a", speak_more=("tts-b",))
+    resting = {}
+    async with __import__("aiohttp").ClientSession() as session:
+        wav = await speak_any(session, setup, "Hi.", resting)
+        assert wav[:4] == b"RIFF"
+        assert [s["model"] for s in seen if "tts" in s] == ["tts-a", "tts-b"]
+        assert 50 < resting["tts-a"] - time.monotonic() <= 53  # its retry time
+        await speak_any(session, setup, "Again.", resting)  # tts-a rests: not asked again
+        assert [s["model"] for s in seen if "tts" in s] == ["tts-a", "tts-b", "tts-b"]
+        resting["tts-b"] = time.monotonic() + 60
+        with pytest.raises(VoiceError, match="free key has a limit"):
+            await speak_any(session, setup, "All resting.", resting)
+
+
+def test_speak_can_list_models():
+    assert load_voices()["backup"].speak_models[:2] == (
+        "gemini-3.8-flash-lite-tts",
+        "gemini-3.8-flash-tts",
+    )
+    assert load_voices()["main"].speak_models == ("gpt-4o-mini-tts",)
 
 
 async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):

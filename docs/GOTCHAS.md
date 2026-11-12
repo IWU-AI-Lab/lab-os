@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-12 — Gemini's free key: 3 speech requests a minute per TTS model
+**What:** making test recordings, the 3rd `gemini-3.8-flash-lite-tts` request within a minute got HTTP 429, "Generate content requests per minute limit exceeded on Free Tier", `quotaValue: 3`, `retryDelay: 53s`. A spoken answer uses 2 requests and the greeting 1, so the demo would go silent after about one question a minute. The limit is per model; there may be a daily one too (not hit yet).
+**Fix:** `speak:` in `models.yaml` lists four TTS models that work on the free key (`gemini-3.8-flash-lite-tts`, `gemini-3.8-flash-tts`, `gemini-3.1-flash-tts-preview`, `gemini-2.5-flash-preview-tts`: 2.7–4.2 s a sentence, same voices); one over its limit rests for its `retryDelay` and the next speaks (`speak_any` in `ai/speech.py`). `gemini-2.5-pro-preview-tts` had no free quota. A paid key (or OpenAI's) doesn't have this.
+
 ### 2026-11-12 — Gemini: hearing through a normal model takes ~10 s; its Live transcription model ~0.4 s
 **What:** sending 4 s of speech to `gemini-3.5-flash-lite` (`generateContent` with the audio inline, "transcribe this") took 7–10 s for the words, far over voice's 2–3 s budget. `gemini-3.1-flash-lite` and `gemini-3.8-flash` were overloaded (503) on the free key, `gemini-omni-1.2-flash` over quota (429). Gemini's OpenAI-compatible address has no `/audio/transcriptions` (404).
 **Fix:** `gemini-3.5-transcribe-live`, a transcription model on the Live API (a WebSocket, `bidiGenerateContent`; the key goes in the `x-goog-api-key` header): the words arrive while the audio streams in, and the final words ~0.4 s after the audio ends. Each pause ends a segment with its own final text, and the next segment starts fresh, so the brain joins them (`ai/speech.py`). Also: `gemini-3.8-flash-lite-tts` answers with a whole WAV (`audio/wav`), not raw samples; the code wraps raw ones only when the type says so.

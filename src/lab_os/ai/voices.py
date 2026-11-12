@@ -39,13 +39,18 @@ class VoiceSetup:
     service: str  # gemini | openai
     base_url: str
     hear: str  # the speech-to-text model
-    speak: str  # the text-to-speech model
+    speak: str  # the text-to-speech model (the first of `speak:` in models.yaml)
     speaker: str = ""  # the service's voice name (Gemini: Charon, Kore…; OpenAI: onyx, alloy…)
     key_env: str | None = None
     where: str = ""
     price_heard: float = 0.0  # US dollars per minute of audio heard
     price_spoken: float = 0.0  # ... per minute of audio spoken
     fallback: str | None = None
+    speak_more: tuple[str, ...] = ()  # more TTS models, tried when one is over its limit
+
+    @property
+    def speak_models(self) -> tuple[str, ...]:
+        return (self.speak, *self.speak_more)
 
     @property
     def key(self) -> str | None:
@@ -81,12 +86,14 @@ def load_voices(path: Path | None = None) -> dict[str, VoiceSetup]:
             continue
         price = spec.get("price_per_min") or {}
         key_env = spec.get("key_env")
+        speak = spec["speak"] if isinstance(spec["speak"], list) else [spec["speak"]]
         voices[name] = VoiceSetup(
             name=name,
             service=service,
             base_url=str(spec["base_url"]).rstrip("/"),
             hear=str(spec["hear"]),
-            speak=str(spec["speak"]),
+            speak=str(speak[0]),
+            speak_more=tuple(str(m) for m in speak[1:]),
             speaker=str(spec.get("speaker") or ""),
             key_env=None if key_env in (None, "none", "") else str(key_env),
             where=str(spec.get("where", "")),

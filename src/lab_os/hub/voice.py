@@ -25,7 +25,7 @@ from aiohttp import web
 
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
-from lab_os.ai.speech import VoiceError, hearing_for, speak, wav_seconds
+from lab_os.ai.speech import VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.personas import Persona
 
@@ -78,6 +78,7 @@ class VoiceDesk:
     voices: Callable[[], dict[str, VoiceSetup]] = load_voices
     greeting: Callable[[], str] = lambda: ""
     links: set = field(default_factory=set)
+    resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
     _session: aiohttp.ClientSession | None = None
 
     def setup(self) -> VoiceSetup:
@@ -168,7 +169,8 @@ class Speaker:
 
     async def _say(self, text: str) -> None:
         try:
-            wav = await speak(self.link.desk.session(), self.setup, text)
+            desk = self.link.desk
+            wav = await speak_any(desk.session(), self.setup, text, desk.resting)
         except VoiceError as e:
             self.stopped = True
             self.link.send({"type": "voice_error", "message": str(e)})

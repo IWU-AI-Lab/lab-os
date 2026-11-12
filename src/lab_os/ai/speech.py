@@ -12,6 +12,7 @@ Audio in is what the hub page sends: 16-bit PCM, 16 kHz, mono (`RATE`). Audio ou
 import asyncio
 import base64
 import contextlib
+import dataclasses
 import io
 import json
 import logging
@@ -36,6 +37,26 @@ GEMINI_LIVE_PATH = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.Bi
 
 class VoiceError(RuntimeError):
     """The voice service didn't do it. The message is a full sentence for the screen."""
+
+
+class OverLimit(VoiceError):
+    """The service's limit for this model is used up for now (HTTP 429): try again after
+    `retry_s` seconds, or another model."""
+
+    def __init__(self, message: str, retry_s: float = 60.0):
+        super().__init__(message)
+        self.retry_s = retry_s
+
+
+def _retry_s(body: str) -> float:
+    """Gemini's 429 says how long to wait ("retryDelay": "53s"); else a minute."""
+    try:
+        for detail in json.loads(body).get("error", {}).get("details", []):
+            if str(detail.get("retryDelay", "")).endswith("s"):
+                return float(detail["retryDelay"][:-1])
+    except (ValueError, AttributeError, TypeError):
+        pass
+    return 60.0
 
 
 def wav_bytes(pcm: bytes, rate: int = RATE) -> bytes:
@@ -66,9 +87,10 @@ def _http_error(setup: VoiceSetup, status: int, body: str) -> VoiceError:
     if status in (401, 403):
         return VoiceError(f"{who} refused the API key ({setup.key_env}), so voice is off.")
     if status == 429:
-        return VoiceError(
+        return OverLimit(
             f"{who} says we're sending too much voice (the free key has a limit per minute and "
-            "per day). The answer is on the screen."
+            "per day). The answer is on the screen.",
+            _retry_s(body),
         )
     if status in (500, 502, 503, 504):
         return VoiceError(f"{who}'s voice is busy or having trouble right now (HTTP {status}).")
@@ -304,8 +326,27 @@ def _pcm_rate(mime: str) -> int | None:
     return 24_000
 
 
+async def speak_any(
+    session: aiohttp.ClientSession, setup: VoiceSetup, text: str, resting: dict[str, float]
+) -> bytes:
+    """Like `speak()`, trying the setup's TTS models in order: one over its limit (HTTP 429) rests
+    until its retry time (`resting`: model → time.monotonic() it may be used again, kept by the
+    caller across calls). Gemini's free key allows 3 requests a minute per model (GOTCHAS)."""
+    last: OverLimit | None = None
+    for model in setup.speak_models:
+        if resting.get(model, 0) > time.monotonic():
+            continue
+        try:
+            return await speak(session, dataclasses.replace(setup, speak=model), text)
+        except OverLimit as e:
+            log.info("%s voice: %s is over its limit for %.0f s", setup.name, model, e.retry_s)
+            resting[model] = time.monotonic() + e.retry_s
+            last = e
+    raise last or _http_error(setup, 429, "")
+
+
 async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) -> bytes:
-    """`text` spoken, as a WAV file."""
+    """`text` spoken, as a WAV file (with the setup's first TTS model)."""
     timeout = aiohttp.ClientTimeout(sock_connect=CONNECT_TIMEOUT_S, total=SPEAK_TIMEOUT_S)
     try:
         if setup.service == "gemini":
