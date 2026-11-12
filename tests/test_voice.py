@@ -504,3 +504,27 @@ def test_the_hubs_speak_the_greeting():
     assert "spokenGreeting" in design and "V.playHeld()" in design
     assert "S.sound" in design.split("function spokenGreeting")[1][:200]  # this screen's sound
     assert "voice.playHeld()" in (SRC / "hub/web/hub.js").read_text()
+
+
+async def test_the_greeting_hint_follows_the_way_in(aiohttp_client, aiohttp_server, key, tmp_path):
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path)
+    conv.clear(opening="Good evening.")
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "greet", "way": "dictation"})
+    events = []
+    await until(ws, "audio_end", events)
+    said = " ".join(e["text"] for e in events if e["type"] == "audio")
+    assert said == "Good evening. You can talk to me: tap the mic."
+    await ws.close()
+
+
+def test_the_way_in_is_a_screen_setting():
+    js = (SRC / "web" / "voice.js").read_text()
+    assert '"push-to-talk": "push_to_talk", dictation: "dictation"' in js
+    assert "export function wayIn" in js and "export async function screenCanHear" in js
+    settings = (SRC / "hub/web/settings.js").read_text()
+    assert 'choices: ["push-to-talk", "dictation"]' in settings and "screenCanHear" in settings
+    for page in ("hub/web/design.html", "hub/web/hub.js"):
+        text = (SRC / page).read_text()
+        assert "dictateStart" in text and 'press("dictate")' in text, page

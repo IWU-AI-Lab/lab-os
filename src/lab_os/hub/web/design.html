@@ -2011,17 +2011,20 @@ async function ask(q, fromCore) {
 /* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation as typing) and speaks. No
    secure page, no microphone or no voice at the brain: no mic button, typing unchanged. */
-let V = null;  // the voice module (loaded below)
+let V = null, VM = null;  // the voice (loaded below) and its module
 const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: false };
+let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
+const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This screen)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
 // after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
 function spokenGreeting() {
   if (!V || !S.sound || !S.greet) return;
-  VS.greeting = V.greet(V.can().ok ? "push_to_talk" : "none");
+  VS.greeting = V.greet(V.can().ok ? WAY() : "none");
 }
 function renderMic() {
-  const ok = !!V?.can().ok;
-  document.querySelectorAll(".mic").forEach((b) => { b.hidden = !ok; });
+  const ok = !!V?.can().ok, dict = WAY() === "dictation";
+  const title = dict ? "Tap to dictate (or tap Space): the words go into the ask line" : "Hold to talk (or hold Space)";
+  document.querySelectorAll(".mic").forEach((b) => { b.hidden = !ok; b.title = title; b.setAttribute("aria-label", dict ? "Dictate" : "Hold to talk"); });
 }
 function micOn(on) { document.querySelectorAll(".mic").forEach((b) => b.classList.toggle("on", on)); }
 async function talkStart(fromCore) {
@@ -2038,7 +2041,7 @@ async function talkStart(fromCore) {
   if (!(await V.press("ask"))) { micOn(false); if (!VS.turn) endVoice(); }
 }
 function talkEnd() {
-  if (!V?.pressed) return;
+  if (!V?.pressed || VD) return;
   micOn(false);
   V.release();
   setState("thinking");
@@ -2049,8 +2052,56 @@ function endVoice() {
   if (S.state === "listening" || S.state === "thinking" || S.state === "speaking") setState("idle");
   S.lastInput = performance.now();
 }
+/* dictation: tap the mic (or Space on an empty ask line); the words go into the ask line while you talk; it stops
+   after a short silence, a second tap or Space; Enter stops and sends; Esc or any other key stops and keeps what's
+   there, to fix and send like typing. Nothing is asked by itself. */
+async function dictateStart(fromCore) {
+  if (!V || V.pressed || VD) return;
+  V.unlock(); VS.greeting = false;
+  if (V.speaking()) V.stopSpeaking();
+  const line = fromCore && S.layout === "launcher" ? $("#quick") : $("#ask"), now = performance.now();
+  VD = { line, base: line.value.trim(), started: now, spoke: false, quietSince: now, floor: 0.005, send: false, ph: line.placeholder };
+  line.placeholder = "Listening… tap the mic again to stop";
+  line.focus(); micOn(true); setState("listening");
+  if (!(await V.press("dictate"))) dictateDone();
+}
+function dictateStop(send) {  // the final words come back, then dictateDone
+  if (!VD) return;
+  if (send) VD.send = true;
+  if (V.pressed) { V.release(); micOn(false); } else dictateDone();
+}
+function dictateCancel() { if (!VD) return; if (V.pressed) V.cancel(); dictateDone(); }
+function dictateDone() {
+  const d = VD; VD = null;
+  if (!d) return;
+  micOn(false); d.line.placeholder = d.ph;
+  if (S.state === "listening" && document.activeElement !== d.line) setState("idle");
+  d.line.focus(); d.line.setSelectionRange(1e6, 1e6);
+  if (d.send && d.line.value.trim()) d.line.form.requestSubmit();
+}
+function dictateLevel(l) {  // stop after a short silence once something was said (or after nothing at all)
+  if (!VD || !V.pressed) return;
+  const now = performance.now(), thr = Math.max(0.02, VD.floor * 3);
+  if (l > thr) { VD.spoke = true; VD.quietSince = now; } else VD.floor = VD.floor * 0.95 + l * 0.05;
+  if ((VD.spoke && now - VD.quietSince > 1600) || (!VD.spoke && now - VD.started > 8000) || now - VD.started > 45_000) dictateStop(false);
+}
+addEventListener("keydown", (e) => {  // keys while dictating (before the ask line's own Esc)
+  if (!VD) return;
+  if (e.key === "Enter" || e.key === "Escape" || e.code === "Space") { e.preventDefault(); e.stopPropagation(); }
+  if (e.key === "Enter") dictateStop(true);
+  else if (e.code === "Space") dictateStop(false);
+  else if (e.key === "Escape") dictateCancel();
+  else if (e.key.length === 1 || ["Backspace", "Delete", "ArrowLeft", "ArrowRight"].includes(e.key)) dictateCancel();  // fixing it by hand
+}, true);
 function voiceNote(msg) { S.noteUntil = performance.now() + 7000; showNote(msg); }
 function onVoiceEvent(ev) {
+  if (VD && ev.type === "heard") {
+    VD.line.value = [VD.base, ev.text].filter(Boolean).join(" ");
+    if (ev.text) { VD.spoke = true; VD.quietSince = performance.now(); }
+    if (ev.final) dictateDone();
+    return;
+  }
+  if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
   if (ev.type === "heard") {
     VS.heard = ev.text;
     if (VS.fromCore && !VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
@@ -2070,15 +2121,20 @@ function onVoiceEvent(ev) {
   else if (ev.type === "played" && VS.greeting) { VS.greeting = false; if (S.state === "speaking" && !S.asking) setState("idle"); }
   else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) endVoice();
 }
-import("/web/voice.js").then(({ createVoice }) => {
-  V = createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), onLevel: (l) => {
-    S.micLevel = l;
+import("/web/voice.js").then((m) => {
+  VM = m;
+  V = m.createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), onLevel: (l) => {
+    S.micLevel = l; dictateLevel(l);
     if (V?.pressed) document.querySelectorAll(".mic").forEach((b) => b.style.setProperty("--lvl", Math.min(1, l * 8).toFixed(2)));
   } });
   if (S.status) V.setStatus(S.status.voice);
 }).catch((e) => console.warn(`hub: no voice (${e.message})`));
 document.querySelectorAll(".mic").forEach((b) => {
-  b.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); b.setPointerCapture?.(e.pointerId); talkStart(b.id === "mic"); });
+  b.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (WAY() === "dictation") { if (VD) dictateStop(false); else dictateStart(b.id === "mic"); return; }  // a tap
+    b.setPointerCapture?.(e.pointerId); talkStart(b.id === "mic");
+  });
   for (const t of ["pointerup", "pointercancel"]) b.addEventListener(t, (e) => { e.stopPropagation(); talkEnd(); });
   b.addEventListener("click", (e) => e.stopPropagation());
   b.addEventListener("contextmenu", (e) => e.preventDefault());  // a long press on a touch screen
@@ -2633,7 +2689,7 @@ addEventListener("keydown", (e) => {
   const ae = document.activeElement, emptyLine = (ae.id === "quick" || ae.id === "ask") && !ae.value;
   if (e.code === "Space" && S.booted && !S.moduleOpen && V?.can().ok && (emptyLine || !/INPUT|SELECT|TEXTAREA|BUTTON/.test(ae.tagName))) {
     e.preventDefault();
-    if (!e.repeat) talkStart(S.layout === "launcher");
+    if (!e.repeat) (WAY() === "dictation" ? dictateStart : talkStart)(S.layout === "launcher");
     return;
   }
   // just start typing: the ask line under the core catches the letter (the conversation page stays closed)
@@ -2644,8 +2700,8 @@ addEventListener("keydown", (e) => {
     else { $("#ask").focus(); $("#ask").value += e.key; }
   }
 });
-addEventListener("keyup", (e) => { if (e.code === "Space" && V?.pressed) { e.preventDefault(); talkEnd(); } });
-addEventListener("blur", () => { if (V?.pressed) talkEnd(); });  // the window lost the key's release
+addEventListener("keyup", (e) => { if (e.code === "Space" && V?.pressed && !VD) { e.preventDefault(); talkEnd(); } });
+addEventListener("blur", () => { if (V?.pressed && !VD) talkEnd(); });  // the window lost the key's release
 function onPointer(e) {
   pointer.x = e.clientX; pointer.y = e.clientY;
   S.lastInput = performance.now();
@@ -2747,6 +2803,7 @@ async function reapply() {
     if (hub.reset_after_s) S.resetAfterMs = hub.reset_after_s * 1000;
     setModules(t?.hub?.modules, hub.modules || []);
   }
+  renderMic();  // the way in may have changed
   pollStatus();
 }
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
@@ -2916,7 +2973,7 @@ function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
   if (S.moduleOpen) closeModule();
   hideDevice();
-  if (V) { V.cancel(); V.stopSpeaking(); endVoice(); VS.greeting = false; }
+  if (V) { dictateCancel(); V.cancel(); V.stopSpeaking(); endVoice(); VS.greeting = false; }
   fetch("/api/chat/clear", { method: "POST" }).catch(() => {});
   S.chat = []; renderChat();
   $("#reply").classList.remove("on");

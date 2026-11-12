@@ -119,9 +119,22 @@ function screensRow() {
   return row;
 }
 
+/* ---------- the way in for voice (docs/voice.md): what this screen can do ---------- */
+const VOICE = { key: "voice", label: "Talking to it", kind: "choice", choices: ["push-to-talk", "dictation"],
+  help: "push-to-talk: hold the mic (or Space), talk, let go, and it answers aloud. dictation: tap the mic, the words go into the ask line, fix them and send like typing",
+  value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };
+async function voiceRow() {
+  const { screenCanHear } = await import("/web/voice.js");
+  const can = await screenCanHear();
+  const f = can.ok ? VOICE : { ...VOICE, help: `Push-to-talk only, and not here: ${can.why}.` };
+  return fieldRow(f, can.ok ? f.value() : "push-to-talk", async (v) => { f.save(v); return { ok: true, message: "Kept on this screen." }; }, !can.ok);
+}
+
 /* ---------- start ---------- */
 const local = $("#this-screen");
 for (const f of LOCAL) local.append(fieldRow(f, f.value(), async (v) => { f.save(v); return { ok: true, message: "Kept on this screen." }; }, false));
+const voiceSlot = local.appendChild(document.createElement("div"));
+voiceRow().then((row) => voiceSlot.replaceWith(row), () => voiceSlot.remove());
 local.append(screensRow());
 
 async function load() {

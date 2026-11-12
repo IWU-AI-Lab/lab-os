@@ -37,6 +37,7 @@ GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
 HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
+    "dictation": "You can talk to me: tap the mic.",
     "none": "",  # no microphone on this screen: the greeting alone
 }
 SENTENCE_END = re.compile(r"[.!?…](?=[\s\"')\]]|$)|\n")
