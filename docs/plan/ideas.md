@@ -65,6 +65,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Which arms:** both SO-101 followers (`so101-white` + `so101-green`, the builder's choice 2026-11-12, once step 11 makes the greens drivable); xArms also possible.
 - **Watch out:** today each hand has a job (left pinch = clutch for the right hand, right pinch = gripper), so two-arm control needs its own controls; the 3D scene shows both arms; the brain desktop's USB sockets are full (an arm on another computer: "Robots report in" above); STOP stops both.
 - **Plugs into:** teleop (one session, two arms), the Quest scene, the robot slot.
+- **Merged here (2026-11-13):** the earlier "one hand controls two robots" (a pitch moment: "one hand, two robots"), "two-hand control" and "two-robot handoff".
 
 ## Recent ideas (2026-11-11)
 
@@ -85,15 +86,15 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### A very light "wow" look for slow screens
 - **What:** a version of the designed hub made for weak screens (the Newline, Pi screens, phones, the portable kit): the same colors, fonts, frame and core, but effects that cost little to draw (few moving dots, no blur, short glows, the startup as a simple line animation instead of 3000 stars), so it stays smooth where `reduced` still lags.
-- **Why:** the Newline lags even at `reduced` (2026-11-10). The focus first measures and lightens the existing look (step 1, "Direction"); this is the next step if that isn't enough.
+- **Why:** the Newline lagged even at `reduced` (2026-11-10). Measured 2026-11-13 (focus step 12): its own Chrome manages `/perf` at 44–59 fps but the startup still lags; this is the next step if a lighter startup isn't enough.
 - **Watch out:** it's a design change: settle it in a design session (`DESIGN.md`, the concept, the theme together), probably as a quality level below `minimal`'s look but with its own small animations.
 - **Plugs into:** quality levels (theme), "This screen" settings.
 
 ### Teleop with a webcam instead of the Quest
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.
 - **Why:** anyone can try it at a desk; no Quest to charge, set up or put on; a fallback when the Quest is out.
-- **How:** a hand-tracking model that runs in the browser, offline, on the webcam (e.g. Google's MediaPipe hand landmarker, vendored like three.js; license to check), producing the same `xr_input` hand messages (`source: "hands"`). Or on the brain with OpenCV, once camera code exists (focus step 3).
-- **Watch out:** one webcam sees left/right/up/down well but **depth (toward/away) only roughly** (from the hand's size in the picture), so forward/back will feel worse than the Quest; a second camera from the side, or the Kinect's depth camera, could fix that. **Never the training cameras** (same model as the white arm's, off limits): use the lab's spare webcam or a laptop's. Same dead-man rule: hand out of view = freeze. The browser gives the camera only to a secure page, so the webcam page runs on the brain's own computer (`localhost`) until the secure address exists.
+- **How:** a hand-tracking model that runs in the browser, offline, on the webcam (e.g. Google's MediaPipe hand landmarker, vendored like three.js; license to check), producing the same `xr_input` hand messages (`source: "hands"`). Or on the brain with OpenCV (`camera_snapshot` already uses it).
+- **Watch out:** one webcam sees left/right/up/down well but **depth (toward/away) only roughly** (from the hand's size in the picture), so forward/back will feel worse than the Quest; a second camera from the side, or the Kinect's depth camera, could fix that. Not the arms' cameras (they look at the table, and one program per camera): use the lab's spare webcam or a laptop's. Same dead-man rule: hand out of view = freeze. The browser gives the camera only to a secure page, so the webcam page runs on the brain's own computer (`localhost`) until the secure address exists.
 - **Plugs into:** inputs slot (a new input page, same clutch mapping); cameras/vision.
 
 ### Past conversations (more than "bring back the last one")
@@ -122,8 +123,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   1. **Full screen from the page itself:** the hub's ignition press switches to full screen (in the current focus). Works in any browser, Newline's included, but Esc or a reload leaves it.
   2. **Kiosk mode:** Chrome/Chromium/Edge started with `--kiosk <address>` show only the page, start at boot, and can't be left by accident. The standard setup for Raspberry Pi screens; works on the lab desktops (Linux, Windows).
   3. **Install as an app:** the hub can declare itself an installable web app ("PWA"); Chrome/Edge/Android then offer "Install", and it opens in its own window without browser bars. Needs `localhost` or HTTPS (the certificate question again for other screens).
-- **The Newline (TT-7523QCA+, a Q+ Pro: Android 15 with the Google Play Store).** Its Chrome has **no full-screen button** (builder, 2026-11-09). Options, quickest first (needed for another project by 2026-11-11/12):
-  0. **The lab-os hub does this with its two taps** (focus step 1: tap 1 = full screen, tap 2 = start). The same trick suits the other project.
+- **The Newline (TT-7523QCA+, a Q+ Pro: Android 15 with the Google Play Store).** Its Chrome has **no full-screen button** (builder, 2026-11-09). Options, quickest first:
+  0. **The lab-os hub does this itself** (the plain hub's tap 1, the designed hub's one tap). The same trick suits other projects.
   1. **The page asks for full screen itself:** a "tap to start" layer that calls `document.documentElement.requestFullscreen()` on the first tap (Android Chrome allows it after a tap; works over plain `http` too). Needs a small change to that project's page; a reload or the Back gesture leaves full screen, so the tap layer comes back.
   2. **Install the page as an app (PWA)** with a web app manifest saying `"display": "fullscreen"`: Chrome's menu → "Install app" / "Add to home screen", then it opens from its icon with no bars. Needs HTTPS (for the lab-os hub: `hub.indwesailab.com`, deferred 2026-11-10, focus step 7; a plain `http://` LAN address won't install; workaround: `chrome://flags` → "Insecure origins treated as secure", if the Newline allows flags) and Chrome's install rules (a manifest with name + icons; older Chrome versions also want a small service worker).
   3. **A kiosk browser app from the Play Store** (e.g. Fully Kiosk Browser: full screen, starts at boot, locks to one address; check its license terms): no change to the page. Only if the Newline lets us install apps.
@@ -251,8 +252,8 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Open questions:** which Pi models are behind the small screens? (Reaching the brain: `pi01` does over the lab Wi-Fi, and the Newline through `pi01`, 2026-11-10; the router makes it simple.)
 
 ### Voice beyond push-to-talk
-- **In the focus:** push-to-talk voice is `docs/plan/current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
-- **What stays here:** (the wake word moved into step 7, decision 2026-11-11) a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
+- **Built (focus step 7, 2026-11-12):** push-to-talk, dictation and the wake word through the speech-to-text → chat → text-to-speech pipeline (`docs/guides/voice.md`). The routes and prices compared on 2026-11-10 (OpenAI, Gemini, local, realtime): `docs/archive/focus-2026-11-13-hub-voice-ai.md` → "Step 7, concretely".
+- **What stays here:** a realtime service for demos (faster, handles interruptions); a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Other triggers later:** a big USB button, or an IR remote (like the builder's Raspbot voice project).
 - **Plugs into:** triggers slot, conversation manager, model router.
 
@@ -274,7 +275,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ### Teleop from a phone
 - **What:** a phone as a teleop input. Either (a) a touch page with sliders/joystick + STOP, or (b) the phone itself as a 3D "controller" (Android Chrome supports WebXR AR, which tracks the phone's position and tilt in space; iPhones' browser doesn't).
 - **Why:** anyone can try it without a headset; a fallback if the Quest is unavailable; another entry for "Ways to teach a robot".
-- **Plugs into:** inputs slot (a new input plug-in, same pipeline + clutch + dead-man). Merges with "Visitors' phones as remotes" (below).
+- **Plugs into:** inputs slot (a new input plug-in, same pipeline + clutch + dead-man). Includes the earlier "visitors' phones as remotes" (interact without the headset).
 - **For whom (2026-10-27):** everyone: the builder, lab members and visitors.
 - **Gyro control (builder's main idea, 2026-10-27):** the phone's motion sensors (gyro + accelerometer, read by the browser's device-orientation feature) give its **tilt/rotation**, not its position in space. So pure gyro control means: tilt → wrist rotation (the glove's "tilt-for-rotation", which worked well), and/or tilt as a joystick (tilt forward = arm moves forward, at a speed set by the angle; relative, so no snapping). Real 3D **position** needs camera-based tracking (WebXR AR on Android Chrome). Both behind a clutch button on screen. iPhones ask the user for motion-sensor permission, and either way the page needs `localhost`/HTTPS.
 - **Watch out:** WebXR needs `localhost` or HTTPS. Over USB that's easy with an Android phone (`adb reverse`, as with the Quest). Over Wi-Fi it needs a certificate. Phone tracking is less steady than Quest controllers.
@@ -327,7 +328,6 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Multi-screen presence (lab PCs/displays) | The system "lives" on the room's screens; lab only. | Outputs/clients |
-| Visitors' phones as remotes | Let visitors interact without the headset. | Inputs, clients |
 | Quest-only mode | — | Quest client |
 | Quest launch → HUD (launch animation into the HUD) | — | Quest client, theme/decorative layer |
 | Quest vision Q&A ("what am I looking at?") | Ask about whatever the headset sees. | Cameras/vision, AI models |
@@ -337,9 +337,6 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 |---|---|---|
 | Fix the Hiwonder glove: (A) re-flash if its firmware source exists, or (B) glove → computer → arm with the teleop logic | Only if fun or useful (low priority). | Inputs (glove plug-in) |
 | "Ways to teach a robot" demo (teleop, leader arm, glove, look-then-reach side by side) | Strong pitch / teaching story. | Teleop + demo |
-| One hand controls two robots | Pitch moment ("one hand, two robots"). | Teleop (multi-arm output) |
-| Two-hand control | — | Teleop inputs |
-| Two-robot handoff | — | Robots, modules |
 | Robot testing harness (not tied to the research paper for now) | Repeatable robot tests. | Tools |
 | ROS 2 bridge | — | Robots |
 | Air:bit drones module (much later; drones stay out of AI/voice/visitor control) | — | Robots (bridged via micro:bit radio) |
