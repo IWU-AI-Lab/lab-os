@@ -35,6 +35,13 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-13)
+
+### The hub's own chat moving the arm
+- **What:** someone asks the hub's assistant (typed or by voice) to move the arm ("wave", "pick up the cube"), not only a developer's AI tool (the builder, 2026-11-13).
+- **Watch out:** today the hub's chat stays in the read tier because anyone in the room can talk to it (current focus, "A public screen"). Needs: which venues allow it (never `public: true`), one controller at a time, STOP on every screen, and probably a person nearby.
+- **Plugs into:** the move tools (same safety layer), voice, the persona.
+
 ## Recent ideas (2026-11-12)
 
 ### AI picking: height, sag and camera placement
@@ -49,7 +56,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Our own recording and training page (instead of LeLab)
 - **What:** a lab-os page for recording demonstrations and starting training runs on the SO-101s: all cameras shown at once, episodes listed, start/stop recording, a training run's progress, through LeRobot (the `so101` extra) without its separate web app.
-- **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera.
+- **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera. **2026-11-13:** it doesn't pick up the cameras reliably, and its teleoperation page can't show both camera views. The builder wants that fixed, **only when the builder says so** (fix LeLab or build this page). A "Stop LeLab" button is a quick job (`quick-jobs.md`).
 - **Watch out:** recording uses the same ports and cameras as lab-os's own control (one program per port); training uses the shared GPU; never touches the `lerobot` conda env.
 - **Plugs into:** a hub module, the robot slot, the green launcher (could replace it).
 

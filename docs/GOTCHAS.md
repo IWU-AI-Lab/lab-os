@@ -4,6 +4,22 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-13 — The Newline by HDMI is choppy at 1920×1080 though the desktop draws 60 fps (open)
+**What:** the lab desktop on the Newline's HDMI (+ the touch cable), the Newline as its screen. `/perf` showed the desktop's numbers, a steady 60 fps, but the picture on the Newline was still very choppy. After lowering the desktop's resolution to **1600×900** (Ubuntu Settings → Displays) it was smooth. So the drawing isn't the problem; the lag is between the HDMI output and the Newline's panel at 1080p. Push-to-talk showed up (whose microphone, the desktop's USB one or the Newline's over the touch cable, isn't clear) and its transcription was poor. The wake word wasn't tried.
+**Fix:** open. Workaround: 1600×900. To check next: the refresh rate Ubuntu picks at 1920×1080 (Displays: 60 Hz, or 30/50?), and the Newline's picture mode (a "game" or low-latency mode in its menu; manual in `docs/device_manuals/`).
+
+### 2026-11-13 — The Newline's own Chrome: 44–59 fps on /perf, but the startup still lags, and no mic button
+**What:** the Newline on an Ethernet cable from the lab desktop, its own Chrome at `http://<desktop>:8080`. `/perf`: average **43.8 fps** over 10 s, slowest frame 50 ms, canvas 2926×1646 (1463×823 at 2×, device pixel ratio 2.625), 108 dots, 3000 stars; **59 fps with 1000 stars**. The startup itself was still very laggy, so laggy that after the tap about half the animation never showed. The Newline's microphones work (Chrome's voice search understood well), but the hub showed **no mic button**: the page is `http://<ip>`, which isn't a secure page, so the browser hides the microphone (`docs/voice.md` → secure pages). STOP from the Newline stopped the arm on the desktop.
+**Fix:** open. The mic: Chrome's flag on the Newline (`chrome://flags` → "Insecure origins treated as secure" → `http://<desktop>:8080`). The lag: `/perf` is near fine with fewer stars, so the startup does more than `/perf` (focus step 12).
+
+### 2026-11-13 — The Quest's wake word sometimes doesn't fire
+**What:** in the headset, "hey jarvis" usually works but sometimes nothing happens; push-to-talk always works. On the lab desktop with a USB microphone both work, though sometimes only when spoken louder (the microphone isn't great).
+**Fix:** open. Cause unknown (the Quest browser pausing the microphone, the level, or the detector's threshold).
+
+### 2026-11-13 — "Don't ask again" for the arm's move tools lasted one session
+**What:** during the cube pick the builder told Claude Code not to ask again for the move tools. The next session asked again: nothing was saved, and the `ask` list in `.claude/settings.json` wins over a saved "allow" anyway (in Claude Code, ask beats allow).
+**Fix:** decided 2026-11-13 to stop asking (`docs/quick-jobs.md`, job 1: the tools move to `allow` in the repo's settings).
+
 ### 2026-11-12 — AI cube pick on so101-white: the gripper closed right next to the cube (open)
 **What:** Claude drove the real `so101-white` through the MCP tools: pictures from both cameras, `home`, then a blue ~2.5 cm cube on the table. 10 moves after `home` brought the open gripper down beside the cube without bumping it. It closed at a reported (28.2, 7.7, 1.0) cm, tool angle 174°, all the way (7.8 % open: nothing in the jaws). Both cameras then showed the cube still in place, just past the jaw tips. Three things showed up:
 - **The height reading looks 1–2 cm too low.** At `rest`, before anything moved, the gripper point read **z = −0.9 cm**, i.e. under the table. If the offset holds, "z 1.0" at the grip was really ~2.5–3 cm: the jaws passed over the cube's top. In the wrist picture at 30 % open, the moving jaw was drawn in front of the cube's edge, which fits. `move_to` can't go lower than `min_z_cm` (1.0), so it couldn't go lower to try again. Not yet checked by eye or with a ruler.
