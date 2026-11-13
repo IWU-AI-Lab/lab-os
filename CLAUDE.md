@@ -8,7 +8,7 @@ Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the 
 3. `docs/dev/GOTCHAS.md` — surprises already found.
 4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). New and changed pages follow the design (the designed hub is at `/design`; the numbers come from `config/theme.yaml`). It's no longer a surprise (2026-11-12), but `/` still shows the plain hub by default (`hub.look: plain`), just in case.
 
-Setup and conventions: `docs/dev/dev-setup.md`, `docs/dev/project-scaffold.md`. Safety: `SAFETY.md`.
+Docs are in folders by who reads them: `docs/plan/` (focus, quick jobs, ideas, log, use cases), `docs/guides/` (using it), `docs/dev/` (working on it), `docs/design/`, `docs/archive/` (history, dated; nothing current goes there). Setup and conventions: `docs/dev/dev-setup.md`. Safety: `SAFETY.md`.
 
 ## Hard rules: so101-green and the shared LeRobot setup
 `so101-green` is the builder's SO-101 training set (leader `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00`, follower `…5B41533501-if00`, two training cameras). **Since 2026-11-12 (the builder) lab-os may drive the green arms and use their cameras**, like `so101-white` (focus step 11). Four rules stay:

@@ -1,6 +1,6 @@
 # lab-os
 
-**Lab JARVIS** for the IWU AI lab: one portable "brain" that connects the lab's robots so AI agents (and people) can see and control them. Working today: the Quest 3 teleop demo (a robot arm follows your controller or bare hand), the hub (a full-screen start page with a typed AI chat that knows the project), and AI tools such as Claude Code driving the `so101-white` arm through the brain, with a person approving every move. What's being worked on: `docs/plan/current-focus.md`. **Everything that works today, plus lab projects not connected yet: [`FEATURES.md`](FEATURES.md).**
+**Lab JARVIS** for the IWU AI lab: one portable "brain" that connects the lab's robots so AI agents (and people) can see and control them. Working today: the Quest 3 teleop demo (a robot arm follows your controller or bare hand), the hub (a full-screen start page with an AI assistant that knows the project, typed or by voice), and AI tools such as Claude Code driving the SO-101 arms through the brain, looking through their cameras. What's being worked on: `docs/plan/current-focus.md`. **Everything that works today, plus lab projects not connected yet: [`FEATURES.md`](FEATURES.md).**
 
 *(Photo / GIF of the demo goes here once it works.)*
 
@@ -21,7 +21,7 @@ uv run lab-os serve                                      # the hub + teleop page
 uv run lab-os-teleop serve                               # XR page + fake arm, live
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # no browser/headset
 ```
-With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/guides/hub.md`). With `lab-os-teleop`, open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/guides/quest-setup.md`. Where the demo stands: `docs/archive/focus-2026-10-teleop-demo.md` (what's left: `docs/plan/ideas.md` → "On hold").
+With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/guides/hub.md`). With `lab-os-teleop`, open http://localhost:8080/monitor to watch the fake arm. Testing at home with a browser emulator, and connecting the real Quest over USB: `docs/guides/quest-setup.md`. Teleop's leftovers: `docs/plan/ideas.md` → "On hold".
 
 ## Repository map
 | Path | What |
@@ -32,28 +32,16 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/guides/hub.m
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
 | `tests/` | Automatic checks that run without hardware |
 | `scripts/` | `install.sh` and other helpers |
-| `docs/` | Plan, current focus, dev setup, gotchas |
+| `docs/` | `plan/`, `guides/`, `dev/`, `design/`, `archive/` (below) |
 | `SAFETY.md` | Stop procedures and limits. Read before any motion |
 
 ## Docs
-- `FEATURES.md`: what lab-os can do today (and lab projects not connected to it yet)
-- `docs/plan/current-focus.md`: what's being worked on now
-- `docs/guides/hub.md`: running the hub, the two taps, other screens, the performance test
-- `docs/guides/quest-setup.md`: teleop at home (emulator, replay) and on the real Quest
-- `docs/guides/lab-checklist.md`: what to test in the lab, in order
-- `docs/guides/ai-control.md`: an AI tool (Claude Code, …) driving the arm through the brain's MCP tools
-- `docs/dev/chat.md`: the hub's typed chat, AI setups (`config/models.yaml`), keys, spend and the budget
-- `docs/dev/personas.md`: who the assistant is (lab-assistant, J.A.R.V.I.S.), switching, the greeting
-- `docs/dev/places.md`: running lab-os at home or in another lab (`--config`, `lab-os new-place`)
-- `docs/guides/green-launcher.md`: starting the SO-101 training setup (green arms + LeLab) in one click
-- `docs/dev/protocol.md`: the messages and endpoints between the pages, AI tools and the brain
-- `docs/plan/use-cases.md`: realistic workflows behind the features
-- `docs/design/`: the approved hub design (`DESIGN.md`, `hub-concept.html`)
-- `docs/plan/lab-jarvis-log.md`: the master log (goals, decisions, devices)
-- `docs/dev/dev-setup.md`, `docs/guides/network-setup-checklist.md`, `docs/dev/project-scaffold.md`
-- `docs/dev/GOTCHAS.md`: surprises and their fixes
-- `docs/plan/ideas.md`: the ideas backlog (single source of truth for ideas)
-- `CHANGELOG.md`: what changed, by date
+In folders by who reads them:
+- **Top level:** `FEATURES.md` (what works today, and lab projects not connected yet), `CHANGELOG.md` (what changed, by date), `SAFETY.md`, `CLAUDE.md` (rules for Claude Code sessions).
+- **`docs/plan/`, what's being built and why:** `current-focus.md` (now, until the 2026-11-19 demo), `quick-jobs.md` (small decided jobs), `ideas.md` (the backlog, incl. "On hold"; the only home for ideas), `lab-jarvis-log.md` (goals, decisions, devices, facts about the lab), `use-cases.md` (realistic workflows behind the features).
+- **`docs/guides/`, using it:** `hub.md` (the hub, its pages, other screens, `/perf`), `voice.md` (talking to it, secure pages), `ai-control.md` (an AI tool driving an arm through the brain's MCP tools), `quest-setup.md` (teleop at home and on the real Quest), `green-launcher.md` (the SO-101 training setup in one click), `lab-checklist.md` (what to test in the lab), `network-setup-checklist.md` (devices on the network).
+- **`docs/dev/`, working on it:** `dev-setup.md` (how development works, branches and folders), `project-scaffold.md` (what the repo should contain), `protocol.md` (messages, MCP tools and HTTP endpoints), `places.md` (config folders, devices, running elsewhere), `personas.md`, `chat.md` (AI setups, keys, spend), `GOTCHAS.md` (surprises and their fixes).
+- **`docs/design/`:** the approved hub design (`DESIGN.md`, `hub-concept.html`). **`docs/device_manuals/`:** manuals (the Newline). **`docs/archive/`:** closed focuses and other history, dated.
 
 CI (GitHub Actions, `.github/workflows/ci.yml`) runs the linter and tests on every push and pull request.
 
