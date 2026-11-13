@@ -367,7 +367,7 @@ export class DetailsPage {
       g.font = `600 3.4px ${FONT.ui}`; g.fillStyle = C.text;
       let y = top + 7;
       wrap(g, p.focus || "", colW).forEach((l) => { g.fillText(l, L, y); y += 4.4; });
-      y = para(L, y + 2, "From docs/current-focus.md: what the project works on now, in small steps that each work on their own.", colW);
+      y = para(L, y + 2, "From docs/plan/current-focus.md: what the project works on now, in small steps that each work on their own.", colW);
       bigNum(L, y + 10, String(done), `of ${p.steps.length} steps done`);
       if (p.next) para(L, y + 17, `Now: step ${p.step}, ${p.next}.`, colW);
       dline(R2, top, "Steps", colW);

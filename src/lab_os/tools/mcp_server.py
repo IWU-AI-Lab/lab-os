@@ -3,10 +3,10 @@
 
 Listens on this computer only (127.0.0.1), on its own port next to the hub (default 8081, path
 /mcp), in the brain's event loop, so the tools drive the same teleop loop as the pages. How to
-connect: docs/ai-control.md. Permission tiers (current-focus.md): arm_status, list_poses,
-pose_view and the project tools (project_status, list_docs, read_doc, search_docs, git_status,
-git_log, list_devices) are read; stop is always allowed; move_joints, gripper, move_to and
-go_to_pose are move (never allow-list them: each one should ask).
+connect: docs/guides/ai-control.md. Permission tiers (docs/plan/lab-jarvis-log.md): arm_status,
+list_poses, pose_view, camera_snapshot and the project tools (project_status, list_docs, read_doc,
+search_docs, git_status, git_log, list_devices) are read; stop is always allowed; move_joints,
+gripper, move_to and go_to_pose are move (never allow-list them: each one should ask).
 """
 
 import contextlib
@@ -158,23 +158,25 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
 
     @server.tool(annotations=READ)
     def project_status() -> dict:
-        """The current focus (docs/current-focus.md): its name, every step with done or not (and
-        when), the step that's next. Start here for "what's next?" or "where are we?"."""
+        """The current focus (docs/plan/current-focus.md): its name, every step with done or not
+        (and when), the step that's next. Start here for "what's next?" or "where are we?"."""
         return run("project_status")
 
     @server.tool(annotations=READ)
     def list_docs() -> dict:
-        """The project's docs: name, file, title. Includes current-focus (what's being worked on),
-        ideas (the backlog, incl. "On hold"), lab-jarvis-log (plan, decisions, devices), GOTCHAS
-        (surprises and fixes), protocol, places, chat, personas, hub, ai-control, CHANGELOG,
-        design/DESIGN (the hub's design)."""
+        """The project's docs: name, file, title. In folders by who reads them: plan/
+        (current-focus: what's being worked on; quick-jobs; ideas: the backlog, incl. "On hold";
+        lab-jarvis-log: plan, decisions, devices), guides/ (hub, voice, ai-control, lab-checklist,
+        …), dev/ (GOTCHAS: surprises and fixes; protocol, places, chat, personas, …), design/DESIGN
+        (the hub's design), archive/ (history); plus README, CHANGELOG, SAFETY, CLAUDE."""
         return run("list_docs")
 
     @server.tool(annotations=READ)
     def read_doc(name: str, section: str | None = None) -> dict:
-        """Read one doc by name (e.g. "current-focus", "ideas", "GOTCHAS"), or only the section
-        under the first heading containing `section` (e.g. "On hold", "Step 7"). Long docs are
-        cut off at 12,000 characters with a list of their sections: then ask for a section."""
+        """Read one doc by name ("plan/current-focus", or just "current-focus", "ideas", "GOTCHAS"
+        when only one doc has that name), or only the section under the first heading containing
+        `section` (e.g. "On hold", "Step 7"). Long docs are cut off at 12,000 characters with a list
+        of their sections: then ask for a section."""
         return run("read_doc", name=name, section=section)
 
     @server.tool(annotations=READ)

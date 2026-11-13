@@ -29,21 +29,21 @@ id: jarvis                    # plain name: the same as the file name
 display_name: "J.A.R.V.I.S."  # show name (on screen)
 personality: jarvis.md        # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml; main falls back to backup)
-voice: main                   # voice setup (models.yaml → voices; docs/voice.md); none = no voice
-wake_word: hey_jarvis         # the wake word (docs/voice.md); none = no wake word
+voice: main                   # voice setup (models.yaml → voices; docs/guides/voice.md); none = no voice
+wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word
 picture: { type: orb, style: calm-ring, color: primary }   # read by the designed hub (step 10)
 lines:
   greeting: "All local systems are up."   # the greeting when there's no news
 sounds: default               # sound pack
 ```
-**Extensible:** fields the loader doesn't know are kept and warned about, never a crash, so new fields can be added any time. Missing fields get plain defaults. A place can have its own `personas/` folder (`docs/places.md`); the repo's personas stay available.
+**Extensible:** fields the loader doesn't know are kept and warned about, never a crash, so new fields can be added any time. Missing fields get plain defaults. A place can have its own `personas/` folder (`docs/dev/places.md`); the repo's personas stay available.
 
 The personality text goes first in the AI's instructions, then the fixed rules (the place's name, the time, "you can't change or move anything", short answers). The pages never get the personality text.
 
 ## The greeting
 After the start press, the hub shows **"Good morning / afternoon / evening."** plus **one line of real news**, and the chat's first message is the same line. The news is built by the brain from real facts, never by the persona or the AI. It uses the first of these that applies:
-1. **A step finished** today or yesterday (`(done YYYY-MM-DD)` in `docs/current-focus.md`): "Step 5, Typed chat, was finished today."
+1. **A step finished** today or yesterday (`(done YYYY-MM-DD)` in `docs/plan/current-focus.md`): "Step 5, Typed chat, was finished today."
 2. **The calendar:** a date within two weeks from `calendar` in `config/place.yaml`: "The semester ends in 6 days."
 3. **A busy day:** 10 or more commits yesterday, or today so far: "Yesterday was a busy day: 23 commits."
 
-Otherwise the persona's `greeting` line. Where voice works, it's also spoken, with a hint how to talk (`docs/voice.md` → "The spoken greeting"). Later news (alerts, a device that dropped out, the budget running low) slots in at the top of that list (`src/lab_os/hub/greeting.py`).
+Otherwise the persona's `greeting` line. Where voice works, it's also spoken, with a hint how to talk (`docs/guides/voice.md` → "The spoken greeting"). Later news (alerts, a device that dropped out, the budget running low) slots in at the top of that list (`src/lab_os/hub/greeting.py`).

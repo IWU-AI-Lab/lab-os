@@ -1,4 +1,4 @@
-"""Parsing for the messages input pages send (format: docs/protocol.md).
+"""Parsing for the messages input pages send (format: docs/dev/protocol.md).
 
 Two kinds of input: *pose* input (`xr_input`: where a hand/controller is; Quest, glove, ...) and
 *joint* input (`joint_input`: how fast to turn each motor; keyboard/mouse jogging). Pose input

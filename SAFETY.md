@@ -21,7 +21,7 @@ The arm **freezes** whenever any of these happens: clutch released · hand/contr
 - Only approved demo commands; no free-form AI control of motion with visitors.
 
 ## AI tools
-An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call, and **a person approves every move** (never "always allow" a move tool). The hub's built-in chat can't move anything. `docs/ai-control.md`.
+An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call, and **a person approves every move** (never "always allow" a move tool). The hub's built-in chat can't move anything. `docs/guides/ai-control.md`.
 
 ## Remote mode
 Remote sessions (from home, Remote Control, any off-site connection) = **no motion by default**. Read-only checks only, unless someone is physically next to the robot.

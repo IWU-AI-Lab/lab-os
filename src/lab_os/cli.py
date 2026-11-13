@@ -23,18 +23,20 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 def _banner(port: int, host: str, mcp_port: int) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
-        f"Designed: http://localhost:{port}/design   (the reveal, preview; docs/hub.md)",
-        f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/quest-setup.md)",
+        f"Designed: http://localhost:{port}/design   (the reveal, preview; docs/guides/hub.md)",
+        f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Perf:     http://localhost:{port}/perf",
     ]
     if mcp_port:
         lines.append(
             f"AI tools: http://127.0.0.1:{mcp_port}/mcp   (MCP, this computer only; "
-            "docs/ai-control.md)"
+            "docs/guides/ai-control.md)"
         )
     if host not in LOCAL_HOSTS:
-        lines.append(f"Other screens: http://<this computer's IP address>:{port}/ (docs/hub.md)")
+        lines.append(
+            f"Other screens: http://<this computer's IP address>:{port}/ (docs/guides/hub.md)"
+        )
     return "\n".join(lines)
 
 
@@ -95,7 +97,7 @@ def main(argv: list[str] | None = None) -> None:
     g = sub.add_parser(
         "green",
         help="start the SO-101 training setup (so101-green + LeLab) after checking the ports; "
-        "opens nothing itself (docs/green-launcher.md)",
+        "opens nothing itself (docs/guides/green-launcher.md)",
     )
     g.add_argument("--wait", action="store_true", help="wait for Enter before closing")
     n = sub.add_parser(

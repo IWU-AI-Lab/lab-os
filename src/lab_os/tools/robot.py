@@ -1,4 +1,4 @@
-"""The robot tools for AI (current-focus.md step 2): read the arm, move it, stop it.
+"""The robot tools for AI (docs/plan/current-focus.md step 2): read the arm, move it, stop it.
 
 Plain logic with no MCP in it; lab_os.tools.mcp_server offers these as MCP tools. Every move runs
 through the teleop loop (`Motion`), so it takes the same path to the arm as teleop: the driver's

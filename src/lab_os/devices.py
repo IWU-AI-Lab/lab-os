@@ -174,7 +174,7 @@ def check_port_allowed(port: str, registry: Registry | None = None) -> None:
     registry = registry or load_registry()
     if not port.startswith(BY_ID_DIR):
         raise PortNotAllowed(
-            f"{port!r}: use a {BY_ID_DIR} path; ttyACM/ttyUSB numbers swap (docs/GOTCHAS.md)"
+            f"{port!r}: use a {BY_ID_DIR} path; ttyACM/ttyUSB numbers swap (docs/dev/GOTCHAS.md)"
         )
     for serial in registry.off_limits_serials():
         if serial in port:
@@ -190,7 +190,7 @@ def serial_port(name: str, registry: Registry | None = None) -> str:
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
-        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
     if len(device.ports) != 1:
@@ -282,7 +282,7 @@ def camera_paths(
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
-        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
     if device.kind != "camera" or not device.socket:
@@ -336,7 +336,7 @@ def find_usb_device(
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
-        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/places.md)")
+        raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
     if len(device.usb) != 1 or device.usb[0].product_id is None:
@@ -352,7 +352,7 @@ def find_usb_device(
             continue
         found.append(info)
     if not found:
-        raise LookupError(f"{name}: no USB device {spec} found (plugged in? docs/GOTCHAS.md)")
+        raise LookupError(f"{name}: no USB device {spec} found (plugged in? docs/dev/GOTCHAS.md)")
     if len({info["path"] for info in found}) > 1:
         raise LookupError(f"{name}: several devices match {spec}; add a serial number")
     return found[0]

@@ -1,6 +1,6 @@
 # In the lab: what to test, in order
 
-A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works without the next. Note what you find in `docs/current-focus.md` (the step's status) and surprises in `docs/GOTCHAS.md`.
+A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works without the next. Note what you find in `docs/plan/current-focus.md` (the step's status) and surprises in `docs/dev/GOTCHAS.md`.
 
 **Done on Tuesday 2026-11-10** (the builder, ~6–7 h): part 1 (the designed hub on the desktop, Gemini answered; `/perf` not run), the hub on `pi01` and the other desktop as well, all full screen except `/teleop` on the Pi (GOTCHAS); the Newline through `pi01` (laggy, part 2); Fable on the real arm (part 3; STOP from other screens not tried). Still open: `/perf` everywhere, STOP from another screen, parts 4–6.
 
@@ -13,7 +13,7 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 4. Part 7, teleop 1:1 on the real arm.
 5. Voice prep: plug in the microphone, check Ubuntu Settings → Sound → Input shows it and the level moves when you talk; check the speakers too.
 6. Part 1's `/perf` on the desktop's monitor (the demo screen for now), then the Newline (part 2) if there's time.
-7. Part 4, the white cameras: list their socket names (they go in the green cameras' sockets). Since step 11 the camera-model block is gone; cameras go in `config/devices.yaml` by socket (`docs/places.md`).
+7. Part 4, the white cameras: list their socket names (they go in the green cameras' sockets). Since step 11 the camera-model block is gone; cameras go in `config/devices.yaml` by socket (`docs/dev/places.md`).
 8. Put the green arms and cameras back as they were.
 
 **New since 2026-11-12 (step 11, built away from the lab, tested without hardware):** the green arms in lab-os (part 8): `so101-green` drivable like the white arm, its calibration read only, `so101_setup` refusing the greens, "in use by LeLab" refusals, the training cameras by socket. Part 8 goes while the green arms are plugged in, before the swap (step 2 of the order above), or after putting them back.
@@ -42,7 +42,7 @@ Open **http://localhost:8080/design** in Chrome. Check:
 - [ ] The strip says the venue, the persona and `AI: …` (the key in `~/lab-os/.env`).
 - [x] Ask something ("What's next?"). Gemini's free key takes 6–15 s. (2026-11-10: it answered)
 - [ ] Teleop, Monitor and Arm open and close (Back or Esc).
-- [ ] Smooth? If it stutters: `/design?quality=reduced` or `/design?res=1`, or check `/perf` (not run yet) (`docs/hub.md` → "Performance test").
+- [ ] Smooth? If it stutters: `/design?quality=reduced` or `/design?res=1`, or check `/perf` (not run yet) (`docs/guides/hub.md` → "Performance test").
 - [ ] **Full screen button:** press Esc to leave full screen: a ⛶ appears in the strip next to ⏻ and ⚙; it brings full screen back. The VR headset icon should **not** be in the strip on the desktop (it used to show everywhere).
 - [ ] Sound comes out of the speakers you want.
 
@@ -53,20 +53,20 @@ google-chrome --app=http://localhost:8080/design --start-fullscreen
 
 ## 2. The Newline (10–15 min)
 Find the desktop's address: `hostname -I` (the first one). With the brain from part 1 still running, on the Newline's Chrome open `http://<that address>:8080/design`.
-- [ ] **It loads.** If it doesn't, the network keeps devices apart: `network-setup-checklist.md` → "Networks before the router" (the HDMI + USB-touch cable to the desktop is the quickest fix, and `localhost` then even allows voice later).
+- [ ] **It loads.** If it doesn't, the network keeps devices apart: `docs/guides/network-setup-checklist.md` → "Networks before the router" (the HDMI + USB-touch cable to the desktop is the quickest fix, and `localhost` then even allows voice later).
 - [ ] **One tap = full screen + start.** Swipe from the edge: can you leave it? Does the Newline's own bar stay away?
 - [ ] Chrome menu → **Add to Home screen**: does the icon open the hub? (On `http://` it opens as a tab; tap once for full screen.)
 - [ ] Touch: the panels' details pages, the commit range buttons, the devices list.
 - [ ] Leave it alone for 30 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 15 minutes). To check it quickly, set a shorter reset in ⚙ → The hub, then set it back.
-- [ ] **`/perf`** full screen for a minute: note the average frames per second (then again with `/perf?res=1` and `/perf?res=0.5`: fewer pixels drawn, scaled up by the screen; `docs/hub.md` → "Performance test").
-- [ ] **The drawing resolution on the hub** (new): open `http://<address>:8080/design?res=1`, then `…/design?res=0.5`. Is the jump and the network smoother? Does it look too soft? Keep the best one for this screen: ⚙ → **This screen → Drawing resolution** (it's kept in the Newline's browser; no `?res=` needed after that). Note the numbers in `current-focus.md` step 1.
-- [ ] If a page doesn't go full screen on the Newline, press its **Full screen** button: it says why (note the sentence in `GOTCHAS.md`).
+- [ ] **`/perf`** full screen for a minute: note the average frames per second (then again with `/perf?res=1` and `/perf?res=0.5`: fewer pixels drawn, scaled up by the screen; `docs/guides/hub.md` → "Performance test").
+- [ ] **The drawing resolution on the hub** (new): open `http://<address>:8080/design?res=1`, then `…/design?res=0.5`. Is the jump and the network smoother? Does it look too soft? Keep the best one for this screen: ⚙ → **This screen → Drawing resolution** (it's kept in the Newline's browser; no `?res=` needed after that). Note the numbers in `docs/plan/current-focus.md` step 1.
+- [ ] If a page doesn't go full screen on the Newline, press its **Full screen** button: it says why (note the sentence in `docs/dev/GOTCHAS.md`).
 - [ ] **Desktop on the Newline's HDMI** (tried 2026-11-10: as laggy as the Mac): run `/perf` on the desktop's own monitor, then on the Newline. Same number on both but the Newline looks worse → the Newline adds the lag. Things to try on the way: Ubuntu Settings → Displays → the Newline at 1920×1080, 60 Hz; the Newline's picture menu (a "PC" or "Game" mode, motion smoothing / noise reduction off, HDMI 2.0 if it has the setting); another of its HDMI ports. In Chrome, `chrome://gpu` should say "Hardware accelerated" for most lines.
-- [ ] **The Newline's microphones** (for voice later): with the desktop's USB touch cable plugged into the Newline, does a microphone appear? Ubuntu Settings → Sound → Input, or `arecord -l` (lists them, records nothing). Note its name in `current-focus.md` step 7 (the microphone question).
-- [ ] The plain hub's two taps too (`http://<address>:8080/plain`): this checks off focus step 1 (then mark it `(done …)` in `current-focus.md`).
+- [ ] **The Newline's microphones** (for voice later): with the desktop's USB touch cable plugged into the Newline, does a microphone appear? Ubuntu Settings → Sound → Input, or `arecord -l` (lists them, records nothing). Note its name in `docs/plan/current-focus.md` step 7 (the microphone question).
+- [ ] The plain hub's two taps too (`http://<address>:8080/plain`): this checks off focus step 1 (then mark it `(done …)` in `docs/plan/current-focus.md`).
 
 ## 3. Fable drives the real arm (20–30 min, you at the arm)
-The full walkthrough: `docs/ai-control.md` → "5. On the real arm". Short version:
+The full walkthrough: `docs/guides/ai-control.md` → "5. On the real arm". Short version:
 ```bash
 ls -l /dev/serial/by-id/       # so101-white = …5B41532410-if00
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
@@ -83,21 +83,21 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [ ] The cube task again, this time with `pose_view` before every grip: does Fable catch its own misses?
 - [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Show on another screen**.
 - Approve every move after reading it; never "always allow". Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
-- Afterwards: `logs/ai-tools/` has the calls. Write in `current-focus.md` step 2 what worked.
-- 2026-11-10: Fable drove the real arm; it clearly needed more to go on than words (cameras, or at least `pose_view`). See `current-focus.md` step 2.
+- Afterwards: `logs/ai-tools/` has the calls. Write in `docs/plan/current-focus.md` step 2 what worked.
+- 2026-11-10: Fable drove the real arm; it clearly needed more to go on than words (cameras, or at least `pose_view`). See `docs/plan/current-focus.md` step 2.
 
 ## 4. The white arm's cameras (5 min, for step 3)
-- [ ] (If the builder picks the USB hub: `current-focus.md` → "Step 3, concretely".) Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
-- [ ] `ls -l /dev/v4l/by-path/ /dev/v4l/by-id/`: this only lists names, it opens no camera. Paste the output into `current-focus.md` step 3, with which camera is which (top, wrist).
+- [ ] (If the builder picks the USB hub: `docs/plan/current-focus.md` → "Step 3, concretely".) Plug both white cameras into USB sockets you'll keep them in (**not** 1-7 and 1-8, the training cameras' sockets). Label the sockets and cables.
+- [ ] `ls -l /dev/v4l/by-path/ /dev/v4l/by-id/`: this only lists names, it opens no camera. Paste the output into `docs/plan/current-focus.md` step 3, with which camera is which (top, wrist).
 
 ## 5. The training launcher, first try (10 min)
 - [ ] Unplug `so101-white`'s USB (the launcher refuses while any other serial device is plugged in). Plug in both green arms.
 - [ ] The desktop icon "SO-101 Training (LeLab)": every line of the check fine? If one isn't, it says what to change and starts nothing.
-- [ ] LeLab opens at http://127.0.0.1:8000: check once that the follower moves when you move the leader. Note in `current-focus.md` ("Done on the side") how it went.
+- [ ] LeLab opens at http://127.0.0.1:8000: check once that the follower moves when you move the leader. Note in `docs/plan/current-focus.md` ("Done on the side") how it went.
 
 ## 6. Quick checks (5 min each)
-- [ ] **raspbot1 on a phone hotspot** (does the lab router fix its Wi-Fi? `network-setup-checklist.md`, Step 5): reach it by cable (Step 2 there), set the phone's hotspot to WPA2 (iPhone: "Maximize Compatibility"; Android: security "WPA2-Personal"), then on the Raspbot: `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. Note in `GOTCHAS.md` (raspbot1 Wi-Fi) whether it joined. While it's connected, its own "Raspbot" hotspot is off; `sudo nmcli con up Raspbot` brings it back.
-- [ ] **The Pi's full screen:** on `pi01`, open `http://192.168.7.72:8080/teleop` (the desktop's address). There's now always a **Full screen** button in the bar while it isn't full screen: press it (or hover over it). If full screen isn't possible, it says why. Note the sentence in `GOTCHAS.md` ("`/teleop` on the Pi"). Same on `/design` (the ⛶ in the strip) to compare.
+- [ ] **raspbot1 on a phone hotspot** (does the lab router fix its Wi-Fi? `docs/guides/network-setup-checklist.md`, Step 5): reach it by cable (Step 2 there), set the phone's hotspot to WPA2 (iPhone: "Maximize Compatibility"; Android: security "WPA2-Personal"), then on the Raspbot: `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. Note in `docs/dev/GOTCHAS.md` (raspbot1 Wi-Fi) whether it joined. While it's connected, its own "Raspbot" hotspot is off; `sudo nmcli con up Raspbot` brings it back.
+- [ ] **The Pi's full screen:** on `pi01`, open `http://192.168.7.72:8080/teleop` (the desktop's address). There's now always a **Full screen** button in the bar while it isn't full screen: press it (or hover over it). If full screen isn't possible, it says why. Note the sentence in `docs/dev/GOTCHAS.md` ("`/teleop` on the Pi"). Same on `/design` (the ⛶ in the strip) to compare.
 
 ## 7. Teleop's 1:1 mode on the Quest (15–20 min; fake arm first)
 Fake arm, recording the session (so a problem can be replayed at home):
@@ -105,7 +105,7 @@ Fake arm, recording the session (so a problem can be replayed at home):
 uv run lab-os serve --record recordings/quest-1to1-$(date +%F).jsonl
 adb reverse tcp:8080 tcp:8080
 ```
-In the Quest's browser: `http://localhost:8080/teleop` → **Hand → arm → 1:1** → **Enter AR**. (`docs/quest-setup.md` → "1:1 mode".)
+In the Quest's browser: `http://localhost:8080/teleop` → **Hand → arm → 1:1** → **Enter AR**. (`docs/guides/quest-setup.md` → "1:1 mode".)
 - [ ] The panel says "REACH THE GRIPPER · N cm" and a see-through ball sits at the 3D gripper; it turns green with your hand inside.
 - [ ] Hold Grip in the ball: nothing jumps. Move: the 3D gripper stays at your hand (same distance, not half).
 - [ ] Reach far out (past the arm's reach) and come back: the gripper meets your hand again, no re-grabbing.
@@ -126,8 +126,8 @@ adb reverse tcp:8080 tcp:8080
   grep -h '"mode": "one_to_one"' logs/servo-health/*so101-white.jsonl | tail -n 1
   grep -h '"mode": "relative"' logs/servo-health/*so101-white.jsonl | tail -n 1
   ```
-  Much warmer in 1:1 (well over 50 °C) → keep relative as the default; about the same → 1:1 can become the default (`docs/current-focus.md`). If the panel says "SERVOS WARM, SLOWED", stop and let them cool.
-- [ ] Note in `current-focus.md` ("Done on the side" → 1:1) how it felt, and whether 1:1 should become the default. At home: `uv run lab-os-teleop replay recordings/quest-1to1-<date>.jsonl` replays it on the fake arm (watch `/monitor`).
+  Much warmer in 1:1 (well over 50 °C) → keep relative as the default; about the same → 1:1 can become the default (`docs/plan/current-focus.md`). If the panel says "SERVOS WARM, SLOWED", stop and let them cool.
+- [ ] Note in `docs/plan/current-focus.md` ("Done on the side" → 1:1) how it felt, and whether 1:1 should become the default. At home: `uv run lab-os-teleop replay recordings/quest-1to1-<date>.jsonl` replays it on the fake arm (watch `/monitor`).
 
 ## 8. The green arms in lab-os (step 11; 30–40 min, you at the arm)
 Green follower, green leader and both training cameras plugged in as for training; `so101-white` unplugged. Part 0 first (`git pull`, `uv sync --extra so101`, `uv run pytest -q`).
@@ -165,7 +165,7 @@ uv run --extra so101 python -m lab_os.robots.so101_setup calibrate --arm so101-g
 ```bash
 uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch
 ```
-- [ ] It connects (no "different calibration" message). Move each joint **by hand** (the arm is limp): the numbers follow, about 0 at the middle pose, and the same directions as the white arm (`docs/GOTCHAS.md` → joint directions). Ctrl+C.
+- [ ] It connects (no "different calibration" message). Move each joint **by hand** (the arm is limp): the numbers follow, about 0 at the middle pose, and the same directions as the white arm (`docs/dev/GOTCHAS.md` → joint directions). Ctrl+C.
 
 **f. Moving, slowly** (ask before it moves; you at the arm, hand near STOP):
 ```bash
@@ -187,7 +187,7 @@ sha256sum -c /tmp/green-cal-before.txt     # every line should say OK
 ls -l /dev/v4l/by-path/
 ```
 - [ ] Entries with `usb-0:7` and `usb-0:8` (`so101-green-cam-a` and `-b`). Unplug the **wrist** camera's cable for a moment and run the `ls` again: the socket whose lines vanish is the wrist camera. Plug it back in. Tell Claude which socket is the wrist and which the top camera, so the names can change to `so101-green-cam-wrist` / `-top`. If the sockets aren't 7 and 8 any more, paste the `ls` output.
-- [ ] Note in `current-focus.md` step 11 what worked.
+- [ ] Note in `docs/plan/current-focus.md` step 11 what worked.
 
 ## 9. Voice (step 7; 20–30 min, the USB microphone and the speakers)
 Needs `GEMINI_API_KEY` in `~/lab-os/.env` (it's there) and the hub on **this desktop's own screen** (`localhost`: other screens by IP get no microphone).
@@ -220,12 +220,12 @@ Open **http://localhost:8080/design** in Chrome and press start.
 **e. The wake word:** ⚙ → This screen → Talking to it → **wake word**, then Back.
 - [ ] A small **dot** appears in the status strip (and Chrome's recording sign in the tab). The core stays idle.
 - [ ] From the desk: "Hey Jarvis" … "what time is it?": the core listens after the phrase, the question ends after a short silence, the answer is spoken.
-- [ ] From across the room, and with the fans/AC running: how far does it still work? ________ m. (A weak USB dongle may only work up close: then a conference speakerphone or microphone array is the fix, `docs/voice.md`.)
+- [ ] From across the room, and with the fans/AC running: how far does it still work? ________ m. (A weak USB dongle may only work up close: then a conference speakerphone or microphone array is the fix, `docs/guides/voice.md`.)
 - [ ] False wakes: talk normally near it for a minute (say "Jarvis" in a sentence too). Any wake it shouldn't have? ________
 - [ ] While its own answer plays, saying "hey Jarvis" doesn't wake it (expected: it doesn't listen for the phrase while speaking).
 - [ ] When done, set Talking to it back to **push-to-talk** (or keep the wake word for the demo).
 
-**f.** Note the results in `docs/current-focus.md` step 7 (status) and surprises in `docs/GOTCHAS.md`; then step 7 can be marked done.
+**f.** Note the results in `docs/plan/current-focus.md` step 7 (status) and surprises in `docs/dev/GOTCHAS.md`; then step 7 can be marked done.
 
 ## 10. The hub in VR (step 10; 20–30 min, the Quest on USB)
 Built 2026-11-12 away from the lab, tried in Meta's emulated Quest (iwer), never in the headset. Fake arm first:
@@ -233,7 +233,7 @@ Built 2026-11-12 away from the lab, tried in Meta's emulated Quest (iwer), never
 uv run lab-os serve
 adb reverse tcp:8080 tcp:8080          # re-run after every re-plug
 ```
-In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** shows, press it and allow (once). Then **Enter VR**. (`docs/quest-setup.md` → "The hub in VR".)
+In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** shows, press it and allow (once). Then **Enter VR**. (`docs/guides/quest-setup.md` → "The hub in VR".)
 - [ ] **Start:** the small core with "Pull the trigger or pinch to start" floats ahead. Pull the trigger: the bolts pull back, the ring opens, then the jump. Do the lines grow out of the stars you were looking at? Cyan with whiter heads (not black and white)? Comfortable, or too fast / too bright (note it)?
 - [ ] **Arrival:** the flash, the network streaking in, the core's rings locking on, the checks, the place's name, the greeting (spoken if voice works). Then everything flies to its place and the callouts unfold.
 - [ ] **Reading:** can you read the callouts, the strip and the log without leaning in? Is anything too far to the side (you shouldn't need to turn your head much)? Note sizes that feel off.
@@ -242,11 +242,11 @@ In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** 
 - [ ] **Teleop** (left of the core): the arm room opens, the TELEOP tab top left. Grip and move: does the fake arm follow (watch `/monitor` on the desktop)? A/X stops; left grip moves the 3D arm; Y puts it back. **B** (or the right controller on ← and the trigger) goes back to the hub; the desktop's `/teleop` can take control again.
 - [ ] **Monitor / AI Control:** the arm hologram with joint angles; move the arm from the desktop's `/teleop` and watch the hologram follow; **STOP** stops it. AI Control lists tool calls if Claude Code drives the arm meanwhile.
 - [ ] **Asking:** point at "Ask anything", hold the trigger, ask "what's next?", let go: the answer types out under the core and is spoken. Then say "hey Jarvis, what's next?" without pressing anything (the dot in the strip should be on). Then ask on the desktop (its mic): does the question and answer show in VR?
-- [ ] Note what felt wrong in `docs/current-focus.md` step 10 and surprises in `docs/GOTCHAS.md`. With time: the real `so101-white` through Teleop in VR (you at the arm, `--speed 0.2`, part 7's setup).
+- [ ] Note what felt wrong in `docs/plan/current-focus.md` step 10 and surprises in `docs/dev/GOTCHAS.md`. With time: the real `so101-white` through Teleop in VR (you at the arm, `--speed 0.2`, part 7's setup).
 
 ## 11. If there's time
 - **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?
-- The Quest: teleop through the hub (`adb reverse tcp:8080 tcp:8080`, then `http://localhost:8080/teleop` on the Quest; `docs/quest-setup.md`).
+- The Quest: teleop through the hub (`adb reverse tcp:8080 tcp:8080`, then `http://localhost:8080/teleop` on the Quest; `docs/guides/quest-setup.md`).
 - Show someone: `/design`, press start, ask it something, open Arm while Fable moves the arm.

@@ -1,4 +1,4 @@
-"""The Current Project panel: read the Steps list in docs/current-focus.md.
+"""The Current Project panel: read the Steps list in docs/plan/current-focus.md.
 
 Each step is a top-level numbered line with a bold title, e.g. `1. **Plain hub.** ...`; a finished
 one has `(done YYYY-MM-DD)` right after its title. The panel shows "Step N of M" and the title of
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from lab_os import REPO_ROOT
 
-FOCUS_FILE = REPO_ROOT / "docs" / "current-focus.md"
+FOCUS_FILE = REPO_ROOT / "docs" / "plan" / "current-focus.md"
 
 _STEP = re.compile(r"^(\d+)\.\s+\*\*(.+?)\*\*(.*)$")
 _DONE = re.compile(r"^\s*\(done (\d{4}-\d{2}-\d{2})\)")

@@ -2,7 +2,7 @@
 and one line of real news when there is some, else the persona's `greeting` line. The news is built
 here from real facts, never by the persona or the AI. So far, in this order:
 
-1. a step of the current focus finished today or yesterday (docs/current-focus.md, `(done …)`);
+1. a step of the current focus finished today or yesterday (docs/plan/current-focus.md, `(done …)`);
 2. a date from the place's calendar within the next two weeks (place.yaml → `calendar`);
 3. a busy day: at least BUSY_COMMITS commits yesterday, or today so far.
 """

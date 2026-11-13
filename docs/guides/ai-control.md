@@ -85,7 +85,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    ```bash
    uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
    ```
-   It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move aims, every call and its outcome, STOP) or `/monitor` (3D) to watch; on a second monitor of this computer they can stay open full screen (`docs/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
+   It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move aims, every call and its outcome, STOP) or `/monitor` (3D) to watch; on a second monitor of this computer they can stay open full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
 3. In the Claude Code session (VS Code): `/mcp` → `lab-os` → reconnect (the brain restarted), `/model` → Fable 5.2.
 4. Small steps first, approving each one after reading it:
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
@@ -97,7 +97,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    Then the step-2 task, with your real measurements:
    > There's a cube 15 cm in front of the base and 5 cm to the left. Pick it up and put it down 10 cm to the left of where it was. Go slowly, one move at a time, and tell me before each move what you'll do.
 5. **Stop:** STOP on any page (or Esc on the teleop page) stops it at once; Ctrl+C in the brain's terminal stops the brain (the SO-101 then goes limp, so hold it if it's lifted). **Never "always allow"** a move tool.
-6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/current-focus.md` (step 2) what worked and what didn't.
+6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/plan/current-focus.md` (step 2) what worked and what didn't.
 
 ### The green arm (`so101-green`, since step 11)
 The training set's follower, borrowed from the training project (CLAUDE.md, "Hard rules"). The same tools and safety as the white arm, plus:
@@ -110,10 +110,10 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 - It's active in the `lab` venue only (`config/venues/lab.yaml`), not on visit days.
 - Connecting with motion on writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, like LeLab does when it connects. Never IDs, baud rate, firmware or calibration.
 
-Not checked on the real arm yet: the `rest` pose (computed only; `docs/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
+Not checked on the real arm yet: the `rest` pose (computed only; `docs/plan/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
 
 ## Looking through a camera (`camera_snapshot`)
-`camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. Today's names: `so101-white-cam-a` (looks down from above) and `so101-white-cam-b` (the wrist camera), a temporary alias (`current-focus.md` → "Hacks to clean up").
+`camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. Today's names: `so101-white-cam-a` (looks down from above) and `so101-white-cam-b` (the wrist camera), a temporary alias (`docs/plan/current-focus.md` → "Hacks to clean up").
 
 ## Seeing the pose (`pose_view`)
 Until the cameras (focus step 3), the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:

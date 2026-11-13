@@ -1,4 +1,4 @@
-# Named poses for the AI tools' go_to_pose (docs/ai-control.md), per arm model (an Arm's `model`).
+# Named poses for the AI tools' go_to_pose (docs/guides/ai-control.md), per arm model (an Arm's `model`).
 # Shared joint names, degrees. A pose may list only some joints; the others stay where they are.
 # Every pose must sit inside the arm's limits with the gripper above the table (tests/test_robot_tools.py).
 
@@ -11,7 +11,7 @@ so101:
     wrist_roll: 0
     gripper: 30
   rest:   # folded: upper arm back, forearm down, gripper ~21 cm out and ~6 cm up, closed.
-          # HACK: from forward kinematics only, not yet checked on the real so101-white (current-focus.md → Hacks)
+          # HACK: from forward kinematics only, not yet checked on the real so101-white (docs/plan/current-focus.md → Hacks)
     shoulder_pan: 0
     shoulder_lift: -95
     elbow_flex: 92

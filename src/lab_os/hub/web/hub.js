@@ -1,4 +1,4 @@
-// The plain hub (current-focus.md step 1). Parts and names follow docs/design/hub-concept.html.
+// The plain hub (docs/plan/current-focus.md step 1). Parts and names follow docs/design/hub-concept.html.
 // All data comes from the brain's endpoints (/api/...), including the title (the place's name);
 // the few theme values come from /theme.json.
 //
@@ -477,7 +477,7 @@ function onChatEvent(ev, answer, paced = false) {
   }
 }
 
-/* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
+/* ---------- voice (step 7, docs/guides/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
    no microphone or no voice at the brain: no mic button, typing unchanged. */
 const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0 };

@@ -1,6 +1,6 @@
 // One auto-reconnecting WebSocket to the brain per role, shared by every module on the page.
 //   const link = getLink("input");  link.on("status", fn);  link.send({type: "xr_input", ...})
-// Message format: docs/protocol.md. Events "open" / "close" fire on (re)connect / disconnect.
+// Message format: docs/dev/protocol.md. Events "open" / "close" fire on (re)connect / disconnect.
 const links = {};
 
 export function getLink(role = "input") {

@@ -1,4 +1,4 @@
-"""The place's config folder (current-focus.md rule 9: nothing place-specific in code).
+"""The place's config folder (docs/plan/current-focus.md rule 9: nothing place-specific in code).
 
 A *place* is where a brain runs: the lab, someone's home. Everything about it lives in one folder:
 
@@ -10,7 +10,7 @@ A *place* is where a brain runs: the lab, someone's home. Everything about it li
 
 The repo's `config/` is the lab's place and also the shared defaults. Pick another one with
 `lab-os serve --config ~/my-lab-os` (or `$LAB_OS_CONFIG`); `lab-os new-place ~/my-lab-os` writes a
-starter. Setup: docs/places.md.
+starter. Setup: docs/dev/places.md.
 """
 
 import logging
@@ -48,7 +48,7 @@ def use(path: str | Path | None) -> Path:
     if found:
         log.info("config %s: read %s from %s", active_dir(), ", ".join(found), env_file())
     elif not env_file().is_file():
-        log.warning("no %s: no API keys, so no AI chat (docs/places.md)", env_file())
+        log.warning("no %s: no API keys, so no AI chat (docs/dev/places.md)", env_file())
     return active_dir()
 
 
@@ -116,7 +116,7 @@ class Place:
     name: str  # shown as the hub's title and the startup title (the same for every persona)
     venue: str | None = None  # the venue used when neither --venue nor $LAB_OS_VENUE says
     domain: str | None = None  # the brain's address name; not used yet (the secure address is
-    # deferred: current-focus.md → "Step 7, concretely")
+    # deferred: docs/plan/current-focus.md → "Step 7, concretely")
     ai_budget_usd_month: float | None = None  # the hub's chat pauses when this month's AI spend
     # reaches it; None = no cap (fine for a local model, not for a paid key)
     calendar: tuple = ()  # dates the greeting may mention: ({"date": "2026-12-15", "what": ...},)

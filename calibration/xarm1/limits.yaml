@@ -3,7 +3,7 @@ note: Measured by hand with the servos limp (python -m lab_os.robots.xarm calibr
 measured: '2026-10-29'
 # Measured ends (degrees), for reference: shoulder_pan -149.3..139.4, shoulder_lift -99.4..84.2,
 # elbow_flex -132.7..134.9, wrist_flex -109.0..129.1, wrist_roll -119.8..113.3, gripper 10.8..125.6.
-# The shoulder→elbow cable snapped while moving the joints to these ends (docs/GOTCHAS.md).
+# The shoulder→elbow cable snapped while moving the joints to these ends (docs/dev/GOTCHAS.md).
 limits_deg:
   shoulder_pan: [-90.0, 90.0]
   shoulder_lift: [-40.0, 80.0]

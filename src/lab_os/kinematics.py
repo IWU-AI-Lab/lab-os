@@ -28,7 +28,7 @@ SO101_URDF = REPO_ROOT / "models/so101/so101_new_calib.urdf"
 
 class Kinematics(Protocol):
     # wrist_roll direction for a hand roll that is counter-clockwise as the operator sees it
-    # (standing behind the arm, looking along the gripper). Differs per arm (docs/GOTCHAS.md).
+    # (standing behind the arm, looking along the gripper). Differs per arm (docs/dev/GOTCHAS.md).
     roll_sign: float
 
     def fk(self, joints: dict[str, float]) -> tuple[Vec3, float]:

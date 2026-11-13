@@ -1,6 +1,6 @@
 # Dev Setup — Claude Code + robots
 
-How development works for the Lab JARVIS project. Companion to lab-jarvis-log.md, current-focus.md and network-setup-checklist.md.
+How development works for the Lab JARVIS project. Companion to docs/plan/lab-jarvis-log.md, docs/plan/current-focus.md and docs/guides/network-setup-checklist.md.
 
 ---
 
@@ -54,7 +54,7 @@ Host *
 In the project's `.claude/settings.json` (permission rules):
 - **Allow without asking:** `ssh` to known robots for read-only checks, `rsync` deploys, `git` commands, running tests.
 - **Always ask first:** `sudo`, deleting files, rebooting devices, and **anything that makes a robot move**.
-- `CLAUDE.md` in the repo tells Claude the rules and points to **current-focus.md** and **lab-jarvis-log.md**.
+- `CLAUDE.md` in the repo tells Claude the rules and points to **docs/plan/current-focus.md** and **docs/plan/lab-jarvis-log.md**.
 - **Git is the undo button:** commit often.
 
 ---
@@ -68,10 +68,10 @@ In the project's `.claude/settings.json` (permission rules):
   - `~/lab-os-planning` — planning/brainstorm sessions, branch `planning` (docs only). Open this folder in VS Code for planning. Merge `planning` into `main` by PR after each planning topic.
 - Long-lived branches (`planning`, `design`): GitHub's auto-delete removes them after each merge. Recreate from the planning folder: `git fetch && git merge --ff-only origin/main && git push -u origin planning`.
 - Create another folder when needed: `git worktree add ../lab-os-<name> -b <branch>`; list them: `git worktree list`.
-- **Parallel coding sessions (2026-11-09):** one folder + branch per step (run `uv sync` in each new folder). Only run steps in parallel that don't share files (e.g. typed chat vs. MCP read tools vs. cameras; not chat vs. screens, which both change the hub page). Each session only edits its own step's lines in `docs/current-focus.md`, and merges `main` into its branch and runs the full tests before its PR. Remove a folder when its branch is merged: `git worktree remove ../lab-os-<name>`.
+- **Parallel coding sessions (2026-11-09):** one folder + branch per step (run `uv sync` in each new folder). Only run steps in parallel that don't share files (e.g. typed chat vs. MCP read tools vs. cameras; not chat vs. screens, which both change the hub page). Each session only edits its own step's lines in `docs/plan/current-focus.md`, and merges `main` into its branch and runs the full tests before its PR. Remove a folder when its branch is merged: `git worktree remove ../lab-os-<name>`.
 
 ## Working away from the lab
-**Most of the system is plain software and can be built anywhere** — your own laptop at home. Give home its own config folder (its name, devices, venues, `.env`): `uv run lab-os new-place ~/my-lab-os`, then `uv run lab-os serve --config ~/my-lab-os` (`docs/places.md`).
+**Most of the system is plain software and can be built anywhere** — your own laptop at home. Give home its own config folder (its name, devices, venues, `.env`): `uv run lab-os new-place ~/my-lab-os`, then `uv run lab-os serve --config ~/my-lab-os` (`docs/dev/places.md`).
 
 ### What works at home
 - The core: the brain, slots and plug-in structure, message protocol, model router, agent harness, GUI, boot animation, voice pipeline (with your laptop's mic), personas.
@@ -102,7 +102,7 @@ To be decided once we've seen what the robot computers look like inside (via the
 - **File and folder names** in the repo
 - **Where logs go**, how they're named
 - **Secrets** — one local secrets file per machine, never in git
-- **Hack labeling** — `# HACK:` comment + entry in current-focus.md's cleanup list
+- **Hack labeling** — `# HACK:` comment + entry in docs/plan/current-focus.md's cleanup list
 - **Principles** (robots stay thin; edit in repo, then deploy; every plug-in declares its requirements; fake robot first; every surprise goes in the gotchas list)
 
 ---

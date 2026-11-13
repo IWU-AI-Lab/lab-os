@@ -11,7 +11,7 @@ The hub's assistant hears and answers aloud (focus step 7). **Typing never chang
 The first press asks the browser for the microphone; allow it once. The microphone stays open for a minute after the last press (so the next question's first word isn't lost), then the browser's recording sign goes away.
 
 **No mic button?** It shows only when all of these are true; hover the place where it would be, or see `voice` in `/api/status` for the brain's reason:
-- the page is **secure**: `http://localhost` or `https://`. From another computer by the brain's IP address (`http://192.168…`), browsers refuse the microphone (`current-focus.md` → "Secure pages" for the ways around it);
+- the page is **secure**: `http://localhost` or `https://`. From another computer by the brain's IP address (`http://192.168…`), browsers refuse the microphone (`docs/plan/current-focus.md` → "Secure pages" for the ways around it);
 - the browser lists a **microphone** (it reacts to plugging and unplugging);
 - the brain has **voice**: the persona's `voice:` isn't `none`, a voice setup has its key, there's internet, and the chat isn't paused (no key, budget used up).
 
@@ -43,13 +43,13 @@ The hub in VR is a screen like the others, with the headset's own microphone and
 - No voice (no key, no internet, paused): the ask line says why when held.
 
 ## The spoken greeting
-After the start tap, the greeting ("Good morning." + one line of real news, `docs/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
+After the start tap, the greeting ("Good morning." + one line of real news, `docs/dev/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
 - Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.
 - A screen without a microphone (or not a secure page) hears the greeting without the hint.
 - Holding the mic (or Space) during the greeting cuts it short.
 
 ## How it works
-- **The page records and plays; the brain hears, thinks and speaks** (`/ws/voice`, `docs/protocol.md` → "Voice"). API keys never leave the brain.
+- **The page records and plays; the brain hears, thinks and speaks** (`/ws/voice`, `docs/dev/protocol.md` → "Voice"). API keys never leave the brain.
 - The page sends the microphone as 16 kHz audio while the mic is held (with the browser's echo cancellation, so the speakers stay out of it). The brain passes it to the voice service, which **hears while you talk**: the words come back as they're recognized.
 - On release, the words go into **the same conversation as typing**: the persona, the read tools, the history, the spend cap, the assistant's states. Spoken questions show up in History like typed ones.
 - **The text appears as it's said:** a spoken answer's words show up under the core while that part is spoken, not when the AI writes them (the core stays `thinking` until the voice starts). If no voice comes (an error, the limit), the text shows anyway.
@@ -71,4 +71,4 @@ Like the chat's setups: the persona picks one by name (`voice: main` in `config/
 - **Timing on the free key** (2026-11-12): the words are final ~0.4 s after you let go; the chat's answer takes 3–11 s (`gemini-3.5-flash-lite`, GOTCHAS); speaking a sentence ~2–3 s. The paid OpenAI chat is usually faster.
 
 ## Privacy
-Voice goes to the voice service only while the mic is held, or after the wake word until the question ends. Listening for the wake word happens on the brain only. Questions asked by voice are kept like typed ones (`docs/chat.md` → "Kept for a while"). On a public screen, anyone can hold the mic.
+Voice goes to the voice service only while the mic is held, or after the wake word until the question ends. Listening for the wake word happens on the brain only. Questions asked by voice are kept like typed ones (`docs/dev/chat.md` → "Kept for a while"). On a public screen, anyone can hold the mic.

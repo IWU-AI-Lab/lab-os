@@ -1,10 +1,10 @@
 # Ideas backlog
 
-**The single source of truth for ideas.** New ideas land here, **not in code** and not in other docs, unless they're part of the current focus (`docs/current-focus.md`). This keeps the project finishable and nothing gets lost. When an idea becomes the focus, move it into `current-focus.md` and delete it here. When an idea is decided (but not yet scheduled), record the decision in `lab-jarvis-log.md` and keep or delete the entry here.
+**The single source of truth for ideas.** New ideas land here, **not in code** and not in other docs, unless they're part of the current focus (`docs/plan/current-focus.md`). This keeps the project finishable and nothing gets lost. When an idea becomes the focus, move it into `docs/plan/current-focus.md` and delete it here. When an idea is decided (but not yet scheduled), record the decision in `docs/plan/lab-jarvis-log.md` and keep or delete the entry here.
 
-Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `lab-jarvis-log.md` → "Architecture sketch"). "—" = not recorded yet.
+Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `docs/plan/lab-jarvis-log.md` → "Architecture sketch"). "—" = not recorded yet.
 
-**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`lab-jarvis-log.md` → "Mobility, portability & remote access").
+**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`docs/plan/lab-jarvis-log.md` → "Mobility, portability & remote access").
 
 ---
 
@@ -12,18 +12,18 @@ Each idea: what it is · why · where it plugs in (slot/module, if known; slots 
 Not ideas any more: agreed features, paused when the teleop focus closed (the demo is showable, "needs polishing"; tag `demo-2026-10-30`). Pick them up from here; the teleop focus's full context is in `docs/archive/focus-2026-10-teleop-demo.md` (step numbers below refer to it).
 
 ### Teleop demo: what's left
-- **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built and tried 2026-11-10:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/quest-setup.md`). It works but is hard to steer (builder). Left: tune it from recordings, per-user thresholds, and a one-handed clutch if two hands feel clumsy.
-- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then smoothing, end-to-end delay. (The hand-to-gripper scale: a 1:1 mode is in the focus since 2026-11-10, `current-focus.md` → "Done on the side".) Above 0.5 is the builder's call (`config/venues/lab.yaml`).
+- **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built and tried 2026-11-10:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/guides/quest-setup.md`). It works but is hard to steer (builder). Left: tune it from recordings, per-user thresholds, and a one-handed clutch if two hands feel clumsy.
+- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then smoothing, end-to-end delay. (The hand-to-gripper scale: a 1:1 mode is in the focus since 2026-11-10, `docs/plan/current-focus.md` → "Done on the side".) Above 0.5 is the builder's call (`config/venues/lab.yaml`).
 - **Quest display (step 5).** Visitor hint until the first grab; joints that turn red near their limits (= the workspace warning) on the 3D arm, which can now be moved onto the real one (2026-11-10; the lazy-follow HUD mini-arm of decision 2026-10-28 is the other option); the status panel lazy-follows.
 - **Visitor polish + portability test (step 8).** Script, casting to a monitor, one run from the laptop away from the lab, tag, 60-second clip. The SO-101 port check uses Linux paths (`/dev/serial/by-id/`, sysfs): a Windows/macOS field laptop needs the USB-ID lookup `xarm1` already uses.
 - **`so101-white-leader`.** Build and set it up (spare board `5B41532183`; `python -m lab_os.robots.so101_setup setup-motors --arm so101-white-leader` after its port is in `config/devices.yaml`). For recording training demonstrations (second act B), not needed for the visitor demo.
-- **xarm1 leftovers.** Hand-measured limits (`python -m lab_os.robots.xarm calibrate`), Keys at `--speed 0.4`, a precise delay measurement, hold-position on stop, Mouse mode tried in a browser. Its HACK stays listed in `current-focus.md`.
+- **xarm1 leftovers.** Hand-measured limits (`python -m lab_os.robots.xarm calibrate`), Keys at `--speed 0.4`, a precise delay measurement, hold-position on stop, Mouse mode tried in a browser. Its HACK stays listed in `docs/plan/current-focus.md`.
 - **A real-Quest recording as a test fixture** (`serve --record`, commit a short clip).
 - **Check:** in the XR emulator, Shift+WASD moving the arm while the clutch is *released* would be a bug.
 
 ### Core plumbing (waits for the lab router)
 From the first draft of the core focus (2026-10-30); the builder chose the hub first. Build when the router is here (Milestone 1):
-- **Map what exists** → `docs/architecture.md`: the `Arm` protocol + drivers (fake, xArm, SO-101), device registry with off-limits devices, venue profiles, the WebSocket server with control handover + STOP, `docs/protocol.md`, the theme file; which slot each belongs to, what's still teleop-specific.
+- **Map what exists** → `docs/architecture.md`: the `Arm` protocol + drivers (fake, xArm, SO-101), device registry with off-limits devices, venue profiles, the WebSocket server with control handover + STOP, `docs/dev/protocol.md`, the theme file; which slot each belongs to, what's still teleop-specific.
 - **Plug-in description:** name, slot, requirements (Python extra, OS, device in `devices.yaml`) and a read-only `check()` returning a short health report. Robot slot first.
 - **Roll call:** `lab-os roll-call` and in the hub: plugged in? requirements met? off limits? A table + a report file (seed of the troubleshooting suite). Missing robots are normal (decision 2026-10-28). **Read-only**: never moves anything, never opens an off-limits port or camera. Include the checks we already know (Quest plugged in, xArm answers); microphone, network, accounts later.
 - **Inputs as plug-ins:** Quest page, desktop control, replay picked in the page instead of command-line flags.
@@ -45,7 +45,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ## Recent ideas (2026-11-12)
 
 ### AI picking: height, sag and camera placement
-- **What:** fixes suggested by the missed cube pick (`GOTCHAS.md`, 2026-11-12):
+- **What:** fixes suggested by the missed cube pick (`docs/dev/GOTCHAS.md`, 2026-11-12):
   1. **Check the height zero:** put the jaw tips on the table by hand (torque off), read `arm_status`, and correct the gripper-point offset or the model if z isn't ~0.
   2. **Allow for the elbow sag:** add the steady ~3° to the elbow command, or have `move_to` send a small second correction after a short stop. Then `stopped_short` only fires for real misses (e.g. above 1° or 0.5 cm), so the warning means something again.
   3. **Place the overhead camera:** a printed square marker (AprilTag) at a known spot in front of the arm lets `cam-a` turn a pixel into table cm, so the AI's first guess is close and the wrist camera only fine-tunes.
@@ -56,7 +56,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Our own recording and training page (instead of LeLab)
 - **What:** a lab-os page for recording demonstrations and starting training runs on the SO-101s: all cameras shown at once, episodes listed, start/stop recording, a training run's progress, through LeRobot (the `so101` extra) without its separate web app.
-- **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera. **2026-11-13:** it doesn't pick up the cameras reliably, and its teleoperation page can't show both camera views. The builder wants that fixed, **only when the builder says so** (fix LeLab or build this page). A "Stop LeLab" button is a quick job (`quick-jobs.md`).
+- **Why:** LeLab was a quick look (the builder, 2026-11-12): it seems hastily built and shows only one camera. **2026-11-13:** it doesn't pick up the cameras reliably, and its teleoperation page can't show both camera views. The builder wants that fixed, **only when the builder says so** (fix LeLab or build this page). A "Stop LeLab" button is a quick job (`docs/plan/quick-jobs.md`).
 - **Watch out:** recording uses the same ports and cameras as lab-os's own control (one program per port); training uses the shared GPU; never touches the `lerobot` conda env.
 - **Plugs into:** a hub module, the robot slot, the green launcher (could replace it).
 
@@ -98,7 +98,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### Past conversations (more than "bring back the last one")
 - **What:** a list of recent conversations on the hub (or per person, once the hub knows who's there), to reopen one and continue: e.g. a drafted prompt from yesterday, or picking up after lunch.
-- **Built so far (2026-11-10, quick version):** the last conversation is kept for `chat_keep_minutes` and can be brought back after an accidental reset or a restart (`docs/chat.md` → "Kept for a while").
+- **Built so far (2026-11-10, quick version):** the last conversation is kept for `chat_keep_minutes` and can be brought back after an accidental reset or a restart (`docs/dev/chat.md` → "Kept for a while").
 - **Watch out:** a public screen; anyone can tap. Past conversations probably need a private screen (venue not `public`) or a sign-in, and a clear way to delete them.
 - **Plugs into:** the conversation manager (`lab_os.ai.history`), the hub's History page.
 
@@ -112,9 +112,9 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** config/venues; the brain program; docs.
 
 ### Sending more than a module to another screen
-- **Opening a module on another screen is in the focus** (`current-focus.md` step 8, "Step 8, concretely").
+- **Opening a module on another screen is in the focus** (`docs/plan/current-focus.md` step 8, "Step 8, concretely").
 - **What stays here:** sending other things to a screen: a chat answer, a picture from a camera, the other project's poster; and later the Quest as a target.
-- **Plugs into:** outputs/clients; the screens list from step 8; casting in `use-cases.md` (the visit, another project borrows a screen).
+- **Plugs into:** outputs/clients; the screens list from step 8; casting in `docs/plan/use-cases.md` (the visit, another project borrows a screen).
 
 ### Screens without browser bars ("kiosk clients")
 - **What:** any lab screen (32" monitor, Pi touchscreens, the Newline) shows the hub, or any other web app, full screen, with no tabs or address bar, and starts by itself.
@@ -131,14 +131,14 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   - Test 1 and 2 today on any **Android phone** with Chrome (it behaves like the Newline's); try 3 at the Newline.
 - **Newline Signage Pro** (corrected 2026-11-09): installed on the Newline but needs registering; Newline names only the Q Pro and STV+ as "fully integrated", and resellers sell a license (~$99 per display per year; a free year comes with Newline's media-player box), so maybe not free. Its listed content is images, videos, text, weather, QR codes and live feeds: **no mention of web pages or touch**. The builder checks at the lab: does registering ask for a license, can it show a URL full screen, does touch work. Good for watch-only screens if so; the interactive hub uses 1–4.
 - **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows (focus step 8; "Sending more than a module to another screen" above).
-- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `network-setup-checklist.md`).
+- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `docs/guides/network-setup-checklist.md`).
 
 ## Recent ideas (2026-11-08)
 "Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md`.
 
 ### GPU-busy indicator on the hub
 - **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
-- **Why:** the lab desktop's GPU is shared with the SO-101 training (`current-focus.md` step 5 already warns about it); a visible sign beats remembering.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`docs/plan/current-focus.md` step 5 already warns about it); a visible sign beats remembering.
 - **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
 - **Plugs into:** status strip or the desktop's device card; model router (local setups).
 
@@ -175,11 +175,11 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
   1. **Place labels by hand once:** point the controller at a device, pick its name; the Quest remembers the spot (WebXR anchors). No camera needed. Moving a device means re-placing its label.
   2. **QR codes / AprilTags** (square printed markers made for robots, readable from far): automatic, but the Quest's browser may not give web pages access to the camera images; to check (native apps can use Meta's camera access).
   3. **Recognizing devices by sight** (computer vision): hardest; identical Pis look the same anyway.
-- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and lining the 3D arm up with the real one by hand (built 2026-11-10, `docs/quest-setup.md`), the same idea for one device.
+- **Not found earlier in the docs.** Related: "Quest vision Q&A" (below), and lining the 3D arm up with the real one by hand (built 2026-11-10, `docs/guides/quest-setup.md`), the same idea for one device.
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **Decided 2026-11-09** (log; `current-focus.md` steps 2, 6 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **Decided 2026-11-09** (log; `docs/plan/current-focus.md` steps 2, 6 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
@@ -190,7 +190,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ## Recent ideas (2026-10-30)
 
 ### Assistant pictures beyond the plain circle
-- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`current-focus.md` → "How it fits together"):
+- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`docs/plan/current-focus.md` → "How it fits together"):
   - **Orbs inspired by other assistants** (e.g. the feel of ChatGPT's voice-mode orb for a GPT persona, a Claude-feel one for a Claude persona). Our own designs, **no logos or brand assets**. A persona's look should match the model really behind it.
   - **A 3D character in VRM format** (open format; the `three-vrm` library runs on the three.js we already vendor): blinking, breathing, mouth moving with the voice.
 - **Not Live2D** (the Neuro-sama look): its runtime isn't open source (license to check before vendoring), it needs a paid/licensed character model, and nobody here knows it. VRM gives a similar result with open tools.
@@ -213,7 +213,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** each device plug-in declares what extra readings it offers; the troubleshooting suite, startup status and HUD read them. Safety: reading sensors is fine; anything that powers or moves stays under the safety rules.
 
 ### Startup sequence ("systems coming online")
-- **In the focus now (2026-10-30):** the startup *animation* itself (designed; built at `/design` (`current-focus.md` step 10), with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
+- **In the focus now (2026-10-30):** the startup *animation* itself (designed; built at `/design` (`docs/plan/current-focus.md` step 10), with only real brain-side checks). **What stays here:** devices lighting up as they report in (needs the roll call → router) and the power-up walk.
 - **What:** after a trigger (wake word, card, button, Quest, touchscreen…), the brain wakes the screens and plays a short sequence where **each device lights up as it actually reports in**. The animation *is* the roll call, with a sound per device, and it ends with a greeting + one-line summary. Starts on the device that triggered it (Quest, touchscreen, desktop); other screens join.
 - **Why:** cool to watch *and* useful: you see at a glance what's up; results feed the troubleshooting suite's report files.
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
@@ -251,7 +251,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Open questions:** which Pi models are behind the small screens? (Reaching the brain: `pi01` does over the lab Wi-Fi, and the Newline through `pi01`, 2026-11-10; the router makes it simple.)
 
 ### Voice beyond push-to-talk
-- **In the focus:** push-to-talk voice is `current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
+- **In the focus:** push-to-talk voice is `docs/plan/current-focus.md` step 7 (part of the demo since 2026-11-09), with the realtime-service vs. own-pipeline choice made there.
 - **What stays here:** (the wake word moved into step 7, decision 2026-11-11) a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Other triggers later:** a big USB button, or an IR remote (like the builder's Raspbot voice project).
 - **Plugs into:** triggers slot, conversation manager, model router.
@@ -299,14 +299,14 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Conversation manager (one component owns interrupt / queue / turn-taking).
 
 ### Coding agent ("ask for a feature, it gets built")
-- **Direction decided 2026-10-30** (`current-focus.md` → "After this focus"; log): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
+- **Direction decided 2026-10-30** (`docs/plan/current-focus.md` → "After this focus"; log): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from docs/plan/ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
 - **Candidates (2026-10-30: keys are OpenAI's; Anthropic out of credits):** OpenAI's Codex (open-source coding agent, OpenAI API key; to verify), or the Claude Agent SDK (Claude Code's engine with an API key) if Anthropic credits are refilled. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
 - **Open questions:** cost per task vs. the budget (coding tasks cost far more than chat); which tools it gets (default-deny); how it reports progress in the hub.
 - **Plugs into:** agent harness slot (slow path) + the normal git / CI / tag workflow; robot motion only through our safety layer.
 
 ---
 
-## Earlier ideas (moved here 2026-10-24 from lab-jarvis-log.md and current-focus.md)
+## Earlier ideas (moved here 2026-10-24 from docs/plan/lab-jarvis-log.md and docs/plan/current-focus.md)
 
 ### Triggers & sign-in
 | Idea | Why | Plugs into |
@@ -321,7 +321,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models: beyond the chat test in `current-focus.md` step 5 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
+| Local models: beyond the chat test in `docs/plan/current-focus.md` step 5 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |

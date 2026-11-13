@@ -1,6 +1,6 @@
 # Use cases: realistic workflows
 
-Concrete situations lab-os should handle, used to decide which features matter. Each one: who, what happens step by step, and which features it needs. **Draft (2026-11-09): correct anything that isn't how the lab really works.** Feature status at the bottom: focus (`current-focus.md`), on hold / idea (`ideas.md`).
+Concrete situations lab-os should handle, used to decide which features matter. Each one: who, what happens step by step, and which features it needs. **Draft (2026-11-09): correct anything that isn't how the lab really works.** Feature status at the bottom: focus (`docs/plan/current-focus.md`), on hold / idea (`docs/plan/ideas.md`).
 
 ---
 
@@ -8,7 +8,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 **Who:** the builder, alone, lab closed, robots off.
 1. Presses a key at the desktop: startup plays, hub opens full screen.
 2. Sees: current project step, AI spend, "GPU: training (SmolVLA)" because a training run is going.
-3. Types "what's next?" → the assistant answers from `current-focus.md` and drafts a prompt for a Claude Code session.
+3. Types "what's next?" → the assistant answers from `docs/plan/current-focus.md` and drafts a prompt for a Claude Code session.
 4. Switches on `xarm1` to test something; its hexagon lights up as it connects.
 
 **Needs:** startup, hub, status strip, project helper (MCP read tools), GPU-busy indicator, devices panel, roll call (router).

@@ -1,6 +1,6 @@
 // WebXR input: reads the Quest's controllers (or bare hands) every XR frame and sends them to the
 // brain, and renders the session's scene (ghost arm, hand markers, status panel: xr-scene.js).
-// Message format: docs/protocol.md.
+// Message format: docs/dev/protocol.md.
 //   - Controllers: right grip = clutch, trigger = gripper, A/X = stop, right thumbstick up/down =
 //     speed. Left grip held = move and turn the 3D arm (e.g. onto the real one), Y = put it back.
 //   - Hands (controllers put down): right wrist = the controller, left pinch = clutch, right pinch
@@ -120,7 +120,7 @@ export async function initXR(link, ui) {
   if (!navigator.xr) {
     return unavailable(
       "WebXR not available",
-      "On the Quest, open http://localhost:8080 (docs/quest-setup.md). On a desktop, use Desktop control below, or the Immersive Web Emulator extension.",
+      "On the Quest, open http://localhost:8080 (docs/guides/quest-setup.md). On a desktop, use Desktop control below, or the Immersive Web Emulator extension.",
     );
   }
   let mode = null;

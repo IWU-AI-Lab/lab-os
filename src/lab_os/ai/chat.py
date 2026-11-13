@@ -38,9 +38,9 @@ You can look things up with read tools: the project's docs (start with project_s
 next?"; ideas has what's on hold), its git history, and the device list. Use them instead of
 guessing, and say where an answer came from in a few words.
 When someone wants to work on something, draft a prompt they can paste into a Claude Code or Codex
-session in the lab-os repository: what to read first (CLAUDE.md, docs/current-focus.md), the goal,
-the step and its "done when", anything to watch out for. Put it after a line "Prompt:" in plain
-text; it may be longer than your usual answers."""
+session in the lab-os repository: what to read first (CLAUDE.md, docs/plan/current-focus.md), the
+goal, the step and its "done when", anything to watch out for. Put it after a line "Prompt:" in
+plain text; it may be longer than your usual answers."""
 
 
 class Conversation:

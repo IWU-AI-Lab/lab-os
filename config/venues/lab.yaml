@@ -3,10 +3,10 @@ name: lab
 active_devices: [fake-arm, xarm1, so101-white, so101-green]
 motion_allowed: true
 persona: default   # who the assistant is here: a persona's id (config/personas/), or `default` = the place's (place.yaml)
-wake_word: default   # "hey jarvis" on screens that chose it (docs/voice.md): on, off, or default = off on a public venue
+wake_word: default   # "hey jarvis" on screens that chose it (docs/guides/voice.md): on, off, or default = off on a public venue
 max_speed_scale: 0.5   # fraction of each arm's max speed
 one_to_one_max_deg_per_s: 180   # teleop 1:1: fastest joint turn (°/s), not scaled by the speed above; none = the servos' own top speed (~270-310), off = relative only
-ai_tools:              # what an AI tool may do per call (docs/ai-control.md); left out = these defaults
+ai_tools:              # what an AI tool may do per call (docs/guides/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call
   min_z_cm: 1                # nothing goes lower than this above the arm's base plane (the table)

@@ -8,7 +8,7 @@
 // Quest, so it goes through the same mapping (IK on arms that have kinematics). Click the button
 // to start (the page captures the pointer), Esc to leave: leaving freezes the arm and hands
 // control over. Messages are sent at 60 Hz while active, even when nothing is pressed: if they
-// stop (tab hidden, page closed), the arm freezes (dead-man). Format: docs/protocol.md.
+// stop (tab hidden, page closed), the arm freezes (dead-man). Format: docs/dev/protocol.md.
 
 const SHARED_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"];
 const SLOW = 0.3; // Shift held = fine control (keys and mouse modes)

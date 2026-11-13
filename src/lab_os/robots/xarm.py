@@ -7,7 +7,7 @@ Servo positions are 0..1000 (500 = middle) and span about 240 degrees.
 READ-ONLY by default: until `allow_motion=True`, only the whitelisted read commands can be sent,
 so nothing here can move a servo. Turn motion on only after the builder's OK (SAFETY.md).
 
-With motion on, a worker thread owns the USB device (docs/GOTCHAS.md 2026-10-27/29):
+With motion on, a worker thread owns the USB device (docs/dev/GOTCHAS.md 2026-10-27/29):
 - Never blocks the caller: `move_joints` only stores the goal, `read_joints` returns the driver's
   estimate (where each servo was told to be, following the board's linear interpolation).
 - No reads while moving: reads closer than ~0.1 s apart make the board drop moves, and a read
@@ -56,7 +56,7 @@ SERVO_IDS = {
 # Shared conventions (same as the SO-101 and web/arm/arm-model.js): 0 = arm upright, +pan swings to
 # the arm's right (clockwise from above), +lift/+elbow/+wrist_flex tilt forward, +wrist_roll is
 # counter-clockwise from above. "Forward" = the side with the controller board. Signs observed by
-# the builder on 2026-10-27 (docs/GOTCHAS.md).
+# the builder on 2026-10-27 (docs/dev/GOTCHAS.md).
 SIGNS = {
     "shoulder_pan": -1,  # +units = counter-clockwise from above
     "shoulder_lift": 1,  # +units = toward the board

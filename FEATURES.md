@@ -1,17 +1,17 @@
 # What lab-os can do
 
-The features that are built and working today, plus a few lab robot projects that aren't connected to lab-os yet. What's being built now: `docs/current-focus.md`. Ideas not built yet: `docs/ideas.md`. Changes by date: `CHANGELOG.md`.
+The features that are built and working today, plus a few lab robot projects that aren't connected to lab-os yet. What's being built now: `docs/plan/current-focus.md`. Ideas not built yet: `docs/plan/ideas.md`. Changes by date: `CHANGELOG.md`.
 
 **Status key:** ✅ tried on the real hardware · 🧪 built and tested on the fake arm or in a browser, not yet on the real hardware · 🟡 works, with known rough edges
 
 ---
 
 ## The hub (the lab's start screen)
-`uv run lab-os serve` → http://localhost:8080/ · `docs/hub.md`
+`uv run lab-os serve` → http://localhost:8080/ · `docs/guides/hub.md`
 
 | Feature | Status | Notes |
 |---|---|---|
-| Plain hub: start screen, status strip, module buttons, assistant circle, Current Project and Commits panels | ✅ | Ran on the lab desktop, `pi01` and the Newline. On the Newline it's laggy (`docs/current-focus.md` → step 1) |
+| Plain hub: start screen, status strip, module buttons, assistant circle, Current Project and Commits panels | ✅ | Ran on the lab desktop, `pi01` and the Newline. On the Newline it's laggy (`docs/plan/current-focus.md` → step 1) |
 | Designed hub preview (`/design`): hyperspace startup, network and core, panels with details pages, sounds | ✅ | Lab desktop and Pi screens. `/` still shows the plain hub by default (`hub.look: plain`), just in case; the design is no longer a surprise (2026-11-12) |
 | The hub in VR (`/xr`): the designed hub's startup around you (ignition, the hyperspace jump, the core assembling, checks, title, greeting), then the hub around you: callouts with their details, strip, ⏻, log | 🟡 | Matches `/design` since 2026-11-12, tried in Meta's emulated Quest. Module buttons: Teleop in VR, Monitor and AI Control as holograms. Asking by voice (push-to-talk on the ask line, the wake word on the headset). Not tried in the headset yet |
 | Settings page (⚙, `/settings`): writes the YAML config, keeps its comments; "This screen" settings per browser | 🧪 | Can only be changed from the brain's own computer |
@@ -23,7 +23,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | Performance test page (`/perf`) | 🧪 | Numbers from the Newline still missing |
 
 ## Talking to it (typed chat, voice and personas)
-`docs/chat.md`, `docs/voice.md`, `docs/personas.md`
+`docs/dev/chat.md`, `docs/guides/voice.md`, `docs/dev/personas.md`
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -41,7 +41,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | The conversation is kept for 30 minutes; "Bring back the last conversation" after a reset or restart | ✅ | |
 
 ## Teleop (drive an arm with a Quest 3)
-`uv run lab-os serve`, then the teleop page · `docs/quest-setup.md` · demo tag `demo-2026-10-30`
+`uv run lab-os serve`, then the teleop page · `docs/guides/quest-setup.md` · demo tag `demo-2026-10-30`
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -56,7 +56,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | Freezes on release, lost tracking, disconnect or stale input; STOP on every page | ✅ | |
 
 ## AI tools driving the arm (MCP)
-http://127.0.0.1:8081/mcp · `docs/ai-control.md`
+http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -70,7 +70,7 @@ http://127.0.0.1:8081/mcp · `docs/ai-control.md`
 | Robot | Status | Notes |
 |---|---|---|
 | `so101-white` (SO-101 arm, LeRobot) | ✅ | Driver, guarded motor setup and calibration, read-only `--watch` mode. `uv sync --extra so101` |
-| `so101-green` (the training set's follower, borrowed) | 🧪 | `--arm so101-green`: same driver, calibration read only from LeRobot's cache, motor setup refused, refused while LeLab has the port. Tested without hardware only. `docs/ai-control.md` → "The green arm" |
+| `so101-green` (the training set's follower, borrowed) | 🧪 | `--arm so101-green`: same driver, calibration read only from LeRobot's cache, motor setup refused, refused while LeLab has the port. Tested without hardware only. `docs/guides/ai-control.md` → "The green arm" |
 | The training cameras (`so101-green-cam-a`, `-b`) | 🧪 | Listed by USB socket; a camera another program uses is refused. Nothing takes pictures yet (focus step 3) |
 | `xarm1` (Hiwonder xArm 1S, USB) | ✅ | Driver, jogging, inverse kinematics, hand calibration of the limits. `--arm xarm1` |
 | Fake arm | ✅ | Every feature runs on it first; no hardware needed |
@@ -79,7 +79,7 @@ http://127.0.0.1:8081/mcp · `docs/ai-control.md`
 ## Running it anywhere
 | Feature | Status | Notes |
 |---|---|---|
-| Places: run at home or in another lab with its own config folder (`--config`, `lab-os new-place`) | ✅ | `docs/places.md` |
+| Places: run at home or in another lab with its own config folder (`--config`, `lab-os new-place`) | ✅ | `docs/dev/places.md` |
 | Venues (lab, visit-day, …) set speed limits, persona and what's shown to the public | ✅ | `config/venues/` |
 | Works offline: every web library and font is bundled | ✅ | |
 | One-line install on a fresh Linux machine (`scripts/install.sh`) | ✅ | |
@@ -88,7 +88,7 @@ http://127.0.0.1:8081/mcp · `docs/ai-control.md`
 ## Training launcher (so101-green)
 | Feature | Status | Notes |
 |---|---|---|
-| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab | 🧪 | Not yet tried with the green arms plugged in. The launcher opens no green port; it refuses while another program (e.g. the brain driving `so101-green`) has one open. `docs/green-launcher.md` |
+| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab | 🧪 | Not yet tried with the green arms plugged in. The launcher opens no green port; it refuses while another program (e.g. the brain driving `so101-green`) has one open. `docs/guides/green-launcher.md` |
 
 ---
 
@@ -98,15 +98,15 @@ Separate projects using the lab's robots. They don't run through the brain and t
 ### xArm control with the Hiwonder Bluetooth glove
 - **What:** the Hiwonder glove (5 finger sensors, a motion sensor, Bluetooth) pairs straight to `xarm1` and drives it. Tilt the hand to turn the wrist; the number of bent fingers picks which motor moves.
 - **Status:** ✅ works with Hiwonder's own firmware (tested 2026-10-23). Little lag; tilt to rotate works well.
-- **Rough edges:** needs extreme gestures; the arm snaps when switching motors (absolute tilt → angle); picking motors by counting fingers is clumsy. These lessons shaped lab-os teleop (clutch, relative control, gentle ramps, per-user calibration). Notes: `docs/lab-jarvis-log.md` → "Hiwonder glove findings".
-- **Connecting it later:** `docs/ideas.md` → "Fix the Hiwonder glove".
+- **Rough edges:** needs extreme gestures; the arm snaps when switching motors (absolute tilt → angle); picking motors by counting fingers is clumsy. These lessons shaped lab-os teleop (clutch, relative control, gentle ramps, per-user calibration). Notes: `docs/plan/lab-jarvis-log.md` → "Hiwonder glove findings".
+- **Connecting it later:** `docs/plan/ideas.md` → "Fix the Hiwonder glove".
 
 ### Raspbot voice control
 - **What:** on a Yahboom Raspbot v2, press a button on the IR remote and speak. After 3 seconds it transcribes the speech, and if it hears a known word (forward, backward, left, right) it moves a little that way.
 - **Status:** ✅ worked (the builder's project, before lab-os). Where its code lives: still to note.
-- **Notes:** `docs/lab-jarvis-log.md` → "Robots". lab-os voice is focus step 7; the IR-remote trigger is in `docs/ideas.md` → "Voice beyond push-to-talk".
+- **Notes:** `docs/plan/lab-jarvis-log.md` → "Robots". lab-os voice is focus step 7; the IR-remote trigger is in `docs/plan/ideas.md` → "Voice beyond push-to-talk".
 
 ### xArm camera demos (`xarm_1s_demo`, June 2026)
 - **What:** Python scripts that drive the xArm 1S from a webcam: follow a green ball with the base (`arm_follow_ball.py`), follow it in 2D with the base and reach (`arm_2d_follow.py`), and grab an object at a camera point after a 3-point camera-to-servo calibration (`test_safe_grab_v2.py`).
 - **Status:** a separate folder on the builder's Mac, not in a git repo here. lab-os's xArm default limits come from its grab script.
-- **Connecting it later:** `docs/ideas.md` → "Ways to teach a robot" (look-then-reach).
+- **Connecting it later:** `docs/plan/ideas.md` → "Ways to teach a robot" (look-then-reach).

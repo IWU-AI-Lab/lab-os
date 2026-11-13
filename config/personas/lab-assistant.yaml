@@ -1,11 +1,11 @@
-# The plain persona (the default): plain name, simple circle, no character. Fields: docs/personas.md.
+# The plain persona (the default): plain name, simple circle, no character. Fields: docs/dev/personas.md.
 version: 1                    # file format version
 id: lab-assistant             # plain name (code, files): the same as the file name
 display_name: "Lab Assistant" # show name (on screen)
 personality: lab-assistant.md # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml)
 voice: main                   # voice setup (models.yaml → voices); none = no voice
-wake_word: hey_jarvis         # the wake word (docs/voice.md); none = no wake word
+wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word
 picture: { type: orb, style: plain, color: primary }
 lines:                        # things it says
   greeting: "Everything is running. Ask me anything about the lab."  # when there's no news

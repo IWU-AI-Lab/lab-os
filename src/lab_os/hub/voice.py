@@ -1,11 +1,11 @@
 """Voice on the hub (focus step 7): the page records and plays, the brain hears, thinks and speaks.
 
-One WebSocket per page, `/ws/voice` (docs/protocol.md → "Voice"). While the person holds the mic,
-the page sends 16 kHz PCM; the brain passes it to the voice service (lab_os.ai.speech), which hears
-the words. On release, the words go to the same conversation as typing (persona, read tools,
+One WebSocket per page, `/ws/voice` (docs/dev/protocol.md → "Voice"). While the person holds the
+mic, the page sends 16 kHz PCM; the brain passes it to the voice service (lab_os.ai.speech), which
+hears the words. On release, the words go to the same conversation as typing (persona, read tools,
 history, spend cap: lab_os.ai.chat), and the answer comes back as text **and** speech: the first
-sentence is spoken as soon as it's written, the rest while that one plays. API keys never leave
-the brain.
+sentence is spoken as soon as it's written, the rest while that one plays. API keys never leave the
+brain.
 
 The assistant's state follows: `listening` while the mic is held, then the chat's `thinking`, and
 `speaking` (with the loudness the page reports) until the page has played the last word.

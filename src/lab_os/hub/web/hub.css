@@ -1,4 +1,4 @@
-/* The plain hub. Plain on purpose until the reveal (current-focus.md step 9): a dark background,
+/* The plain hub. Plain on purpose until the reveal (docs/plan/current-focus.md step 9): a dark background,
    the system font, readable text, no animation, none of the design's colors or fonts. */
 
 :root { color-scheme: dark; }

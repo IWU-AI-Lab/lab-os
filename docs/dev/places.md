@@ -1,6 +1,6 @@
 # Places: running lab-os somewhere other than the lab
 
-lab-os keeps nothing about a particular place in its code (current-focus.md, rule 9). A **place** is wherever a brain runs: the AI lab, the builder's home, someone else's lab. Everything about it lives in one **config folder**.
+lab-os keeps nothing about a particular place in its code (docs/plan/current-focus.md, rule 9). A **place** is wherever a brain runs: the AI lab, the builder's home, someone else's lab. Everything about it lives in one **config folder**.
 
 The repo's own `config/` is the **lab's** place. Another place gets its own folder, **outside the repo**, with its own `.env`.
 
@@ -15,7 +15,7 @@ Or set `LAB_OS_CONFIG=~/my-lab-os` in your shell and leave out `--config`.
 The starter has:
 | File | What |
 |---|---|
-| `place.yaml` | `name` (the hub's title and the startup title), `venue` (the default venue), `persona` (who the assistant is, `docs/personas.md`), `ai_budget_usd_month`, `chat_keep_minutes` (`docs/chat.md`), `domain` (not used yet: the secure address is deferred, `current-focus.md` → step 7) |
+| `place.yaml` | `name` (the hub's title and the startup title), `venue` (the default venue), `persona` (who the assistant is, `docs/dev/personas.md`), `ai_budget_usd_month`, `chat_keep_minutes` (`docs/dev/chat.md`), `domain` (not used yet: the secure address is deferred, `docs/plan/current-focus.md` → step 7) |
 | `devices.yaml` | the devices here; starts with the software arm only |
 | `venues/home.yaml` | how cautious to be here (speed, motion allowed, active devices) |
 | `.env.example` | copy to `.env` in the same folder (your place's folder, not lab-os's `src/lab_os/place_template/`) and put your own API keys in it |

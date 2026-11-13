@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="/web/vendor/fonts/fonts.css">
 <style>
-/* The designed hub (current-focus.md step 10, the reveal): docs/design/hub-concept.html made real.
+/* The designed hub (docs/plan/current-focus.md step 10, the reveal): docs/design/hub-concept.html made real.
    Same look, motion and sound as the approved concept; the concept's controls and made-up data are gone.
    Every fact comes from the brain (/api/...), the numbers from /theme.json, the fonts from
    /web/vendor/fonts/ (offline). Served at /design, and at / when the theme says hub.look: design. */
@@ -801,7 +801,7 @@ body[data-mod="page"] #module .send { display: flex; }
   </section>
 
   <aside class="side left">
-    <div class="panel" data-detail="project" title="From docs/current-focus.md"><div class="cut"><div class="in">
+    <div class="panel" data-detail="project" title="From docs/plan/current-focus.md"><div class="cut"><div class="in">
       <div class="head"><span class="cap">Current Project</span><button class="open" type="button" aria-label="Current Project details"><svg class="ico"><use href="#i-open"/></svg></button></div>
       <div class="big"></div>
       <div class="prog"><div class="steps" id="steps" aria-hidden="true"></div><span class="stepn"></span></div>
@@ -2016,7 +2016,7 @@ async function ask(q, fromCore) {
   await end(false);
 }
 
-/* ---------- voice (step 7, docs/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
+/* ---------- voice (step 7, docs/guides/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation as typing) and speaks. No
    secure page, no microphone or no voice at the brain: no mic button, typing unchanged. */
 let V = null, VM = null;  // the voice (loaded below) and its module
@@ -2368,7 +2368,7 @@ function showDetail(id) {
   if (id === "project") {
     const p = S.project?.available ? S.project : { steps: [] }, done = p.steps.filter((s) => s.done).length;
     html = `<div class="detail"><div><div class="d-line">The goal</div><div class="d-big">${esc(p.focus || "")}</div>
-      <p>From <b>docs/current-focus.md</b>: what the project works on now, in small steps that each work on their own.</p>
+      <p>From <b>docs/plan/current-focus.md</b>: what the project works on now, in small steps that each work on their own.</p>
       <div class="d-num">${done}<small>of ${p.steps.length} steps done</small></div>
       ${p.next ? `<p>Now: <b>step ${p.step}, ${esc(p.next)}</b>.</p>` : ""}</div>
       <div><div class="d-line">Steps</div><ol class="d-steps">${p.steps.map((s) => {
