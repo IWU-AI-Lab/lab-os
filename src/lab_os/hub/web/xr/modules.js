@@ -247,7 +247,7 @@ export class ArmHologram {
       g.fillStyle = rgba(C.primary, 0.55); g.fillRect(5 * u, 11 * u, w - 10 * u, 1.5);
       if (!this.calls.length) {
         g.font = `${FONT.linesW} ${3.4 * u}px ${FONT.lines}`; g.fillStyle = C.dim;
-        wrap(g, "No calls yet this run. An AI tool connected to the brain (docs/ai-control.md) shows here as it reads and moves the arm.", w - 10 * u).forEach((l, i) => g.fillText(l, 5 * u, 20 * u + i * 5 * u));
+        wrap(g, "No calls yet this run. An AI tool connected to the brain (docs/guides/ai-control.md) shows here as it reads and moves the arm.", w - 10 * u).forEach((l, i) => g.fillText(l, 5 * u, 20 * u + i * 5 * u));
         return;
       }
       [...this.calls].reverse().forEach((c, i) => {

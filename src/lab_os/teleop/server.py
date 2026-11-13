@@ -83,7 +83,7 @@ async def monitor(_request: web.Request) -> web.FileResponse:
 
 async def _no_stale_files(request: web.Request, response: web.StreamResponse) -> None:
     """Pages and their scripts must always be the current version: without this, Firefox reuses
-    old cached scripts for hours (docs/GOTCHAS.md). `no-cache` still allows a cheap 304."""
+    old cached scripts for hours (docs/dev/GOTCHAS.md). `no-cache` still allows a cheap 304."""
     if not request.path.startswith("/ws"):
         response.headers.setdefault("Cache-Control", "no-cache")
 

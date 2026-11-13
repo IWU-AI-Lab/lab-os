@@ -106,7 +106,7 @@ function screensRow() {
   row.querySelector("button").addEventListener("click", async () => {
     const out = row.querySelector("#screens");
     if (!("getScreenDetails" in window)) {
-      out.innerHTML = "<li>This browser can't place windows on other monitors: open the page there by hand (docs/hub.md → Other monitors).</li>";
+      out.innerHTML = "<li>This browser can't place windows on other monitors: open the page there by hand (docs/guides/hub.md → Other monitors).</li>";
       return;
     }
     try {
@@ -119,7 +119,7 @@ function screensRow() {
   return row;
 }
 
-/* ---------- the way in for voice (docs/voice.md): what this screen can do ---------- */
+/* ---------- the way in for voice (docs/guides/voice.md): what this screen can do ---------- */
 const VOICE = { key: "voice", label: "Talking to it", kind: "choice", choices: ["push-to-talk", "dictation"],
   help: "push-to-talk: hold the mic (or Space), talk, let go, and it answers aloud. dictation: tap the mic, the words go into the ask line, fix them and send like typing",
   value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };

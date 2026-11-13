@@ -1,6 +1,6 @@
 # Message protocol
 
-JSON messages over a WebSocket. This is the seed of the "one standard message protocol for all clients" in the architecture sketch (lab-jarvis-log.md). It grows as new clients appear; add message types here when you add them in code.
+JSON messages over a WebSocket. This is the seed of the "one standard message protocol for all clients" in the architecture sketch (docs/plan/lab-jarvis-log.md). It grows as new clients appear; add message types here when you add them in code.
 
 Every message has a `type`. Unknown or malformed messages are ignored (logged), never fatal.
 
@@ -136,13 +136,14 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 ```
 
 ## MCP tools (AI tools → the brain)
-Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTTP, this computer only; `--mcp-port`). Setup, rules and examples: `docs/ai-control.md`. Positions in cm from the arm's base (x forward, y left, z up), angles in degrees.
+Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTTP, this computer only; `--mcp-port`). Setup, rules and examples: `docs/guides/ai-control.md`. Positions in cm from the arm's base (x forward, y left, z up), angles in degrees.
 
 | Tool | Arguments | Tier |
 |---|---|---|
 | `arm_status` | `arm?` | read |
 | `list_poses` | `arm?` | read |
 | `pose_view` | `marks?` ([{`x_cm`, `y_cm`, `z_cm`, `label?`, `size_cm?`}], ≤ 10), `arm?` | read |
+| `camera_snapshot` | `camera` (a name in `devices.yaml`), `width_px?` (640; 160–1280) | read |
 | `move_joints` | `joints` ({name: degrees}), `relative?` (false), `arm?` | move |
 | `gripper` | `open_pct` (0 closed … 100 open), `arm?` | move |
 | `move_to` | `x_cm`, `y_cm`, `z_cm`, `tool_angle_deg?` (0 up, 90 forward, 180 down; default: keep), `arm?` | move |
@@ -160,9 +161,9 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 | `git_log` | `count?` (15, ≤ 50), `path?` | `commits`: `hash`, `date`, `author`, `subject` |
 | `list_devices` | — | the place's devices: `name`, `kind`, `off_limits`, `borrowed`, `active_in_venue`, `notes` |
 
-Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`, and not `pose_view` (its answer is a picture).
+Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`, and not `pose_view` or `camera_snapshot` (their answers are pictures).
 
-`pose_view` returns two content blocks: a PNG (`image/png`, 1000×470: side view in the arm's plane on the left, top view on the right, grid in cm) and the text of `{"arm", "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg", "last_target_cm"?, "views"}` (`views`: one sentence saying what's where in the picture). The call log keeps the picture's size only. The same picture without marks: `GET /api/pose-view.png`.
+`pose_view` returns two content blocks: a PNG (`image/png`, 1000×470: side view in the arm's plane on the left, top view on the right, grid in cm) and the text of `{"arm", "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg", "last_target_cm"?, "views"}` (`views`: one sentence saying what's where in the picture). The call log keeps the picture's size only. The same picture without marks: `GET /api/pose-view.png`. `camera_snapshot` returns a JPEG (`image/jpeg`) and `{"camera", "width_px"}`; a camera another program has open is refused.
 
 Moves return `{"result": "arrived" | "stopped_short" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`, read from the motors after the move (`read_measured` where the driver has it). `"stopped_short"`: the arm ended more than 0.5 cm from the target (move_to), a joint more than 2° from its target, or the gripper more than 5 % from the opening asked for; then also `"joints_short_deg"` (target − measured, only the joints that fell short) and `"message"` (one sentence: how far, which joints). `move_to` always adds `"target_cm"`, `"target_tool_angle_deg"` and `"off_by_cm"` (the target of this call, after the per-call clipping). Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
@@ -188,20 +189,20 @@ Polled every 3 s by the hub.
   "time_ms": 1794264745533
 }
 ```
-- `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/personas.md`), re-read every time; the designed hub draws `picture`.
+- `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/dev/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
-- `ai`: the chat's AI setup (`docs/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
-- `voice`: whether this brain can hear and speak now (`docs/voice.md`): `available`, else `why` (a full sentence: the persona has no voice, no key, no internet, the chat is paused), the voice setup in use, and `wake`: `{"available", "why", "phrase"}` for the wake word (the persona's `wake_word:`, the venue's `wake_word:`, the models). The hub shows the mic button only when it's `available` (and the page is secure and has a microphone).
+- `ai`: the chat's AI setup (`docs/dev/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
+- `voice`: whether this brain can hear and speak now (`docs/guides/voice.md`): `available`, else `why` (a full sentence: the persona has no voice, no key, no internet, the chat is paused), the voice setup in use, and `wake`: `{"available", "why", "phrase"}` for the wake word (the persona's `wake_word:`, the venue's `wake_word:`, the models). The hub shows the mic button only when it's `available` (and the page is secure and has a microphone).
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking (a spoken answer: the loudness the page reports). `offline` while no AI is connected; `error` after a failed answer until the service answers again.
 - `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
 - `in_use`: what's in use right now (`"teleop"`, `"ai"`, `"chat"` while an answer streams, `"voice"` from a mic press until the answer's last spoken word); the hub never goes back to the start screen while it isn't empty.
 - `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.
 
 ### `/api/project`
-The Current Project panel, from the Steps list in `docs/current-focus.md`.
+The Current Project panel, from the Steps list in `docs/plan/current-focus.md`.
 ```json
-{"available": true, "focus": "The JARVIS hub + AI driving a robot arm", "step": 1, "of": 10,
- "next": "Plain hub", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
+{"available": true, "focus": "The JARVIS hub, voice, and AI driving the SO-101 arms", "step": 2, "of": 12,
+ "next": "Robot tools for AI", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
 ```
 `step` is the first step that isn't done (`next` its title, `null` when all are done). `{"available": false}` when the file is missing or has no steps.
 
@@ -232,7 +233,7 @@ The robot tools' calls this brain run (the last 50 after `T`, epoch seconds), fo
 `outcome`: `ok`, `clipped`, `short` (the move ended `stopped_short`), `refused` (then `result` is the sentence why), `stopped`, `error`. `mcp`: null when the AI tools are off (`--mcp-port 0`, or their port was taken).
 
 ### `/api/green`, `/api/green/start`
-The training launcher (`docs/green-launcher.md`). `GET /api/green` → `{"ok": false, "lines": [{"ok": true, "text": "nothing else on a serial port (the white arm is unplugged)"}, …], "running": false, "url": "http://127.0.0.1:8000", "here": true}`: the port check (names in `/dev/serial/by-id/` and LeLab's saved settings only; nothing is opened), `running` = LeLab already answers, `here` = this page is on the brain's computer. `POST /api/green/start` checks again and, if every line is fine, opens a terminal on the brain's computer that starts LeLab: the same answer plus `"started": true | false`. Only from the brain's computer (`403` otherwise).
+The training launcher (`docs/guides/green-launcher.md`). `GET /api/green` → `{"ok": false, "lines": [{"ok": true, "text": "nothing else on a serial port (the white arm is unplugged)"}, …], "running": false, "url": "http://127.0.0.1:8000", "here": true}`: the port check (names in `/dev/serial/by-id/` and LeLab's saved settings only; nothing is opened), `running` = LeLab already answers, `here` = this page is on the brain's computer. `POST /api/green/start` checks again and, if every line is fine, opens a terminal on the brain's computer that starts LeLab: the same answer plus `"started": true | false`. Only from the brain's computer (`403` otherwise).
 
 ### `/api/settings`
 `GET`: `{"sections": [{"id", "title", "help", "fields": [{"key": "theme:hub.look", "file", "label", "kind", "help", "choices", "min", "max", "step", "unit", "applies", "value"}]}], "writable": true, "why_not": null, "venue": "lab"}` (from `src/lab_os/settings.py`). `POST {"key": "theme:hub.look", "value": "design"}` changes one value in its file (comments kept): `{"ok": true, "key", "value", "applies": "reload" | "next" | "restart"}`, or `400 {"ok": false, "message": "<why>"}`. Only from the brain's computer: `403` otherwise, and `writable: false`.
@@ -244,7 +245,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
  "devices": [{"name": "so101-green", "kind": "so101", "off_limits": false, "borrowed": true, "active_in_venue": true, "notes": "…", "linked": false},
              {"name": "fake-arm", "kind": "fake", "off_limits": false, "borrowed": false, "active_in_venue": true, "notes": "…", "linked": true}]}
 ```
-`linked`: the arm this brain drives. `borrowed`: another project's device that lab-os may use with its rules (`docs/places.md`). Whether a device is switched on isn't known until the roll call (lab router).
+`linked`: the arm this brain drives. `borrowed`: another project's device that lab-os may use with its rules (`docs/dev/places.md`). Whether a device is switched on isn't known until the roll call (lab router).
 
 ### `/api/hub`
 ```json
@@ -253,14 +254,14 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
              {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
  "reset_after_s": 1800}
 ```
-`title`: the place's name (`name` in `place.yaml`, `docs/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+`title`: the place's name (`name` in `place.yaml`, `docs/dev/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
 
 ### Greeting
 - `GET /api/greeting` → `{"hello": "Good evening.", "news": "Step 5, Typed chat, was finished today." | null, "source": "step" | "calendar" | "commits" | "persona", "text": "<hello + news, or hello + the persona's line>"}`.
 - `POST /api/chat/start` → the same plus `"previous"` (as in `GET /api/chat`), and the conversation starts fresh with `text` as the assistant's first message (the hub calls it on the start press). A conversation with a question in it is put aside first.
 
 ### Chat
-- `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}, "previous": {"questions": 2, "saved_at": <epoch seconds>} | null}`: the conversation the brain holds (one per brain; the hub's reset puts it aside) and the one put aside, if any (kept `chat_keep_minutes`, `docs/chat.md`).
+- `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}, "previous": {"questions": 2, "saved_at": <epoch seconds>} | null}`: the conversation the brain holds (one per brain; the hub's reset puts it aside) and the one put aside, if any (kept `chat_keep_minutes`, `docs/dev/chat.md`).
 - `POST /api/chat` with `{"text": "…"}` (at most 2000 characters) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
   ```
   {"type": "state", "state": "thinking"}
@@ -284,7 +285,7 @@ This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.
 `{"available": false}` on a venue with `public: true`. `budget_usd` is `null` when the place sets none. Also `"voice_minutes"` (heard + spoken this month); `chats` counts chat turns only.
 
 ### Voice (`/ws/voice`)
-A WebSocket per page (`docs/voice.md`). The page records and plays; the brain hears, answers through the chat above, and speaks. One utterance at a time per page; the chat's one turn at a time still holds.
+A WebSocket per page (`docs/guides/voice.md`). The page records and plays; the brain hears, answers through the chat above, and speaks. One utterance at a time per page; the chat's one turn at a time still holds.
 
 **Page → brain**
 - `{"type": "listen", "mode": "ask" | "dictate"}`: the mic is pressed. Then **binary messages**: the microphone as 16-bit PCM, 16 kHz, mono (little-endian), e.g. 50 ms each. `ask` = push-to-talk (the words become a question); `dictate` = words only, nothing is asked. Held longer than 60 s, the brain ends it itself.

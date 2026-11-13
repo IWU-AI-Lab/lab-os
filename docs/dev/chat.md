@@ -7,7 +7,7 @@ The assistant under the hub's circle answers typed questions (focus step 5). It 
    - `OPENAI_API_KEY=…`: the `main` setup (OpenAI).
    - `GEMINI_API_KEY=…`: the `backup` setup (Gemini). Used automatically when there's no OpenAI key.
 2. `uv run lab-os serve`, open http://localhost:8080/, start the hub.
-3. Type anywhere (it lands in "Ask anything"), press Enter. Or hold the mic (or Space) and talk: `docs/voice.md`. The answer streams in under the circle; **History** (or a tap on the answer) opens the whole conversation; Back or Esc closes it.
+3. Type anywhere (it lands in "Ask anything"), press Enter. Or hold the mic (or Space) and talk: `docs/guides/voice.md`. The answer streams in under the circle; **History** (or a tap on the answer) opens the whole conversation; Back or Esc closes it.
 
 The status strip says which setup answers (`AI: main (OpenAI)`), or `AI not connected` / `AI: paused`. The brain checks the service every minute by listing its models (costs nothing). Without internet the assistant shows `offline`, and everything else keeps working.
 
@@ -20,8 +20,8 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 | `local` | Ollama on this computer, no internet | `qwen3:4b` | none |
 
 - `fallback: backup` on `main`: no OpenAI key → the backup answers. Only a **missing key** switches; an error doesn't (it shows the error).
-- **Switching:** the persona picks the setup (`model: main` in `config/personas/<id>.yaml`, `docs/personas.md`). Change it there, or edit the setups in `models.yaml`; the brain re-reads both before every answer (no restart).
-- **Local:** `ollama serve`, `ollama pull qwen3:4b`, then point `main` at the `local` values (or give a home place its own `models.yaml`, `docs/places.md`). On the lab desktop, mind the GPU: it's shared with the training project. llama.cpp's server also works but defaults to port 8080, the hub's port: start it on another port.
+- **Switching:** the persona picks the setup (`model: main` in `config/personas/<id>.yaml`, `docs/dev/personas.md`). Change it there, or edit the setups in `models.yaml`; the brain re-reads both before every answer (no restart).
+- **Local:** `ollama serve`, `ollama pull qwen3:4b`, then point `main` at the `local` values (or give a home place its own `models.yaml`, `docs/dev/places.md`). On the lab desktop, mind the GPU: it's shared with the training project. llama.cpp's server also works but defaults to port 8080, the hub's port: start it on another port.
 - `options` are sent with every request as they are (e.g. `reasoning_effort: none`, `max_completion_tokens: 800` for OpenAI; Gemini wants `max_tokens`).
 - Prices are in the file (checked 2026-11-09); they only feed the spend log, so keep them current.
 
@@ -31,9 +31,9 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 - The **AI Spend** panel shows the month's total against the budget. A venue with `public: true` hides it (a hallway screen).
 
 ## What it knows
-The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
+The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/dev/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
 
-**It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is never served (the reveal is a surprise).
+**It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is included since 2026-11-12 (the design isn't a surprise any more).
 
 ## Kept for a while
 An accidental reset, a closed page or the brain restarting (even a power cut) doesn't lose the conversation:
@@ -41,9 +41,9 @@ An accidental reset, a closed page or the brain restarting (even a power cut) do
 - The reset, or the start press, puts a conversation with a question in it aside (`logs/chat/previous.json`). Under the ask line, **Bring back the last conversation (2 questions, 3:41 PM)** swaps it back in. Press it again to swap back.
 - Both files are deleted once they're older than `chat_keep_minutes` in `place.yaml` (30 by default). `0` keeps nothing and deletes what's there when the brain starts.
 - After a restart: press start, then **Bring back**.
-- Only one conversation is kept aside (the latest one). A list of past conversations is an idea for later (`docs/ideas.md`).
+- Only one conversation is kept aside (the latest one). A list of past conversations is an idea for later (`docs/plan/ideas.md`).
 
 ## Privacy and the public screen
 Anyone at the screen can type. The conversation clears from the screen when the hub goes back to the start screen (after 30 minutes with nobody there, `hub.reset_after_s`), but **Bring back** can show it again for `chat_keep_minutes`. On a hallway screen with visitors, consider a short time (e.g. `chat_keep_minutes: 5`). Questions go to the AI service of the setup in use; a free Gemini key lets Google use them to improve its products, so don't type anything private into the backup.
 
-Endpoints and the streamed message format: `docs/protocol.md` → "Chat".
+Endpoints and the streamed message format: `docs/dev/protocol.md` → "Chat".

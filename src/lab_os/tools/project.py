@@ -1,10 +1,12 @@
-"""The project helper's read tools (current-focus.md step 6): the docs, git, the device list.
+"""The project helper's read tools (focus step 6): the docs, git, the device list.
 
 Plain logic with no MCP in it; lab_os.tools.mcp_server offers these as MCP tools (read tier), and
 the hub's chat uses the same ones. Nothing here writes, runs a fetch or opens a device.
 
 The docs are `docs/**/*.md` plus README, CHANGELOG, SAFETY and CLAUDE at the top, `docs/design/`
-included (the design stopped being a surprise on 2026-11-12).
+included (the design stopped being a surprise on 2026-11-12). A doc's name is its path under docs/
+without `.md` ("plan/current-focus"); its last part alone ("current-focus") works too when only one
+doc has it.
 """
 
 import re
@@ -83,7 +85,7 @@ class ProjectTools:
     # ---------- docs ----------
 
     def _docs(self) -> dict[str, Path]:
-        """name → file, e.g. "current-focus" → docs/current-focus.md, "README" → README.md."""
+        """name → file: "plan/current-focus" → docs/plan/current-focus.md, "README" → README.md."""
         docs = {}
         root = self.repo / "docs"
         for path in sorted(root.rglob("*.md")):
@@ -94,11 +96,16 @@ class ProjectTools:
         return docs
 
     def _find(self, name: str) -> tuple[str, Path]:
+        """By full name ("plan/ideas"), or by its last part ("ideas") when only one doc has it."""
         key = name.strip().removeprefix("docs/").removesuffix(".md").lower()
-        for doc, path in self._docs().items():
+        docs = self._docs()
+        for doc, path in docs.items():
             if doc.lower() == key:
                 return doc, path
-        raise NotFound(f"no doc {name!r}; there are: {', '.join(self._docs())}")
+        short = [(doc, path) for doc, path in docs.items() if doc.lower().split("/")[-1] == key]
+        if len(short) == 1:
+            return short[0]
+        raise NotFound(f"no doc {name!r}; there are: {', '.join(docs)}")
 
     def list_docs(self) -> dict:
         out = []
@@ -152,7 +159,7 @@ class ProjectTools:
 
     def project_status(self) -> dict:
         """The current focus: its name, every step (done or not), the next one."""
-        summary = project_summary(self.repo / "docs" / "current-focus.md")
+        summary = project_summary(self.repo / "docs" / "plan" / "current-focus.md")
         summary.pop("available", None)
         summary["read_more"] = "read_doc('current-focus', section=...) for a step's details"
         return summary

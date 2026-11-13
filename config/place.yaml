@@ -1,14 +1,14 @@
-# This place: the AI lab (docs/places.md). Another place (a home) has its own folder with its own
+# This place: the AI lab (docs/dev/places.md). Another place (a home) has its own folder with its own
 # place.yaml, devices.yaml, venues/ and .env: lab-os serve --config <folder>.
 version: 1
 name: "AI Comp Lab"   # the hub's title and the startup title: the lab's name, not the project's
                       # code name (docs/design/DESIGN.md). The same for every persona.
 venue: lab            # the venue used when --venue / $LAB_OS_VENUE don't say
 persona: lab-assistant   # who the assistant is (config/personas/): lab-assistant (plain) | jarvis
-                         # (show); --persona / $LAB_OS_PERSONA win (docs/personas.md)
-ai_budget_usd_month: 20   # the hub's chat pauses when this month's AI spend reaches it (docs/chat.md)
+                         # (show); --persona / $LAB_OS_PERSONA win (docs/dev/personas.md)
+ai_budget_usd_month: 20   # the hub's chat pauses when this month's AI spend reaches it (docs/dev/chat.md)
 chat_keep_minutes: 30     # a reset or interrupted conversation can be brought back this long (0 = off)
-calendar:             # dates the hub's greeting mentions in the two weeks before (docs/personas.md)
+calendar:             # dates the hub's greeting mentions in the two weeks before (docs/dev/personas.md)
   - {date: 2026-12-15, what: "The semester ends"}
-domain: hub.indwesailab.com   # not used yet: the secure address is deferred (current-focus.md → step 7);
+domain: hub.indwesailab.com   # not used yet: the secure address is deferred (docs/guides/voice.md → "Secure pages");
                               # later only this place updates the name (step 8)

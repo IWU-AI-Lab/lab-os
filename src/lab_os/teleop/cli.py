@@ -218,7 +218,7 @@ def add_arm_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--config",
         help="this place's config folder (default: $LAB_OS_CONFIG, else lab-os's own config/); "
-        "docs/places.md",
+        "docs/dev/places.md",
     )
     parser.add_argument(
         "--venue", help="venue profile (default: $LAB_OS_VENUE, else `venue` in place.yaml)"

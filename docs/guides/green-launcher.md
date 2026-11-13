@@ -20,7 +20,7 @@ LeLab then opens **http://127.0.0.1:8000** in the browser. Teleop, recording and
 If a line fails, it says what to change and opens nothing. The first good start remembers the pairing: check once in LeLab that the follower really moves when you move the leader.
 
 ## What it never does
-Open a green port (it only reads the names in `/dev/serial/by-id/` and which programs have them open, from `/proc`), change LeLab's settings, touch the calibration folder or the `lerobot` conda env. (lab-os itself may drive the green follower since step 11, `docs/ai-control.md` → "The green arm"; the brain and LeLab never at the same time.) LeLab is its own uv tool (`~/.local/share/uv/tools/lelab`, with its own LeRobot), started as is. The code: `src/lab_os/green.py`.
+Open a green port (it only reads the names in `/dev/serial/by-id/` and which programs have them open, from `/proc`), change LeLab's settings, touch the calibration folder or the `lerobot` conda env. (lab-os itself may drive the green follower since step 11, `docs/guides/ai-control.md` → "The green arm"; the brain and LeLab never at the same time.) LeLab is its own uv tool (`~/.local/share/uv/tools/lelab`, with its own LeRobot), started as is. The code: `src/lab_os/green.py`.
 
 ## Moving the icon to another computer
 It's `~/.local/share/applications/lab-os-training.desktop`:

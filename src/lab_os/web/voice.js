@@ -1,5 +1,5 @@
-// Voice on the hub (focus step 7, docs/voice.md). The page records and plays; the brain hears, thinks
-// and speaks over /ws/voice (docs/protocol.md → "Voice"), so API keys never leave the brain.
+// Voice on the hub (focus step 7, docs/guides/voice.md). The page records and plays; the brain hears, thinks
+// and speaks over /ws/voice (docs/dev/protocol.md → "Voice"), so API keys never leave the brain.
 //
 //   const v = createVoice({ onEvent, onChange, onLoud, onLevel });
 //   v.setStatus(status.voice)   the brain's word on voice (/api/status → voice)

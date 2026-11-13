@@ -1,6 +1,6 @@
 # Use cases: realistic workflows
 
-Concrete situations lab-os should handle, used to decide which features matter. Each one: who, what happens step by step, and which features it needs. **Draft (2026-11-09): correct anything that isn't how the lab really works.** Feature status at the bottom: focus (`current-focus.md`), on hold / idea (`ideas.md`).
+Concrete situations lab-os should handle, used to decide which features matter. Each one: who, what happens step by step, and which features it needs. **Draft (2026-11-09): correct anything that isn't how the lab really works.** Feature status at the bottom (updated 2026-11-13): built (`FEATURES.md`), focus (`docs/plan/current-focus.md`), on hold / idea (`docs/plan/ideas.md`).
 
 ---
 
@@ -8,7 +8,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 **Who:** the builder, alone, lab closed, robots off.
 1. Presses a key at the desktop: startup plays, hub opens full screen.
 2. Sees: current project step, AI spend, "GPU: training (SmolVLA)" because a training run is going.
-3. Types "what's next?" → the assistant answers from `current-focus.md` and drafts a prompt for a Claude Code session.
+3. Types "what's next?" → the assistant answers from `docs/plan/current-focus.md` and drafts a prompt for a Claude Code session.
 4. Switches on `xarm1` to test something; its hexagon lights up as it connects.
 
 **Needs:** startup, hub, status strip, project helper (MCP read tools), GPU-busy indicator, devices panel, roll call (router).
@@ -80,15 +80,15 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 ## Features by how many workflows need them
 | Feature | Workflows | Status |
 |---|---|---|
-| Hub + status strip + devices panel | 1, 2, 6, 7, 8 | focus (devices: roll call waits for the router) |
-| MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | focus steps 2 (server), 6 (project tools) |
+| Hub + status strip + devices panel | 1, 2, 6, 7, 8 | built (the devices panel lists `devices.yaml`; whether each is on waits for the roll call and the router) |
+| MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | built (focus steps 2, 3, 6); reports wait for the troubleshooting suite |
 | Roll call / device diagnostics / battery | 1, 2, 6 | on hold (router) / idea |
 | Teleop + control handover + STOP everywhere | 2, 3 | done (polish on hold) |
-| Personas | 2, 3 | focus step 4 |
-| Kiosk screens | 3, 9 | idea (full screen on the start press: focus step 1) |
-| Remote access + tokens + tiers | 4, 8 | after focus / idea (needs router + IT) |
-| Harness toggle + lab-paid agent + cost display | 5 | after focus |
+| Personas | 2, 3 | built (focus step 4) |
+| Kiosk screens | 3, 9 | full screen on the start press and the kiosk recipe built (`docs/guides/hub.md`); the rest an idea |
+| Remote access + tokens + tiers | 4, 8 | after this focus / idea (needs router + IT) |
+| Harness toggle + lab-paid agent + cost display | 5 | after this focus |
 | GPU-busy indicator | 1, 7 | idea |
 | Find me | 6 | idea |
 | Projects module (locks) | 7 | idea |
-| Voice | 3 | focus step 7 |
+| Voice | 3 | built (focus step 7) |

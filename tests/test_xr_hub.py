@@ -1,7 +1,7 @@
 """The hub in VR (/xr): its JavaScript modules are all served, and nothing comes from the internet.
 
-The scene itself is tested in a browser with Meta's emulated Quest (iwer; docs/quest-setup.md →
-"Testing without a headset"). These checks catch a broken import or a CDN link before that.
+The scene itself is tested in a browser with Meta's emulated Quest (iwer; docs/guides/quest-setup.md
+→ "Testing without a headset"). These checks catch a broken import or a CDN link before that.
 """
 
 import re

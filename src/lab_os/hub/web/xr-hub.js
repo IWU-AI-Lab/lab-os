@@ -456,7 +456,7 @@ async function init() {
   vr.disabled = !hasVR;
   vr.textContent = hasVR ? "Enter VR" : "No VR on this device";
   ar.hidden = !hasAR;
-  if (!hasVR && !hasAR) $("#msg").textContent = "Open this page in the Quest's browser: http://localhost:8080/xr (with adb reverse, docs/quest-setup.md). Here you can watch it on the screen.";
+  if (!hasVR && !hasAR) $("#msg").textContent = "Open this page in the Quest's browser: http://localhost:8080/xr (with adb reverse, docs/guides/quest-setup.md). Here you can watch it on the screen.";
   const go = (m) => () => start(m).catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
   vr.onclick = go("immersive-vr");
   ar.onclick = go("immersive-ar");

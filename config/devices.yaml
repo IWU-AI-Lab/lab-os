@@ -1,6 +1,6 @@
-# Robot registry. Names follow docs/lab-jarvis-log.md.
+# Robot registry. Names follow docs/plan/lab-jarvis-log.md.
 #
-# Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/GOTCHAS.md).
+# Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/dev/GOTCHAS.md).
 # Cameras are listed ONLY by USB socket (/dev/v4l/by-path/): identical cameras share a serial.
 # off_limits: true -> lab_os.devices refuses to hand out the port.
 # borrowed: true   -> another project's device (CLAUDE.md, "Hard rules"): lab-os may drive or use
@@ -35,7 +35,7 @@ devices:
 
   # The training set's two cameras (Innomaker U20CAM-1080p, 0c45:6366, both serial SN0001):
   # sockets from `ls -l /dev/v4l/by-path/` on 2026-11-11. Which one is the wrist camera and which
-  # sees from above isn't written down yet: check at the lab, then rename (docs/lab-checklist.md).
+  # sees from above isn't written down yet: check at the lab, then rename (docs/guides/lab-checklist.md).
   so101-green-cam-a:
     kind: camera
     borrowed: true
@@ -51,7 +51,7 @@ devices:
   # HACK (2026-11-12, temporary, for today's camera test with the AI): the two cameras plugged in
   # now are the WHITE arm's, but they sit in sockets 7 and 8, which are registered above as the
   # green set's. These two names point at the same sockets so the AI can use them. Clean up:
-  # real names per setup, see docs/current-focus.md -> "Hacks to clean up".
+  # real names per setup, see docs/plan/current-focus.md -> "Hacks to clean up".
   so101-white-cam-a:
     kind: camera
     socket: usb-0:7

@@ -7,7 +7,7 @@ uv run lab-os-teleop serve                         # XR page + live fake arm
 uv run lab-os-teleop serve --record recordings/try1.jsonl
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser needed
 ```
-Then open **http://localhost:8080/monitor** to watch the fake arm. **Under `uv run lab-os serve`** (the brain with the hub, `docs/hub.md`) the same page is at **http://localhost:8080/teleop**; `/`, `/ws` and `/monitor` work the same otherwise, so use `/teleop` wherever this page says `http://localhost:8080/`. In VS Code, the Run and Debug panel has buttons for each of these (`.vscode/launch.json`).
+Then open **http://localhost:8080/monitor** to watch the fake arm. **Under `uv run lab-os serve`** (the brain with the hub, `docs/guides/hub.md`) the same page is at **http://localhost:8080/teleop**; `/`, `/ws` and `/monitor` work the same otherwise, so use `/teleop` wherever this page says `http://localhost:8080/`. In VS Code, the Run and Debug panel has buttons for each of these (`.vscode/launch.json`).
 
 **3D view** (on both pages): draws exactly the joint angles the arm driver receives, per command, unclamped. Pick the model in its dropdown: SO-101 (real URDF meshes), SO-101 stick figure, or xArm 1S boxes. Drag to orbit, scroll to zoom. The table under it flags joints the driver clamped and commands outside the model's limits; the arm turns dark red while frozen. Works offline (three.js and the model are in the repo). Note: control is relative, so `replay --loop` adds the same motion every loop until joints reach their soft limits (3° inside the real ones). There the clutch slips: the arm stops, and moving the hand back moves it back right away.
 
@@ -31,7 +31,7 @@ Controls: **grip** held = clutch (arm follows, relative to where it is) · **tri
 | **Mouse** | hold 1–5 (base, shoulder, elbow, wrist tilt, wrist roll) and move the mouse; left/right button = gripper open/close. Shift = slow. | joint jogging |
 | **Virtual hand** (prototype) | a pretend Quest controller: Space = clutch, trackpad/WASD/RF move it, arrows tilt/roll, C gripper. Unintuitive on a desk; kept because it costs nothing and tests the Quest path. | pose (`xr_input`): IK on the xArm, joint space on the SO-101 |
 
-**Real arm (xarm1):** before starting: arm clamped, area clear, power plug in reach, and if the servos are limp press the board's **Run** button (the arm stands up by itself). Stand **behind the arm, opposite the controller board** (the board side is the arm's "front", docs/GOTCHAS.md), so "forward" and "right" match. Motors move only while a key/button is held; a move already sent still finishes (≤ ~0.1 s).
+**Real arm (xarm1):** before starting: arm clamped, area clear, power plug in reach, and if the servos are limp press the board's **Run** button (the arm stands up by itself). Stand **behind the arm, opposite the controller board** (the board side is the arm's "front", docs/dev/GOTCHAS.md), so "forward" and "right" match. Motors move only while a key/button is held; a move already sent still finishes (≤ ~0.1 s).
 
 ## 3. At home: browser WebXR emulator
 1. In Chrome or Brave (both work on the lab desktop), install Meta's **Immersive Web Emulator** extension from the Chrome Web Store.
@@ -79,7 +79,7 @@ On the teleop page, **Hand → arm → 1:1** (the brain keeps the choice until i
 
 Tilt and roll stay relative (degree for degree from the grab). Bare hands work too: the right wrist in the ball, left pinch = clutch. Desktop control and old recordings have no arm position, so they stay relative. Replay a new recording in 1:1: `uv run lab-os-teleop replay recordings/<file>.jsonl --mode one_to_one` (a recording made in 1:1 switches by itself).
 
-Why: in the relative mode (10 cm of hand = 5 cm of gripper) the hand drifted away from the arm and needed re-grabbing again and again (focus, "Done on the side", 2026-11-10).
+Why: in the relative mode (10 cm of hand = 5 cm of gripper) the hand drifted away from the arm and needed re-grabbing again and again (decision 2026-11-10).
 
 ### Tuning: when it doesn't follow well
 Record a session, then replay it without the Quest (and without the real arm):
@@ -90,7 +90,7 @@ uv run lab-os-teleop replay recordings/quest-2026-11-10.jsonl      # the fake ar
 A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow straightens"). The knobs are in `MappingConfig` (`src/lab_os/teleop/mapping.py`):
 - `tip_m_per_hand_m` (0.5): relative mode, 10 cm of hand → 5 cm of gripper. Lower = finer and more "it doesn't follow"; higher = jumpier. (1:1 is always 1.)
 - `capture_m` (0.08): 1:1, how close the hand must be to the gripper to grab it.
-- `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
+- `floor_m` (0.01; −0.005 decided 2026-11-13, quick job 3, since the arm stands on the overhead camera's base): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
 - The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
 **The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Then the hub is around you: point at a callout with a controller (or your hand) and pull the trigger (or pinch) to open its details; 7d/14d/30d, List all and a device's card work too. **B** or **Y** closes a page. The trigger no longer replays the jump: ⏻ (top right) goes back to the start screen.

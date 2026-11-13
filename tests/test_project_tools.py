@@ -40,10 +40,11 @@ READ_TOOLS = {
 def repo(tmp_path):
     """A tiny project: docs (one design doc), README, two commits."""
     (tmp_path / "docs" / "design").mkdir(parents=True)
-    (tmp_path / "docs" / "current-focus.md").write_text(
+    (tmp_path / "docs" / "plan").mkdir()
+    (tmp_path / "docs" / "plan" / "current-focus.md").write_text(
         "# Current Focus: tiny\n## Steps\n1. **First** (done 2026-11-01).\n2. **Second.** x\n"
     )
-    (tmp_path / "docs" / "ideas.md").write_text(
+    (tmp_path / "docs" / "plan" / "ideas.md").write_text(
         "# Ideas\n## On hold\n- The router.\n- Roll call.\n## Later\n- Voice wake word.\n"
         "```\n# not a heading\n```\n"
     )
@@ -54,7 +55,7 @@ def repo(tmp_path):
     subprocess.run([*git, "init", "-q", "-b", "main"], check=True)
     subprocess.run([*git, "add", "-A"], check=True)
     subprocess.run([*git, "commit", "-q", "-m", "First commit"], check=True)
-    (tmp_path / "docs" / "ideas.md").write_text("# Ideas\n## On hold\n- The router.\n")
+    (tmp_path / "docs" / "plan" / "ideas.md").write_text("# Ideas\n## On hold\n- The router.\n")
     subprocess.run([*git, "commit", "-q", "-am", "Ideas: trim"], check=True)
     (tmp_path / "scratch.txt").write_text("x")
     return tmp_path
@@ -71,13 +72,13 @@ def robot_tools():
 
 def test_docs_are_listed_with_the_design(repo):
     names = [d["name"] for d in ProjectTools(repo).list_docs()["docs"]]
-    assert names == ["current-focus", "design/DESIGN", "ideas", "long", "README"]
+    assert names == ["design/DESIGN", "long", "plan/current-focus", "plan/ideas", "README"]
     assert ProjectTools(repo).read_doc("design/DESIGN")["text"] == "# The design\n"  # no surprise
 
 
 def test_read_doc_whole_section_and_cut_off(repo):
     tools = ProjectTools(repo)
-    assert tools.read_doc("docs/ideas.md")["text"].startswith("# Ideas")  # any spelling works
+    assert tools.read_doc("docs/plan/ideas.md")["text"].startswith("# Ideas")  # any spelling works
     part = tools.read_doc("IDEAS", section="on hold")
     assert part["text"] == "## On hold\n- The router."
     long = tools.read_doc("long")
@@ -87,9 +88,20 @@ def test_read_doc_whole_section_and_cut_off(repo):
         tools.read_doc("ideas", section="nope")
 
 
+def test_short_names_only_when_there_is_one(repo):
+    tools = ProjectTools(repo)
+    assert tools.read_doc("current-focus")["file"] == "docs/plan/current-focus.md"
+    assert tools.read_doc("plan/current-focus")["name"] == "plan/current-focus"
+    (repo / "docs" / "archive").mkdir()
+    (repo / "docs" / "archive" / "ideas.md").write_text("# Old ideas\n")
+    with pytest.raises(NotFound):
+        tools.read_doc("ideas")  # two docs end in "ideas": say which
+    assert tools.read_doc("archive/ideas")["text"] == "# Old ideas\n"
+
+
 def test_search_docs(repo):
     hits = ProjectTools(repo).search_docs("router")["hits"]
-    assert hits == [{"doc": "ideas", "line": 3, "heading": "On hold", "text": "- The router."}]
+    assert hits == [{"doc": "plan/ideas", "line": 3, "heading": "On hold", "text": "- The router."}]
     with pytest.raises(NotFound):
         ProjectTools(repo).search_docs("x")
 
@@ -126,8 +138,9 @@ def test_list_devices():
 def test_the_real_docs():
     tools = ProjectTools(REPO)
     names = {d["name"] for d in tools.list_docs()["docs"]}
-    assert {"current-focus", "ideas", "GOTCHAS", "lab-jarvis-log", "CLAUDE"} <= names
-    assert "design/DESIGN" in names
+    assert {"plan/current-focus", "plan/ideas", "dev/GOTCHAS", "plan/lab-jarvis-log"} <= names
+    assert {"guides/hub", "design/DESIGN", "CLAUDE"} <= names
+    assert tools.read_doc("current-focus")["name"] == "plan/current-focus"  # the short name works
     assert "On hold" in tools.read_doc("ideas", section="On hold")["text"]
 
 

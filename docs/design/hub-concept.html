@@ -754,7 +754,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
   </section>
 
   <aside class="side left">
-    <div class="panel" data-detail="project" title="From docs/current-focus.md. Step 0 (design and planning) is under way."><div class="cut"><div class="in">
+    <div class="panel" data-detail="project" title="From docs/plan/current-focus.md. Step 0 (design and planning) is under way."><div class="cut"><div class="in">
       <div class="head"><span class="cap">Current Project</span><button class="open" type="button" aria-label="Current Project details"><svg class="ico"><use href="#i-open"/></svg></button></div>
       <div class="big">Build the JARVIS hub</div>
       <div class="prog"><div class="steps" id="steps" aria-hidden="true"></div><span class="stepn">Step 0 of 8</span></div>
@@ -1809,7 +1809,7 @@ function setAlert(a) {
 /* ---------- chat ---------- */
 const ANSWERS = [
   [/next|step|todo|work on/i, "Step 1 is next: the brain program and hub skeleton. `lab-os serve` serves this full-screen hub, with the status strip and module buttons coming from config, and Teleop working from inside it. After that come personas."],
-  [/hold|wait|router|paused/i, "Roll call and robot connections wait for the lab router. Everything that's paused is listed in `docs/ideas.md` under \"On hold\"."],
+  [/hold|wait|router|paused/i, "Roll call and robot connections wait for the lab router. Everything that's paused is listed in `docs/plan/ideas.md` under \"On hold\"."],
   [/design|font|color|look/i, "The design lives in `docs/design/DESIGN.md`: dark, cyan line-light, cut corners, cinematic motion. Colors, fonts and timings are all in `config/theme.yaml`, so each one is a single edit."],
   [/arm|robot|teleop|so101|xarm/i, "so101-white is driven from the Quest through Teleop. xarm1 comes through the core once the router is here. In this concept the arm readouts come from fake-arm."],
 ];
@@ -1996,7 +1996,7 @@ document.querySelectorAll(".side .panel[data-detail]").forEach((p) => {
   p.querySelector(".open").addEventListener("click", (e) => { e.stopPropagation(); go(); });
 });
 const DETAILS = { project: ["Current Project", "i-next", "detail"], spend: ["AI Spend", "i-coin", "detail"], commits: ["Commits", "i-commit", "detail"], devices: ["Devices", "i-net", "detail"] };
-// docs/current-focus.md, 7 Nov 2026
+// docs/plan/current-focus.md, 7 Nov 2026
 const STEPS = [
   ["Settle before coding", "AI service picked (OpenAI first, local models second); the design session is under way"],
   ["Brain program + hub skeleton", "lab-os serve serves this hub; Teleop works from inside it"],

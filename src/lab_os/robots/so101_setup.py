@@ -323,7 +323,7 @@ def main(argv: list[str] | None = None, ask: Ask = input, say: Say = print) -> i
     parser.add_argument(
         "--arm", help="device name in devices.yaml (default: the place's only SO-101 follower)"
     )
-    parser.add_argument("--config", help="this place's config folder (docs/places.md)")
+    parser.add_argument("--config", help="this place's config folder (docs/dev/places.md)")
     args = parser.parse_args(argv)
 
     if args.config:

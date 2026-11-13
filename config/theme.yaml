@@ -88,7 +88,7 @@ motion:                  # (planned; the designed hub reads some)
 
 hub:                     # (planned) except where "Used by" says otherwise
   look: plain            # plain | design: which hub `/` shows. design = the approved concept made real (the
-                         # reveal, current-focus.md step 10); /design and /plain always show each. Used by: the brain
+                         # reveal, docs/plan/current-focus.md step 10); /design and /plain always show each. Used by: the brain
                          # The top-left title and the startup title are the place's name: `name` in place.yaml, not here.
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, ai, training]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub

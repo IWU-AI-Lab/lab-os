@@ -1,6 +1,6 @@
 # Gotchas
 
-Every on-the-ground surprise and its fix. Newest first. (Network/device-setup gotchas also live at the bottom of `network-setup-checklist.md`.)
+Every on-the-ground surprise and its fix. Newest first. (Network/device-setup gotchas also live at the bottom of `docs/guides/network-setup-checklist.md`.)
 
 ---
 
@@ -9,7 +9,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 **Fix:** open. Workaround: 1600×900. To check next: the refresh rate Ubuntu picks at 1920×1080 (Displays: 60 Hz, or 30/50?), and the Newline's picture mode (a "game" or low-latency mode in its menu; manual in `docs/device_manuals/`).
 
 ### 2026-11-13 — The Newline's own Chrome: 44–59 fps on /perf, but the startup still lags, and no mic button
-**What:** the Newline on an Ethernet cable from the lab desktop, its own Chrome at `http://<desktop>:8080`. `/perf`: average **43.8 fps** over 10 s, slowest frame 50 ms, canvas 2926×1646 (1463×823 at 2×, device pixel ratio 2.625), 108 dots, 3000 stars; **59 fps with 1000 stars**. The startup itself was still very laggy, so laggy that after the tap about half the animation never showed. The Newline's microphones work (Chrome's voice search understood well), but the hub showed **no mic button**: the page is `http://<ip>`, which isn't a secure page, so the browser hides the microphone (`docs/voice.md` → secure pages). STOP from the Newline stopped the arm on the desktop.
+**What:** the Newline on an Ethernet cable from the lab desktop, its own Chrome at `http://<desktop>:8080`. `/perf`: average **43.8 fps** over 10 s, slowest frame 50 ms, canvas 2926×1646 (1463×823 at 2×, device pixel ratio 2.625), 108 dots, 3000 stars; **59 fps with 1000 stars**. The startup itself was still very laggy, so laggy that after the tap about half the animation never showed. The Newline's microphones work (Chrome's voice search understood well), but the hub showed **no mic button**: the page is `http://<ip>`, which isn't a secure page, so the browser hides the microphone (`docs/guides/voice.md` → secure pages). STOP from the Newline stopped the arm on the desktop.
 **Fix:** open. The mic: Chrome's flag on the Newline (`chrome://flags` → "Insecure origins treated as secure" → `http://<desktop>:8080`). The lag: `/perf` is near fine with fewer stars, so the startup does more than `/perf` (focus step 12).
 
 ### 2026-11-13 — The Quest's wake word sometimes doesn't fire
@@ -18,7 +18,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-13 — "Don't ask again" for the arm's move tools lasted one session
 **What:** during the cube pick the builder told Claude Code not to ask again for the move tools. The next session asked again: nothing was saved, and the `ask` list in `.claude/settings.json` wins over a saved "allow" anyway (in Claude Code, ask beats allow).
-**Fix:** decided 2026-11-13 to stop asking (`docs/quick-jobs.md`, job 1: the tools move to `allow` in the repo's settings).
+**Fix:** decided 2026-11-13 to stop asking (`docs/plan/quick-jobs.md`, job 1: the tools move to `allow` in the repo's settings).
 
 ### 2026-11-12 — AI cube pick on so101-white: the gripper closed right next to the cube (open)
 **What:** Claude drove the real `so101-white` through the MCP tools: pictures from both cameras, `home`, then a blue ~2.5 cm cube on the table. 10 moves after `home` brought the open gripper down beside the cube without bumping it. It closed at a reported (28.2, 7.7, 1.0) cm, tool angle 174°, all the way (7.8 % open: nothing in the jaws). Both cameras then showed the cube still in place, just past the jaw tips. Three things showed up:
@@ -27,7 +27,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 - **Placing the cube from the overhead picture was ~8 cm off.** From `so101-white-cam-a` alone, Claude marked the cube at (24, 13) cm; the wrist camera put it at roughly (30.5, 8). The camera's position relative to the arm isn't known, so a picture gives a direction, not a place. The wrist camera got there by small steps (look, move 2 cm, look).
 
 Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.2, 5) with 179°; 170° worked.
-**Fix:** open. First check how high the jaw tips really are when the tools say z = 1 (ruler), and whether the cube sat beside the jaws or in line with them. Fix ideas are in `ideas.md` ("AI picking: height, sag and camera placement").
+**Fix:** open. First check how high the jaw tips really are when the tools say z = 1 (ruler), and whether the cube sat beside the jaws or in line with them. Fix ideas are in `docs/plan/ideas.md` ("AI picking: height, sag and camera placement").
 
 ### 2026-11-12 — Which white-arm camera sees what
 **What:** the `camera_snapshot` tool told the AI this wasn't written down. From the pick run: **`so101-white-cam-a`** is fixed above the table, behind the arm, looking forward over it (the arm comes in at the bottom right; the box and pliers are top right). **`so101-white-cam-b`** is on the wrist, looking along the jaws (both jaw tips at the bottom of the picture). The exposure settles slowly: cam-a gave three very dark pictures in a row while the arm moved under it, and cam-b one washed-out yellow-white picture, both fine again on the next snapshot.
@@ -35,7 +35,7 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 
 ### 2026-11-12 — Asked to say each move first, the AI made most moves without a word
 **What:** in the same run the builder asked: "tell me before each move what you'll do. One move at a time." Claude (Fable 5.2) said what it would do before only 3 or 4 of its 17 moves (gripper included), and in chat it didn't wait for a go-ahead between moves. Each move was still a separate, small tool call with a look in between, but the builder couldn't follow along or stop a move before it started. Bad for the 2026-11-19 demo, where people follow the arm through what the AI says.
-**Fix:** open. When asked, the AI writes one line before every move ("Next: lower 1.5 cm, straight down, to just above the cube"). An idea for making the tools do it is in `ideas.md` (same entry as above).
+**Fix:** open. When asked, the AI writes one line before every move ("Next: lower 1.5 cm, straight down, to just above the cube"). An idea for making the tools do it is in `docs/plan/ideas.md` (same entry as above).
 
 ### 2026-11-12 — Custom three.js shaders mix colors in linear light; the hub's canvas mixes in sRGB
 **What:** the VR jump's star lines and sky (custom `ShaderMaterial`s) used the theme colors as `THREE.Color`s, which three converts to linear light, and the output was converted back to sRGB. A 15 % cyan tint (the hub's `rgba(primary, 0.15)` over black) came out as a strong teal fog, the flash as gray, and faint line tails much too bright: "mostly black and white" in the headset.
@@ -66,8 +66,8 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 **Fix:** since step 11 the hook (`.claude/hooks/guard.sh`, tests in `tests/test_guard_hook.py`) allows reads (`ls`, `cat`, `jq`, `diff`, `sha256sum`) under `~/.cache/huggingface/lerobot` and denies anything that could write, move or delete there (`rm`, `mv`, `cp`, `>`, `tee`, `sed -i`, `python`, `lerobot-*`, …); the green serials aren't blocked any more. Still a text match: `jq '.x > 1' <file there>` is denied too (the `>`). Edits with the editor tools aren't checked by the hook; `.claude/settings.json` denies `Edit(…/.cache/huggingface/lerobot/**)` for those.
 
 ### 2026-11-11 — The two training cameras share one serial number
-**What:** `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
-**Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (`current-focus.md` → "Step 3, concretely").
+**What:** (first seen 2026-10-28: Innomaker U20CAM-1080p, USB ID `0c45:6366`, which `lsusb` calls "Microdia Webcam Vitade AF"; each shows up as two `/dev/video*` entries; the white arm's two are the same model.) `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
+**Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index (until 2026-11-12 the whole camera model was blocked instead; since step 11 the training cameras are `borrowed`, by socket, and refused while another program has them open). The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (the powered hub on the shopping list, `docs/plan/lab-jarvis-log.md` → "Facts about the lab").
 
 ### 2026-11-11 — `/classic/teleop` threw an error since the speed control
 **What:** `teleop-page.js` (shared by `/teleop` and `/classic/teleop`) set up the speed slider without checking it's there; the classic page has none, so the script stopped at that line ("Cannot set properties of null") and everything after it in that script didn't run there. Found by a headless Chrome check of every page.
@@ -87,7 +87,7 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 - Reloading the brcmfmac driver twice in quick succession hung the Wi-Fi chip ("dongle is not responding: err=-84"). Only a reboot fixed it.
 - raspbot1's logs look 13 h ahead of the desktop: its time zone is Asia/Shanghai (UTC+8). The clock is right.
 
-**Fix:** for OWE networks on a Pi, save the profile plain open: `sudo nmcli con modify IWU-AI-LAB remove 802-11-wireless-security` (worked on `pi01`). Run sudo commands in the foreground (or in one `sudo bash -c '…'`), never behind `&`. raspbot1 on IWU-AI-LAB: open. Suspected cause is its old software; untested next step `sudo apt install firmware-brcm80211` (offered 1:20240709-2~bpo12+1+rpt4, may not contain 7.45.265). Its IWU-AI-LAB profile is open with autoconnect off; debug log `~/iwu-debug-2026-11-10.log` and profile backups `~/Raspbot-working-2026-11-10.nmconnection`, `~/IWU-AI-LAB-2026-11-10.nmconnection` are on the Pi. Left as they were: the Raspbot profile's gateway 192.168.1.0 (bogus, adds a dead default route), and the old Yahboom / Yahboom3 Wi-Fi profiles outrank Raspbot (priority 4 and 6 vs 2). Reaching it by cable: `network-setup-checklist.md` → Step 2.
+**Fix:** for OWE networks on a Pi, save the profile plain open: `sudo nmcli con modify IWU-AI-LAB remove 802-11-wireless-security` (worked on `pi01`). Run sudo commands in the foreground (or in one `sudo bash -c '…'`), never behind `&`. raspbot1 on IWU-AI-LAB: open. Suspected cause is its old software; untested next step `sudo apt install firmware-brcm80211` (offered 1:20240709-2~bpo12+1+rpt4, may not contain 7.45.265). Its IWU-AI-LAB profile is open with autoconnect off; debug log `~/iwu-debug-2026-11-10.log` and profile backups `~/Raspbot-working-2026-11-10.nmconnection`, `~/IWU-AI-LAB-2026-11-10.nmconnection` are on the Pi. Left as they were: the Raspbot profile's gateway 192.168.1.0 (bogus, adds a dead default route), and the old Yahboom / Yahboom3 Wi-Fi profiles outrank Raspbot (priority 4 and 6 vs 2). Reaching it by cable: `docs/guides/network-setup-checklist.md` → Step 2.
 
 ### 2026-11-10 — The Pi's browser "kept loading" the hub: it was waiting for a password
 **What:** on `pi01`, `http://192.168.7.72:8080/monitor` kept loading. The brain saw the Pi connect but never send a request: Chromium on Raspberry Pi OS was waiting behind a password prompt (most likely "Unlock login keyring", asked when Chromium first starts). The Pi also didn't reach the desktop by its name (`ai-comp-lab-ubuntu-76358.iwu.ai.lab`); the IP address works.
@@ -98,15 +98,15 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 
 ### 2026-11-10 — `move_to` said "arrived" 1.6 cm short of the target (real so101-white)
 **What:** blind cube test (cube "10 cm in front"), the AI driving the real `so101-white` through the MCP tools. Close to the base, straight-down picks are out of reach (refused down to ~16 cm at 180°); the nearest the IK offered was (10.9, 0, 2.1) cm at 172°. Asked for (11, 0, 2.1), the arm reported "arrived" at (12.6, 0.1, 2.5) at 166°: elbow and wrist short of the command, the arm folded near its limits. The gripper closed 2.7 cm past where the cube would be, and the blind AI couldn't tell.
-**Fix (2026-11-11, not yet tried on the real arm):** moves now read the motors after arriving and say `stopped_short` with how far (`off_by_cm`, `joints_short_deg`, a sentence) instead of "arrived" (`docs/ai-control.md`). Found on the way, a likely cause: when an AI move reached its last waypoint, the next tick froze the arm, and the SO-101's freeze writes "hold where the motors are **now**". A joint still trailing its command (load, near a limit) was locked short there. Now the move keeps sending its target for 0.5 s before the freeze. Also: while driving, the SO-101 driver's `read_joints` returns where it *told* the motors to go, so "arrived" never saw the miss; the check uses `read_measured`. Still open: whether the rest of the miss is load, a servo deadband or the arm touching itself. Cameras (focus step 3) let the AI see it. **2026-11-12:** the elbow came up ~3° short on nearly every move of the cube pick (entry above), so it looks steady, not a one-off.
+**Fix (2026-11-11, not yet tried on the real arm):** moves now read the motors after arriving and say `stopped_short` with how far (`off_by_cm`, `joints_short_deg`, a sentence) instead of "arrived" (`docs/guides/ai-control.md`). Found on the way, a likely cause: when an AI move reached its last waypoint, the next tick froze the arm, and the SO-101's freeze writes "hold where the motors are **now**". A joint still trailing its command (load, near a limit) was locked short there. Now the move keeps sending its target for 0.5 s before the freeze. Also: while driving, the SO-101 driver's `read_joints` returns where it *told* the motors to go, so "arrived" never saw the miss; the check uses `read_measured`. Still open: whether the rest of the miss is load, a servo deadband or the arm touching itself. Cameras (focus step 3) let the AI see it. **2026-11-12:** the elbow came up ~3° short on nearly every move of the cube pick (entry above), so it looks steady, not a one-off.
 
 ### 2026-11-10 — LeLab saves raw ttyACM names, and the white arm was its "leader"
 **What:** the training project's LeLab keeps its ports as `/dev/ttyACM0` (leader) and `/dev/ttyACM1` (follower). With only `so101-white` plugged in, the white arm was `ttyACM0`: LeLab started then would have treated it as the green leader. The numbers follow the plug-in order.
-**Fix:** the training launcher (`lab-os green`, `docs/green-launcher.md`) refuses unless exactly the two green arms are plugged in, LeLab's ports are those two, and they're the same way round as the last good start.
+**Fix:** the training launcher (`lab-os green`, `docs/guides/green-launcher.md`) refuses unless exactly the two green arms are plugged in, LeLab's ports are those two, and they're the same way round as the last good start.
 
 ### 2026-11-10 — Quest teleop: the SO-101 stretched out its elbow and went into the table
 **What:** after a while of Quest teleop, `so101-white`'s elbow straightened and the arm hit the table. Reproduced offline (a wandering hand through `ClutchMapper` + the SO-101 model): with the hand 2 m forward, shoulder_lift 89°, elbow −75° (straight is −90°), the gripper 8.6 cm *below* the table. Nothing knew where the table was, and relative control lets the arm wander as the hand re-grabs. Also, each joint's speed was limited on its own, so at low speed the joints arrived at different times and the gripper didn't move along the hand's line ("doesn't follow exactly").
-**Fix:** the IK mapping keeps the gripper and wrist `floor_m` (1 cm) above the base's bottom (the table) and slips there like a joint limit; a step that would dip goes as far as it can; all joints slow down together. (A rule keeping the elbow 15° from straight was tried and dropped the same day: the builder found it got in the way of some movements.) Tuning: `docs/quest-setup.md` → "Tuning". Still possible: the real arm sags when stretched out flat near the table; raise `floor_m` if it touches.
+**Fix:** the IK mapping keeps the gripper and wrist `floor_m` (1 cm) above the base's bottom (the table) and slips there like a joint limit; a step that would dip goes as far as it can; all joints slow down together. (A rule keeping the elbow 15° from straight was tried and dropped the same day: the builder found it got in the way of some movements.) Tuning: `docs/guides/quest-setup.md` → "Tuning". Still possible: the real arm sags when stretched out flat near the table; raise `floor_m` if it touches.
 
 ### 2026-11-10 — The Newline doesn't look like 60 Hz from a laptop (open)
 **What:** the laptop says the Newline runs at 60 Hz, but motion looks no smoother. Several ways tried by the builder; not solved yet. Likely suspects, cheapest first: the browser's energy saver (Chrome/Edge/Brave cap pages at 30 frames a second on battery: plug in, or turn it off under Settings → Performance / System); a 4K signal (60 Hz at 4K needs HDMI 2.0 at both ends and a "Premium High Speed" cable, and 4× the pixels for a laptop's graphics to draw: set the laptop to 1920×1080 at 60 Hz and let the Newline scale it); the Newline's HDMI/EDID version setting (1.4 vs 2.0) on its input menu, where the model has one; its USB-C input instead of HDMI, if both ends carry video over USB-C. Measure with `/perf` (frames the browser actually draws) on the Newline.
@@ -133,7 +133,7 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 **Fix:** none needed in code (the page says "Looking up the current focus…" meanwhile). Expect it when demoing on the free key; the paid OpenAI `main` setup is usually faster. Test scripts wait 20 s+ for an answer.
 
 ### 2026-11-10 — Steps "built and tested" still counted as not done
-**What:** the Current Project panel said "Step 1 of 10" although steps 4–6 were finished: the panel only counts a step as done when its line in `current-focus.md` says `(done YYYY-MM-DD)` right after the bold title; the status lines underneath don't count.
+**What:** the Current Project panel said "Step 1 of 10" although steps 4–6 were finished: the panel only counts a step as done when its line in `docs/plan/current-focus.md` says `(done YYYY-MM-DD)` right after the bold title; the status lines underneath don't count.
 **Fix:** marked 4–6 `(done 2026-11-10)`. When a step is finished, add the `(done …)` mark (step 1 waits for its Newline check).
 
 ### 2026-11-10 — The live status line floods a narrow terminal
@@ -178,7 +178,7 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 
 ### 2026-11-09 — New devices can't join the lab Wi-Fi quickly
 **What:** only campus IT can add a device (by MAC address) to the lab Wi-Fi. The Raspbots were sent in about two weeks ago and still aren't on (IT tried; it didn't work, cause unknown). Planning had assumed the Newline could just join it.
-**Fix:** plan around it: only devices already on it (the desktops, the Pis) use it; the Newline reaches the brain by cable, through a Pi, or by a phone hotspot until the lab router exists (`network-setup-checklist.md` → "Networks before the router").
+**Fix:** plan around it: only devices already on it (the desktops, the Pis) use it; the Newline reaches the brain by cable, through a Pi, or by a phone hotspot until the lab router exists (`docs/guides/network-setup-checklist.md` → "Networks before the router").
 
 ### 2026-11-09 — Headless Chrome refuses full screen and pointer lock
 **What:** In headless Chrome (`--headless=new`), `requestFullscreen()` and `requestPointerLock()` are refused even after a real (DevTools-sent) click. So the hub's tap 1 takes its "can't go full screen" path (straight to tap 2), and teleop's Desktop control never starts. Not a bug in the pages: the standalone `/teleop` page behaves the same.
@@ -267,11 +267,7 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 
 ### 2026-10-28 — Two Claude sessions in one folder switch branches under each other
 **What:** A coding session and a planning session both worked in `lab-os/`. The coding session switched the folder to `xarm-driver`, so the planning session's doc commits landed there instead of on its own branch (nothing lost, but confusing).
-**Fix:** One folder per session, via **git worktrees** (several folders on the same repo, each on its own branch). Coding: `lab-os/`. Planning: `lab-os-planning/` on branch `planning`. See `dev-setup.md` → "Branches and folders".
-
-### 2026-10-28 — The two training cameras have the same serial number
-**What:** Both USB cameras (Innomaker U20CAM-1080p, USB ID `0c45:6366`, `lsusb` calls them "Microdia Webcam Vitade AF") belong to the so101-green training setup. Both report serial `SN0001`, so a serial number can't tell them apart. On the lab desktop they sit in USB sockets `1-7` and `1-8` (each shows up as two `/dev/video*` entries).
-**Rule (until 2026-11-12; since step 11 they're `borrowed` cameras, by socket, refused while another program uses them):** lab-os never opens them (a camera can only be used by one program at a time; opening it can break a training recording). Today `config/devices.yaml` blocks that camera model entirely. The white arm's cameras are the same model, so focus step 3 switches to blocking by USB socket (`/dev/v4l/by-path/`). Identified from `/sys` only, without opening them.
+**Fix:** One folder per session, via **git worktrees** (several folders on the same repo, each on its own branch). Coding: `lab-os/`. Planning: `lab-os-planning/` on branch `planning`. See `docs/dev/dev-setup.md` → "Branches and folders".
 
 ### 2026-10-27 — xArm driver: the `hidapi` wheel can't open the arm on Linux; use `hid`
 **What:** PyPI's `hidapi` ships wheels for Linux/Windows/macOS, but its Linux build uses the *libusb* backend: it needs access to `/dev/bus/usb/…` (root-only), so `enumerate()` returns empty serial/product strings and `open()` fails ("open failed"). Our udev rule only covers `/dev/hidraw*`. The `xarm` PyPI package is an unmaintained 5-file wrapper (imports `hid` without declaring it), so we don't use it.
@@ -314,7 +310,7 @@ Then unplug and re-plug the xArm's USB.
 
 ### 2026-10-27 — The lab Quests' Meta account is tied to classmates' phones
 **What:** All 3 Quest 3s are owned by one informal "AI lab admin" Meta account; its sign-in/verification goes through classmates' phones; there's no lab phone. Developer mode can only be turned on by the account that owns the headset, and Meta asks for a phone number (or card) to verify a developer account.
-**Fix:** "AI lab admin" becomes the lab's one Meta account, verified with the professor's phone number (decision 2026-10-28 in `lab-jarvis-log.md`).
+**Fix:** "AI lab admin" becomes the lab's one Meta account, verified with the professor's phone number (decision 2026-10-28 in `docs/plan/lab-jarvis-log.md`).
 
 ### 2026-10-24 — Joint directions differ per arm: check them with forward kinematics
 **What:** The first joint-space mapping had its signs picked by hand. On the SO-101, "hand up" lowered the arm (in its URDF, +shoulder_lift lowers it, +elbow_flex folds it down, +shoulder_pan swings it to its right).
@@ -330,7 +326,7 @@ Then unplug and re-plug the xArm's USB.
 
 ### 2026-10-24 — WebXR needs a secure context: use `localhost`, not an IP
 **What:** Browsers only allow WebXR on `https://` or `http://localhost`. Opening the page via the desktop's IP address shows "WebXR not available".
-**Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/quest-setup.md). Re-run `adb reverse` after every re-plug.
+**Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/guides/quest-setup.md). Re-run `adb reverse` after every re-plug.
 
 ### 2026-10-24 — Never open so101-green's serial ports
 **What:** The lab desktop has so101-green's leader + follower plugged in. Both show up as CH343 adapters (`1a86:55d3`, "USB Single Serial"), exactly what so101-white will look like.

@@ -5,14 +5,15 @@ GET /                    the hub: start screen, status strip, module buttons, as
 GET /plain, /design      each look by name (the design = the reveal, docs/design/DESIGN.md)
 GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
 GET /xr                  the hub in VR/AR for the Quest (watch-only)
-GET /training            the training launcher's page (so101-green + LeLab, docs/green-launcher.md)
+GET /training            the training launcher's page (so101-green + LeLab,
+                         docs/guides/green-launcher.md)
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
 GET /api/status          venue, internet, AI, assistant state, the brain's clock, what's in use
-GET /api/project         the Current Project panel (docs/current-focus.md → Steps)
+GET /api/project         the Current Project panel (docs/plan/current-focus.md → Steps)
 GET /api/commits?days=N  commits per day for the last N days, and the latest few commits
 GET /api/arm             the arm now: name, joints (degrees), held still, who has control
 GET /api/pose-view.png   the AI's pose_view picture of the arm now (side + top, grid in cm)
@@ -25,7 +26,7 @@ GET /api/hub             the place's name (the title), the module buttons (hub.m
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
 POST /api/chat/start     start a fresh conversation with the greeting (the start press)
 GET /api/chat            the conversation so far and the chat's status
-POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/protocol.md)
+POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/dev/protocol.md)
 POST /api/chat/clear     put the conversation aside (the hub's reset; kept chat_keep_minutes)
 POST /api/chat/restore   bring back the conversation put aside
 GET /ws/voice            voice: the page's microphone in, spoken answers out (hub/voice.py)

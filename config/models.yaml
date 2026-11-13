@@ -1,4 +1,4 @@
-# AI setups: which AI service answers, through the OpenAI-style chat interface (docs/chat.md).
+# AI setups: which AI service answers, through the OpenAI-style chat interface (docs/dev/chat.md).
 # Setups differ only by address, model name and key name, so switching is a config edit + restart.
 # No keys here: `key_env` names the variable in .env that holds the key (none = no key needed).
 # A persona picks a setup by name (`model: main`); a place can have its own models.yaml.
@@ -44,12 +44,12 @@ setups:
     options:
       max_tokens: 800
 
-# Voice setups (focus step 7, docs/voice.md): who hears (speech-to-text) and who speaks
+# Voice setups (focus step 7, docs/guides/voice.md): who hears (speech-to-text) and who speaks
 # (text-to-speech). A persona picks one by name (`voice: main`; `voice: none` = no voice).
 # `fallback` works like the chat's: no key in .env → the next setup.
 # `hear`: Gemini's is a Live API transcription model (the words arrive while you talk);
 # OpenAI's hears the recording after the release. `speaker`: the service's voice name.
-# Prices: US dollars per minute of audio, checked 2026-11-10 (current-focus.md, step 7).
+# Prices: US dollars per minute of audio, checked 2026-11-10 (docs/archive/focus-2026-11-13-hub-voice-ai.md, step 7).
 voices:
   main:
     where: OpenAI

@@ -33,7 +33,7 @@ Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
 
 - IK only: the table. The gripper and the wrist stay `floor_m` above the base's bottom (z = 0); a
   target below that slips like a limit, and a step that would dip goes as far as it can (the arm
-  used to stretch out into the table: docs/GOTCHAS.md, 2026-11-10).
+  used to stretch out into the table: docs/dev/GOTCHAS.md, 2026-11-10).
 
 Joint limits and the floor don't prevent every self-collision (e.g. the gripper hitting the
 base); that needs a collision model.

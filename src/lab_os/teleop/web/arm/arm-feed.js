@@ -1,4 +1,4 @@
-// What the arm driver has been told, tracked from a link's status / arm_* messages (protocol.md).
+// What the arm driver has been told, tracked from a link's status / arm_* messages (docs/dev/protocol.md).
 // Shared by every view of the arm (desktop 3D panel, XR ghost arm) so they always agree:
 //   joints       angles of the latest arm_command (unclamped), or the driver's state before any
 //   lastCommand  that arm_command message (has seq, speed_scale, driver_joints), or null

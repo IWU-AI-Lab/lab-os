@@ -1,5 +1,6 @@
 """`pose_view`: a picture of the arm's 3D model in a given pose, for an AI that can't see the arm
-(current-focus.md, step 3). No camera: the model is drawn from its URDF meshes (models/so101).
+(focus step 3, docs/guides/ai-control.md). No camera: the model is drawn from its URDF meshes
+(models/so101).
 
 Two views side by side, both to the same scale, with a grid in cm:
 - **side**, in the arm's own plane (turned with shoulder_pan, so the arm is never seen end-on):

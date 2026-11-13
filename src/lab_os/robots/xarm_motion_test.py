@@ -1,6 +1,6 @@
 """xArm motion test: small, slow moves of ONE joint. Moves the real arm. Only run after SAFETY.md:
 arm clamped, area clear, power plug in reach. If the servos are limp after power-on, press the
-board's "Run" button first (it poses the arm upright; docs/GOTCHAS.md).
+board's "Run" button first (it poses the arm upright; docs/dev/GOTCHAS.md).
 
     uv run python -m lab_os.robots.xarm_motion_test [--joint wrist_roll] [--degrees 10]
 
