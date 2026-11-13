@@ -67,7 +67,7 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 
 ### 2026-11-11 — The two training cameras share one serial number
 **What:** `ls -l /dev/v4l/by-id/` (it lists names, opens nothing) shows only `usb-Innomaker_Innomaker-U20CAM-1080p-S1_SN0001-video-index0/1` for **two** plugged-in Innomaker cameras: both report the serial `SN0001`, so the second one has no by-id link. `/dev/v4l/by-path/` shows both: sockets `usb-0:7` and `usb-0:8`. Cheap cameras often carry a placeholder serial like this.
-**Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (`docs/plan/current-focus.md` → "Step 3, concretely").
+**Fix:** tell identical cameras apart by socket (`by-path`), never by serial or index. The white cameras (same model) will need fixed sockets, e.g. on their own small USB hub (the powered hub on the shopping list, `docs/plan/lab-jarvis-log.md` → "Facts about the lab").
 
 ### 2026-11-11 — `/classic/teleop` threw an error since the speed control
 **What:** `teleop-page.js` (shared by `/teleop` and `/classic/teleop`) set up the speed slider without checking it's there; the classic page has none, so the script stopped at that line ("Cannot set properties of null") and everything after it in that script didn't run there. Found by a headless Chrome check of every page.

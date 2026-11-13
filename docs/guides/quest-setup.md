@@ -79,7 +79,7 @@ On the teleop page, **Hand → arm → 1:1** (the brain keeps the choice until i
 
 Tilt and roll stay relative (degree for degree from the grab). Bare hands work too: the right wrist in the ball, left pinch = clutch. Desktop control and old recordings have no arm position, so they stay relative. Replay a new recording in 1:1: `uv run lab-os-teleop replay recordings/<file>.jsonl --mode one_to_one` (a recording made in 1:1 switches by itself).
 
-Why: in the relative mode (10 cm of hand = 5 cm of gripper) the hand drifted away from the arm and needed re-grabbing again and again (focus, "Done on the side", 2026-11-10).
+Why: in the relative mode (10 cm of hand = 5 cm of gripper) the hand drifted away from the arm and needed re-grabbing again and again (decision 2026-11-10).
 
 ### Tuning: when it doesn't follow well
 Record a session, then replay it without the Quest (and without the real arm):

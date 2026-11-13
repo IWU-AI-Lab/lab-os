@@ -158,6 +158,34 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 
 ---
 
+## How it fits together (as built, 2026-11)
+- **One brain program, `lab-os serve`.** It serves the hub and mounts the teleop pages inside it; the core grows out of the teleop code (decision 2026-10-24). `lab-os-teleop` keeps working until it's replaced.
+- **The brain is an MCP server** (decision 2026-11-09): tools (read the arm, move it, `pose_view`, camera pictures, read the docs) in the standard format AI tools understand. Claude Code, Codex and Claude Desktop connect to it; the hub's own chat gets only the read tools. Tiers: "AI-assisted development" below.
+- **The assistant's state is separate from its picture.** The state: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`, plus a 0–1 loudness while speaking. The rest of the system only sets the state; the picture is chosen by the persona and only reads it (`docs/dev/personas.md`).
+- **The hub's buttons come from config** (`hub.modules` in the theme). No fake "coming soon" buttons. **The status strip and panels show only real facts.**
+- **Offline vs. internet.** Offline: start screen, hub, the assistant's picture, teleop, sounds, theme, fonts. Needs internet: the AI chat and cloud voices. Without internet the assistant shows `offline` and everything else works.
+- **A public screen** (the Newline, a hallway desktop): anyone can start it and talk to it, so the hub's chat stays in the read tier, the move tools only accept AI tools on the brain's own computer, a spend cap pauses the chat, the conversation clears on the reset, and a `public: true` venue hides internal details.
+- **Starting, full screen, the reset, drawing resolution:** `docs/guides/hub.md`.
+
+---
+
+## AI-assisted development (direction, decisions 2026-10-30 and 2026-11-09)
+Anyone working on lab-os can use AI to change the system **and** the connected devices (robots, Pis), without depending on one person's subscription. Two routes, same rules:
+- **Bring your own AI tool:** a laptop with VS Code + the Claude Code extension, Codex, or Claude Desktop: clone the repo, connect the tool to the brain's MCP server (with a personal access token, once remote access exists).
+- **Lab-paid harness in the hub:** a **"send to harness" toggle** on the chat line hands the request to a coding agent running on the brain with the lab's API key (Codex with the OpenAI key, or Claude Code with an Anthropic key if refilled). Monthly spend cap.
+
+**Rules for both:** code changes only on a branch (`agent/<task>` for the lab harness) → tests → PR → the builder approves; never edit the running system. Device actions go through the brain's tools in **permission tiers**:
+| Tier | Examples | Who |
+|---|---|---|
+| read | device status, logs, docs, arm readouts, camera snapshots | everyone, incl. the hub's built-in chat |
+| act | "find me" beep, restart a service on a Pi, deploy a tagged version to a robot | developers with a token; asks first |
+| move | anything that makes a robot move | developers on the brain's computer, through the safety layer; no asking per move since the 2026-11-13 decision (`docs/plan/quick-jobs.md` job 1); off in remote mode |
+| admin | `sudo`, deleting, reboots | humans only, never through tools |
+
+The hub's built-in chat stays in the read tier (anyone in the room can type into it). Realistic workflows: `docs/plan/use-cases.md`. Built so far: the read and move tiers on this computer (focus steps 2, 3, 6); tokens, the act tier and the harness wait (`docs/plan/ideas.md` → "Brain as an MCP server", "Coding agent").
+
+---
+
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
@@ -253,7 +281,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - **Status of the project (builder, 2026-11-09):** unofficial: nobody has been told yet, it may turn out useless, and it may not continue past this semester. It's about seeing what's possible. So: demo-able pieces first, cheap, nothing others come to depend on, and docs good enough for a future student to pick up.
 - **Usage pattern (2026-10-28):** the lab is usually empty; startup happens when the first person arrives to a closed lab. Robots are off before that (battery-powered ones must be switched off); all need a physical switch, except the SO-101s (no switch; wall power supply).
 - **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
-- **Equipment check (2026-10-30):** the lab has most of the demo kit (cables, adapters, extension cords; boxes + a trolley for transport). Also a **Kinect** (version to check) and a spare webcam (the two Innomaker cameras belong to the training project). **To buy:** USB-C power bank (router/field use); **a powered USB hub (7 ports) for the brain desktop** (2026-11-12: all 7 USB-A sockets are taken: keyboard, mouse, the green cameras and arms, the xArm; the white arm + cameras need 4 more) (added 2026-11-11: identical cameras can only be told apart by socket, and the desktop's sockets are limited; `docs/plan/current-focus.md` → "Step 3, concretely"); **stronger table clamps** (the SO-101s' thin ones are only just sufficient). **Later, not urgent:** better cameras for lab-os (second act). Router: see Network plan.
+- **Equipment check (2026-10-30):** the lab has most of the demo kit (cables, adapters, extension cords; boxes + a trolley for transport). Also a **Kinect** (version to check) and a spare webcam (the two Innomaker cameras belong to the training project). **To buy:** USB-C power bank (router/field use); **a powered USB hub (7 ports) for the brain desktop** (2026-11-12: all 7 USB-A sockets are taken: keyboard, mouse, the green cameras and arms, the xArm; the white arm + cameras need 4 more) (added 2026-11-11: identical cameras can only be told apart by socket, and the desktop's sockets are limited); **stronger table clamps** (the SO-101s' thin ones are only just sufficient). **Later, not urgent:** better cameras for lab-os (second act). Router: see Network plan.
 - **Displays/wearables (2026-10-27):** 3 small (~7–9") Raspberry Pi touchscreens; a ~75" Newline touchscreen on wheels (standalone, runs Android); Google Glass Explorer Edition (boots, voice commands work).
 - **Computers:** 6 RTX 5070 desktops (12 GB GPU memory, to confirm; 2 Ubuntu → brain + backup, 4 Windows 11); 5 Jetson Orin Nano; several Pi 5s; 7 ThinkCentres (no Wi-Fi; 4 at the front on two desks, 3 at the back; all unused, 2026-11-11). Remote Control from home works.
 - **Network:** lab Wi-Fi with MAC registration via campus IT; wall Ethernet port works.

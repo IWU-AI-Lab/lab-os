@@ -11,9 +11,18 @@ The hub's assistant hears and answers aloud (focus step 7). **Typing never chang
 The first press asks the browser for the microphone; allow it once. The microphone stays open for a minute after the last press (so the next question's first word isn't lost), then the browser's recording sign goes away.
 
 **No mic button?** It shows only when all of these are true; hover the place where it would be, or see `voice` in `/api/status` for the brain's reason:
-- the page is **secure**: `http://localhost` or `https://`. From another computer by the brain's IP address (`http://192.168…`), browsers refuse the microphone (`docs/plan/current-focus.md` → "Secure pages" for the ways around it);
+- the page is **secure**: `http://localhost` or `https://`. From another computer by the brain's IP address (`http://192.168…`), browsers refuse the microphone ("Secure pages" below for the ways around it);
 - the browser lists a **microphone** (it reacts to plugging and unplugging);
 - the brain has **voice**: the persona's `voice:` isn't `none`, a voice setup has its key, there's internet, and the chat isn't paused (no key, budget used up).
+
+## Secure pages (the microphone on other screens)
+Browsers give the microphone (and Wake Lock, app install, WebXR) only to `https://` or `http://localhost` pages. The lab's real address (`hub.indwesailab.com` with a Let's Encrypt certificate via Route 53) is **deferred** (decision 2026-11-10; the router side: `docs/guides/network-setup-checklist.md` → Step 7). Until then, easiest first:
+- **The brain's own screen:** `http://localhost:8080` (a monitor or the Newline on the brain's HDMI counts).
+- **Chrome's flag** on another screen: `chrome://flags` → "Insecure origins treated as secure" → `http://<brain's address>:8080`, then relaunch; on a kiosk, `--unsafely-treat-insecure-origin-as-secure=http://<brain's address>:8080`.
+- **`adb reverse`** over USB (the Quest, an Android device): the page is `http://localhost:8080` there too.
+- **Tailscale's certificate** (an idea: `docs/plan/ideas.md` → "Demo away from the lab").
+
+No secure page or no microphone: no mic button; typing works.
 
 ## The way in, per screen
 ⚙ → **This screen** → **Talking to it**: how this screen listens. Kept in this screen's browser, like its level of detail, so each screen has its own.
@@ -32,7 +41,7 @@ After "hey Jarvis", the core listens like a push-to-talk press: say the question
 - **Venues:** `wake_word:` in the venue's file (⚙ → The assistant → Wake word in this venue): `on`, `off`, or `default` = **off on a `public: true` venue**, on otherwise. Restart the brain after changing it.
 - **Several screens** hear it: the one that heard it best answers; the others ignore it.
 - **The models** (`models/openwakeword/`, README there): openWakeWord's, run with `onnxruntime` directly (its own package doesn't install on Linux with Python 3.12). Non-commercial license (CC BY-NC-SA 4.0).
-- **The room microphone:** from across the room it needs a decent microphone (a conference speakerphone or a microphone array; weak USB dongles only hear you up close). Not tried at the lab yet.
+- **The room microphone:** from across the room it needs a decent microphone (a conference speakerphone or a microphone array; weak USB dongles only hear you up close). At the lab (2026-11-13) the desktop's USB microphone heard it at the desk, sometimes only when spoken louder; on the Quest it usually fires and sometimes misses (`docs/dev/GOTCHAS.md`).
 
 ## In VR (`/xr`)
 The hub in VR is a screen like the others, with the headset's own microphone and speakers:

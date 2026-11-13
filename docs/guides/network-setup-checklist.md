@@ -144,7 +144,7 @@ From here on, Claude Code (on the desktop) can reach every device by name.
 ---
 
 ## Step 7 — The brain's secure address (for voice on every screen)
-**Deferred (decision 2026-11-10):** voice is built first on `localhost` and with Chrome's flag; this section is for later. Details: `docs/plan/current-focus.md` → "Step 7, concretely".
+**Deferred (decision 2026-11-10):** voice is built first on `localhost` and with Chrome's flag; this section is for later. Details: `docs/guides/voice.md` → "Secure pages".
 - **Fixed address for the brain:** a DHCP reservation in the lab router, so `hub.indwesailab.com` keeps pointing to the right computer. (Before the router: the desktop's university address may change; check it before relying on the name.)
 - **Local DNS entry in the router:** `hub.indwesailab.com` → the brain's address, so the name works without internet. On the GL.iNet (OpenWrt) this is a custom DNS / hosts entry.
 - **DNS rebinding protection:** routers and some networks block public names that point to private addresses (like `192.168.x.x`). If the name doesn't resolve on the lab network, allow the domain in the router's rebind protection, or rely on the local DNS entry.

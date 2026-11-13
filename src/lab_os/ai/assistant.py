@@ -1,5 +1,5 @@
 """The assistant's state (the information layer). The rest of the system sets it; the picture on
-the page only reads it (docs/plan/current-focus.md → "How it fits together")."""
+the page only reads it (docs/plan/lab-jarvis-log.md → "How it fits together")."""
 
 from dataclasses import dataclass
 

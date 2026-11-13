@@ -1,4 +1,4 @@
-// Full screen for every page (docs/plan/current-focus.md → "Two taps": the full-screen button).
+// Full screen for every page (docs/guides/hub.md → "Two taps": the full-screen button).
 // The button shows only while the page isn't full screen, does what the hub's tap 1 does, and when
 // full screen isn't possible or the browser refuses, it says why instead of hiding (GOTCHAS
 // 2026-11-10: on pi01's Chromium, /teleop showed no button at all).

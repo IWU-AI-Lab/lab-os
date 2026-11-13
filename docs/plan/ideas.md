@@ -13,7 +13,7 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
 
 ### Teleop demo: what's left
 - **Hand tracking (step 6)**, the original goal: a visitor's bare hand drives the arm (pinch = gripper, open hand = release). Same pipeline as the controllers; per-user calibration with comfortable thresholds + hysteresis (the glove lessons). **First version built and tried 2026-11-10:** right wrist = the controller, left pinch = clutch, right pinch = gripper (fixed thresholds: 6 cm apart = 0, 1.5 cm = 1; `docs/guides/quest-setup.md`). It works but is hard to steer (builder). Left: tune it from recordings, per-user thresholds, and a one-handed clutch if two hands feel clumsy.
-- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then smoothing, end-to-end delay. (The hand-to-gripper scale: a 1:1 mode is in the focus since 2026-11-10, `docs/plan/current-focus.md` → "Done on the side".) Above 0.5 is the builder's call (`config/venues/lab.yaml`).
+- **Speed and feel (step 7).** Builder, 2026-10-30, SO-101 + Quest at `--speed 0.2` (24 °/s per joint): "much more intuitive if it was much faster". Raise `--speed` step by step to the lab venue's 0.5 (60 °/s); then smoothing, end-to-end delay. (The hand-to-gripper scale: the 1:1 mode, built 2026-11-11, `docs/guides/quest-setup.md` → "1:1 mode".) Above 0.5 is the builder's call (`config/venues/lab.yaml`).
 - **Quest display (step 5).** Visitor hint until the first grab; joints that turn red near their limits (= the workspace warning) on the 3D arm, which can now be moved onto the real one (2026-11-10; the lazy-follow HUD mini-arm of decision 2026-10-28 is the other option); the status panel lazy-follows.
 - **Visitor polish + portability test (step 8).** Script, casting to a monitor, one run from the laptop away from the lab, tag, 60-second clip. The SO-101 port check uses Linux paths (`/dev/serial/by-id/`, sysfs): a Windows/macOS field laptop needs the USB-ID lookup `xarm1` already uses.
 - **`so101-white-leader`.** Build and set it up (spare board `5B41532183`; `python -m lab_os.robots.so101_setup setup-motors --arm so101-white-leader` after its port is in `config/devices.yaml`). For recording training demonstrations (second act B), not needed for the visitor demo.
@@ -112,7 +112,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** config/venues; the brain program; docs.
 
 ### Sending more than a module to another screen
-- **Opening a module on another screen is in the focus** (`docs/plan/current-focus.md` step 8, "Step 8, concretely").
+- **Opening a module on another screen is in the focus** (`docs/plan/current-focus.md` step 8).
 - **What stays here:** sending other things to a screen: a chat answer, a picture from a camera, the other project's poster; and later the Quest as a target.
 - **Plugs into:** outputs/clients; the screens list from step 8; casting in `docs/plan/use-cases.md` (the visit, another project borrows a screen).
 
@@ -138,7 +138,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ### GPU-busy indicator on the hub
 - **What:** the hub shows when the shared GPU is in use, and by what (e.g. "GPU: training (SmolVLA) · 10.8 of 12 GB"), so nobody starts a local model during a recording or training run.
-- **Why:** the lab desktop's GPU is shared with the SO-101 training (`docs/plan/current-focus.md` step 5 already warns about it); a visible sign beats remembering.
+- **Why:** the lab desktop's GPU is shared with the SO-101 training (`docs/dev/chat.md` already warns about it); a visible sign beats remembering.
 - **How (read-only):** `nvidia-smi` lists GPU memory use and which programs use it (Linux and Windows). Later, the model router can refuse or warn before starting a local model while the GPU is busy.
 - **Plugs into:** status strip or the desktop's device card; model router (local setups).
 
@@ -179,7 +179,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **Decided 2026-11-09** (log; `docs/plan/current-focus.md` steps 2, 6 + "After this focus"): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **Decided 2026-11-09** (`docs/plan/lab-jarvis-log.md` → "AI-assisted development"; focus steps 2, 6): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
@@ -190,7 +190,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ## Recent ideas (2026-10-30)
 
 ### Assistant pictures beyond the plain circle
-- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`docs/plan/current-focus.md` → "How it fits together"):
+- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`docs/plan/lab-jarvis-log.md` → "How it fits together"):
   - **Orbs inspired by other assistants** (e.g. the feel of ChatGPT's voice-mode orb for a GPT persona, a Claude-feel one for a Claude persona). Our own designs, **no logos or brand assets**. A persona's look should match the model really behind it.
   - **A 3D character in VRM format** (open format; the `three-vrm` library runs on the three.js we already vendor): blinking, breathing, mouth moving with the voice.
 - **Not Live2D** (the Neuro-sama look): its runtime isn't open source (license to check before vendoring), it needs a paid/licensed character model, and nobody here knows it. VRM gives a similar result with open tools.
@@ -299,7 +299,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** Conversation manager (one component owns interrupt / queue / turn-taking).
 
 ### Coding agent ("ask for a feature, it gets built")
-- **Direction decided 2026-10-30** (`docs/plan/current-focus.md` → "After this focus"; log): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from docs/plan/ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
+- **Direction decided 2026-10-30** (`docs/plan/lab-jarvis-log.md` → "AI-assisted development"): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from docs/plan/ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
 - **Candidates (2026-10-30: keys are OpenAI's; Anthropic out of credits):** OpenAI's Codex (open-source coding agent, OpenAI API key; to verify), or the Claude Agent SDK (Claude Code's engine with an API key) if Anthropic credits are refilled. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
 - **Open questions:** cost per task vs. the budget (coding tasks cost far more than chat); which tools it gets (default-deny); how it reports progress in the hub.
 - **Plugs into:** agent harness slot (slow path) + the normal git / CI / tag workflow; robot motion only through our safety layer.
@@ -321,7 +321,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 | Idea | Why | Plugs into |
 |---|---|---|
 | Program-by-voice / agent onboarding | — | Agent harness |
-| Local models: beyond the chat test in `docs/plan/current-focus.md` step 5 (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
+| Local models: beyond the `local` chat setup (`docs/dev/chat.md`) (e.g. which model fits 12 GB, local voice) | Offline lite mode; no per-use cost; privacy. | AI models (router) |
 
 ### Screens, phones, headset
 | Idea | Why | Plugs into |

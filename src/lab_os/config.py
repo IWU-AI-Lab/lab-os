@@ -116,7 +116,7 @@ class Place:
     name: str  # shown as the hub's title and the startup title (the same for every persona)
     venue: str | None = None  # the venue used when neither --venue nor $LAB_OS_VENUE says
     domain: str | None = None  # the brain's address name; not used yet (the secure address is
-    # deferred: docs/plan/current-focus.md → "Step 7, concretely")
+    # deferred: docs/guides/voice.md → "Secure pages")
     ai_budget_usd_month: float | None = None  # the hub's chat pauses when this month's AI spend
     # reaches it; None = no cap (fine for a local model, not for a paid key)
     calendar: tuple = ()  # dates the greeting may mention: ({"date": "2026-12-15", "what": ...},)
