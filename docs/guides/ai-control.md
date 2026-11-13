@@ -1,6 +1,6 @@
 # AI control: an AI tool drives the arm through the brain
 
-The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop, asks you first, and is logged. The **fake arm** first (done 2026-11-10: Fable 5.2 did the pretend-cube task with broadly the right moves), then the real `so101-white`, with the builder present (SAFETY.md): "5. On the real arm".
+The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop and is logged; today Claude Code asks you before each one (that's changing: section 3). The **fake arm** first (done 2026-11-10: Fable 5.2 did the pretend-cube task with broadly the right moves), then the real `so101-white`, with the builder present (SAFETY.md): "5. On the real arm".
 
 ## 1. Start the brain
 In a terminal, in the `lab-os` folder:
@@ -22,10 +22,10 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 
 **Which model:** type `/model` and pick Fable 5.2 if it's in the list (the builder's access ends 2026-11-16). Any model works; nothing is tied to Fable.
 
-## 3. Permissions: every move asks
-The repo's `.claude/settings.json` sets this for everyone who opens the project:
+## 3. Permissions
+**Changing (decision 2026-11-13):** the move tools go on the allow list, so an AI tool moves the arm without asking; STOP on every screen, the soft limits and one controller at a time stay (`docs/plan/quick-jobs.md` jobs 1–2). Until that's merged, the repo's `.claude/settings.json` sets this for everyone who opens the project:
 - **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click). The project tools (below) and `pose_view` are read only too and may be added here (`"mcp__lab-os__pose_view"`); until they are, Claude Code asks once per tool;
-- **always asks:** `move_joints`, `gripper`, `move_to`, `go_to_pose`. These are "ask" rules, so they ask even if someone allows them elsewhere. **Never allow-list the move tools.** Approve each move only after reading what it will do.
+- **always asks:** `move_joints`, `gripper`, `move_to`, `go_to_pose`. These are "ask" rules, so they ask even if someone allows them elsewhere (a "don't ask again" lasts one session: GOTCHAS 2026-11-13). Approve each move only after reading what it will do.
 
 ## 4. Try it
 In the Claude Code session, for example:
@@ -64,8 +64,8 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 
 ## Safety rules (the brain clips and refuses; it never trusts the numbers it's given)
 - **Same path as teleop:** moves run through the teleop loop: the arm's soft limits (3° inside the real ones), the venue's `max_speed_scale`, and a capped speed (all joints arrive together).
-- **Small steps per call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° per joint** (`move_joints`, `go_to_pose`; the gripper is exempt) or **10 cm** (`move_to`). A bigger request goes part of the way and says so, and the AI calls again (with another approval).
-- **Never into the table:** nothing may go below `min_z_cm` (1 cm), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
+- **Small steps per call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° per joint** (`move_joints`, `go_to_pose`; the gripper is exempt) or **10 cm** (`move_to`). A bigger request goes part of the way and says so, and the AI calls again.
+- **Never into the table:** nothing may go below `min_z_cm` (1 cm; −0.5 cm decided 2026-11-13, quick job 3), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
 - **Refused, nothing moves:** the venue has `motion_allowed: false`; **teleop has control** (a teleop page or the Quest is driving); another AI move is still running; an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that isn't a number.
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control") and the pages show control "the AI tools". The hub doesn't reset to its start screen mid-move.
 - **Stopping:** `stop`, STOP on any page, or the tool call being cancelled mid-move all freeze the arm.
@@ -87,7 +87,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    ```
    It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move aims, every call and its outcome, STOP) or `/monitor` (3D) to watch; on a second monitor of this computer they can stay open full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
 3. In the Claude Code session (VS Code): `/mcp` → `lab-os` → reconnect (the brain restarted), `/model` → Fable 5.2.
-4. Small steps first, approving each one after reading it:
+4. Small steps first (approving each one after reading it, while Claude Code still asks):
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
 
    > Go to the home pose.
@@ -96,7 +96,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
 
    Then the step-2 task, with your real measurements:
    > There's a cube 15 cm in front of the base and 5 cm to the left. Pick it up and put it down 10 cm to the left of where it was. Go slowly, one move at a time, and tell me before each move what you'll do.
-5. **Stop:** STOP on any page (or Esc on the teleop page) stops it at once; Ctrl+C in the brain's terminal stops the brain (the SO-101 then goes limp, so hold it if it's lifted). **Never "always allow"** a move tool.
+5. **Stop:** STOP on any page (or Esc on the teleop page) stops it at once; Ctrl+C in the brain's terminal stops the brain (the SO-101 then goes limp, so hold it if it's lifted).
 6. Afterwards: `logs/ai-tools/` has every call of this run. Note in `docs/plan/current-focus.md` (step 2) what worked and what didn't.
 
 ### The green arm (`so101-green`, since step 11)
@@ -116,7 +116,7 @@ Not checked on the real arm yet: the `rest` pose (computed only; `docs/plan/curr
 `camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. Today's names: `so101-white-cam-a` (looks down from above) and `so101-white-cam-b` (the wrist camera), a temporary alias (`docs/plan/current-focus.md` → "Hacks to clean up").
 
 ## Seeing the pose (`pose_view`)
-Until the cameras (focus step 3), the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
+Without a camera the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
 - **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;
 - **right, top view**, as if standing behind the arm: forward (x) up the picture, the arm's left (+y) on the left;
 - a **red dot** at the gripper point (with a dotted line down to the table), a **magenta ×** at the last `move_to` target, and **blue marks** the AI passes in `marks`, e.g. `[{"x_cm": 15, "y_cm": 5, "z_cm": 1.5, "label": "cube", "size_cm": 3}]` (at most 10). A mark with `size_cm` is a square of that size.
@@ -133,6 +133,6 @@ Every call (time, tool, arguments, outcome `ok` / `clipped` / `short` / `refused
 Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, …). Make it ask before each move tool, as above.
 
 ## Later
-- Cameras (focus step 3), access from other computers with a token (after this focus).
+- Access from other computers with a token (`docs/plan/lab-jarvis-log.md` → "AI-assisted development").
 
 Code: `src/lab_os/tools/robot.py` (the tools and their rules), `tools/mcp_server.py` (MCP), `tools/calllog.py`; tests in `tests/test_robot_tools.py`.

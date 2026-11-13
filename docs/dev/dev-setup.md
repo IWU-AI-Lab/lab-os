@@ -1,6 +1,6 @@
 # Dev Setup — Claude Code + robots
 
-How development works for the Lab JARVIS project. Companion to docs/plan/lab-jarvis-log.md, docs/plan/current-focus.md and docs/guides/network-setup-checklist.md.
+How development works for the Lab JARVIS project. Companions: `docs/plan/lab-jarvis-log.md`, `docs/plan/current-focus.md`, `docs/guides/network-setup-checklist.md`.
 
 ---
 
@@ -94,16 +94,8 @@ Build at home against fakes → test in the lab on real hardware → note surpri
 
 ---
 
-## Standards (to define on the ground)
-To be decided once we've seen what the robot computers look like inside (via the device census):
-- **Device names** (so far: `so101-green` (the training set, drivable by lab-os since 2026-11-12), `so101-white`, `so101-white-leader`, `xarm1`, `xarm2`; starter: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted)
-- **User accounts** on robots
-- **Where things live** on each robot (one project folder)
-- **File and folder names** in the repo
-- **Where logs go**, how they're named
-- **Secrets** — one local secrets file per machine, never in git
-- **Hack labeling** — `# HACK:` comment + entry in docs/plan/current-focus.md's cleanup list
-- **Principles** (robots stay thin; edit in repo, then deploy; every plug-in declares its requirements; fake robot first; every surprise goes in the gotchas list)
+## Standards
+Device names, accounts, folders on robots, logs, secrets and principles: `docs/plan/lab-jarvis-log.md` → "Standards" (the one list). Hacks: `# HACK:` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
 
 ---
 

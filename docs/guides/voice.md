@@ -52,7 +52,7 @@ The hub in VR is a screen like the others, with the headset's own microphone and
 - No voice (no key, no internet, paused): the ask line says why when held.
 
 ## The spoken greeting
-After the start tap, the greeting ("Good morning." + one line of real news, `docs/dev/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
+**Changing (decision 2026-11-13, quick job 4):** each voice's greeting is recorded once and played from the file (time of day + the hint, no news line), so it costs no voice request. Today: after the start tap, the greeting ("Good morning." + one line of real news, `docs/dev/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
 - Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.
 - A screen without a microphone (or not a secure page) hears the greeting without the hint.
 - Holding the mic (or Space) during the greeting cuts it short.

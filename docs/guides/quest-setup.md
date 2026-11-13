@@ -90,7 +90,7 @@ uv run lab-os-teleop replay recordings/quest-2026-11-10.jsonl      # the fake ar
 A recording is what Claude needs to find where it goes wrong ("at 0:40 the elbow straightens"). The knobs are in `MappingConfig` (`src/lab_os/teleop/mapping.py`):
 - `tip_m_per_hand_m` (0.5): relative mode, 10 cm of hand → 5 cm of gripper. Lower = finer and more "it doesn't follow"; higher = jumpier. (1:1 is always 1.)
 - `capture_m` (0.08): 1:1, how close the hand must be to the gripper to grab it.
-- `floor_m` (0.01): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
+- `floor_m` (0.01; −0.005 decided 2026-11-13, quick job 3, since the arm stands on the overhead camera's base): the gripper and wrist stay this far above the base's bottom. Raise it if the real arm still touches the table (it sags under its own weight when stretched out).
 - The speed (slider, thumbstick, `--speed`): at 0.2 the arm lags far behind a quick hand.
 
 **The hub in VR:** `http://localhost:8080/xr` in the Quest's browser → **Enter VR** (or AR). The startup plays around you as on the designed hub's screen: pull the trigger (or pinch) to start, again to skip it. Then the hub is around you: point at a callout with a controller (or your hand) and pull the trigger (or pinch) to open its details; 7d/14d/30d, List all and a device's card work too. **B** or **Y** closes a page. The trigger no longer replays the jump: ⏻ (top right) goes back to the start screen.

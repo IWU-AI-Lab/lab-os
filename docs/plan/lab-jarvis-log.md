@@ -115,7 +115,7 @@ Robots stay thin · Linux lab desktop with VS Code + Claude Code extension · Re
 ---
 
 ## Standards (to define on the ground)
-Device names, accounts, folders on robots, repo layout, logs, secrets, principles, venue profiles. **Names so far:** `so101-green` (the training project's), `so101-white` / `so101-white-leader`, `xarm1`, `xarm2`; starter names: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot with bridge noted. Calibration files travel with each arm. Hacks: `# HACK:` + entry in docs/plan/current-focus.md. Demos run from tagged known-good versions.
+To be decided on the ground, once the device census shows what the robot computers look like inside: user accounts on robots, one project folder per robot, where logs go and how they're named, venue profiles. **Device names so far:** `so101-green` / `so101-green-leader` (the training set, borrowed by lab-os since 2026-11-12), `so101-white` / `so101-white-leader`, `xarm1`, `xarm2`, `pi01`; starter names: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted. **Already decided:** secrets in one local `.env` per machine, never in git; calibration files travel with each arm (`calibration/<arm>/`); principles and hacks as in CLAUDE.md; demos run from tagged known-good versions.
 
 ---
 

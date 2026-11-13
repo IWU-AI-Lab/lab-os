@@ -1,6 +1,6 @@
 # Project Scaffold — what the repository should contain
 
-For Claude Code to set up at the start (kickoff), before feature work. Solo project → keep everything **short and useful**, not corporate. "Day one" items get created immediately; "later" items when they're first needed.
+What the repo should contain. Solo project → keep everything **short and useful**, not corporate. "Day one" items were created at the kickoff (2026-10-23); the others when they're first needed. **Status (2026-11-13):** everything in "Day one" exists except `LICENSE` (waiting on the professor); from "Soon", `GOTCHAS.md`, CI, demo tags and `CHANGELOG.md` exist, `DEMO.md`, `decisions/` and a task board don't (the log's decisions table stands in for `decisions/`).
 
 ---
 
@@ -9,7 +9,7 @@ For Claude Code to set up at the start (kickoff), before feature work. Solo proj
 |---|---|
 | `README.md` | What this is (one paragraph + a photo/GIF later), how to install, how to run the demo, where the docs are. The first thing a future student reads. |
 | `CLAUDE.md` | Instructions for Claude Code every session: read `docs/plan/current-focus.md` and `docs/plan/lab-jarvis-log.md` first; project rules (robots stay thin, edit-in-repo-then-deploy, fake robot first, hacks labeled, safety rules, ask before robot motion/sudo/deletes/reboots); coding style; how to run tests. Keep it short and point to docs rather than copying them. |
-| `docs/` | `docs/plan/lab-jarvis-log.md` (master log), `docs/plan/current-focus.md`, `docs/dev/dev-setup.md`, `docs/guides/network-setup-checklist.md`, `docs/dev/project-scaffold.md` (copies of the Claude project docs). |
+| `docs/` | In folders by who reads them: `plan/` (the log, the current focus, ideas), `guides/` (using it), `dev/` (working on it), `archive/` (history). The list: README → "Docs". |
 | `SAFETY.md` | Stop procedures, speed/workspace limits, dead-man rule, visitor rules, remote-mode rule, drone rule. Short and printable. |
 | `.gitignore` | Ignore secrets, logs, recordings, datasets, model weights, virtual environments, OS junk. |
 | `.env.example` | Lists every secret/setting the system needs **with fake values**. The real `.env` (API keys, passwords) stays on each machine and is never committed. |
@@ -40,10 +40,5 @@ For Claude Code to set up at the start (kickoff), before feature work. Solo proj
 | `docs/ARCHITECTURE.md` | One diagram + one page: brain, slots, plug-ins, message protocol, where each piece lives. |
 | Demo video / GIF in README | Proof it works; also portfolio material. |
 
-## Working habits Claude Code should follow
-- **Small commits** with clear messages; commit before risky changes (git = undo button).
-- **Branch per feature** (`teleop-controllers`, `xarm-plugin`), merge to `main` when it works; `main` should always run.
-- **Fake robot first**, then real robot; every robot plug-in declares its requirements.
-- **Label hacks** (`# HACK:`) and add them to the cleanup list in `docs/plan/current-focus.md`.
-- **Update the docs when decisions change** (log, current focus, gotchas) — part of "done."
-- **Never commit secrets**; check before every push.
+## Working habits
+They're in `CLAUDE.md` ("Project rules"), the one list.

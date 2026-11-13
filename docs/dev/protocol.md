@@ -143,6 +143,7 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 | `arm_status` | `arm?` | read |
 | `list_poses` | `arm?` | read |
 | `pose_view` | `marks?` ([{`x_cm`, `y_cm`, `z_cm`, `label?`, `size_cm?`}], ≤ 10), `arm?` | read |
+| `camera_snapshot` | `camera` (a name in `devices.yaml`), `width_px?` (640; 160–1280) | read |
 | `move_joints` | `joints` ({name: degrees}), `relative?` (false), `arm?` | move |
 | `gripper` | `open_pct` (0 closed … 100 open), `arm?` | move |
 | `move_to` | `x_cm`, `y_cm`, `z_cm`, `tool_angle_deg?` (0 up, 90 forward, 180 down; default: keep), `arm?` | move |
@@ -160,9 +161,9 @@ Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTT
 | `git_log` | `count?` (15, ≤ 50), `path?` | `commits`: `hash`, `date`, `author`, `subject` |
 | `list_devices` | — | the place's devices: `name`, `kind`, `off_limits`, `borrowed`, `active_in_venue`, `notes` |
 
-Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`, and not `pose_view` (its answer is a picture).
+Unknown docs or sections are tool errors starting with `Not found:` that list what exists. The hub's own chat gets exactly the tools annotated read-only (these and `arm_status`, `list_poses`), never a move tool or `stop`, and not `pose_view` or `camera_snapshot` (their answers are pictures).
 
-`pose_view` returns two content blocks: a PNG (`image/png`, 1000×470: side view in the arm's plane on the left, top view on the right, grid in cm) and the text of `{"arm", "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg", "last_target_cm"?, "views"}` (`views`: one sentence saying what's where in the picture). The call log keeps the picture's size only. The same picture without marks: `GET /api/pose-view.png`.
+`pose_view` returns two content blocks: a PNG (`image/png`, 1000×470: side view in the arm's plane on the left, top view on the right, grid in cm) and the text of `{"arm", "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg", "last_target_cm"?, "views"}` (`views`: one sentence saying what's where in the picture). The call log keeps the picture's size only. The same picture without marks: `GET /api/pose-view.png`. `camera_snapshot` returns a JPEG (`image/jpeg`) and `{"camera", "width_px"}`; a camera another program has open is refused.
 
 Moves return `{"result": "arrived" | "stopped_short" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`, read from the motors after the move (`read_measured` where the driver has it). `"stopped_short"`: the arm ended more than 0.5 cm from the target (move_to), a joint more than 2° from its target, or the gripper more than 5 % from the opening asked for; then also `"joints_short_deg"` (target − measured, only the joints that fell short) and `"message"` (one sentence: how far, which joints). `move_to` always adds `"target_cm"`, `"target_tool_angle_deg"` and `"off_by_cm"` (the target of this call, after the per-call clipping). Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
@@ -200,8 +201,8 @@ Polled every 3 s by the hub.
 ### `/api/project`
 The Current Project panel, from the Steps list in `docs/plan/current-focus.md`.
 ```json
-{"available": true, "focus": "The JARVIS hub + AI driving a robot arm", "step": 1, "of": 10,
- "next": "Plain hub", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
+{"available": true, "focus": "The JARVIS hub, voice, and AI driving the SO-101 arms", "step": 2, "of": 12,
+ "next": "Robot tools for AI", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
 ```
 `step` is the first step that isn't done (`next` its title, `null` when all are done). `{"available": false}` when the file is missing or has no steps.
 
