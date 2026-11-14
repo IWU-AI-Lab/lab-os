@@ -170,10 +170,16 @@ def make_loop(args) -> TeleopLoop:
 
 
 async def serve(
-    app: web.Application, port: int, extra=None, host: str = "127.0.0.1", banner: str = ""
+    app: web.Application,
+    port: int,
+    extra=None,
+    host: str = "127.0.0.1",
+    banner: str = "",
+    after_start=None,
 ) -> None:
     """Run `app` until `extra` finishes (or forever). The default host is localhost only: a secure
-    context for WebXR, and nothing else on the network can connect."""
+    context for WebXR, and nothing else on the network can connect. `after_start()` runs once it
+    listens (lab-os serve --open: the browser)."""
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     try:
@@ -187,6 +193,8 @@ async def serve(
     print(
         banner or f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor"
     )
+    if after_start:
+        after_start()
     try:
         if extra:
             await extra

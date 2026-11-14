@@ -6,9 +6,12 @@ import asyncio
 import contextlib
 import logging
 import socket
+import sys
 from pathlib import Path
 
 from lab_os import config
+from lab_os.hub import launch
+from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import create_brain_app
 from lab_os.personas import current_persona, load_persona
@@ -89,6 +92,12 @@ def main(argv: list[str] | None = None) -> None:
         help="save the teleop input to this .jsonl file (replay it: lab-os-teleop replay <file>)",
     )
     s.add_argument(
+        "--open",
+        metavar="DEVICE",
+        help="once it runs, open the hub on this computer as that device (e.g. desk), full screen; "
+        'if a brain already runs here, only open the hub (the "Start lab-os" icon does this)',
+    )
+    s.add_argument(
         "--status-line",
         action="store_true",
         help="print teleop's live status line (input, clutch, joints) under the log; off by "
@@ -106,7 +115,17 @@ def main(argv: list[str] | None = None) -> None:
         "with the software arm, venues/home.yaml, .env.example",
     )
     n.add_argument("folder", help="e.g. ~/my-lab-os (outside the repo)")
+    i = sub.add_parser(
+        "icon",
+        help='make the "Start lab-os" icon on this computer (the brain\'s): it starts the brain '
+        "and opens the hub as DEVICE. Options after -- go to lab-os serve (docs/guides/hub.md → "
+        "Devices)",
+    )
+    i.add_argument("--device", default="desk", help="this computer's device name (default: desk)")
+    i.add_argument("serve_args", nargs=argparse.REMAINDER, help="-- --arm so101-white …")
     args = parser.parse_args(argv)
+    if args.command == "icon":
+        return _icon(args)
     if args.command == "green":
         from lab_os import green
 
@@ -118,6 +137,19 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(str(e)) from None
         print(f"Wrote {folder}. Edit place.yaml (the name), then: lab-os serve --config {folder}")
         return
+
+    after_start = None
+    if args.open:
+        try:
+            device = clean_name(args.open)
+        except DeviceError as e:
+            raise SystemExit(f"--open: {e}") from None
+        if launch.brain_answers(args.port):  # already running (a second tap on the icon)
+            print(f"lab-os already runs here: {launch.open_hub(launch.hub_url(args.port, device))}")
+            return
+
+        def after_start():
+            print(launch.open_hub(launch.hub_url(args.port, device)))
 
     # a real arm on the network: other screens watch (and can STOP), only this computer drives
     local_control_only = args.host not in LOCAL_HOSTS and not args.arm.startswith("fake")
@@ -157,11 +189,29 @@ def main(argv: list[str] | None = None) -> None:
     try:
         with contextlib.suppress(KeyboardInterrupt):
             banner = _banner(args.port, args.host, args.mcp_port)
-            asyncio.run(serve(app, args.port, host=args.host, banner=banner))
+            asyncio.run(
+                serve(app, args.port, host=args.host, banner=banner, after_start=after_start)
+            )
     finally:
         loop.arm.stop()
         loop.arm.close()
     print()
+
+
+def _icon(args) -> None:
+    """`lab-os icon`: the "Start lab-os" icon (Linux), or the command for a shortcut elsewhere."""
+    try:
+        device = clean_name(args.device)
+    except DeviceError as e:
+        raise SystemExit(f"--device: {e}") from None
+    extra = [a for a in args.serve_args if a != "--"]
+    if sys.platform.startswith("linux"):
+        path = launch.write_icon(device, extra)
+        print(f'Wrote {path}: "Start lab-os" is in the app list (right-click → Add to Favorites).')
+        print(f"It runs: {' '.join(launch.start_command(device, extra))}")
+    else:
+        print("Put this in a shortcut (it starts the brain, then opens the hub as " + device + "):")
+        print("  " + " ".join(launch.start_command(device, extra)))
 
 
 if __name__ == "__main__":
