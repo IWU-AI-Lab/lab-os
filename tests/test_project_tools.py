@@ -158,6 +158,16 @@ async def test_the_mcp_server_offers_the_read_tools(repo):
         await server.call_tool("read_doc", {"name": "nope"})
 
 
+async def test_claude_code_runs_every_brain_tool_without_asking(repo):
+    """Quick job 1 (decision 2026-11-13): the repo's Claude Code settings allow every tool the
+    brain offers, the move tools too; none is an "ask" rule (in Claude Code, ask beats allow)."""
+    server = create_mcp_server(robot_tools(), ProjectTools(repo))
+    names = {f"mcp__lab-os__{t.name}" for t in await server.list_tools()}
+    perms = json.loads((REPO / ".claude" / "settings.json").read_text())["permissions"]
+    assert names - set(perms["allow"]) == set()
+    assert not [r for r in perms["ask"] + perms["deny"] if r.startswith("mcp__lab-os__")]
+
+
 async def test_the_hub_chat_gets_read_tools_only(repo):
     chat_tools = ChatTools(create_mcp_server(robot_tools(), ProjectTools(repo)))
     offered = {t["function"]["name"] for t in await chat_tools.openai_tools()}

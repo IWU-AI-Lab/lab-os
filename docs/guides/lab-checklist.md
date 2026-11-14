@@ -25,7 +25,8 @@ git pull
 uv sync --extra so101          # LeRobot for the SO-101s; plain `uv sync` would remove it
 uv run pytest -q               # should end "passed"
 ```
-Optional, so Claude Code doesn't ask before each `pose_view` (it's read only): in `.claude/settings.json`, under `"allow"`, add the line `"mcp__lab-os__pose_view",` next to `"mcp__lab-os__list_poses",`.
+Since quick job 1 (2026-11-14) Claude Code no longer asks before any lab-os tool, moves included: keep a hand near STOP.
+- [ ] **No prompts, fake arm first (quick job 1):** `uv run lab-os serve` (fake arm), then a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` connected, then "Use the lab-os tools: go to the home pose, then open the gripper to 50." Both moves run with no permission question, and the hub's AI Control (`http://localhost:8080/ai`) lists them. If it still asks: `.claude/settings.local.json` may hold an old `"ask"` rule for `mcp__lab-os__…` (ask beats allow): delete that line.
 
 ## 1. The designed hub on the desktop's own screen (5 min)
 ```bash
@@ -68,7 +69,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 (`--host 0.0.0.0` lets the Newline keep showing the hub; it's view-only there, and its STOP works.)
 - In Claude Code: `/mcp` → `lab-os` → reconnect; `/model` → Fable 5.2.
 - [ ] "Read the arm's status": the joints match the arm.
-- [ ] "Go to the home pose" (approve it, watch it).
+- [ ] "Go to the home pose" (it moves without asking: watch it).
 - [ ] "Move the gripper 3 cm lower, pointing straight down."
 - [ ] The cube: measure it (cm in front of the base's middle, cm to the left), then the step-2 prompt.
 - [x] STOP from the Newline (or any other screen) stops a move. (2026-11-13, the Newline over Ethernet.)
@@ -77,7 +78,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [x] **`pose_view`** (2026-11-12, used in the cube pick): ask Fable "Look at the arm with pose_view, with a mark where the cube is (… cm in front, … cm left, 1.5 cm up, size 3 cm), before you close the gripper." Does the picture match the real arm? To see the same picture yourself: open **http://localhost:8080/api/pose-view.png** (reload for a new one).
 - [ ] The cube task again, this time with `pose_view` before every grip: does Fable catch its own misses?
 - [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Open on…** → **Another monitor of this computer**.
-- Until quick job 1 is in, Claude Code asks before every move: approve each after reading it. Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
+- Claude Code doesn't ask before moves (quick job 1): STOP is the brake. Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
 - Afterwards: `logs/ai-tools/` has the calls. Write in `docs/plan/current-focus.md` step 2 what worked.
 
 ## 4. The white arm's cameras (5 min, for step 3)
@@ -107,7 +108,7 @@ In the Quest's browser: `http://localhost:8080/teleop` → **Hand → arm → 1:
 - [ ] Bare hands (controllers down): the right wrist in the ball, left pinch = move.
 - [ ] Relative still works (switch back on the page; grip again after switching).
 
-Then the **real arm**, with you at it, slowly (ask before it moves; CLAUDE.md). If part 5 left the green arms plugged in, unplug them and plug `so101-white` back in first:
+Then the **real arm**, with you at it, slowly (you at the arm, hand near STOP). If part 5 left the green arms plugged in, unplug them and plug `so101-white` back in first:
 ```bash
 ls -l /dev/serial/by-id/       # so101-white = …5B41532410-if00
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.2 --record recordings/quest-1to1-real-$(date +%F).jsonl
@@ -163,12 +164,12 @@ uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch
 ```
 - [ ] It connects (no "different calibration" message). Move each joint **by hand** (the arm is limp): the numbers follow, about 0 at the middle pose, and the same directions as the white arm (`docs/dev/GOTCHAS.md` → joint directions). Ctrl+C.
 
-**f. Moving, slowly** (ask before it moves; you at the arm, hand near STOP):
+**f. Moving, slowly** (you at the arm, hand near STOP):
 ```bash
 uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 ```
 - [ ] Open http://localhost:8080/teleop on the desktop: the 3D arm matches the real one. Small jog moves with the desktop controls; STOP works.
-- [ ] In Claude Code (`/mcp` → `lab-os` → reconnect): "Use the lab-os tools. Read so101-green's status, then go to the home pose." Approve each move after reading it. Is `home` a safe pose for the green arm too? (It comes from the white arm's kinematics.)
+- [ ] In Claude Code (`/mcp` → `lab-os` → reconnect): "Use the lab-os tools. Read so101-green's status, then go to the home pose." (It moves without asking: watch it.) Is `home` a safe pose for the green arm too? (It comes from the white arm's kinematics.)
 - [ ] **The launcher refuses while the brain has the port:** with the brain still running, the desktop icon "SO-101 Training (LeLab)". One line says `green arm …3501 is open in …: stop it first`, and LeLab doesn't start. Press Enter to close it.
 - [ ] Ctrl+C in the brain's terminal (the arm goes limp: hold it if it's lifted).
 

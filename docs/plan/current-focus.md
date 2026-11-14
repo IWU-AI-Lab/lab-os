@@ -8,7 +8,7 @@ A demo of every feature on Thursday 2026-11-19 (decision 2026-11-12). The design
 **Time:** the builder has assignments due Wednesday 2026-11-18, so Claude Code sessions do most of the coding; lab time is scarce. **Fable 5.2 access ends Monday 2026-11-16**: real-arm AI runs come first (afterwards the same tools work with any model).
 
 ## Until the demo, in order
-1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 (moves without asking, limits that can be switched off, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
+1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 2–3 (limits that can be switched off, the floor at −0.5 cm; moves without asking is done); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
 2. **Devices** (step 8): built 2026-11-14; left: the lab check (`docs/guides/lab-checklist.md` part 11).
 3. **Voice and the assistant** (step 7): a snappier wake word with adjustable sensitivity; the assistant opens pages when asked ("pull up the teleop page", decision 2026-11-14); the greeting from a recording (quick job 4); the Newline's microphone.
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale), then the Quest with the real arm in 1:1.
@@ -24,7 +24,7 @@ Lab checks for each step: `docs/guides/lab-checklist.md`.
 2. **Fake first, offline first:** every step runs without hardware and (except the AI steps) without internet. Robot tools run on the fake arm before a real one.
 3. **Only claim what's real:** the start screen, status strip and panels never show a check or number that didn't happen; what isn't real yet is left out.
 4. **The design for new and changed pages** (`docs/design/DESIGN.md`, `config/theme.yaml`); `/` stays plain by default (`hub.look: plain`) and the plain pages keep working.
-5. **The hub's built-in assistant only reads, answers and opens pages** on the device it's talking at (anyone in the room can talk to it; moving the arm from it is an idea). The move tools are for a developer's AI tool on the brain's computer, through the same safety layer as teleop. Since 2026-11-13 they're decided not to ask before each move (quick job 1 builds it); STOP on every screen, the soft joint limits and one controller at a time always stay. Code written by AI only via branch → tests → the builder's approval.
+5. **The hub's built-in assistant only reads, answers and opens pages** on the device it's talking at (anyone in the room can talk to it; moving the arm from it is an idea). The move tools are for a developer's AI tool on the brain's computer, through the same safety layer as teleop. Since 2026-11-13 they don't ask before each move (quick job 1, built 2026-11-14); STOP on every screen, the soft joint limits and one controller at a time always stay. Code written by AI only via branch → tests → the builder's approval.
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable:** Linux, Windows, macOS. **Plain names** in code, show names in persona files.
 8. **The green arms:** CLAUDE.md's four rules (the code follows them since step 11).
@@ -38,7 +38,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 1. **Plain hub** (done 2026-11-12). `docs/guides/hub.md`.
 
 2. **Robot tools for AI.** The brain's MCP tools drive an SO-101 through teleop's safety layer (`docs/guides/ai-control.md`). On the real `so101-white` with `pose_view` and both cameras (2026-11-12) the gripper came down beside the cube and closed just past it (`docs/dev/GOTCHAS.md`).
-   - **Left:** quick jobs 1–3; the height reads 1–2 cm low and the elbow sags ~3° (`docs/plan/ideas.md` → "AI picking"); the cube actually picked; the green arm (step 11).
+   - **Left:** quick jobs 2–3; the height reads 1–2 cm low and the elbow sags ~3° (`docs/plan/ideas.md` → "AI picking"); the cube actually picked; the green arm (step 11).
    - **Done when:** the real arm does the cube task from a Claude Code prompt.
 
 3. **Cameras for the AI.** `pose_view` (2026-11-11) and `camera_snapshot` (2026-11-12) are built and were used in the cube pick.

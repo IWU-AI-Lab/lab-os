@@ -21,6 +21,19 @@
       "Read(//home/ai-comp-lab-ubuntu-76358/.cache/huggingface/lerobot/calibration/**)",
       "mcp__lab-os__arm_status",
       "mcp__lab-os__list_poses",
+      "mcp__lab-os__pose_view",
+      "mcp__lab-os__camera_snapshot",
+      "mcp__lab-os__move_joints",
+      "mcp__lab-os__gripper",
+      "mcp__lab-os__move_to",
+      "mcp__lab-os__go_to_pose",
+      "mcp__lab-os__project_status",
+      "mcp__lab-os__list_docs",
+      "mcp__lab-os__read_doc",
+      "mcp__lab-os__search_docs",
+      "mcp__lab-os__git_status",
+      "mcp__lab-os__git_log",
+      "mcp__lab-os__list_devices",
       "mcp__lab-os__stop"
     ],
     "ask": [
@@ -32,11 +45,7 @@
       "Bash(shutdown*)",
       "Bash(systemctl *)",
       "Bash(ssh * reboot*)",
-      "Bash(ssh * sudo *)",
-      "mcp__lab-os__move_joints",
-      "mcp__lab-os__gripper",
-      "mcp__lab-os__move_to",
-      "mcp__lab-os__go_to_pose"
+      "Bash(ssh * sudo *)"
     ],
     "deny": [
       "Edit(//home/ai-comp-lab-ubuntu-76358/miniforge3/envs/lerobot/**)",
