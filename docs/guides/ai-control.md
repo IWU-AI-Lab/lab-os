@@ -1,6 +1,6 @@
 # AI control: an AI tool drives the arm through the brain
 
-The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop and is logged; today Claude Code asks you before each one (that's changing: section 3). The **fake arm** first (done 2026-11-10: Fable 5.2 did the pretend-cube task with broadly the right moves), then the real `so101-white`, with the builder present (SAFETY.md): "5. On the real arm".
+The brain (`lab-os serve`) offers **robot tools** and the **project helper's read tools** (the docs, git, the device list; step 6) over MCP, the standard way AI tools (Claude Code, Codex, Claude Desktop, …) call tools. An AI can read the arm, move it a little at a time and stop it. Every move goes through the same safety path as teleop and is logged; Claude Code doesn't ask before each one (since 2026-11-14: section 3), so watch the arm with STOP in reach. The **fake arm** first (done 2026-11-10: Fable 5.2 did the pretend-cube task with broadly the right moves), then the real `so101-white`, with the builder present (SAFETY.md): "5. On the real arm".
 
 ## 1. Start the brain
 In a terminal, in the `lab-os` folder:
@@ -23,9 +23,9 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 **Which model:** type `/model` and pick Fable 5.2 if it's in the list (the builder's access ends 2026-11-16). Any model works; nothing is tied to Fable.
 
 ## 3. Permissions
-**Changing (decision 2026-11-13):** the move tools go on the allow list, so an AI tool moves the arm without asking; STOP on every screen, the soft limits and one controller at a time stay (`docs/plan/quick-jobs.md` jobs 1–2). Until that's merged, the repo's `.claude/settings.json` sets this for everyone who opens the project:
-- **allowed without asking:** `arm_status`, `list_poses` (read only) and `stop` (stopping must never wait for a click). The project tools (below) and `pose_view` are read only too and may be added here (`"mcp__lab-os__pose_view"`); until they are, Claude Code asks once per tool;
-- **always asks:** `move_joints`, `gripper`, `move_to`, `go_to_pose`. These are "ask" rules, so they ask even if someone allows them elsewhere (a "don't ask again" lasts one session: GOTCHAS 2026-11-13). Approve each move only after reading what it will do.
+The repo's `.claude/settings.json` (decision 2026-11-13, built 2026-11-14) **allows every brain tool without asking**, for everyone who opens the project: the read tools (`arm_status`, `list_poses`, `pose_view`, `camera_snapshot`, the project tools below), `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`). Nothing waits for a click; what keeps it safe is the brain itself: **STOP** on every screen, the soft joint limits and one controller at a time always stay, plus the per-move limit, the speed cap and the floor (safety rules below). Someone stays at a real arm with STOP in reach.
+
+A coding session (one working on lab-os's code) still asks you before it runs anything that moves a real arm (CLAUDE.md); a session you started to drive the arm uses the tools freely. To be asked before each move anyway (in your own Claude Code settings only): add the four move tools as `"ask"` rules in `.claude/settings.local.json` (in Claude Code, ask beats allow).
 
 ## 4. Try it
 In the Claude Code session, for example:
@@ -34,7 +34,7 @@ In the Claude Code session, for example:
 or the step-2 goal:
 > Pick up the cube that's 15 cm in front of the base and put it 10 cm to the left.
 
-Watch **AI Control** (`/ai`, or the hub's AI Control button) while you approve each move: each call appears there as it happens, with what it did. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
+Watch **AI Control** (`/ai`, or the hub's AI Control button) while it moves: each call appears there as it happens, with what it did. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
 
 ## The tools
 Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
@@ -87,7 +87,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    ```
    It prints "AI tools can move the REAL so101-white". Open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move aims, every call and its outcome, STOP) or `/monitor` (3D) to watch; on a second monitor of this computer they can stay open full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`: other screens are then view-only (their STOP works).
 3. In the Claude Code session (VS Code): `/mcp` → `lab-os` → reconnect (the brain restarted), `/model` → Fable 5.2.
-4. Small steps first (approving each one after reading it, while Claude Code still asks):
+4. Small steps first (Claude Code doesn't ask before moves: watch, with STOP in reach):
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
 
    > Go to the home pose.
@@ -130,7 +130,7 @@ After each move the brain holds the target for half a second (so a slow joint ca
 Every call (time, tool, arguments, outcome `ok` / `clipped` / `short` / `refused` / `stopped` / `error`, and the result) goes to `logs/ai-tools/<date>_<time>.jsonl`, one file per brain run (not in git). Use it to compare runs later.
 
 ## Other AI tools
-Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, …). Make it ask before each move tool, as above.
+Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, …). Its own permission settings decide whether it asks before a move tool; the brain's limits and STOP apply either way.
 
 ## Later
 - Access from other computers with a token (`docs/plan/lab-jarvis-log.md` → "AI-assisted development").
