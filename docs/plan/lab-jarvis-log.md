@@ -97,7 +97,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 ---
 
 ## Standards (to define on the ground)
-To be decided once the device census shows what the robot computers look like inside: user accounts on robots, one project folder per robot, where logs go and how they're named, venue profiles. **Device names so far:** `so101-green` / `so101-green-leader` (the training set, borrowed by lab-os since 2026-11-12), `so101-white` / `so101-white-leader`, `xarm1`, `xarm2`, `pi01`; starter names: `raspbot1`, `pi5-1`, `jetson1`, `quest1`; bridged robots named after the robot, with the bridge noted. **Already decided:** secrets in one local `.env` per machine, never in git; calibration files travel with each arm (`calibration/<arm>/`); principles and hacks as in CLAUDE.md; demos run from tagged known-good versions.
+To be decided once the device census shows what the robot computers look like inside: user accounts on robots, one project folder per robot, where logs go and how they're named, venue profiles. **Device names so far:** `so101-green` / `so101-green-leader` (the training set, borrowed by lab-os since 2026-11-12), `so101-white` / `so101-white-leader`, `xarm1`, `xarm2`, `pi01`, `quest-a` / `quest-b` / `quest-c` (the three Quest 3s, letters because "Quest 3" is the model; 2026-11-14); starter names: `raspbot1`, `pi5-1`, `jetson1`; bridged robots named after the robot, with the bridge noted. **Already decided:** secrets in one local `.env` per machine, never in git; calibration files travel with each arm (`calibration/<arm>/`); principles and hacks as in CLAUDE.md; demos run from tagged known-good versions.
 
 ---
 
