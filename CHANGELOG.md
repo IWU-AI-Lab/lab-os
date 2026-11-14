@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-14
+- **The AI budget on the Settings page applies at once** (quick job 5): the brain re-reads `ai_budget_usd_month` each time it checks, so raising it un-pauses the chat without a restart (it used to be read only at start).
 - **The spoken greeting from a recording** (quick job 4): only the time of day and the hint are spoken (the news stays on the screen); each voice says each one once, saved in the place's `recordings/greetings/`, then played from the file with no voice request (also offline). A new voice or a changed line makes a new file.
 - **The floor at −0.5 cm** (quick job 3): `min_z_cm: -0.5` in both venues, for the AI tools and teleop alike (the SO-101 stands on the overhead camera's base). Check the height with a ruler first (lab checklist part 3).
 - **Safety limits that can be switched off** (quick job 2): the AI tools' per-move limit, the speed cap and the floor, each `on` by default, `off` under `limits:` in the venue file or on Settings → Safety limits (marked "OFF" there; the brain prints `LIMITS OFF …`). Refused on public venues and the visit-day venue (`limits_locked: true`). Teleop's floor now comes from the venue's `min_z_cm` too (still 1 cm).

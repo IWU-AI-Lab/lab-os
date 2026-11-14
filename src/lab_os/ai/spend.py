@@ -3,17 +3,42 @@ in <logs>/ai-spend/<YYYY-MM>.jsonl, the month's total,
 and the monthly budget (place.yaml → ai_budget_usd_month) that pauses the chat."""
 
 import json
+import logging
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
 from lab_os import config
 
+log = logging.getLogger(__name__)
+
 
 class SpendLog:
-    def __init__(self, folder: Path | None = None, budget_usd: float | None = None):
-        """`folder=None`: the place's logs/ai-spend/. `budget_usd=None`: no cap."""
+    def __init__(
+        self,
+        folder: Path | None = None,
+        budget_usd: float | None = None,
+        budget_from: Callable[[], float | None] | None = None,
+    ):
+        """`folder=None`: the place's logs/ai-spend/. `budget_usd=None`: no cap. `budget_from`:
+        read the budget each time it's needed (place.yaml, changed on the Settings page), keeping
+        the last good value if that fails."""
         self.folder = folder or config.logs_dir() / "ai-spend"
-        self.budget_usd = budget_usd
+        self._budget = budget_usd
+        self._budget_from = budget_from
+
+    @property
+    def budget_usd(self) -> float | None:
+        if self._budget_from:
+            try:
+                self._budget = self._budget_from()
+            except Exception as e:  # a half-edited place.yaml: keep the last good number
+                log.warning("AI budget: couldn't read it (%s); still $%s", e, self._budget)
+        return self._budget
+
+    @budget_usd.setter
+    def budget_usd(self, value: float | None) -> None:
+        self._budget, self._budget_from = value, None
 
     def _file(self, now: datetime) -> Path:
         return self.folder / f"{now:%Y-%m}.jsonl"
@@ -87,4 +112,5 @@ class SpendLog:
         }
 
     def over_budget(self, now: datetime | None = None) -> bool:
-        return self.budget_usd is not None and self.month(now)["spent_usd"] >= self.budget_usd
+        budget = self.budget_usd
+        return budget is not None and self.month(now)["spent_usd"] >= budget

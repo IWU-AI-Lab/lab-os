@@ -623,12 +623,16 @@ def create_brain_app(
     project = ProjectTools(repo, venue)
     server = create_mcp_server(app[TOOLS], project)
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
+    own_place = place is None  # the active place's files: the budget is re-read as it changes
     place = place or config.load_place()
     persona = persona or (lambda: current_persona(venue=venue.name))
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
         assistant,
-        SpendLog(budget_usd=place.ai_budget_usd_month),
+        SpendLog(
+            budget_usd=place.ai_budget_usd_month,
+            budget_from=config.ai_budget if own_place else None,
+        ),
         place_name=place.name,
         persona=persona,
         tools=ChatTools(server),

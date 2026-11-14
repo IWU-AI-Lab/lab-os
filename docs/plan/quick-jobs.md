@@ -6,7 +6,6 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 
 ## To do
 
-5. **The AI budget on the Settings page.** `ai_budget_usd_month` (`config/place.yaml`, $20 now) can be changed from Settings; it's already read live (`docs/dev/chat.md`).
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue.
 7. **Stop LeLab.** A "Stop LeLab" button on the Training page (and `lab-os green --stop`) that closes the LeLab the launcher started (`docs/guides/green-launcher.md`). Only that process, nothing else.
 8. **The Quests in the device list** (`config/devices.yaml`, so they show in the Devices panel): three Meta Quest 3 headsets, `quest-a`, `quest-b`, `quest-c` (shown as Quest A, B, C; letters because "Quest 3" is the model). One is on loan to an AI club member (which one: ask the builder; its notes say so). The device name the Quest uses for `?device=` (step 8) is the same.
@@ -23,3 +22,4 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 - 2. **Limits that can be turned off** (done 2026-11-14, PR #75). `limits:` in the venue file and Settings → Safety limits; `limits_locked: true` on visit-day. Lab: lab-checklist part 6.
 - 3. **The floor at −0.5 cm** (done 2026-11-14, PR #76). `min_z_cm: -0.5` in both venues, teleop the same number. Lab: the stepped ruler check in lab-checklist part 3.
 - 4. **The greeting from a recording** (done 2026-11-14, PR #77). Time of day + hint only, saved per voice in `recordings/greetings/`. Lab: lab-checklist part 9b.
+- 5. **The AI budget on the Settings page.** (done 2026-11-14, PR #78). The field was there; the brain now reads the budget live. Lab: lab-checklist part 6.

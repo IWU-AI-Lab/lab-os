@@ -32,7 +32,7 @@ The features that are built and working today, plus a few lab robot projects tha
 |---|---|---|
 | Typed chat under the circle ("Ask anything"), answers stream and type themselves out, History page | ✅ | Tried with the free Gemini key; OpenAI is set up but untested without its key |
 | Swap AI setups in `config/models.yaml` (OpenAI, Gemini, local Ollama); falls back to Gemini without an OpenAI key | ✅ | |
-| Spend log per answer and a monthly budget that pauses the chat | ✅ | $20/month at the lab |
+| Spend log per answer and a monthly budget that pauses the chat; the budget can be changed on Settings and applies at once | ✅ | $20/month at the lab |
 | The chat knows the project: reads the docs, git history and device list; drafts prompts for Claude Code / Codex (Copy button) | ✅ | Read-only: the chat can never move a robot |
 | **Push-to-talk:** hold the mic button (or Space), talk, let go; the words appear while you talk, the answer is spoken sentence by sentence and the core follows its loudness. Same conversation as typing (tools, history, budget) | ✅ | On the free Gemini key (~15–20 spoken answers a day). Works at the lab desktop with a USB microphone and on the Quest (2026-11-13). No mic button without a secure page (localhost/https), a microphone, or voice at the brain |
 | **Dictation:** tap the mic (or Space); the words go into the ask line as you talk, it stops after a short silence or a second tap; fix and send like typing | 🧪 | Chosen per device: ⚙ → This device → Talking to it (push-to-talk is the default) |
