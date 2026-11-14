@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-14
+- **The AI's arm moves no longer ask** (quick job 1): the repo's Claude Code settings allow every brain tool, the four move tools and the read tools (`pose_view`, `camera_snapshot`, the project tools) included. STOP, the soft limits and one controller at a time stay; a coding session still asks before running something that moves a real arm.
+
 ## 2026-11-13
 - **The docs in folders by who reads them:** `docs/plan/` (current focus, quick jobs, ideas, the log, use cases), `docs/guides/` (hub, voice, AI control, Quest, training launcher, lab and network checklists), `docs/dev/` (dev setup, scaffold, protocol, places, personas, chat, GOTCHAS); `design/`, `device_manuals/`, `archive/` as before. The Current Project panel and the greeting read `docs/plan/current-focus.md`; the read tools name docs by path (`plan/ideas`), and the short name still works when it's unique.
 - **`current-focus.md` rewritten** around what's left before the 2026-11-19 demo (same step titles; the old one in `docs/archive/focus-2026-11-13-hub-voice-ai.md`). History out of the log and the lab checklist into `docs/archive/`, outdated statements updated, repeats replaced by links.

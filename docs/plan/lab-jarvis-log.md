@@ -161,7 +161,7 @@ Anyone working on lab-os can use AI to change the system **and** the connected d
 |---|---|---|
 | read | device status, logs, docs, arm readouts, camera snapshots | everyone, incl. the hub's built-in chat |
 | act | "find me" beep, restart a service on a Pi, deploy a tagged version to a robot | developers with a token; asks first |
-| move | anything that makes a robot move | developers on the brain's computer, through the safety layer; no asking per move since the 2026-11-13 decision (`docs/plan/quick-jobs.md` job 1); off in remote mode |
+| move | anything that makes a robot move | developers on the brain's computer, through the safety layer; no asking per move (decision 2026-11-13, on the repo's allow list since 2026-11-14); off in remote mode |
 | admin | `sudo`, deleting, reboots | humans only, never through tools |
 
 The hub's built-in chat stays in the read tier (anyone in the room can type into it). Realistic workflows: `docs/plan/use-cases.md`. Built so far: the read and move tiers on this computer (focus steps 2, 3, 6); tokens, the act tier and the harness wait (`docs/plan/ideas.md` → "Brain as an MCP server", "Coding agent").

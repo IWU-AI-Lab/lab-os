@@ -18,7 +18,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-13 — "Don't ask again" for the arm's move tools lasted one session
 **What:** during the cube pick the builder told Claude Code not to ask again for the move tools. The next session asked again: nothing was saved, and the `ask` list in `.claude/settings.json` wins over a saved "allow" anyway (in Claude Code, ask beats allow).
-**Fix:** decided 2026-11-13 to stop asking (`docs/plan/quick-jobs.md`, job 1: the tools move to `allow` in the repo's settings).
+**Fix:** decided 2026-11-13 to stop asking; since 2026-11-14 every brain tool is on `allow` in the repo's `.claude/settings.json` and nothing on `ask` (quick job 1; a test keeps it that way).
 
 ### 2026-11-12 — AI cube pick on so101-white: the gripper closed right next to the cube (open)
 **What:** Claude drove the real `so101-white` through the MCP tools: pictures from both cameras, `home`, then a blue ~2.5 cm cube on the table. 10 moves after `home` brought the open gripper down beside the cube without bumping it. It closed at a reported (28.2, 7.7, 1.0) cm, tool angle 174°, all the way (7.8 % open: nothing in the jaws). Both cameras then showed the cube still in place, just past the jaw tips. Three things showed up:
