@@ -45,6 +45,9 @@ class Field:
     step: float | None = None
     unit: str = ""
     applies: str = "reload"
+    # a safety limit (bool): the page shows clearly when it's off, and it can't be switched off
+    # in a public venue or one with `limits_locked: true`
+    safety: bool = False
 
     @property
     def key(self) -> str:
@@ -268,6 +271,45 @@ SECTIONS: list[Section] = [
         ),
         help="Safety settings: they apply when the brain restarts.",
     ),
+    Section(
+        "limits",
+        "Safety limits in this venue",
+        (
+            Field(
+                "venue",
+                "limits.per_move",
+                "AI: limit each move",
+                "bool",
+                "off = an AI tool may move any distance in one call (the AI numbers under Robots "
+                "don't apply)",
+                applies="restart",
+                safety=True,
+            ),
+            Field(
+                "venue",
+                "limits.speed_cap",
+                "Speed cap",
+                "bool",
+                "off = up to each arm's full speed (the top speed above becomes the starting "
+                "speed) and 1:1 at the servos' own top speed",
+                applies="restart",
+                safety=True,
+            ),
+            Field(
+                "venue",
+                "limits.floor",
+                "Floor (stay above the table)",
+                "bool",
+                "off = teleop and the AI tools may take the gripper below the table line "
+                "(ai_tools.min_z_cm)",
+                applies="restart",
+                safety=True,
+            ),
+        ),
+        help="Each on by default. Always kept, whatever is set here: STOP on every screen, the "
+        "soft joint limits (3° inside each joint's range) and one controller at a time. Can't be "
+        "switched off on a public venue or one with limits_locked: true (visit days).",
+    ),
 ]
 
 
@@ -322,10 +364,14 @@ def read(venue: str | None = None) -> list[dict]:
                 cache[file] = {}
         return cache[file]
 
+    locked = limits_locked_why(data("venue"))
     out = []
     for s in SECTIONS:
         fields = []
         for f in s.fields:
+            value = _get(data(f.file), f.path)
+            if f.safety:
+                value = value is not False and str(value).lower() not in ("off", "false", "no")
             fields.append(
                 {
                     "key": f.key,
@@ -339,11 +385,22 @@ def read(venue: str | None = None) -> list[dict]:
                     "step": f.step,
                     "unit": f.unit,
                     "applies": f.applies,
-                    "value": _get(data(f.file), f.path),
+                    "value": value,
+                    "safety": f.safety,
+                    "locked": locked if f.safety else "",
                 }
             )
         out.append({"id": s.id, "title": s.title, "help": s.help, "fields": fields})
     return out
+
+
+def limits_locked_why(venue_data: dict) -> str:
+    """Why the safety limits can't be switched off in this venue ("" = they can)."""
+    if venue_data.get("public"):
+        return "a public venue: the limits always stay on"
+    if venue_data.get("limits_locked"):
+        return "this venue has limits_locked: true (visit days): the limits always stay on"
+    return ""
 
 
 def check(f: Field, value: Any) -> Any:
@@ -390,6 +447,10 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
     f = find(key)
     value = check(f, value)
     path = file_path(f.file, venue, writing=True)
+    if f.safety and value is False:
+        why = limits_locked_why(yaml.safe_load(path.read_text()) or {})
+        if why:
+            raise SettingError(f"{f.label} can't be switched off here: {why}.")
     rt = YAML()
     rt.preserve_quotes = True
     rt.width = 4096  # never re-wrap long comment lines

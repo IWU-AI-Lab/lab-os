@@ -24,7 +24,7 @@ import asyncio
 import logging
 import math
 import time
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 
 import yaml
@@ -73,7 +73,21 @@ class AiLimits:
         known = {f.name for f in fields(cls)}
         for key in set(venue.ai_tools) - known:
             log.warning("venue %s: unknown ai_tools setting %r (ignored)", venue.name, key)
-        return cls(**{k: float(v) for k, v in venue.ai_tools.items() if k in known})
+        limits = cls(**{k: float(v) for k, v in venue.ai_tools.items() if k in known})
+        if not venue.per_move_limit:  # switched off in the venue (Settings → Robots)
+            limits = replace(limits, max_joint_change_deg=math.inf, max_move_cm=math.inf)
+        if not venue.floor:
+            limits = replace(limits, min_z_cm=-math.inf)
+        return limits
+
+    def per_call(self) -> dict:
+        """For arm_status: the numbers, or "off" for a limit that's switched off."""
+        values = {
+            "max_joint_change_deg": self.max_joint_change_deg,
+            "max_move_cm": self.max_move_cm,
+            "min_z_cm": self.min_z_cm,
+        }
+        return {k: v if math.isfinite(v) else "off" for k, v in values.items()}
 
 
 def load_poses(path: Path | None = None) -> dict[str, dict[str, dict[str, float]]]:
@@ -217,11 +231,7 @@ class RobotTools:
                 "held_still": self.loop.frozen,
                 "motion_allowed": self.venue.motion_allowed,
                 "speed_scale": self.loop.speed_scale,
-                "per_call": {
-                    "max_joint_change_deg": self.limits.max_joint_change_deg,
-                    "max_move_cm": self.limits.max_move_cm,
-                    "min_z_cm": self.limits.min_z_cm,
-                },
+                "per_call": self.limits.per_call(),
                 "frame": "cm from the arm's base: x forward, y left, z up (0 = table); "
                 "tool angle 0 = up, 90 = forward, 180 = straight down",
             }

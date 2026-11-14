@@ -184,22 +184,38 @@ async function load() {
   }
   $("#mode").textContent = data.writable ? `saved into the config files (venue: ${data.venue})` : data.why_not;
   $("#mode").className = `pill ${data.writable ? "on" : "warn"}`;
+  const offNow = new Map(); // safety limits that are off in the venue file: label → true
+  const showOff = () => {
+    $("#limits-off").hidden = offNow.size === 0;
+    $("#limits-off .pill").textContent = [...offNow.keys()].join(", ");
+  };
   for (const s of data.sections) {
     const card = document.createElement("section");
     card.className = "card";
     card.innerHTML = `<div class="in"><h2>${esc(s.title)}</h2>${s.help ? `<p class="section-help">${esc(s.help)}</p>` : ""}</div>`;
     const inner = card.querySelector(".in");
     for (const f of s.fields) {
-      inner.append(fieldRow(f, f.value, async (value) => {
+      // a safety limit: marked when off; locked (public / visit-day venue) = can't be switched
+      const field = f.locked ? { ...f, help: `${f.help}. Locked: ${f.locked}` } : f;
+      let row = null;
+      const markOff = (on) => {
+        if (!f.safety) return;
+        row?.classList.toggle("limit-off", !on);
+        if (on) offNow.delete(f.label); else offNow.set(f.label, true);
+        showOff();
+      };
+      row = fieldRow(field, f.value, async (value) => {
         try {
           const res = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: f.key, value }) });
           const r = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: await res.text() };
-          if (r.ok) tellHub();
+          if (r.ok) { tellHub(); markOff(value); }
           return { ok: r.ok, message: r.ok ? APPLIES[r.applies] || "Saved." : r.message };
         } catch (e) {
           return { ok: false, message: `Not saved: ${e.message}` };
         }
-      }, !data.writable));
+      }, !data.writable || !!f.locked);
+      markOff(f.value);
+      inner.append(row);
     }
     $("#sections").append(card);
   }

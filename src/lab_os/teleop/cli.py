@@ -18,7 +18,7 @@ from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
-from lab_os.teleop.mapping import MODES, ClutchMapper
+from lab_os.teleop.mapping import MODES, ClutchMapper, MappingConfig
 from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import create_app
@@ -140,7 +140,8 @@ def make_loop(args) -> TeleopLoop:
         venue = load_venue(args.venue)
     except config.ConfigError as e:
         raise SystemExit(str(e)) from None
-    speed = min(args.speed, venue.max_speed_scale) if args.speed else venue.max_speed_scale
+    # the venue's top speed is where it starts; with the speed cap off, --speed may go higher
+    speed = min(args.speed, venue.speed_cap_scale) if args.speed else venue.max_speed_scale
     arm = _make_arm(args.arm, venue)
     try:
         arm.connect()
@@ -152,15 +153,18 @@ def make_loop(args) -> TeleopLoop:
     )
     if not args.arm.startswith("fake"):
         print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
+    if venue.limits_off:
+        off = ", ".join(venue.limits_off)
+        print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety limits)")
     kin = kinematics_for(arm.model)
     print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
     return TeleopLoop(
         arm=arm,
         inputs=InputState(),
-        mapper=ClutchMapper(kinematics=kin),
+        mapper=ClutchMapper(config=MappingConfig(floor_m=venue.floor_cm / 100), kinematics=kin),
         speed_scale=speed,
-        max_speed_scale=venue.max_speed_scale,
-        one_to_one_deg_per_s=venue.one_to_one_deg_per_s,
+        max_speed_scale=venue.speed_cap_scale,
+        one_to_one_deg_per_s=venue.one_to_one_cap,
         # real servos: temperature, load and voltage every 5 s, one file per run (not in git)
         health_log=HEALTH_DIR / f"{datetime.now():%Y-%m-%d_%H%M%S}_{arm.name}.jsonl"
         if hasattr(arm, "read_health")

@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-14
+- **Safety limits that can be switched off** (quick job 2): the AI tools' per-move limit, the speed cap and the floor, each `on` by default, `off` under `limits:` in the venue file or on Settings → Safety limits (marked "OFF" there; the brain prints `LIMITS OFF …`). Refused on public venues and the visit-day venue (`limits_locked: true`). Teleop's floor now comes from the venue's `min_z_cm` too (still 1 cm).
 - **Devices** (focus step 8, `docs/guides/hub.md` → "Devices"): hub pages open under a name (`/?device=desk`); the brain lists the devices with the hub open (`/ws/hub-device`, `/api/hub-devices`; each monitor a window) and keeps each device's settings in the place's `hub-devices.yaml` ("This screen" is now **This device**). **Open on…** next to Back in a module opens it on another device's hub (the free monitor, or it asks); Back there or **Bring it back** here closes it. Pages reconnect by themselves when the brain restarts. **`lab-os serve --open desk`** and **`lab-os icon`** ("Start lab-os" on the brain's computer); ⚙ → This device → "Lab hub" icon for other computers.
 - **The AI's arm moves no longer ask** (quick job 1): the repo's Claude Code settings allow every brain tool, the four move tools and the read tools (`pose_view`, `camera_snapshot`, the project tools) included. STOP, the soft limits and one controller at a time stay; a coding session still asks before running something that moves a real arm.
 
