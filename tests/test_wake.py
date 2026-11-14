@@ -1,3 +1,4 @@
+# ruff: noqa: F811 (`key` is a fixture from test_voice, used as an argument)
 """The wake word (step 7): openWakeWord's models on the brain, and a hands-free turn over /ws/voice.
 The recordings in fixtures/ were made with Gemini's TTS (2026-11-12): "Hey Jarvis!" and "Hey, can
 you show me the arm? Thanks, Jordan." No microphone, no internet (a fake voice service)."""
@@ -168,7 +169,7 @@ async def stream(ws, data: bytes):
         await asyncio.sleep(0)
 
 
-async def test_the_wake_word_starts_a_turn(aiohttp_client, aiohttp_server, key, tmp_path):  # noqa: F811
+async def test_the_wake_word_starts_a_turn(aiohttp_client, aiohttp_server, key, tmp_path):
     app, conv, assistant = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     st = await (await client.get("/api/status")).json()
@@ -194,7 +195,7 @@ async def test_one_screen_answers_at_once_warm_and_timed(
     aiohttp_client,
     aiohttp_server,
     key,
-    tmp_path,  # noqa: F811
+    tmp_path,
 ):
     """One screen listening: no waiting for others; the hearing was connected ahead of time; each
     step's time is logged and kept for /api/voice/timings."""
@@ -238,7 +239,7 @@ async def test_the_service_hearing_a_pause_ends_the_question(
     aiohttp_client,
     aiohttp_server,
     key,
-    tmp_path,  # noqa: F811
+    tmp_path,
 ):
     """No "end" from the page: the voice service heard the pause after the question (a noisy room's
     hum can keep the page's own silence watch from ever ending it)."""
@@ -261,7 +262,7 @@ async def test_the_sensitivity_comes_from_the_page(
     aiohttp_client,
     aiohttp_server,
     key,
-    tmp_path,  # noqa: F811
+    tmp_path,
 ):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     from lab_os.hub.server import BRAIN
@@ -278,7 +279,7 @@ async def test_the_sensitivity_comes_from_the_page(
     await ws.close()
 
 
-async def test_not_while_the_answer_plays(aiohttp_client, aiohttp_server, key, tmp_path):  # noqa: F811
+async def test_not_while_the_answer_plays(aiohttp_client, aiohttp_server, key, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     ws = await client.ws_connect("/ws/voice")
@@ -291,7 +292,7 @@ async def test_not_while_the_answer_plays(aiohttp_client, aiohttp_server, key, t
     await ws.close()
 
 
-async def test_two_screens_hear_it_one_answers(aiohttp_client, aiohttp_server, key, tmp_path):  # noqa: F811
+async def test_two_screens_hear_it_one_answers(aiohttp_client, aiohttp_server, key, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     a, b = await client.ws_connect("/ws/voice"), await client.ws_connect("/ws/voice")
@@ -308,7 +309,7 @@ async def test_two_screens_hear_it_one_answers(aiohttp_client, aiohttp_server, k
         await ws.close()
 
 
-async def test_off_on_a_public_venue(aiohttp_client, aiohttp_server, key, tmp_path):  # noqa: F811
+async def test_off_on_a_public_venue(aiohttp_client, aiohttp_server, key, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     from lab_os.hub.server import BRAIN
 
