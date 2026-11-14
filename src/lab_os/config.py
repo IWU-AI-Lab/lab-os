@@ -143,6 +143,14 @@ PLACE_FIELDS = {
 }
 
 
+def ai_budget() -> float | None:
+    """place.yaml's `ai_budget_usd_month` as it is now (the Settings page changes it while the
+    brain runs); None = no cap."""
+    raw = yaml.safe_load(place_path("place.yaml").read_text()) or {}
+    budget = raw.get("ai_budget_usd_month")
+    return float(budget) if budget is not None else None
+
+
 def load_place(path: Path | None = None) -> Place:
     path = path or place_path("place.yaml")
     if not path.is_file():

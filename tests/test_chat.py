@@ -364,3 +364,39 @@ def test_the_page_has_the_chat_parts():
     js = (SRC / "hub" / "web" / "hub.js").read_text()
     assert "clearChat(); // the next visitor" in js  # the reset clears the conversation
     assert "/api/chat" in js and "/api/spend" in js
+
+
+def test_the_budget_is_read_live(tmp_path):
+    """Quick job 5: the budget can change while the brain runs (the Settings page)."""
+    budget = {"now": 20.0}
+    log = SpendLog(tmp_path, budget_usd=20, budget_from=lambda: budget["now"])
+    log.write("main", "m", Usage(10, 10), 0.5)
+    assert not log.over_budget()
+    budget["now"] = 0.25
+    assert log.over_budget() and log.month()["budget_usd"] == 0.25
+
+    def broken():
+        raise ValueError("half-edited place.yaml")
+
+    log._budget_from = broken
+    assert log.budget_usd == 0.25  # the last good number
+    log.budget_usd = 30  # set by hand: fixed from now on
+    assert not log.over_budget()
+
+
+async def test_a_budget_changed_in_settings_applies_without_restart(aiohttp_client, tmp_path):
+    from lab_os import config, settings
+    from lab_os.hub.server import create_brain_app
+    from lab_os.robots.fake import FakeArm
+    from lab_os.teleop.loop import InputState, TeleopLoop
+    from lab_os.venues import load_venue
+
+    config.use(config.new_place(tmp_path / "home"))
+    arm = FakeArm()
+    arm.connect()
+    app = create_brain_app(TeleopLoop(arm=arm, inputs=InputState()), load_venue("home"))
+    client = await aiohttp_client(app)
+    before = (await (await client.get("/api/spend")).json())["budget_usd"]
+    assert settings.write("place:ai_budget_usd_month", 42) == 42
+    assert settings.find("place:ai_budget_usd_month").applies == "next"
+    assert (await (await client.get("/api/spend")).json())["budget_usd"] == 42 != before

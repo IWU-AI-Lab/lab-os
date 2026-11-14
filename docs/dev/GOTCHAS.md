@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-14 — The AI budget wasn't read live, though the docs said so
+**What:** `docs/dev/chat.md` said raising `ai_budget_usd_month` un-pauses the chat with no restart, and the Settings page said "applies when the brain restarts". The second was true: the brain read the number once at start (`SpendLog(budget_usd=…)`).
+**Fix:** quick job 5: `SpendLog(budget_from=config.ai_budget)` re-reads `place.yaml` each time it checks (a broken file keeps the last good number); the Settings field says "applies from the next question". (`load_place()` wasn't used for it: it logs a warning per unknown field on every call, and `/api/spend` is polled.)
+
 ### 2026-11-14 — The "Open on…" menu covered the module page's STOP
 **What:** the first version of "Open on…" (step 8) opened under its button at the top right, which is exactly where every module page (teleop, monitor, AI Control) keeps STOP. The page is an iframe, so nothing in the hub can sit under it: while the menu was open, the first tap on STOP landed on the menu. Seen in a headless screenshot, not in the lab.
 **Fix:** the menu opens on the left (under Back / the title) in both looks, and a tap on the page closes it. Rule for anything the hub draws over an open module: never over the page's bar on the right.
