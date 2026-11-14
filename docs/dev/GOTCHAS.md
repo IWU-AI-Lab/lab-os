@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-14 — The designed hub's question and answer can't simply be pinned over an open page
+**What:** for the docked core on an open page (its reply beside it), the reply (`#reply`) lives inside `#hub`, which is scaled, faded to 12 % and blurred while a page is open (`body.folded #hub`). A `position: fixed` child of a transformed, filtered parent is placed and blurred with it, so it can't just be repositioned with CSS.
+**Fix:** like the core itself, the element moves: into `#dock-say` (beside `#orb-dock`, outside `#hub`) when a page opens, back to its old place when it closes (both looks). It sits bottom right, left of the core: never over the page's bar with STOP (the "Open on…" rule above). It covers a corner of the page for the 14 s the answer shows.
+
 ### 2026-11-14 — openWakeWord's voice-activity filter makes a noisy room worse
 **What:** for the sensitivity setting, openWakeWord 0.6's own options were tried on the recordings (its package, on the Mac). Its Silero VAD filter (`vad_threshold` 0.3 or 0.5) left a clear "hey Jarvis" alone, but with the voice at 30 % under loud noise it turned a 0.98 score into **0.00**: the filter looks at the audio 0.3–0.6 s back and decides there's no speech. Its Speex noise suppression needs `speexdsp_ns` (a Linux C package). Also measured: a quiet voice alone scores the same as a loud one (the recording at 1 % loudness: 0.999); what lowers the score is noise relative to the voice.
 **Fix:** neither is used. The sensitivity slider sets openWakeWord's threshold and patience (`ai/wake.py` → `SENSITIVITY`); the browser's own noise suppression already runs on the microphone. `docs/guides/voice.md` → "Sensitivity".

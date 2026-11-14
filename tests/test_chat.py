@@ -215,7 +215,7 @@ async def test_a_turn_sets_the_states_and_logs_the_cost(aiohttp_server, key, tmp
     system = seen[0]["body"]["messages"][0]
     assert system["role"] == "system"
     assert "Be brief." in system["content"] and "Test Lab" in system["content"]
-    assert "can't change or move anything" in system["content"]
+    assert "can't move the robot arms from here" in system["content"]
     month = conv.spend.month()
     assert month["chats"] == 1 and month["by_setup"] == {"main": pytest.approx(0.000164)}
     await conv.close()

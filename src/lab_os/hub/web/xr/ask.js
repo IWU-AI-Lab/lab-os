@@ -3,7 +3,7 @@
 //   - the ask line: "Ask anything" with the mic; point at it and HOLD the trigger (or a pinch), talk, let
 //     go; the answer types out under the core as it's spoken (web/voice.js, the brain's /ws/voice: the same
 //     conversation as typing, API keys stay on the brain);
-//   - the wake word: while the hub is up (no module open), the Quest's microphone streams to the brain,
+//   - the wake word: while the hub is up (a module or page open too, 2026-11-14), the Quest's microphone streams to the brain,
 //     which listens for the phrase itself; a small dot in the strip says so. Then the core listens and the
 //     question ends after a short silence;
 //   - another screen heard it (the desktop's microphone, its own wake word or push-to-talk): the brain's
@@ -35,6 +35,7 @@ export class Ask {
         onEvent: (ev) => this._event(ev),
         onLoud: (l) => (this.loud = l),
         onLevel: (l) => { this.level = l; this.watch?.level(l); },
+        pages: () => this.pages?.() || null, // what the hub can show (the assistant opens them)
       });
       if (this.status) this.V.setStatus(this.status.voice);
     }).catch((e) => console.warn(`xr hub: no voice (${e.message})`));
@@ -44,7 +45,7 @@ export class Ask {
   get wakeOn() { return !!this.V?.wakeOn; }
   /** The brain's status (every 1.5 s). */
   setStatus(st) { this.status = st; this.V?.setStatus(st?.voice); }
-  /** The wake word listens while the hub is up with nothing open (and the brain can do it). */
+  /** The wake word listens while the hub is up, with or without a page open (and the brain can do it). */
   syncWake(want) {
     if (!this.V) return;
     const w = this.status?.voice?.wake;
@@ -96,6 +97,7 @@ export class Ask {
       }, { quietMs: this.VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: this.V.noiseFloor });
       return;
     }
+    if (ev.type === "open") { this.onOpen?.(ev.page); return; } // the assistant opened a page here
     if (ev.type === "ended") { this.watch?.cancel(); this.watch = null; this.state = "thinking"; return; } // the brain heard the pause
     if (["wake_on", "wake_off", "wake_elsewhere", "mic_stalled"].includes(ev.type)) return;
     if ((ev.type === "error" || ev.type === "voice_error") && this.greeting && !this.voiced) { this.greeting = false; this._note(ev.message, now); this.state = null; return; }

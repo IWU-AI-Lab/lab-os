@@ -210,6 +210,12 @@ body[data-layout="panels"] #ask-btn { display: none; }
 body[data-mod] #orb-dock { display: block; }
 body[data-mod="chat"] #orb-dock { left: 9vw; top: 50%; width: min(58vh, 34vw); translate: 0 -50%; }
 body[data-mod]:not([data-mod="chat"]) #orb-dock { right: calc(5vw + 1.4rem); bottom: calc(5vh + 1.4rem); width: min(19vh, 10rem); }
+/* the docked core works on an open page too (2026-11-14): hold it to talk; what it hears and says shows beside it */
+body[data-mod]:not([data-mod="chat"]) #orb-dock.talk { pointer-events: auto; cursor: pointer; touch-action: none; }
+#dock-say { position: fixed; z-index: 7; display: none; pointer-events: none; right: calc(5vw + 2.2rem + min(19vh, 10rem)); bottom: calc(5vh + 1.4rem); width: min(24rem, 40vw); }
+body[data-mod]:not([data-mod="chat"]) #dock-say { display: block; }
+#dock-say #reply { position: static; transform: none; width: auto; text-align: right; padding: 0.6rem 0.8rem; background: color-mix(in srgb, var(--surface) 90%, transparent); border: 1px solid var(--line); clip-path: polygon(0.6rem 0, 100% 0, 100% calc(100% - 0.6rem), calc(100% - 0.6rem) 100%, 0 100%, 0 0.6rem); }
+#dock-say #reply .a { max-height: 6.5em; overflow: hidden; }
 
 /* boot-only elements */
 #boot-title-wrap { position: fixed; left: 0; right: 0; top: 11vh; text-align: center; z-index: 7; pointer-events: none; }
@@ -877,6 +883,7 @@ body[data-mod="page"] #module .send { display: flex; }
   </div></div>
 </div>
 <div id="orb-dock" aria-hidden="true"></div>
+<div id="dock-say"></div>
 <!-- pages this device opened on another one ("open on…", step 8): Bring it back closes them there -->
 <div id="sent" hidden></div>
 
@@ -1989,7 +1996,9 @@ function beginTurn(q, fromCore, voiced = false) {
   const pacer = voiced ? VM.revealPacer(() => answer.content.length, (n, typing) => show(answer.content.slice(0, n), typing)) : null;
   const onEvent = (ev) => {
     if (ev.type === "state") { if (!voiced && !(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out; spoken: the voice decides
+    else if (ev.type === "open") showPage(ev.page);  // the assistant opened a page on this screen
     else if (ev.type === "tool") {
+      if (ev.name === "open_page") return;
       if (!answer.content && fromCore) a.innerHTML = `<span class="look">Looking up ${esc(TOOL_WORDS[ev.name] || ev.name)}…</span>`;
       if (traces.length) pulseTrace(traces[Math.floor(Math.random() * traces.length)], true, 320);
     } else if (ev.type === "text") {
@@ -2021,7 +2030,7 @@ async function ask(q, fromCore) {
   if (!q || S.asking) return;
   const { onEvent, end } = beginTurn(q, fromCore);
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q }) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q, pages: pagesHere() }) });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader(), decoder = new TextDecoder();
     let buf = "";
@@ -2065,7 +2074,8 @@ let wakeNoted = null;
 function syncWake() {
   if (!V) return;
   const w = S.status?.voice?.wake;
-  const want = WAY() === "wake_word" && V.can().ok && !!w?.available && S.booted && !S.sleeping && !S.moduleOpen && document.visibilityState === "visible";
+  // with a module or page open too (2026-11-14, the builder): "hey Jarvis, go back to the hub" works hands-free
+  const want = WAY() === "wake_word" && V.can().ok && !!w?.available && S.booted && !S.sleeping && document.visibilityState === "visible";
   V.wake(want);
   if (WAY() === "wake_word" && w && !w.available && w.why !== wakeNoted && S.booted) { wakeNoted = w.why; voiceNote(w.why); }
   renderWakeDot();
@@ -2189,7 +2199,7 @@ function onVoiceEvent(ev) {
     if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
     $("#reply .q").classList.remove("heard");
     VS.turn = VS.shown = beginTurn(ev.text, VS.fromCore, true);
-  } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
+  } else if (VS.turn && ["state", "tool", "text", "open", "error", "done"].includes(ev.type)) {
     VS.turn.onEvent(ev);
     if (ev.type === "done" || ev.type === "error") {
       const t = VS.turn; VS.turn = null; t.end(true);
@@ -2211,7 +2221,7 @@ function onVoiceEvent(ev) {
 }
 import("/web/voice.js").then((m) => {
   VM = m;
-  V = m.createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), onLevel: (l) => {
+  V = m.createVoice({ onEvent: onVoiceEvent, onChange: renderMic, onLoud: (l) => (S.voiceLoud = l), pages: pagesHere, onLevel: (l) => {
     S.micLevel = l; dictateLevel(l); VW?.level(l);
     if (V?.pressed) document.querySelectorAll(".mic").forEach((b) => b.style.setProperty("--lvl", Math.min(1, l * 8).toFixed(2)));
   } });
@@ -2324,6 +2334,8 @@ function openModule(btn) {
   if (S.moduleOpen) return;
   const [title, ico, kind] = btn.dataset.module ? MODULES[btn.dataset.module] : btn.dataset.detail ? DETAILS[btn.dataset.detail] : CHAT;
   S.moduleOpen = kind; S.moduleId = btn.dataset.module || null;
+  S.showing = kind === "chat" ? "chat" : btn.dataset.module || btn.dataset.detail || null;  // (the assistant's showPage)
+  if (kind !== "chat") { $("#dock-say").appendChild($("#reply")); $("#orb-dock").classList.toggle("talk", !!V?.can().ok); }
   closeOpenOn();
   $("#mod-from").hidden = !S.sentFrom; $("#mod-from").textContent = S.sentFrom ? `Opened from ${S.sentFrom.from || "another device"}` : "";
   const r = btn.getBoundingClientRect(), m = $("#module");
@@ -2373,6 +2385,8 @@ function closeModule() {
     $(".core").insertBefore(orb, $(".core").firstChild);
     delete body.dataset.mod;
     if (S.moduleOpen === "chat") $("#hub").insertBefore($(".chat"), $(".side.left"));
+    REPLY_HOME.parent.insertBefore($("#reply"), REPLY_HOME.next); $("#orb-dock").classList.remove("talk");
+    S.showing = null;
     $("#mod-slot .detail")?.remove();
     S.moduleOpen = null; S.closing = false;
     layoutTraces(); showTraces();
@@ -2382,6 +2396,43 @@ function openChat() {
   if (S.layout === "panels") { $("#ask").focus(); return; }
   openModule($(".core"));
 }
+const REPLY_HOME = { parent: $("#reply").parentNode, next: $("#reply").nextSibling };  // it sits beside the docked core on a page
+/* the assistant opens pages on this screen (decision 2026-11-14): what it can show is sent with each question
+   (typed or spoken), and an "open" event in the answer shows it, like a tap would */
+function pagesHere() {
+  const out = { hub: "the hub", chat: "the conversation" };
+  for (const id of S.modules) if (MODULES[id]?.[2] === "page") out[id] = MODULES[id][0];
+  if (S.page.settings) out.settings = "Settings";
+  for (const [id, [title]] of Object.entries(DETAILS)) {
+    const p = document.querySelector(`.side .panel[data-detail="${id}"]`);
+    if (p && !p.hidden && getComputedStyle(p).display !== "none") out[id] = title;
+  }
+  return out;
+}
+function showPage(id) {
+  if (!S.booted || S.showing === id || (id === "hub" && !S.moduleOpen)) return;
+  const target = id === "hub" ? null : id === "chat" ? $(".core") : id === "settings" ? $("#settings-btn")
+    : document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`);
+  if (id !== "hub" && !target) return;
+  if (S.sleeping) wake();
+  hideDevice();
+  if (S.moduleOpen) closeModule();
+  if (id === "hub") return;
+  const go = () => {
+    if (S.moduleOpen) return setTimeout(go, 120);
+    if (id === "chat") openChat(); else openModule(target);
+    S.lastInput = performance.now();
+  };
+  setTimeout(go, Math.max(0, (S.closingUntil || 0) - performance.now()));
+}
+// hold the docked core to talk, like the mic (a module or page is open)
+$("#orb-dock").addEventListener("pointerdown", (e) => {
+  if (!$("#orb-dock").classList.contains("talk")) return;
+  e.preventDefault(); e.stopPropagation();
+  $("#orb-dock").setPointerCapture?.(e.pointerId); talkStart(true);
+});
+for (const t of ["pointerup", "pointercancel"]) $("#orb-dock").addEventListener(t, (e) => { e.stopPropagation(); talkEnd(); });
+$("#orb-dock").addEventListener("contextmenu", (e) => e.preventDefault());
 $(".core").addEventListener("click", (e) => {
   if (!S.booted || performance.now() < S.readyAt || e.target.closest("#toast, #errmsg, #ask-btn, #reply")) return;
   SFX.blip(); openChat();

@@ -246,6 +246,8 @@ function openModule(m, sentFrom = null) {
   $("#module").hidden = false;
   body.dataset.mod = m.id;
   $("#orb-dock").appendChild($("#orb"));
+  $("#orb-dock").classList.toggle("talk", voice.can().ok);
+  $("#dock-say").appendChild($("#reply"));
   $("#mod-back").focus();
   device.update();
 }
@@ -257,12 +259,51 @@ function closeModule() {
   $("#module").hidden = true;
   delete body.dataset.mod;
   $(".core").prepend($("#orb"));
+  $("#orb-dock").classList.remove("talk");
+  REPLY_HOME.parent.insertBefore($("#reply"), REPLY_HOME.next);
   S.module = null;
   S.sentFrom = null;
   closeOpenOn();
   device.update();
 }
 $("#mod-back").addEventListener("click", closeModule);
+const REPLY_HOME = { parent: $("#reply").parentNode, next: $("#reply").nextSibling };
+
+/* ---------- the assistant opens pages on this screen (decision 2026-11-14) ----------
+   What this screen can show goes with each question (typed or spoken); an "open" event in the answer shows it. */
+const PANELS = { project: ["#p-panel", "Current Project"], spend: ["#s-panel", "AI Spend"], commits: ["#c-panel", "Commits"] };
+function pagesHere() {
+  const out = { hub: "the hub", chat: "the conversation" };
+  for (const m of S.modules) out[m.id] = m.title;
+  for (const [id, [sel, title]] of Object.entries(PANELS)) if (!$(sel)?.hidden) out[id] = title;
+  return out;
+}
+function showPage(id) {
+  if (S.screen !== "hub") return;
+  noteInput();
+  if (id === "hub") return (closeModule(), closeChat());
+  if (id === "chat") return (closeModule(), openChat());
+  if (S.modules.some((m) => m.id === id)) {
+    closeChat();
+    if (S.module?.id !== id) openHere(id, null);
+    return;
+  }
+  const panel = PANELS[id] && $(PANELS[id][0]);
+  if (!panel || panel.hidden) return;
+  closeModule();
+  closeChat();
+  panel.scrollIntoView({ block: "center", behavior: "smooth" }); // the plain hub's panels are on the hub itself
+  panel.classList.add("flash");
+  setTimeout(() => panel.classList.remove("flash"), 2500);
+}
+// hold the docked core to talk, like the mic (a module is open)
+$("#orb-dock").addEventListener("pointerdown", (e) => {
+  if (!$("#orb-dock").classList.contains("talk")) return;
+  e.preventDefault();
+  $("#orb-dock").setPointerCapture?.(e.pointerId);
+  talkStart();
+});
+for (const t of ["pointerup", "pointercancel"]) $("#orb-dock").addEventListener(t, () => talkEnd());
 
 /* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
 const device = connectDevice({
@@ -489,7 +530,7 @@ async function ask(text) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, pages: pagesHere() }),
     });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader();
@@ -530,6 +571,8 @@ function onChatEvent(ev, answer, paced = false) {
   if (ev.type === "state") {
     if (!paced) setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
   }
+  else if (ev.type === "open") showPage(ev.page); // the assistant opened a page on this screen
+  else if (ev.type === "tool" && ev.name === "open_page") return;
   else if (ev.type === "tool") $("#state-word").textContent = `looking up: ${TOOL_WORDS[ev.name] || ev.name}`;
   else if (ev.type === "text") {
     if (!answer.content) S.chat.push(answer);
@@ -549,6 +592,7 @@ function onChatEvent(ev, answer, paced = false) {
    no microphone or no voice at the brain: no mic button, typing unchanged. */
 const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0 };
 const voice = createVoice({
+  pages: () => pagesHere(),
   onEvent: onVoiceEvent,
   onChange: renderMic,
   onLoud: (l) => (VS.voiced || VS.greeting) && setAssistant("speaking", l),
@@ -563,9 +607,10 @@ const voice = createVoice({
 let VW = null;
 function syncWake() {
   const w = S.status?.voice?.wake;
+  // with a module or the conversation open too (2026-11-14, the builder): "hey Jarvis, go back to the hub"
   const want =
-    wayIn() === "wake_word" && voice.can().ok && !!w?.available && S.screen === "hub" && !S.module &&
-    $("#chat").hidden && document.visibilityState === "visible";
+    wayIn() === "wake_word" && voice.can().ok && !!w?.available && S.screen === "hub" &&
+    document.visibilityState === "visible";
   voice.wake(want);
   renderWakeDot();
 }
@@ -762,7 +807,7 @@ function onVoiceEvent(ev) {
       () => turn.answer.content.length,
       (n) => ($("#reply .a").textContent = turn.answer.content.slice(0, n)),
     );
-  } else if (VS.turn && ["state", "tool", "text", "error", "done"].includes(ev.type)) {
+  } else if (VS.turn && ["state", "tool", "text", "open", "error", "done"].includes(ev.type)) {
     VS.turn(ev);
     if (ev.type === "done" || ev.type === "error") {
       VS.turn = null;

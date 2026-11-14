@@ -312,7 +312,7 @@ async function pollPanels(show) {
   Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
 }
 async function poll(show) {
-  show.hub.ask.syncWake(show.phase === "hub" && show.hub.mode === "hub");
+  show.hub.ask.syncWake(show.phase === "hub"); // in a module or a page too: "hey Jarvis, back to the hub"
   if (show.phase === "hub") show.hub.ask.pollChat(clockNow());
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
   if (st) show.facts.status = st; else if (show.facts.status) show.facts.status = { ...show.facts.status, assistant: { state: "offline" } };

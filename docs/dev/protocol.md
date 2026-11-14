@@ -262,7 +262,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
 
 ### Chat
 - `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}, "previous": {"questions": 2, "saved_at": <epoch seconds>} | null}`: the conversation the brain holds (one per brain; the hub's reset puts it aside) and the one put aside, if any (kept `chat_keep_minutes`, `docs/dev/chat.md`).
-- `POST /api/chat` with `{"text": "…"}` (at most 2000 characters) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
+- `POST /api/chat` with `{"text": "…", "pages": {"hub": "the hub", "teleop": "Teleop", "spend": "AI Spend"}}` (text at most 2000 characters; `pages`: what the asking page can show, id → title, optional: without it there's no `open_page` tool) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
   ```
   {"type": "state", "state": "thinking"}
   {"type": "tool", "name": "project_status"}     (the assistant looks something up; 0–4 per turn)
@@ -272,6 +272,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
   {"type": "state", "state": "idle"}
   {"type": "done", "setup": "main", "cost_usd": 0.000164, "tools": 1}
   ```
+  When the assistant opens a page: `{"type": "tool", "name": "open_page"}`, then `{"type": "open", "page": "teleop", "title": "Teleop"}` (show it on this screen; `hub` = close what's open), usually followed by the text "Here's Teleop." with no second round.
   or `{"type": "error", "message": "<a full sentence for the screen>"}` (no key, budget used up, the service refused or didn't answer, "I'm still answering the last question."). One turn at a time.
 - `POST /api/chat/clear` → `{"ok": true}`: start over; the conversation is put aside (if it has a question).
 - `POST /api/chat/restore` → `{"ok": true | false, "messages": […], "previous": … | null}`: bring back the conversation put aside; the current one is put aside in its place (if it has a question), so a second call swaps back. `ok: false` when there's none (or a turn is running).
@@ -288,7 +289,7 @@ This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.
 A WebSocket per page (`docs/guides/voice.md`): `ws://<host>:8080/ws/voice?device=<name>` (`device`: the page's device name, only for the brain's log; may be left out). The page records and plays; the brain hears, answers through the chat above, and speaks. One utterance at a time per page; the chat's one turn at a time still holds.
 
 **Page → brain**
-- `{"type": "listen", "mode": "ask" | "dictate"}`: the mic is pressed. Then **binary messages**: the microphone as 16-bit PCM, 16 kHz, mono (little-endian), e.g. 50 ms each. `ask` = push-to-talk (the words become a question); `dictate` = words only, nothing is asked. Held longer than 60 s, the brain ends it itself.
+- `{"type": "listen", "mode": "ask" | "dictate", "pages": {…}}`: the mic is pressed (`pages` as in `POST /api/chat`; also sent with `wake`, for questions after the wake word). Then **binary messages**: the microphone as 16-bit PCM, 16 kHz, mono (little-endian), e.g. 50 ms each. `ask` = push-to-talk (the words become a question); `dictate` = words only, nothing is asked. Held longer than 60 s, the brain ends it itself.
 - `{"type": "end"}`: let go. `{"type": "cancel"}`: stop, ask nothing.
 - `{"type": "played", "loudness": 0.42}` while the answer plays (~5 per second), `{"type": "played", "done": true}` after its last word (or when it was cut short). The assistant's state stays `speaking` until then; `in_use` has `"voice"`.
 - `{"type": "wake", "on": true | false, "sensitivity": 5}`: listen for the wake word: the page then streams its microphone (binary, as above) while it isn't playing an answer; the brain runs the detector on it (nothing leaves the brain). `sensitivity`: this device's setting, 1–9 (missing or invalid = 5); sent again with `on: true` when it changes. Answered with `{"type": "wake_on", "phrase": "hey Jarvis"}` or `{"type": "wake_off", "why": "…"}`.
@@ -298,7 +299,7 @@ A WebSocket per page (`docs/guides/voice.md`): `ws://<host>:8080/ws/voice?device
 
 **Brain → page**
 - `{"type": "listening", "mode": "ask"}`; `{"type": "heard", "text": "what is the next", "final": false}` while hearing (the words so far), then `{"type": "heard", "text": "…", "final": true}` after `end` (`""`: nothing was said; nothing is asked).
-- Then, for `ask`, the chat's events as in `POST /api/chat` (`state`, `tool`, `text`, `done` or `error`).
+- Then, for `ask`, the chat's events as in `POST /api/chat` (`state`, `tool`, `text`, `open`, `done` or `error`).
 - `{"type": "audio", "seq": 0, "text": "Next is step 7.", "mime": "audio/wav", "data": "<base64>"}`: the spoken answer, a sentence or a few at a time, in order; then `{"type": "audio_end", "count": 2}` (`"greeting": true` for the greeting; `count: 0` when nothing was spoken).
 - `{"type": "wake", "score": 0.98}`: this page heard the wake word best (others got `{"type": "wake_elsewhere"}`); the brain is already hearing (then `listening`, `heard` as above). The page ends the question with `end` (after a silence) or drops it with `cancel`. The wake phrase is taken off the start of the words.
 - `{"type": "ended"}`: after `wake` only: the voice service heard the pause after the question, so the brain ended it itself (the page stops waiting for silence; don't send `end`).

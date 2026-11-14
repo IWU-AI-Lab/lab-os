@@ -85,6 +85,9 @@ export class HubView {
     this.ask.line.mesh.position.set(0, -0.66, -D + 0.01);
     this.ask.reply.mesh.position.set(0, -0.9, -D + 0.01);
     this.group.add(this.ask.line.mesh, this.ask.reply.mesh);
+    // the assistant opens pages here when asked (decision 2026-11-14)
+    this.ask.pages = () => this.pagesHere();
+    this.ask.onOpen = (id) => this.showPage(id, this.ask.now?.() ?? performance.now());
     // the details page (unfolds from its callout)
     this.page = new DetailsPage(2.7, 1.6);
     this.page.mesh.visible = false;
@@ -126,6 +129,22 @@ export class HubView {
   }
 
   get callout() { return this.callouts; }
+  /** What the assistant may open here: the hub, the module buttons, the callouts' pages. */
+  pagesHere() {
+    const out = { hub: "the hub" };
+    for (const b of this.buttons) out[b.id] = b.title;
+    for (const c of Object.values(this.callouts)) out[c.id] = c.title;
+    return out;
+  }
+  /** The assistant opened a page ("pull up teleop", "go back to the hub"): like pointing at it. */
+  showPage(id, now) {
+    const shown = this.mode === "module" ? this.module?.id : this.mode === "details" ? this.page.id : "hub";
+    if (shown === id) return;
+    if (this.mode === "module") this.closeModule(now);
+    else if (this.mode === "details") this.closeDetails(now);
+    if (this.buttons.some((b) => b.id === id)) this.openModule(id, now);
+    else if (this.callouts[id]) this.openDetails(this.callouts[id], now);
+  }
   /** What the pointer can land on. */
   targets() {
     if (this.mode === "details") return [this.page.mesh];
