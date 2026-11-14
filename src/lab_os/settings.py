@@ -93,7 +93,7 @@ SECTIONS: list[Section] = [
                 "Level of detail",
                 "choice",
                 "maximal adds the extra rings, frame details and the far-layer verses; minimal "
-                "is still and light. A screen can pick its own under This screen.",
+                "is still and light. A device can pick its own under This device.",
                 QUALITY,
             ),
             Field(
@@ -172,7 +172,7 @@ SECTIONS: list[Section] = [
                 "wake_word",
                 "Wake word in this venue",
                 "choice",
-                'screens that chose it listen for "hey jarvis" (⚙ → This screen); '
+                'devices that chose it listen for "hey jarvis" (⚙ → This device); '
                 "default = off on a public venue, on otherwise",
                 choices=("default", "on", "off"),
                 applies="restart",

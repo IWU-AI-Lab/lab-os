@@ -558,7 +558,7 @@ const voice = createVoice({
   },
 });
 
-// the wake word (Settings → This screen): while the hub is up, no module or conversation page open and the tab
+// the wake word (Settings → This device): while the hub is up, no module or conversation page open and the tab
 // in front, the brain listens for the phrase (the dot in the strip). After it, the question ends after a silence.
 let VW = null;
 function syncWake() {
@@ -613,7 +613,7 @@ function renderMic() {
 addEventListener("storage", (e) => isPrefsKey(e.key) && renderMic());
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && renderMic());
 
-// dictation (the way in chosen in Settings → This screen): tap the mic (or Space on an empty ask line); the words
+// dictation (the way in chosen in Settings → This device): tap the mic (or Space on an empty ask line); the words
 // go into the ask line while you talk; it stops after a short silence, a second tap or Space; Enter stops and
 // sends; Esc or any other key stops and keeps what's there, to fix and send like typing
 let VD = null;

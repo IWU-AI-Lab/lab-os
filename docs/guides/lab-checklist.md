@@ -6,12 +6,13 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 1. Part 0.
 2. Part 3, the AI on `so101-white`: the height checked with a ruler first, then the cube pick (after quick jobs 1–3 if they're merged).
 3. Part 8, the green arms in lab-os (plugged in as for training, their cameras back in sockets 7 and 8).
-4. Part 7 on the real arm: 1:1 (after quick job 13, a ruler for the scale), relative vs 1:1.
-5. Part 5, the training launcher, if it hasn't run from the icon yet.
-6. Part 10 again once quick jobs 10–11 are merged.
-7. Part 2's leftovers: the refresh rate at 1920×1080, the Newline's picture mode, Chrome's flag for its microphone.
-8. Part 6, raspbot1 on a WPA2 hotspot.
-9. Before the demo: `FEATURES.md` row by row on the real hardware.
+4. Part 11, devices (step 8): the "Start lab-os" icon, Monitor from the Newline to the desk and back, everything off and on again.
+5. Part 7 on the real arm: 1:1 (after quick job 13, a ruler for the scale), relative vs 1:1.
+6. Part 5, the training launcher, if it hasn't run from the icon yet.
+7. Part 10 again once quick jobs 10–11 are merged.
+8. Part 2's leftovers: the refresh rate at 1920×1080, the Newline's picture mode, Chrome's flag for its microphone.
+9. Part 6, raspbot1 on a WPA2 hotspot.
+10. Before the demo: `FEATURES.md` row by row on the real hardware.
 
 **Gemini's free key speaks only ~15–20 answers a day** (10 requests per TTS model per day, GOTCHAS): if answers come silent with "…sending too much voice", that's it for the day (it resets at midnight Pacific). Keep some for the demo.
 
@@ -52,7 +53,7 @@ Find the desktop's address: `hostname -I` (the first one). With the brain from p
 - [ ] Touch: the panels' details pages, the commit range buttons, the devices list.
 - [ ] Leave it alone for 30 minutes: it goes back to the start screen (`hub.reset_after_s`; it dims to sleep after 15 minutes). To check it quickly, set a shorter reset in ⚙ → The hub, then set it back.
 - [x] **`/perf`** full screen for a minute (2026-11-13, its own Chrome: 44 fps with 3000 stars, 59 with 1000): note the average frames per second (then again with `/perf?res=1` and `/perf?res=0.5`: fewer pixels drawn, scaled up by the screen; `docs/guides/hub.md` → "Performance test").
-- [ ] **The drawing resolution on the hub:** open `http://<address>:8080/design?res=1`, then `…/design?res=0.5`. Is the jump and the network smoother? Does it look too soft? Keep the best one for this screen: ⚙ → **This screen → Drawing resolution** (it's kept in the Newline's browser; no `?res=` needed after that). Note the numbers in `docs/plan/current-focus.md` step 12.
+- [ ] **The drawing resolution on the hub:** open `http://<address>:8080/design?device=newline&res=1`, then `…&res=0.5`. Is the jump and the network smoother? Does it look too soft? Keep the best one for the Newline: ⚙ → **This device → Drawing resolution** (the brain keeps it under the name `newline`; no `?res=` needed after that). Note the numbers in `docs/plan/current-focus.md` step 12.
 - [ ] If a page doesn't go full screen on the Newline, press its **Full screen** button: it says why (note the sentence in `docs/dev/GOTCHAS.md`).
 - [x] **Desktop on the Newline's HDMI** (2026-11-13: choppy at 1920×1080 though `/perf` said 60, smooth at 1600×900; left: the refresh rate Ubuntu picks at 1080p and the picture mode): run `/perf` on the desktop's own monitor, then on the Newline. Same number on both but the Newline looks worse → the Newline adds the lag. Things to try on the way: Ubuntu Settings → Displays → the Newline at 1920×1080, 60 Hz; the Newline's picture menu (a "PC" or "Game" mode, motion smoothing / noise reduction off, HDMI 2.0 if it has the setting); another of its HDMI ports. In Chrome, `chrome://gpu` should say "Hardware accelerated" for most lines.
 - [ ] **The Newline's microphones** (for voice later): with the desktop's USB touch cable plugged into the Newline, does a microphone appear? Ubuntu Settings → Sound → Input, or `arecord -l` (lists them, records nothing). Note its name in `docs/plan/current-focus.md` step 7. (2026-11-13: the Newline's own Chrome hears well, but the hub over `http://<ip>` shows no mic button: Chrome's flag, `docs/guides/voice.md` → "Secure pages".)
@@ -75,7 +76,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [x] **Honest "arrived"** (2026-11-12: the elbow ~3° short on nearly every move, GOTCHAS): after each move the result says `arrived` or `stopped_short` with `off_by_cm` and which joints fell short. Hold a ruler to one `stopped_short`: is it about that far off? Near the base, a low `move_to` like "x 11, y 0, z 2.1" is where it fell 1.6 cm short on 2026-11-10: is it still short (load / the arm folded) or does it arrive now (the half-second hold)?
 - [x] **`pose_view`** (2026-11-12, used in the cube pick): ask Fable "Look at the arm with pose_view, with a mark where the cube is (… cm in front, … cm left, 1.5 cm up, size 3 cm), before you close the gripper." Does the picture match the real arm? To see the same picture yourself: open **http://localhost:8080/api/pose-view.png** (reload for a new one).
 - [ ] The cube task again, this time with `pose_view` before every grip: does Fable catch its own misses?
-- [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Show on another screen**.
+- [ ] Watch it on **AI Control** (`/ai`, or the hub's AI Control button): each call shows up as it happens; on a second monitor of the desktop: open AI Control in the hub → **Open on…** → **Another monitor of this computer**.
 - Until quick job 1 is in, Claude Code asks before every move: approve each after reading it. Ctrl+C stops the brain (the arm goes limp: hold it if lifted).
 - Afterwards: `logs/ai-tools/` has the calls. Write in `docs/plan/current-focus.md` step 2 what worked.
 
@@ -198,7 +199,7 @@ cd ~/lab-os
 uv run lab-os serve --persona jarvis
 ```
 Open **http://localhost:8080/design** in Chrome and press start.
-- [ ] After the jump, the greeting is **spoken** while it's typed, ending "You can talk to me: hold the mic." (No sound at all? ⚙ → This screen → Sound must be on.)
+- [ ] After the jump, the greeting is **spoken** while it's typed, ending "You can talk to me: hold the mic." (No sound at all? ⚙ → This device → Sound must be on.)
 - [ ] A **mic button** sits next to "Ask anything". If there's none, check what the brain says:
   ```bash
   curl -s http://localhost:8080/api/status | python3 -m json.tool | grep -A12 '"voice"'
@@ -211,10 +212,10 @@ Open **http://localhost:8080/design** in Chrome and press start.
 - [ ] Loud speakers: does it hear itself? (It shouldn't: echo cancellation, and it only listens while held.)
 - [ ] Note the time from letting go to the first spoken word: ________
 
-**d. Dictation:** ⚙ (top right) → This screen → **Talking to it → dictation**, then Back.
+**d. Dictation:** ⚙ (top right) → This device → **Talking to it → dictation**, then Back.
 - [ ] Tap the mic once, say a sentence, stop talking: the words appear in the ask line and it stops by itself after ~1.5 s. Fix a word, press Enter: it's asked (the answer is text only, like typing).
 
-**e. The wake word:** ⚙ → This screen → Talking to it → **wake word**, then Back.
+**e. The wake word:** ⚙ → This device → Talking to it → **wake word**, then Back.
 - [ ] A small **dot** appears in the status strip (and Chrome's recording sign in the tab). The core stays idle.
 - [ ] From the desk: "Hey Jarvis" … "what time is it?": the core listens after the phrase, the question ends after a short silence, the answer is spoken.
 - [ ] From across the room, and with the fans/AC running: how far does it still work? ________ m. (A weak USB dongle may only work up close: then a conference speakerphone or microphone array is the fix, `docs/guides/voice.md`.)
@@ -241,8 +242,41 @@ In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** 
 - [ ] **Asking:** point at "Ask anything", hold the trigger, ask "what's next?", let go: the answer types out under the core and is spoken. Then say "hey Jarvis, what's next?" without pressing anything (the dot in the strip should be on). Then ask on the desktop (its mic): does the question and answer show in VR?
 - [ ] Note what felt wrong in `docs/plan/current-focus.md` step 10 and surprises in `docs/dev/GOTCHAS.md`. With time: the real `so101-white` through Teleop in VR (you at the arm, `--speed 0.2`, part 7's setup).
 
-## 11. If there's time
-- **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This screen", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
+## 11. Devices (step 8; 20–30 min, the desktop and the Newline, or a laptop instead of the Newline)
+Built 2026-11-14 and tried with headless browser pages only (`docs/guides/hub.md` → "Devices"). Fake arm is enough. Part 0 first.
+
+**a. The "Start lab-os" icon on the desktop** (once):
+```bash
+cd ~/lab-os
+uv run lab-os icon --device desk
+```
+- [ ] It says where it wrote the icon. Ubuntu's app list → **Start lab-os** → right-click → **Add to Favorites**.
+- [ ] Close any running brain (Ctrl+C in its terminal). Click the icon: a terminal with the brain's log opens, then Chrome full screen on the hub with `?device=desk` in the address. One tap starts it. (No Chrome? It opens the default browser instead: note which.)
+- [ ] Click the icon again while it runs: only a second hub window opens, no second brain ("lab-os already runs here" in a terminal that closes).
+- [ ] If the hub isn't the designed one: ⚙ → The hub → Look → design (the icon opens whatever `hub.look` says).
+
+**b. The Newline as a device.** Find the desktop's address: `hostname -I` (the first one). On the Newline's Chrome open `http://<that address>:8080/?device=newline` (the brain from **a** listens for other devices).
+- [ ] It loads with `?device=newline` still in the address. ⚙ → **This device: newline** (the heading says the name).
+- [ ] ⚙ → This device → Drawing resolution → 0.5. Then on the desktop: `cat ~/lab-os/config/hub-devices.yaml` shows `newline:` with `res: '0.5'`. The desk's own settings didn't change.
+- [ ] Chrome menu → **Add to Home screen**: the icon opens the hub as `newline` (check the ⚙ heading).
+
+**c. Open on… (the "done when" of step 8).**
+- [ ] On the **Newline**: open **Monitor** → **Open on…** (next to Back): the list shows **desk** ("the hub"). Pick it: Monitor opens on the desk's screen, inside its hub, with "Opened from newline" under the title; the Newline goes back to its hub and shows "Monitor is on desk · **Bring it back**" at the top.
+- [ ] On the **desk**: press **Back**: Monitor closes there, and the Newline's line disappears.
+- [ ] Again from the Newline, then **Bring it back** on the Newline: Monitor closes on the desk and opens on the Newline.
+- [ ] From the **desk** to the Newline (Teleop or AI Control): same, the other way. Does the menu ever cover STOP? (It shouldn't: it opens on the left.)
+- [ ] The desk's **second monitor**: open a second hub there (`google-chrome --new-window --app=http://localhost:8080/design?device=desk --window-position=1920,0 --start-fullscreen`, the 1920 = the first monitor's width). From the Newline, Open on… → desk: it asks **which monitor** ("left monitor" / "right monitor"); pick one. With one of them showing a page, it picks the free one without asking.
+- [ ] Leave the Newline at its **start screen** (⏻), then send Monitor to it from the desk: does it open there without a tap?
+- [ ] On the Newline, switch to another app (the Newline used for something else): the desk's Open on… should no longer list it once its hub tab is closed. (Only devices with the hub open are listed.)
+
+**d. Everything off, then one tap each (the other half of "done when").**
+- [ ] With Monitor sent to the desk: stop the brain (Ctrl+C in its terminal), wait 10 s, click **Start lab-os** again. Within ~5 s both hubs are back by themselves (no reload): the Newline's "Monitor is on desk" line comes back too.
+- [ ] Switch everything off (the desktop shut down, the Newline off). Switch on: click **Start lab-os** on the desktop, then the home-screen icon on the Newline. Both come back under their names (⚙ headings), with their own settings (the Newline's drawing resolution still 0.5).
+- [ ] The Newline's icon tapped *before* the brain runs: Chrome says it can't reach the page. Tap again once the brain runs (expected; note if it's a nuisance).
+- [ ] Note the results in `docs/plan/current-focus.md` step 8 and surprises in `docs/dev/GOTCHAS.md`.
+
+## 12. If there's time
+- **Settings** (the ⚙ top right in `/design`): try Level of detail → maximal under "This device", and `hub.look` → design (then `git diff config/` shows the change; `git checkout config/theme.yaml` undoes it).
 - The new **Teleop** page on the Quest's browser; if anything misbehaves there, `/classic/teleop` is the old page.
 - `/design?quality=maximal` on the Newline (adds the far-layer verses): still smooth?
 - The Quest: teleop through the hub (`adb reverse tcp:8080 tcp:8080`, then `http://localhost:8080/teleop` on the Quest; `docs/guides/quest-setup.md`).

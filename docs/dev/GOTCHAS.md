@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-14 — The "Open on…" menu covered the module page's STOP
+**What:** the first version of "Open on…" (step 8) opened under its button at the top right, which is exactly where every module page (teleop, monitor, AI Control) keeps STOP. The page is an iframe, so nothing in the hub can sit under it: while the menu was open, the first tap on STOP landed on the menu. Seen in a headless screenshot, not in the lab.
+**Fix:** the menu opens on the left (under Back / the title) in both looks, and a tap on the page closes it. Rule for anything the hub draws over an open module: never over the page's bar on the right.
+
+### 2026-11-14 — Headless Chrome: background tabs slow their timers, and `/json/new` drops `#skip`
+**What:** testing several hub pages as devices in one headless Chrome. (1) Pages opened as tabs (`/json/new`) are background tabs except the last; their `setTimeout`s run late, so the designed hub's 0.7 s module-close animation hadn't finished when the next step clicked, and the module looked stuck open. Real devices are each the front window of their own browser. (2) `PUT /json/new?http://…/design#skip`: the HTTP client treats `#skip` as the request's own fragment and never sends it, so the page started at its start screen.
+**Fix:** open each page in a window of its own (the browser's DevTools socket, `Target.createTarget` with `newWindow: true`), and pass the address there (or escape `#` as `%23`). Also found that way: while closing, the designed hub still told the brain it showed the page; it says "nothing" from the moment Back is pressed now.
+
 ### 2026-11-13 — The Newline by HDMI is choppy at 1920×1080 though the desktop draws 60 fps (open)
 **What:** the lab desktop on the Newline's HDMI (+ the touch cable), the Newline as its screen. `/perf` showed the desktop's numbers, a steady 60 fps, but the picture on the Newline was still very choppy. After lowering the desktop's resolution to **1600×900** (Ubuntu Settings → Displays) it was smooth. So the drawing isn't the problem; the lag is between the HDMI output and the Newline's panel at 1080p. Push-to-talk showed up (whose microphone, the desktop's USB one or the Newline's over the touch cable, isn't clear) and its transcription was poor. The wake word wasn't tried.
 **Fix:** open. Workaround: 1600×900. To check next: the refresh rate Ubuntu picks at 1920×1080 (Displays: 60 Hz, or 30/50?), and the Newline's picture mode (a "game" or low-latency mode in its menu; manual in `docs/device_manuals/`).

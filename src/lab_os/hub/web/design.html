@@ -1042,7 +1042,7 @@ const cv = $("#net"), cx = cv.getContext("2d");
 let W = 0, H = 0, dots = [], fires = [], rain = [], stars = [];
 const pointer = { x: -1e4, y: -1e4 };
 const NET = { link: 140, push: 170 };
-// The drawing resolution (Settings → This screen, or ?res= in the address, which wins): canvas pixels per CSS
+// The drawing resolution (Settings → This device, or ?res= in the address, which wins): canvas pixels per CSS
 // pixel. "auto" = the device's, up to 2×. Lower draws fewer pixels and the screen scales them up: softer, but
 // far cheaper on a 4K panel driven by a phone-class chip (the Newline). Same scale as /perf?res=.
 function drawRes() {
@@ -2047,7 +2047,7 @@ const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: fal
 // the spoken answer's text: shown as it's said; all of it once the voice is done (or never came)
 function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = null; }
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
-const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This screen)
+const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
 // after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
 function spokenGreeting() {
@@ -2056,7 +2056,7 @@ function spokenGreeting() {
   VS.greeting = V.greet(V.can().ok ? way : "none");
 }
 
-/* the wake word: on screens that chose it (Settings → This screen), while the hub is up and awake (not asleep,
+/* the wake word: on screens that chose it (Settings → This device), while the hub is up and awake (not asleep,
    no module open, the tab in front). The brain listens for the phrase; the dot in the strip says so. After the
    phrase the core listens like a push-to-talk press, and the question ends after a short silence. */
 let VW = null;  // the silence watch of a question after the wake word
@@ -2804,7 +2804,7 @@ function sleep() { if (!S.booted || S.moduleOpen) return; S.sleeping = true; bod
 function wake() { S.sleeping = false; body.classList.remove("sleep"); relockTarget = { to: Math.round((rings.ticks.a + 30) / 30) * 30 }; SFX.relock(); }
 
 /* ---------- the brain: theme numbers, real facts, polling, back to the start screen ---------- */
-// this screen's own choices (Settings → This screen): level of detail, sound, full screen on start
+// this screen's own choices (Settings → This device): level of detail, sound, full screen on start
 // (Settings → This device: kept by the brain under the device's name, ?device= in the address; a copy in this
 // browser under the same key /web/device.js uses, so the first frame already has them)
 function prefsKey() {
@@ -2861,7 +2861,7 @@ function applyTheme(t) {
   const mine = screenPrefs();
   S.sound = params.get("sound") !== "0" && mine.sound !== false;
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
-  if (S.dpr && drawRes() !== S.dpr) resize();  // "This screen" changed the drawing resolution
+  if (S.dpr && drawRes() !== S.dpr) resize();  // "This device" changed the drawing resolution
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
 }
 function setQuality(q) {
