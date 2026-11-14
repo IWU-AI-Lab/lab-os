@@ -201,7 +201,8 @@ cd ~/lab-os
 uv run lab-os serve --persona jarvis
 ```
 Open **http://localhost:8080/design** in Chrome and press start.
-- [ ] After the jump, the greeting is **spoken** while it's typed, ending "You can talk to me: hold the mic." (No sound at all? ⚙ → This device → Sound must be on.)
+- [ ] After the jump, the greeting is **spoken** while it's typed: only "Good … . You can talk to me: hold the mic." (the news line is on the screen, not spoken; quick job 4). (No sound at all? ⚙ → This device → Sound must be on.)
+- [ ] **The recording (quick job 4):** `ls ~/lab-os/recordings/greetings/` now shows one `.wav`. Press ⏻ (back to the start screen), wait 10 s, start again: the same greeting plays at once, and the terminal shows no new voice request (`grep -c greeting ~/lab-os/logs/ai-spend/2026-11.jsonl` stays the same number). Does the recorded voice sound the same as a live answer?
 - [ ] A **mic button** sits next to "Ask anything". If there's none, check what the brain says:
   ```bash
   curl -s http://localhost:8080/api/status | python3 -m json.tool | grep -A12 '"voice"'

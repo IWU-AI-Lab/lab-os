@@ -52,8 +52,10 @@ The hub in VR is a screen like the others, with the headset's own microphone and
 - No voice (no key, no internet, paused): the ask line says why when held.
 
 ## The spoken greeting
-**Changing (decision 2026-11-13, quick job 4):** each voice's greeting is recorded once and played from the file (time of day + the hint, no news line), so it costs no voice request. Today: after the start tap, the greeting ("Good morning." + one line of real news, `docs/dev/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
-- Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This device, or `?sound=0`). No voice or no internet: silent, as before.
+After the start tap the greeting is also **spoken**: the time of day and a hint how to talk ("Good morning. You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). The news line (`docs/dev/personas.md` → "The greeting") stays on the screen, unspoken.
+
+**From a recording** (decision 2026-11-13, built 2026-11-14): each voice says each greeting once (morning / afternoon / evening × each hint); the brain keeps the WAV in the place's `recordings/greetings/` (`~/lab-os/recordings/greetings/` for the lab; not in git) and plays it from there at every later start, with **no voice request** (the free Gemini key's ~10 requests a day per model go to answers). A new voice (another setup, model, speaker, style or speed in `models.yaml`) or a changed line gets a new file name, so it's spoken once more. A saved greeting also plays with no internet or the budget used up. To make one again: delete its file. On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
+- Only where this screen's sound is on (⚙ → This device, or `?sound=0`) and the persona has a voice. Not recorded yet and no voice right now (no internet, no key, the budget): silent, as before.
 - A screen without a microphone (or not a secure page) hears the greeting without the hint.
 - Holding the mic (or Space) during the greeting cuts it short.
 

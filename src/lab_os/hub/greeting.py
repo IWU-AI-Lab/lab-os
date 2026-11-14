@@ -17,12 +17,15 @@ BUSY_COMMITS = 10
 CALENDAR_DAYS = 14
 
 
+HELLOS = ("Good morning.", "Good afternoon.", "Good evening.")
+
+
 def time_of_day(now: datetime) -> str:
     if 5 <= now.hour < 12:
-        return "Good morning."
+        return HELLOS[0]
     if 12 <= now.hour < 18:
-        return "Good afternoon."
-    return "Good evening."
+        return HELLOS[1]
+    return HELLOS[2]
 
 
 def _when(days: int) -> str:

@@ -14,6 +14,8 @@ def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
     monkeypatch.setattr(config, "_active", None)
     logs = tmp_path_factory.mktemp("logs")
     monkeypatch.setattr(config, "logs_dir", lambda: logs)
+    recordings = tmp_path_factory.mktemp("recordings")  # the saved greetings: never into the repo
+    monkeypatch.setattr(config, "recordings_dir", lambda: recordings)
     from lab_os.hub import hub_devices  # each device's settings: never into the repo's config/
 
     devices_file = tmp_path_factory.mktemp("hub-devices") / "hub-devices.yaml"

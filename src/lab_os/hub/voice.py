@@ -10,6 +10,11 @@ brain.
 The assistant's state follows: `listening` while the mic is held, then the chat's `thinking`, and
 `speaking` (with the loudness the page reports) until the page has played the last word.
 
+The spoken greeting (decision 2026-11-13): only the time of day and the hint how to talk, never
+the news line (that stays on the screen). Each voice says each one once; the WAV is kept in the
+place's `recordings/greetings/` and played from there at every later start, with no voice request.
+A new voice or a changed line has a new file name (a hash of both), so it's made again.
+
 The wake word: a page that chose it streams its microphone while the hub is awake; the brain listens
 for the phrase itself (lab_os.ai.wake, nothing leaves the computer) and only then starts hearing,
 like a push-to-talk press. If several screens hear it, the one that heard it best answers.
@@ -18,12 +23,17 @@ like a push-to-talk press. If several screens hear it, the one that heard it bes
 import asyncio
 import base64
 import contextlib
+import hashlib
+import json
 import logging
+import os
 import re
 import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 
 import aiohttp
 from aiohttp import web
@@ -33,6 +43,7 @@ from lab_os.ai.chat import Conversation
 from lab_os.ai.speech import VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.ai.wake import PHRASES, THRESHOLD, WakeDetector, WakeModels
+from lab_os.hub.greeting import HELLOS, time_of_day
 from lab_os.personas import Persona
 
 log = logging.getLogger(__name__)
@@ -52,6 +63,21 @@ HINTS = {  # how to talk to it, said after the greeting (by this screen's way in
     "none": "",  # no microphone on this screen: the greeting alone
 }
 SENTENCE_END = re.compile(r"[.!?…](?=[\s\"')\]]|$)|\n")
+
+
+def spoken_greeting(opening: str, hint: str, now: datetime | None = None) -> str:
+    """What the greeting says aloud: the opening's "Good morning." (else the time of day now) and
+    the hint. Never the news or the persona's line, so it can be said from a recording."""
+    hello = next((h for h in HELLOS if opening.startswith(h)), None)
+    return f"{hello or time_of_day(now or datetime.now())} {hint}".strip()
+
+
+def greeting_file(folder: Path, setup: VoiceSetup, text: str) -> Path:
+    """Where this voice's recording of `text` is kept: the name is a hash of the voice and the
+    words, so a new voice or a changed line makes a new file."""
+    voice = [setup.service, setup.base_url, setup.speak, setup.speaker, setup.style, setup.speed]
+    digest = hashlib.sha256(json.dumps([voice, text]).encode()).hexdigest()[:16]
+    return folder / f"{setup.name}-{digest}.wav"
 
 
 def strip_wake(text: str, phrase: str) -> str:
@@ -96,7 +122,8 @@ class VoiceDesk:
     persona: Callable[[], Persona]
     internet: Callable[[], bool | None] = lambda: None
     voices: Callable[[], dict[str, VoiceSetup]] = load_voices
-    greeting: Callable[[], str] = lambda: ""
+    greeting: Callable[[], str] = lambda: ""  # the conversation's opening ("Good evening. …")
+    recordings: Callable[[], Path | None] = lambda: None  # where greetings are kept; None = not
     links: set = field(default_factory=set)
     resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
     venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
@@ -480,28 +507,58 @@ class VoiceLink:
             self.desk.assistant.set("speaking", float(msg.get("loudness") or 0))
 
     def greet(self, way: str) -> None:
-        """The spoken greeting after the jump: the greeting's text and a hint how to talk."""
+        """The spoken greeting after the jump: the time of day and a hint how to talk, from its
+        recording when this voice has said it before (no request, works offline), else spoken
+        now and saved."""
         if self.task and not self.task.done():
             return  # a turn runs: it ends with its own audio_end
-        if time.monotonic() - self.last_greet < GREET_EVERY_S or self.desk.why_not():
-            self.send({"type": "audio_end", "count": 0, "greeting": True})
+        if time.monotonic() - self.last_greet < GREET_EVERY_S:
+            self._greeted(0)
+            return
+        try:
+            setup = self.desk.setup()
+        except NoVoice:
+            self._greeted(0)
+            return
+        hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
+        text = spoken_greeting(self.desk.greeting(), hint)
+        folder = self.desk.recordings()
+        saved = greeting_file(folder, setup, text) if folder else None
+        if saved and saved.is_file():
+            self.last_greet = time.monotonic()
+            self.send_audio(0, text, saved.read_bytes())
+            self._greeted(1)
+            return
+        if self.desk.why_not():
+            self._greeted(0)
             return
         self.last_greet = time.monotonic()
-        hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
-        text = f"{self.desk.greeting()} {hint}".strip()
-        if not text:
-            self.send({"type": "audio_end", "count": 0, "greeting": True})
-            return
-        self.task = asyncio.create_task(self._greet(text))
+        self.task = asyncio.create_task(self._greet(setup, text, saved))
 
-    async def _greet(self, text: str) -> None:
-        setup = self.desk.setup()
-        speaker = Speaker(self, setup, split_first=False)
-        speaker.add(text)
-        speaker.close()
-        await speaker.task
-        self.send({"type": "audio_end", "count": speaker.sent, "greeting": True})
-        self.desk.log_spend(setup, 0, speaker.seconds, "greeting")
+    def _greeted(self, count: int) -> None:
+        self.send({"type": "audio_end", "count": count, "greeting": True})
+
+    async def _greet(self, setup: VoiceSetup, text: str, saved: Path | None) -> None:
+        try:
+            wav = await speak_any(self.desk.session(), setup, text, self.desk.resting)
+        except VoiceError as e:
+            self.send({"type": "voice_error", "message": str(e)})
+            self._greeted(0)
+            return
+        if saved:
+            try:
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                part = saved.with_suffix(".part")
+                part.write_bytes(wav)
+                os.replace(part, saved)  # never a half-written recording
+                log.info("voice: greeting saved to %s", saved)
+            except OSError as e:
+                log.warning(
+                    "voice: couldn't save the greeting (%s): it's spoken again next time", e
+                )
+        self.send_audio(0, text, wav)
+        self._greeted(1)
+        self.desk.log_spend(setup, 0, wav_seconds(wav), "greeting")
 
     async def close(self) -> None:
         await self.cancel()

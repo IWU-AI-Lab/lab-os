@@ -6,7 +6,6 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 
 ## To do
 
-4. **The greeting from a recording** (decision 2026-11-13): each voice's spoken greeting is made once and saved (morning / afternoon / evening × each hint: hold, tap, "hey Jarvis"), then played from the file at every start with no voice request. The spoken greeting no longer includes the news line (the line can stay on the screen, unspoken). A new voice or a changed greeting line makes new files. **Done when:** the second start makes no request to the voice service (test with the fake voice service).
 5. **The AI budget on the Settings page.** `ai_budget_usd_month` (`config/place.yaml`, $20 now) can be changed from Settings; it's already read live (`docs/dev/chat.md`).
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue.
 7. **Stop LeLab.** A "Stop LeLab" button on the Training page (and `lab-os green --stop`) that closes the LeLab the launcher started (`docs/guides/green-launcher.md`). Only that process, nothing else.
@@ -23,3 +22,4 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 - 1. **Arm moves without asking** (done 2026-11-14, PR #73). Every brain tool on the allow list; a test checks it. Lab: the no-prompt check in lab-checklist part 0.
 - 2. **Limits that can be turned off** (done 2026-11-14, PR #75). `limits:` in the venue file and Settings → Safety limits; `limits_locked: true` on visit-day. Lab: lab-checklist part 6.
 - 3. **The floor at −0.5 cm** (done 2026-11-14, PR #76). `min_z_cm: -0.5` in both venues, teleop the same number. Lab: the stepped ruler check in lab-checklist part 3.
+- 4. **The greeting from a recording** (done 2026-11-14, PR #77). Time of day + hint only, saved per voice in `recordings/greetings/`. Lab: lab-checklist part 9b.
