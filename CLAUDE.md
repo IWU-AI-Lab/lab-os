@@ -31,7 +31,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
 - **Ask before**: anything that makes a real robot move, `sudo`, deleting files, rebooting devices.
 - **Hacks are labeled**: `# HACK: …` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
 - **Every surprise** goes in `docs/dev/GOTCHAS.md`.
-- **New ideas go into `docs/plan/ideas.md`, not code**, unless they are part of the current focus in `docs/plan/current-focus.md`. `docs/plan/ideas.md` is the single source of truth for ideas; don't list them in other docs.
+- **New ideas go into `docs/plan/ideas.md`, not code**, unless they are part of the current focus in `docs/plan/current-focus.md`. `docs/plan/ideas.md` is the single source of truth for ideas; don't list them in other docs. The long-term direction is `docs/plan/vision.md` (areas, not tasks).
 - **Secrets never in git**: real values in `.env` (gitignored); `.env.example` lists names with fake values.
 - **Works offline**: no CDN or internet-loaded code in the web pages. Browser libraries are vendored in `src/lab_os/web/vendor/` (versions + licenses in its README); robot models in `models/`.
 - **Shared joint names** for all arms (`shoulder_pan`, `shoulder_lift`, `elbow_flex`, `wrist_flex`, `wrist_roll`, `gripper`, degrees); each driver maps them to its own servos.

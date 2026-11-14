@@ -10,11 +10,12 @@ A demo of every feature on Thursday 2026-11-19 (decision 2026-11-12). The design
 ## Until the demo, in order
 1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 (moves without asking, limits that can be switched off, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
 2. **Devices** (step 8): named devices, "open on…", one-tap icons.
-3. **Voice** (step 7): the greeting from a recording (quick job 4); the Newline's microphone.
+3. **Voice and the assistant** (step 7): a snappier wake word with adjustable sensitivity; the assistant opens pages when asked ("pull up the teleop page", decision 2026-11-14); the greeting from a recording (quick job 4); the Newline's microphone.
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale), then the Quest with the real arm in 1:1.
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
-6. **The Newline** (step 12): pick the route if it's used; not blocking.
-7. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-11-19` (demo only from a tag).
+6. **Existing work instead of ours, if there's time** (decision 2026-11-14, a preference): compare our Quest teleop and our AI arm control with existing projects (`docs/plan/ideas.md` → "Teleop: compare…" and "AI arm control: compare…"), and switch where theirs is better.
+7. **The Newline** (step 12): pick the route if it's used; not blocking.
+8. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-11-19` (demo only from a tag).
 
 Lab checks for each step: `docs/guides/lab-checklist.md`.
 
@@ -23,7 +24,7 @@ Lab checks for each step: `docs/guides/lab-checklist.md`.
 2. **Fake first, offline first:** every step runs without hardware and (except the AI steps) without internet. Robot tools run on the fake arm before a real one.
 3. **Only claim what's real:** the start screen, status strip and panels never show a check or number that didn't happen; what isn't real yet is left out.
 4. **The design for new and changed pages** (`docs/design/DESIGN.md`, `config/theme.yaml`); `/` stays plain by default (`hub.look: plain`) and the plain pages keep working.
-5. **The hub's built-in assistant only reads and answers** (anyone in the room can talk to it; moving the arm from it is an idea). The move tools are for a developer's AI tool on the brain's computer, through the same safety layer as teleop. Since 2026-11-13 they're decided not to ask before each move (quick job 1 builds it); STOP on every screen, the soft joint limits and one controller at a time always stay. Code written by AI only via branch → tests → the builder's approval.
+5. **The hub's built-in assistant only reads, answers and opens pages** on the device it's talking at (anyone in the room can talk to it; moving the arm from it is an idea). The move tools are for a developer's AI tool on the brain's computer, through the same safety layer as teleop. Since 2026-11-13 they're decided not to ask before each move (quick job 1 builds it); STOP on every screen, the soft joint limits and one controller at a time always stay. Code written by AI only via branch → tests → the builder's approval.
 6. **Secrets** (API keys) only in `.env`; `.env.example` lists the names.
 7. **Portable:** Linux, Windows, macOS. **Plain names** in code, show names in persona files.
 8. **The green arms:** CLAUDE.md's four rules (the code follows them since step 11).
@@ -78,7 +79,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - **The lab router** (the professor's OK): "Up next" below.
 
 ## Hacks to clean up
-- `config/devices.yaml`: `so101-white-cam-a` / `-b` (2026-11-12) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
+- `config/devices.yaml`: `so101-white-cam-a` / `-b` (2026-11-12; to be renamed `-cam-stand` / `-cam-wrist`, quick job 15) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
 - `config/poses.yaml`: the SO-101 `rest` pose comes from forward kinematics only; check it on the real `so101-white` (slowly, builder present) before relying on it.
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 
