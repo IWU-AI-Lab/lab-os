@@ -43,8 +43,8 @@
 </head>
 <!--
   Settings: whatever src/lab_os/settings.py lists (GET /api/settings), written back into the config
-  files with their comments kept (POST /api/settings, this computer only). "This screen" lives in this
-  screen's browser (localStorage), so each screen can have its own level of detail.
+  files with their comments kept (POST /api/settings, this computer only). "This device" is kept by the
+  brain under the device's name (?device= in the hub's address), so each device has its own level of detail.
 -->
 <body class="settings">
 <div class="page">
@@ -57,8 +57,8 @@
   </header>
   <main class="sections" id="sections">
     <section class="card"><div class="in" id="this-screen">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg>This screen</h2>
-      <p class="section-help">Kept in this screen's browser only; every other screen keeps its own.</p>
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg>This device<span id="this-device-name"></span></h2>
+      <p class="section-help" id="this-device-help"></p>
     </div></section>
   </main>
 </div>

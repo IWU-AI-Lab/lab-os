@@ -679,7 +679,26 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 #module .send { position: absolute; right: 4.2rem; top: 0.8rem; display: none; align-items: center; gap: 0.5rem; height: 2.6rem; padding: 0 0.9rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
 body[data-mod="page"] #module .send { display: flex; }
 #module .send:hover, #module .send:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
-#module .send-msg { position: absolute; right: 4.2rem; top: 3.8rem; max-width: 26rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); text-align: right; }
+#module .send[aria-expanded="true"] { border-color: var(--c); color: var(--hot); }
+/* "open on…" (step 8): the other devices with the hub open. On the left: the module pages keep STOP at the
+   right of their bar, and nothing may cover it */
+#open-on { position: absolute; left: 1.7rem; top: 4.4rem; z-index: 6; width: min(24rem, calc(100vw - 6rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
+#open-on[hidden] { display: none; }
+.oo-head { margin: 0 0 0.6rem; font: 600 0.72rem/1.3 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
+.oo-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; margin: 0.3rem 0 0; padding: 0.65rem 0.8rem; text-align: left; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
+.oo-row:hover:not(:disabled), .oo-row:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
+.oo-row:disabled { opacity: 0.5; cursor: default; }
+.oo-sub { font: var(--w-lines) 0.78rem/1.2 var(--f-lines); color: var(--text-dim); }
+.oo-msg, .oo-none { margin: 0.7rem 0 0; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); }
+.oo-msg:empty { display: none; }
+#module .mod-from { position: absolute; left: 1.7rem; top: 3.1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
+#module .mod-from[hidden] { display: none; }
+/* pages this device opened elsewhere: one quiet line each, "Bring it back" */
+#sent { position: fixed; top: 4.6rem; left: 50%; transform: translateX(-50%); z-index: 8; display: grid; gap: 0.35rem; }
+#sent[hidden], body.waiting #sent, body.folded #sent { display: none; }
+.oo-sent { display: flex; align-items: center; gap: 0.9rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 85%, transparent); font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--text-dim); }
+.oo-back { padding: 0.45rem 0.7rem; font: 500 0.75rem/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); cursor: pointer; }
+.oo-back:hover, .oo-back:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 </style>
 </head>
 <body>
@@ -851,11 +870,14 @@ body[data-mod="page"] #module .send { display: flex; }
     <div id="mod-slot"></div>
     <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title"></span></div>
     <button class="back" id="mod-back" type="button" aria-label="Back to the hub"><svg class="ico"><use href="#i-back"/></svg></button>
-    <button class="send" id="mod-send" type="button" title="Open this page full screen on another monitor of this computer"><svg class="ico"><use href="#i-cast"/></svg>Show on another screen</button>
-    <div class="send-msg" id="send-msg" aria-live="polite"></div>
+    <div class="mod-from" id="mod-from" hidden></div>
+    <button class="send" id="mod-send" type="button" aria-haspopup="true" aria-expanded="false" title="Open this page on another device (or another monitor of this computer)"><svg class="ico"><use href="#i-cast"/></svg>Open on…</button>
+    <div id="open-on" hidden></div>
   </div></div>
 </div>
 <div id="orb-dock" aria-hidden="true"></div>
+<!-- pages this device opened on another one ("open on…", step 8): Bring it back closes them there -->
+<div id="sent" hidden></div>
 
 <div id="flash" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -886,6 +908,7 @@ const TAU = Math.PI * 2;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const reducedOS = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+let D = null, DM = null;  // this device's connection to the brain (/web/device.js, step 8) and its module
 const params = new URLSearchParams(location.search);  // ?quality=maximal, ?startup=assemble, ?sound=0, ?full=0
 const S = {
   state: "idle", alert: "none", mood: "room", title: "", layout: "launcher", startup: "hyperspace", clock24: true,
@@ -1019,7 +1042,7 @@ const cv = $("#net"), cx = cv.getContext("2d");
 let W = 0, H = 0, dots = [], fires = [], rain = [], stars = [];
 const pointer = { x: -1e4, y: -1e4 };
 const NET = { link: 140, push: 170 };
-// The drawing resolution (Settings → This screen, or ?res= in the address, which wins): canvas pixels per CSS
+// The drawing resolution (Settings → This device, or ?res= in the address, which wins): canvas pixels per CSS
 // pixel. "auto" = the device's, up to 2×. Lower draws fewer pixels and the screen scales them up: softer, but
 // far cheaper on a 4K panel driven by a phone-class chip (the Newline). Same scale as /perf?res=.
 function drawRes() {
@@ -2024,7 +2047,7 @@ const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: fal
 // the spoken answer's text: shown as it's said; all of it once the voice is done (or never came)
 function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = null; }
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
-const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This screen)
+const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
 // after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
 function spokenGreeting() {
@@ -2033,7 +2056,7 @@ function spokenGreeting() {
   VS.greeting = V.greet(V.can().ok ? way : "none");
 }
 
-/* the wake word: on screens that chose it (Settings → This screen), while the hub is up and awake (not asleep,
+/* the wake word: on screens that chose it (Settings → This device), while the hub is up and awake (not asleep,
    no module open, the tab in front). The brain listens for the phrase; the dot in the strip says so. After the
    phrase the core listens like a push-to-talk press, and the question ends after a short silence. */
 let VW = null;  // the silence watch of a question after the wake word
@@ -2296,7 +2319,8 @@ function openModule(btn) {
   if (S.moduleOpen) return;
   const [title, ico, kind] = btn.dataset.module ? MODULES[btn.dataset.module] : btn.dataset.detail ? DETAILS[btn.dataset.detail] : CHAT;
   S.moduleOpen = kind; S.moduleId = btn.dataset.module || null;
-  $("#send-msg").textContent = "";
+  closeOpenOn();
+  $("#mod-from").hidden = !S.sentFrom; $("#mod-from").textContent = S.sentFrom ? `Opened from ${S.sentFrom.from || "another device"}` : "";
   const r = btn.getBoundingClientRect(), m = $("#module");
   modFrom = `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px)`;
   $("#mod-title").textContent = title;
@@ -2317,6 +2341,7 @@ function openModule(btn) {
   body.classList.add("folded");
   SFX.open();
   setTimeout(() => (kind === "chat" ? $("#ask") : $("#mod-back")).focus(), 320);
+  D?.update();
 }
 function closeModule() {
   if (!S.moduleOpen) return;
@@ -2325,6 +2350,9 @@ function closeModule() {
   m.classList.add("closing");
   // removing the page closes its connection at once: the arm freezes (dead-man) and control is free
   $("#mod-slot iframe")?.remove();
+  closeOpenOn();
+  S.sentFrom = null; S.closing = true; S.closingUntil = performance.now() + 720;
+  D?.update();  // not showing it any more (the animation still runs)
   m.style.transition = "clip-path 0.4s cubic-bezier(0.7,0,0.84,0), opacity 0.22s ease-in";
   m.style.clipPath = modFrom; m.style.opacity = 0;
   body.classList.remove("folded");
@@ -2341,7 +2369,7 @@ function closeModule() {
     delete body.dataset.mod;
     if (S.moduleOpen === "chat") $("#hub").insertBefore($(".chat"), $(".side.left"));
     $("#mod-slot .detail")?.remove();
-    S.moduleOpen = null;
+    S.moduleOpen = null; S.closing = false;
     layoutTraces(); showTraces();
   }, 700);
 }
@@ -2697,6 +2725,7 @@ function finishBoot() {
     setState("speaking"); await wait(1200); if (S.state === "speaking" && !S.asking && !VS.greeting) setState("idle");
   }, 1500);
   S.lastInput = performance.now();
+  D?.update();
 }
 
 /* ---------- ignition: safe to start, any input ---------- */
@@ -2775,9 +2804,18 @@ function sleep() { if (!S.booted || S.moduleOpen) return; S.sleeping = true; bod
 function wake() { S.sleeping = false; body.classList.remove("sleep"); relockTarget = { to: Math.round((rings.ticks.a + 30) / 30) * 30 }; SFX.relock(); }
 
 /* ---------- the brain: theme numbers, real facts, polling, back to the start screen ---------- */
-// this screen's own choices (Settings → This screen): level of detail, sound, full screen on start
+// this screen's own choices (Settings → This device): level of detail, sound, full screen on start
+// (Settings → This device: kept by the brain under the device's name, ?device= in the address; a copy in this
+// browser under the same key /web/device.js uses, so the first frame already has them)
+function prefsKey() {
+  const clean = (s) => String(s || "").trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "").slice(0, 32);
+  let name = params.get("device");
+  if (name === null) { try { name = localStorage.getItem("lab-os.device"); } catch { name = ""; } }
+  name = clean(name);
+  return name ? `lab-os.device.${name}` : "lab-os.screen";
+}
 function screenPrefs() {
-  try { return JSON.parse(localStorage.getItem("lab-os.screen")) || {}; } catch { return {}; }
+  try { return JSON.parse(localStorage.getItem(prefsKey())) || {}; } catch { return {}; }
 }
 async function getJSON(url) {
   try {
@@ -2823,7 +2861,7 @@ function applyTheme(t) {
   const mine = screenPrefs();
   S.sound = params.get("sound") !== "0" && mine.sound !== false;
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
-  if (S.dpr && drawRes() !== S.dpr) resize();  // "This screen" changed the drawing resolution
+  if (S.dpr && drawRes() !== S.dpr) resize();  // "This device" changed the drawing resolution
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
 }
 function setQuality(q) {
@@ -2869,7 +2907,7 @@ async function reapply() {
   pollStatus();
 }
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
-addEventListener("storage", (e) => e.key === "lab-os.screen" && reapply());
+addEventListener("storage", (e) => (e.key === "lab-os.screen" || e.key?.startsWith("lab-os.device.")) && reapply());
 function setFact(id, text, off) { const f = $(id); f.querySelector("span").textContent = text; f.classList.toggle("off", !!off); }
 let noteShown = null;
 function showNote(msg) {  // a calm sentence at the top of the core (e.g. why the chat is paused)
@@ -2978,6 +3016,7 @@ function watchFrame(frame) {
   try {
     const w = frame.contentWindow, note = () => (S.lastInput = performance.now());
     for (const ev of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"]) w.addEventListener(ev, note, { passive: true, capture: true });
+    w.addEventListener("pointerdown", closeOpenOn, { capture: true });  // a tap on the page closes "Open on…"
     w.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (w.document.pointerLockElement) { w.document.exitPointerLock(); return; }
@@ -3001,8 +3040,8 @@ $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!
 // API places the window there (it asks once for permission; localhost or https only). The page then asks
 // for one click to go full screen (browsers' rule). Elsewhere: a new window to drag over.
 let screenDetails = null;
-async function sendToScreen(id) {
-  const url = `${S.page[id]}?screen=1`, say = (m) => ($("#send-msg").textContent = m);
+async function sendToScreen(id, say) {
+  const url = `${S.page[id]}?screen=1`;
   let place = "";
   if ("getScreenDetails" in window) {
     try {
@@ -3020,7 +3059,70 @@ async function sendToScreen(id) {
   say(place ? "Opened on the other monitor: click it there for full screen." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
   if (place) setTimeout(closeModule, 900);  // it lives there now; the hub's copy would hold a second connection
 }
-$("#mod-send").addEventListener("click", (e) => { e.stopPropagation(); if (S.moduleId && S.page[S.moduleId]) sendToScreen(S.moduleId); });
+/* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
+function closeOpenOn() { $("#open-on").hidden = true; $("#mod-send").setAttribute("aria-expanded", "false"); }
+function fillMenu() {
+  const id = S.moduleId;
+  DM.fillOpenOn($("#open-on"), D, id, {
+    title: MODULES[id]?.[0],
+    onSent: () => setTimeout(() => S.moduleId === id && closeModule(), 900),  // it lives there now
+    extra: [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }],
+  });
+}
+$("#mod-send").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!S.moduleId || !S.page[S.moduleId]) return;
+  if (!$("#open-on").hidden) return closeOpenOn();
+  if (!D) return sendToScreen(S.moduleId, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
+  SFX.blip(); fillMenu();
+  $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
+});
+$("#open-on").addEventListener("click", (e) => e.stopPropagation());
+// a module sent from another device: shown at once, even from the start screen (that device has the hub open,
+// so it's there for this; no startup, no new conversation); a module already open here gives way
+function openHere(id, sentFrom) {
+  if (!S.page[id] || id === "settings") return D?.update();
+  if (!S.booted) {
+    $("#ignite")?.remove(); body.classList.remove("waiting"); S.igniteAt = S.igniteAt || 1; S.reveal = 1e9;
+    document.querySelectorAll(".panel").forEach((p) => p.classList.add("hold"));
+    S.greetP = Promise.resolve(null); S.greet = null;
+    finishBoot();
+  }
+  if (S.sleeping) wake();
+  const go = () => {
+    if (S.moduleOpen) return setTimeout(go, 120);
+    S.sentFrom = sentFrom; hideDevice();
+    const btn = document.querySelector(`#mods [data-module="${id}"]`);
+    if (btn) openModule(btn);
+    S.lastInput = performance.now();  // someone wants this on screen: no reset right away
+  };
+  if (S.moduleOpen) closeModule();
+  setTimeout(go, Math.max(0, (S.closingUntil || 0) - performance.now()));
+}
+function renderSent() {
+  DM.fillSent($("#sent"), D, {
+    onBack: (it) => {
+      if (!S.booted || S.moduleOpen) return;
+      const btn = document.querySelector(`#mods [data-module="${it.showing.id}"]`);
+      if (btn) { SFX.blip(); openModule(btn); }
+    },
+  });
+}
+import("/web/device.js").then((m) => {
+  DM = m;
+  D = m.connectDevice({
+    look: "design",
+    state: () => ({
+      stage: S.booted ? "hub" : "start",
+      showing: S.moduleOpen === "page" && !S.closing ? S.moduleId : null,
+      from: S.sentFrom?.from || "", from_window: S.sentFrom?.from_window || "",
+    }),
+    onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
+    onClose: () => { if (S.moduleOpen === "page") closeModule(); },
+    onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); },
+    onSettings: () => reapply(),
+  });
+}).catch((e) => console.warn(`hub: no devices (${e.message})`));
 // nobody there for hub.reset_after_s (never while something is in use): back to the start screen, with a
 // fresh conversation for the next visitor (the last one is kept for a while: "Bring back")
 const IGNITE_HTML = $("#ignite").outerHTML;
@@ -3049,6 +3151,7 @@ function toStart(why) {
   ignitionText();
   if (S.status) $("#ign-venue").textContent = S.status.venue;
   S.startGuardUntil = performance.now() + 600;
+  D?.update();
 }
 
 /* ---------- main loop ---------- */

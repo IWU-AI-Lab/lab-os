@@ -301,5 +301,33 @@ A WebSocket per page (`docs/guides/voice.md`). The page records and plays; the b
 - `{"type": "wake", "score": 0.98}`: this page heard the wake word best (others got `{"type": "wake_elsewhere"}`); the brain is already hearing (then `listening`, `heard` as above). The page ends the question with `end` (after a silence) or drops it with `cancel`. The wake phrase is taken off the start of the words.
 - `{"type": "voice_error", "message": "…"}`: speaking failed; the answer stays on the screen. `{"type": "error", "message": "…"}`: no voice now, the service refused, or "I'm still on the last one."
 
+### Devices (`/ws/hub-device`)
+Focus step 8 (`docs/guides/hub.md` → "Devices"). Every hub page (both looks) keeps one WebSocket open: `ws://<host>:8080/ws/hub-device?device=<name>&window=<id>`. `device`: the name in the page's address (lowercase letters, digits, dashes, up to 32; empty or invalid = no name: the page can send, but isn't listed). `window`: the id the brain gave this page last time (kept in the tab's `sessionStorage`), so after a brain restart it's the same window again; a new or already-connected id gets a fresh one. The page reconnects by itself (1 s, then up to 5 s apart). The code: `src/lab_os/hub/hub_devices.py`, `src/lab_os/web/device.js`.
+
+**Brain → page**
+- `{"type": "welcome", "device": "desk", "window": "w-AbC123", "settings": {"res": "0.5"}, "devices": [...], "why_no_name": ""}`: on connect. `settings`: this device's own (below); `devices`: the list as in `GET /api/hub-devices`.
+- `{"type": "devices", "devices": [...]}`: the list changed (a page came or went, or shows something else).
+- `{"type": "open", "module": "monitor", "from": "newline", "from_window": "w-…"}`: show this module now (sent from another device: "Open on…"). From the start screen too, without a startup or a new conversation; an open module gives way.
+- `{"type": "close"}`: close the module ("Bring it back" on the device that sent it).
+- `{"type": "settings", "settings": {...}}`: this device's settings changed (every window of it gets them).
+
+**Page → brain**
+- `{"type": "hello", "look": "plain" | "design", "stage": "start" | "hub", "showing": "monitor" | null, "from": "newline", "from_window": "w-…", "screen": {"label": "DELL U2720Q", "left": 1920, "top": 0, "width": 1920, "height": 1080}}`: after the welcome. `showing`: the module page open there (null: none, or a chat or details page); `from`: who sent it (`""`: opened there). `screen`: which monitor (position in the desktop; `label` only where the browser already allowed "window management").
+- `{"type": "state", ...}`: the same fields when they change (a module opened or closed, the start screen, the reset).
+
+**HTTP**
+- `GET /api/hub-devices` →
+  ```json
+  {"devices": [{"name": "desk", "address": "192.168.1.20",
+                "windows": [{"id": "w-AbC123", "label": "left monitor", "look": "design", "stage": "hub",
+                             "showing": {"id": "monitor", "title": "Monitor"}, "from": "newline", "from_window": "w-…"}]}],
+   "sent": [{"device": "desk", "window": "w-AbC123", "label": "left monitor", "showing": {"id": "monitor", "title": "Monitor"},
+             "from": "newline", "from_window": "w-…"}]}
+  ```
+  Named devices only, by name; windows left to right. `label`: `""` when the device has one window, else the monitor's name, `left monitor` / `right monitor`, `monitor 3`, or `window 2`. `sent`: pages opened from another device, for "Bring it back".
+- `POST /api/hub-devices/open` `{"module": "monitor", "device": "desk", "window": "" , "from": "newline", "from_window": "w-…"}` → `{"ok": true, "device": "desk", "window": "w-…", "label": "", "message": "Monitor is open on desk."}`; or, when the device has two monitors free (or none), `{"ok": false, "ask": [<windows as above>], "message": "desk has 2 monitors free: which one?", "device": "desk"}`: send again with `window`. `400 {"ok": false, "message"}`: not a module of the hub, not a name, no hub open there. Never the window that sent it.
+- `POST /api/hub-devices/close` `{"device": "desk", "window": "w-…"}` → `{"ok": true, "device", "module"}` (the page there gets `close`).
+- `GET /api/hub-devices/<name>/settings` → `{"ok": true, "settings": {...}}`. `POST` `{"res": "0.5", "sound": false}` changes some (`""` or `null` = back to the default) → `{"ok": true, "settings": {...all of them}}`, and every window of that device gets `settings`. Keys: `quality` (`maximal` / `full` / `reduced` / `minimal`), `res` (`auto` / `1` / `0.75` / `0.5`), `sound`, `full` (true / false), `voice` (`push-to-talk` / `dictation` / `wake word`); anything else is `400`. Kept in the place's `hub-devices.yaml`. Any page may (as before, when they were per browser).
+
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.

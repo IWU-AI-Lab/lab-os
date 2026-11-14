@@ -30,6 +30,9 @@
   <!-- the greeting after the start press: "Good evening." + one line of real news (or the persona's line) -->
   <div id="boot-greet" aria-live="polite"></div>
 
+  <!-- pages this device opened on another one ("open on…", step 8): Bring it back closes them there -->
+  <div id="sent" hidden></div>
+
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
   <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
 
@@ -82,7 +85,13 @@
   <div class="bar">
     <button class="back" id="mod-back" type="button" aria-label="Back to the hub">‹ Back <span class="key">Esc</span></button>
     <div class="tab"><span id="mod-title"></span></div>
+    <!-- opened here from another device: Back closes it (that device can also bring it back) -->
+    <span id="mod-from" hidden></span>
+    <span class="grow"></span>
+    <!-- "open on…" (step 8): the other devices with the hub open -->
+    <button class="back" id="mod-open-on" type="button" aria-haspopup="true" aria-expanded="false">Open on…</button>
   </div>
+  <div id="open-on" class="panel" hidden></div>
   <div id="mod-slot"></div>
 </div>
 <!-- the whole conversation (History): opens over the hub, Back/Esc closes it -->
