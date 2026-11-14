@@ -236,6 +236,15 @@ Open **http://localhost:8080/design** in Chrome and press start.
 - [ ] ⚙ → This device → **Wake word sensitivity**: from where it missed at 5 (across the room, or spoken softly), try 7, then 8. Note the lowest level that hears it reliably: ________. Then a minute of normal talk near it at that level: any false wake? ________ (lower one step if so). The terminal's `heard something like "hey Jarvis" (0.38; it takes 0.50 …)` lines show near misses while you test.
 - [ ] To keep it: the slider saves itself for this device (`desk`); nothing else to do.
 
+**g. The assistant opens pages (built 2026-11-14):** on `/design`, with the wake word on (part e).
+- [ ] "Hey Jarvis, pull up the teleop page": Teleop opens on this screen and it says "Here's Teleop." quickly (no long think). The core sits small in the bottom right, with the question and answer beside it.
+- [ ] With Teleop open: "Hey Jarvis, show me the monitor" (Monitor replaces Teleop), then "Hey Jarvis, show me the AI spend" (the AI Spend page), then "Hey Jarvis, go back to the hub" ("Back to the hub.", everything closes).
+- [ ] With a page open, **hold the small core** and ask "open the settings": Settings opens.
+- [ ] Typed: in the ask line, "show me the commits": the Commits page opens.
+- [ ] Ask for something this screen doesn't have ("open the training page" if Training isn't a button here): it says it can't, nothing opens.
+- [ ] Another screen with the hub open (the Newline or a laptop) doesn't change when you ask on the desk.
+- [ ] Quest, in VR (`/xr`): "hey Jarvis, open teleop", then "hey Jarvis, back to the hub".
+
 **f.** Note the results in `docs/plan/current-focus.md` step 7 (status) and surprises in `docs/dev/GOTCHAS.md`.
 
 ## 10. The hub in VR (step 10; 20–30 min, the Quest on USB)

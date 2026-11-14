@@ -504,6 +504,7 @@ class VoiceLink:
         self._next_warm = 0.0
         self._near_logged = 0.0
         self.timing: TurnTiming | None = None  # this turn's steps
+        self.pages: dict | None = None  # what this page can show (the assistant opens them)
         self.last_greet = 0.0
         self.started_at = 0.0
         self._out: asyncio.Queue = asyncio.Queue()
@@ -551,6 +552,8 @@ class VoiceLink:
 
     async def on_text(self, msg: dict) -> None:
         kind = msg.get("type")
+        if isinstance(msg.get("pages"), dict):  # with listen and wake: what the page can show
+            self.pages = msg["pages"]
         if kind == "listen":
             await self.listen(str(msg.get("mode") or "ask"))
         elif kind == "end":
@@ -780,7 +783,7 @@ class VoiceLink:
     async def _turn(self, text: str, setup: VoiceSetup) -> None:
         speaker = Speaker(self, setup)
         try:
-            async for ev in self.desk.chat.ask(text):
+            async for ev in self.desk.chat.ask(text, self.pages):
                 self.send(ev)
                 if ev["type"] == "text":
                     if self.timing:

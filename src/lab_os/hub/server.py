@@ -429,14 +429,17 @@ async def api_chat_get(request: web.Request) -> web.Response:
 
 
 async def api_chat_post(request: web.Request) -> web.StreamResponse:
-    """One turn, streamed as JSON lines: state / text / done / error events."""
+    """One turn, streamed as JSON lines: state / text / open / done / error events. `pages`: what
+    the asking page can show ({id: title}), for the assistant's open_page tool."""
     try:
-        text = str((await request.json()).get("text", ""))[:MAX_QUESTION_CHARS]
+        body = await request.json()
+        text = str(body.get("text", ""))[:MAX_QUESTION_CHARS]
+        pages = body.get("pages")
     except (ValueError, AttributeError):
         raise web.HTTPBadRequest(text='send {"text": "..."}') from None
     resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
     await resp.prepare(request)
-    async for event in request.app[BRAIN].chat.ask(text):
+    async for event in request.app[BRAIN].chat.ask(text, pages):
         await resp.write((json.dumps(event) + "\n").encode())
     await resp.write_eof()
     return resp

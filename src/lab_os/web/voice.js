@@ -1,7 +1,9 @@
 // Voice on the hub (focus step 7, docs/guides/voice.md). The page records and plays; the brain hears, thinks
 // and speaks over /ws/voice (docs/dev/protocol.md → "Voice"), so API keys never leave the brain.
 //
-//   const v = createVoice({ onEvent, onChange, onLoud, onLevel });
+//   const v = createVoice({ onEvent, onChange, onLoud, onLevel, pages });
+//                               pages(): what this screen can show ({id: title}), sent with each question
+//                               so the assistant can open one here ("open" events, decision 2026-11-14)
 //   v.setStatus(status.voice)   the brain's word on voice (/api/status → voice)
 //   v.can()                     {ok, why}: a secure page, a microphone, voice on at the brain
 //   v.unlock()                  in a press (the start tap): lets the page play sound
@@ -136,7 +138,7 @@ export function chimeOn(ctx) {
 }
 const QUEUE_MAX = 400; // audio pieces kept while the connection opens (20 s)
 
-export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {} } = {}) {
+export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {}, pages = () => null } = {}) {
   const st = {
     secure: window.isSecureContext,
     api: !!navigator.mediaDevices?.getUserMedia,
@@ -210,7 +212,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.ws = ws;
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
-      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true, sensitivity: st.wakeSens })); // again after a reconnect
+      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true, sensitivity: st.wakeSens, pages: pages() })); // again after a reconnect
       for (const m of st.pending.splice(0)) ws.send(m);
     };
     ws.onmessage = (e) => {
@@ -331,7 +333,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.held = [];
     stopSpeaking();
     st.awaitingEnd = false;
-    send({ type: "listen", mode });
+    send({ type: "listen", mode, pages: pages() });
     try {
       await openMic();
     } catch (e) {
@@ -346,11 +348,12 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   }
   // the wake word: the microphone stays open while it's on (the browser shows its recording sign)
   async function wake(on) {
-    const sens = wakeSensitivity();
-    if (on === st.wakeWanted && (!on || sens === st.wakeSens)) return true;
-    if (on && st.wakeWanted) { // only the sensitivity changed (Settings → This device)
+    const sens = wakeSensitivity(), pk = JSON.stringify(pages());
+    if (on === st.wakeWanted && (!on || (sens === st.wakeSens && pk === st.pagesKey))) return true;
+    st.pagesKey = pk;
+    if (on && st.wakeWanted) { // only the sensitivity (Settings → This device) or the pages changed
       st.wakeSens = sens;
-      send({ type: "wake", on: true, sensitivity: sens });
+      send({ type: "wake", on: true, sensitivity: sens, pages: pages() });
       return true;
     }
     st.wakeWanted = on;
@@ -371,7 +374,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     }
     st.wakeSens = sens;
     st.lastPiece = performance.now();
-    send({ type: "wake", on: true, sensitivity: sens });
+    send({ type: "wake", on: true, sensitivity: sens, pages: pages() });
     clearInterval(st.watchTimer);
     st.watchTimer = setInterval(watchMic, 1000);
     return true;

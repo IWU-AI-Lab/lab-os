@@ -4,13 +4,18 @@ One turn at a time: `ask()` sets `thinking`, streams the answer (`speaking` from
 logs what it cost, and goes back to `idle`. It refuses with a full sentence when no AI setup is
 usable or this month's budget is used up. With `tools` (the brain's MCP read tools: the docs,
 git, devices; lab_os.ai.tools) the model may look things up first, up to MAX_TOOL_ROUNDS times.
-The hub's chat only reads and answers (rule 5): it gets no tools that change anything.
+The hub's chat reads and answers (rule 5), and opens pages on the screen that asked (decision
+2026-11-14): the page sends what it can show (`pages`), the model gets an `open_page` tool for them,
+and the turn yields an `open` event the page acts on. A round that only opens a page is answered
+right away ("Here's Teleop."), without asking the model again.
 With a `store` (lab_os.ai.history) the conversation is kept for a short while: saved after every
 answer, put aside by a reset, brought back with `restore()`.
 """
 
 import contextlib
+import json
 import logging
+import re
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 
@@ -31,8 +36,49 @@ MAX_TOOL_ROUNDS = 4  # look-ups per question before the model must answer
 
 RULES = """\
 You are the assistant on the hub screen of {place}. It is {now}.
-You answer questions. From this screen you can't change or move anything.
+You answer questions. You can't move the robot arms from here; your tools are what you can do now.
 Answer in plain text without markdown, in one to four short sentences unless asked for more."""
+
+OPEN_PAGE = "open_page"
+PAGE_RULES = """\
+You can open pages on this screen, the one the person is talking to (open_page): {pages}.
+When someone wants to see, open, pull up, show or go to one ("show me the AI spend", "go back to
+the hub"), open it instead of describing it. "hub" closes whatever is open."""
+PAGE_ID = re.compile(r"^[a-z][a-z0-9_-]{0,23}$")
+MAX_PAGES = 24
+
+
+def clean_pages(pages) -> dict[str, str]:
+    """What the asking page says it can show: {id: title}, checked (anything odd is left out)."""
+    if not isinstance(pages, dict):
+        return {}
+    out = {}
+    for pid, title in list(pages.items())[:MAX_PAGES]:
+        if isinstance(pid, str) and PAGE_ID.match(pid) and isinstance(title, str) and title.strip():
+            out[pid] = title.strip()[:40]
+    return out
+
+
+def page_tool(pages: dict[str, str]) -> dict:
+    listed = "; ".join(f"{pid} = {title}" for pid, title in pages.items())
+    return {
+        "type": "function",
+        "function": {
+            "name": OPEN_PAGE,
+            "description": f"Open a page on this screen (the one being talked to): {listed}.",
+            "parameters": {
+                "type": "object",
+                "properties": {"page": {"type": "string", "enum": list(pages)}},
+                "required": ["page"],
+            },
+        },
+    }
+
+
+def opened_line(page: str, title: str) -> str:
+    """The short answer after opening a page (spoken on a voice turn)."""
+    return "Back to the hub." if page == "hub" else f"Here's {title}."
+
 
 TOOL_RULES = """\
 You can look things up with read tools: the project's docs (start with project_status for "what's
@@ -42,6 +88,14 @@ When someone wants to work on something, draft a prompt they can paste into a Cl
 session in the lab-os repository: what to read first (CLAUDE.md, docs/plan/current-focus.md), the
 goal, the step and its "done when", anything to watch out for. Put it after a line "Prompt:" in
 plain text; it may be longer than your usual answers."""
+
+
+def _page_arg(arguments: str, pages: dict[str, str]) -> str | None:
+    try:
+        page = json.loads(arguments or "{}").get("page")
+    except (ValueError, AttributeError):
+        return None
+    return page if isinstance(page, str) and page in pages else None
 
 
 class Conversation:
@@ -168,7 +222,7 @@ class Conversation:
 
     # ---------- a turn ----------
 
-    def system_prompt(self) -> str:
+    def system_prompt(self, pages: dict[str, str] | None = None) -> str:
         self._refresh()
         now = datetime.now().strftime("%A %Y-%m-%d, %H:%M")
         rules = RULES.format(place=self.place_name or "this place", now=now)
@@ -176,6 +230,9 @@ class Conversation:
             rules = f"Your name on the screen is {self.display_name}.\n{rules}"
         if self.tools:
             rules = f"{rules}\n\n{TOOL_RULES}"
+        if pages:
+            listed = ", ".join(f"{title} ({pid})" for pid, title in pages.items())
+            rules = f"{rules}\n\n{PAGE_RULES.format(pages=listed)}"
         return f"{self.personality}\n\n{rules}" if self.personality else rules
 
     def clear(self, opening: str | None = None) -> None:
@@ -206,10 +263,13 @@ class Conversation:
         self.store.save(self.messages)
         return True
 
-    async def ask(self, text: str) -> AsyncIterator[dict]:
-        """One turn. Yields events for the page: state, text (pieces of the answer), done or
-        error. Never raises for AI trouble: an error event carries the sentence to show."""
+    async def ask(self, text: str, pages: dict | None = None) -> AsyncIterator[dict]:
+        """One turn. Yields events for the page: state, text (pieces of the answer), open (show
+        this page), done or error. Never raises for AI trouble: an error event carries the
+        sentence to show. `pages`: what the asking page can show ({id: title}); none = no
+        open_page tool."""
         text = text.strip()
+        pages = clean_pages(pages)
         if not text:
             return
         if self.busy:
@@ -222,9 +282,12 @@ class Conversation:
         setup = self.setup()
         self.busy = True
         self.messages.append({"role": "user", "content": text})
-        sent = [{"role": "system", "content": self.system_prompt()}, *self.messages[-MAX_HISTORY:]]
+        system = self.system_prompt(pages)
+        sent = [{"role": "system", "content": system}, *self.messages[-MAX_HISTORY:]]
         answer, usage = "", Usage()
-        tools = await self.tools.openai_tools() if self.tools else None
+        tools = await self.tools.openai_tools() if self.tools else []
+        if pages:
+            tools = [*tools, page_tool(pages)]
         error, completed, rounds = None, False, 0
         try:
             self.assistant.set("thinking")
@@ -264,13 +327,38 @@ class Conversation:
                         ],
                     }
                 )
+                opened = None  # the last page this round opened, if it only opened pages
+                only_pages = True
                 for call in reply.tool_calls:
                     yield {"type": "tool", "name": call.name}
-                    result = await self.tools.call(call.name, call.arguments)
+                    if call.name == OPEN_PAGE and pages:
+                        page = _page_arg(call.arguments, pages)
+                        if page:
+                            yield {"type": "open", "page": page, "title": pages[page]}
+                            opened = page
+                            result = f"Opened {pages[page]} on this screen."
+                        else:
+                            only_pages = False
+                            result = f"Error: not a page here (one of: {', '.join(pages)})."
+                    elif self.tools:
+                        only_pages = False
+                        result = await self.tools.call(call.name, call.arguments)
+                    else:
+                        only_pages = False
+                        result = f"Error: {call.name!r} isn't a tool you have."
                     sent.append({"role": "tool", "tool_call_id": call.id, "content": result})
                 if answer and not answer.endswith(("\n", " ")):
                     answer += "\n"
                     yield {"type": "text", "text": "\n"}
+                if opened and only_pages:
+                    # nothing left to look up: say so at once instead of asking the model again
+                    line = opened_line(opened, pages[opened])
+                    answer += line
+                    if self.assistant.state != "speaking":
+                        self.assistant.set("speaking", 1.0)
+                        yield {"type": "state", "state": "speaking"}
+                    yield {"type": "text", "text": line}
+                    break
             completed = True
         except AiError as e:
             error = str(e)

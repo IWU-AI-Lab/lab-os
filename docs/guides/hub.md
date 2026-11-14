@@ -55,6 +55,11 @@ The concept's look, motion and sound on the brain's real facts: the title is the
 - **Not real yet, so not shown:** whether a robot or camera is switched on (the roll call needs the lab router: the Devices panel's Power column says "not known"), alerts (no real alert source yet). The Devices panel is still the place's `devices.yaml` (robots, cameras); the devices with the hub open are in "Open on…" (below).
 - **The code:** one file, `src/lab_os/hub/web/design.html`: the concept's CSS, SVG and JavaScript, with the made-up data replaced by the brain's endpoints and the concept controls removed. Fonts are bundled in `src/lab_os/web/vendor/fonts/` (offline).
 
+## Asking it to show something (2026-11-14)
+Ask the assistant, typed or by voice: "pull up the teleop page", "show me the AI spend", "open the settings", "go back to the hub". It opens that page **on the screen you asked** and says so in a few words ("Here's Teleop."). It knows what each screen can show: the module buttons, Settings, the callouts' pages (designed hub), the conversation. Details: `docs/dev/chat.md` → "It opens pages".
+
+**The core on an open page:** while a module or a callout's page is open, the core sits small in the bottom right corner. It works there too: **hold it to talk** (like the mic), and what it hears and says shows beside it for a while. With the wake word on, "hey Jarvis" keeps working with a page open (it used to stop), so "hey Jarvis, go back to the hub" works hands-free.
+
 ## The module pages (teleop, monitor, AI Control)
 Since 2026-11-10 they're in the hub's design too (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub they drop their own frame and title; on their own screen they have both, the place's name, the clock and a **Full screen** button.
 - **Teleop** (`/teleop`): the arm in 3D on the left; on the right how to drive it (the Quest's Enter AR/VR, Desktop control and its keys) and what the page sends. Status (brain, control, arm) and **STOP** in the bar, always visible.

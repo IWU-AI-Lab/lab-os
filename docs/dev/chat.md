@@ -1,6 +1,6 @@
 # The hub's chat (typed)
 
-The assistant under the hub's circle answers typed questions (focus step 5). It **only reads and answers**: from the hub it can't change or move anything (focus rule 5).
+The assistant under the hub's circle answers typed questions (focus step 5). It **reads, answers and opens pages** on the screen it's talking to (focus rule 5, decision 2026-11-14); it can't move the arms from the hub. What it can do is the tools it's given (the builder, 2026-11-14: no hard "never changes anything" rule, more abilities may come).
 
 ## Try it
 1. Put a key in `.env` in the repo's **top folder**, next to `pyproject.toml` (copy `.env.example` there if there's none; not the one in `src/lab_os/place_template/`). Without it, the chat says which file it looked for. The names, exactly:
@@ -31,9 +31,11 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 - The **AI Spend** panel shows the month's total against the budget. A venue with `public: true` hides it (a hallway screen).
 
 ## What it knows
-The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/dev/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't change or move anything", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
+The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/dev/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't move the robot arms from here; your tools are what you can do now", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
 
 **It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is included since 2026-11-12 (the design isn't a surprise any more).
+
+**It opens pages (2026-11-14):** "pull up the teleop page", "show me the AI spend", "open the settings", "go back to the hub", typed or spoken, on the screen that asked. Each question carries what that screen can show (`pages`: the hub's module buttons, Settings, the callouts' pages, the conversation, `hub`); the model gets an `open_page` tool for exactly those, and the turn's `open` event makes the page show it, like a tap would (the other screens don't change). When a round only opens a page, the brain answers at once ("Here's Teleop.", "Back to the hub.") instead of asking the model again, so it's spoken quickly. A page this screen doesn't have is refused to the model, which then says so. On the plain hub the callouts are on the hub itself: "show me the AI spend" goes back to the hub and highlights that panel. In VR: the module buttons and the callouts.
 
 ## Kept for a while
 An accidental reset, a closed page or the brain restarting (even a power cut) doesn't lose the conversation:
