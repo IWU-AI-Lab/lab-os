@@ -19,6 +19,8 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 11. **VR hub: the chat doesn't scroll.** On the VR home, new chat text below the bottom of the panel isn't scrolled into view. Keep the newest line visible.
 12. **A diagram of the system**, and a way to see it on the hub: one clear drawing (the brain, the hub pages, the devices and how each connects: USB, network, MCP), as SVG made by hand (no CDN, `docs/` and the hub), opened from the Devices panel ("How it connects"). Matches the design.
 13. **1:1 teleop scale, the part without the lab.** Moving the hand 1 cm should move the gripper 1 cm, and it feels slightly off (the builder, 2026-11-13). Check what can be checked without the arm: the SO-101 model's link lengths against the real arm's (its URDF), the units from the Quest (meters) to the arm, whether the 3D arm is drawn at real size, and where the "gripper point" is. Fix what's wrong; then a ruler test in the lab (lab-checklist).
+14. **Teleop page: the 3D view and the joint readout in their own boxes.** Today, when more than one joint moves, the degree readouts stack above the base ones and squeeze the 3D model, so it keeps resizing. Give the 3D view a fixed box (slightly smaller is fine) and put the joint readouts in their own column beside it, so nothing jumps (the builder, 2026-11-14).
+15. **Camera names: stand and wrist** (decision 2026-11-14). `so101-white-cam-a` → `so101-white-cam-stand` (on the 3D-printed stand, about 2 ft up, behind the arm), `-cam-b` → `so101-white-cam-wrist`. "Overhead" becomes "stand camera" in docs, the tool descriptions and notes (there is no ceiling camera). The green cameras keep `-a`/`-b` until the lab check says which is which, then get the same names.
 
 ## Done
 (none yet)

@@ -2,6 +2,8 @@
 
 **The single source of truth for ideas.** New ideas land here, **not in code** and not in other docs, unless they're part of the current focus (`docs/plan/current-focus.md`). This keeps the project finishable and nothing gets lost. When an idea becomes the focus, move it into `docs/plan/current-focus.md` and delete it here. When an idea is decided (but not yet scheduled), record the decision in `docs/plan/lab-jarvis-log.md` and keep or delete the entry here.
 
+**The long-term direction** (a real JARVIS, the lab unplugging it cleanly after May 2027) is in `docs/plan/vision.md`; concrete pieces of it come here as ideas.
+
 Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `docs/plan/lab-jarvis-log.md` → "Architecture sketch"). "—" = not recorded yet.
 
 **Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`docs/plan/lab-jarvis-log.md` → "Mobility, portability & remote access").
@@ -27,6 +29,13 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
   - **telegrip** (github.com/DipFlip/telegrip, ~145 stars, MIT): Quest 3 WebXR page → SO-100 arms, both arms at once (one per controller), PyBullet IK, keyboard control.
   - **XLeRobot** (github.com/Vector-Wangel/XLeRobot, ~5.8k stars): a dual-SO-101 home robot with Quest 3 VR teleop (simulation first; real-robot VR code by others).
 - **What to do (after the demo):** a session reads these and writes a comparison (how they map hand to arm, IK, clutch, wrist, smoothing, what they record), then the builder picks: borrow their ideas, use one of them for data collection, or keep ours. Nothing in the lerobot conda env (use our `so101` extra).
+
+### AI arm control: compare with existing projects (found 2026-11-14)
+- **Why:** the same reason as the teleop entry above: others have connected LLMs to SO-101s. Ours must stay model-agnostic (Fable 5.2 until 2026-11-16, then any frontier model).
+  - **Google's robotics-pointing-sample** (github.com/google-gemini/robotics-pointing-sample, official): an SO-101 + one USB camera + Gemini Robotics-ER, which finds objects by name and points at them. It calibrates the camera to the arm with a printed ChArUco board, which is the fix for "the stand camera's guess was 8 cm off" (GOTCHAS 2026-11-12).
+  - **robot_MCP** (github.com/IliaLarchenko/robot_MCP, ~87 stars, last change 2025-08): an MCP server + agent for SO-100/101 with a camera, for Claude, Gemini and GPT; the author found Claude best. Older LeRobot.
+  - Write-ups: an LLM picking up a pen with an SO-101 through a side camera (Frank Dou, MIT, 2026-09).
+- **What to do:** a session compares (tools, how the camera becomes positions, how a grab is done, how many steps the AI takes) and recommends what to borrow; the builder decides.
 
 ### Core plumbing (waits for the lab router)
 From the first draft of the core focus (2026-10-30); the builder chose the hub first. Build when the router is here (Milestone 1):
