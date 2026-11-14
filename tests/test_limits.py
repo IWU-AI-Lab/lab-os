@@ -194,3 +194,14 @@ def test_the_page_marks_a_limit_thats_off():
     js = (REPO_ROOT / "src" / "lab_os" / "hub" / "web" / "settings.js").read_text()
     html = (REPO_ROOT / "src" / "lab_os" / "hub" / "web" / "settings.html").read_text()
     assert "limit-off" in js and 'id="limits-off"' in html and ".field.limit-off" in html
+
+
+def test_the_floor_is_minus_half_a_cm_in_both_venues(monkeypatch):
+    """Quick job 3 (decision 2026-11-13): the arm stands on the camera's base, so the table is
+    below its zero; the AI tools and teleop use the same number."""
+    monkeypatch.setattr(config, "active_dir", lambda: REPO_ROOT / "config")
+    for name in ("lab", "visit-day"):
+        v = load_venue(name, REPO_ROOT / "config")
+        assert v.floor_cm == -0.5 and AiLimits.from_venue(v).min_z_cm == -0.5
+    loop = make_loop(loop_args(venue="lab"))
+    assert loop.mapper.config.floor_m == pytest.approx(-0.005)

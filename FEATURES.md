@@ -51,7 +51,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | Quest 3 controllers drive `so101-white` through inverse kinematics: grip = clutch, trigger = gripper, A/X = stop | ✅ | The working demo |
 | Bare-hand tracking: right wrist drives, left pinch = clutch, right pinch = gripper | 🟡 | Works but is hard to steer |
 | 1:1 mode ("Hand → arm"): the gripper goes exactly where your hand is | 🧪 | Fake arm only so far |
-| Speed slider and right thumbstick (capped by the venue); the arm stays 1 cm above the table | ✅ | |
+| Speed slider and right thumbstick (capped by the venue); the gripper and wrist stay above the venue's floor (`min_z_cm`, −0.5 cm since 2026-11-14) | ✅ | |
 | 3D arm in the headset (see-through ghost in AR), movable onto the real arm | ✅ | |
 | Desktop control without a headset: keyboard + trackpad act as a controller | ✅ | |
 | Record and replay controller sessions (`--record`, `lab-os-teleop replay`) | ✅ | For testing without a headset |
