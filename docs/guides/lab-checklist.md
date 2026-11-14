@@ -4,7 +4,7 @@ A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works
 
 **The next visits, in this order** (Fable 5.2 ends Monday 2026-11-16, so the real-arm AI first; the demo is Thursday 2026-11-19):
 1. Part 0.
-2. Part 3, the AI on `so101-white`: the height checked with a ruler first, then the cube pick (after quick jobs 1–3 if they're merged).
+2. Part 3, the AI on `so101-white`: the height checked with a ruler first (at the new −0.5 cm floor), then the cube pick (quick jobs 1–3 are merged).
 3. Part 8, the green arms in lab-os (plugged in as for training, their cameras back in sockets 7 and 8).
 4. Part 11, devices (step 8): the "Start lab-os" icon, Monitor from the Newline to the desk and back, everything off and on again.
 5. Part 7 on the real arm: 1:1 (after quick job 13, a ruler for the scale), relative vs 1:1.
@@ -73,7 +73,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 - [ ] "Move the gripper 3 cm lower, pointing straight down."
 - [ ] The cube: measure it (cm in front of the base's middle, cm to the left), then the step-2 prompt.
 - [x] STOP from the Newline (or any other screen) stops a move. (2026-11-13, the Newline over Ethernet.)
-- [ ] **Height first** (the reading looked 1–2 cm low on 2026-11-12): "go to x 20, y 0, z 1, pointing straight down" (z −0.5 once quick job 3 is in), then hold a ruler by the jaw tips. How high are they really? Note it in step 2.
+- [ ] **Height first, at the new floor** (the reading looked 1–2 cm low on 2026-11-12; the floor is −0.5 cm since quick job 3): "go to x 20, y 0, z 2, pointing straight down", ruler by the jaw tips; then "z 0.5", then "z −0.5" **only if the tips are still clearly above the table at 0.5** (hand near STOP). How high are the tips really at each? Note it in step 2. If −0.5 would touch the table, raise `min_z_cm` in `config/venues/lab.yaml` until it doesn't.
 - [x] **Honest "arrived"** (2026-11-12: the elbow ~3° short on nearly every move, GOTCHAS): after each move the result says `arrived` or `stopped_short` with `off_by_cm` and which joints fell short. Hold a ruler to one `stopped_short`: is it about that far off? Near the base, a low `move_to` like "x 11, y 0, z 2.1" is where it fell 1.6 cm short on 2026-11-10: is it still short (load / the arm folded) or does it arrive now (the half-second hold)?
 - [x] **`pose_view`** (2026-11-12, used in the cube pick): ask Fable "Look at the arm with pose_view, with a mark where the cube is (… cm in front, … cm left, 1.5 cm up, size 3 cm), before you close the gripper." Does the picture match the real arm? To see the same picture yourself: open **http://localhost:8080/api/pose-view.png** (reload for a new one).
 - [ ] The cube task again, this time with `pose_view` before every grip: does Fable catch its own misses?
