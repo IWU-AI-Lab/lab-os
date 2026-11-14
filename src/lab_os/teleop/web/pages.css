@@ -13,21 +13,36 @@
   .view { height: 62vh; }
 }
 
-/* the 3D view (arm-panel.js): the view fills the card, the source line and the joint table under it */
-.arm3d { display: flex; flex-direction: column; gap: 0.4rem; }
+/* the 3D view (arm-panel.js): the view in its own box, the joint readout in a fixed column beside it,
+   the source line under both. Nothing in the readout changes size, so the view never resizes. */
+.arm3d { display: flex; flex-direction: column; gap: 0.4rem; overflow: hidden; }
 .arm3d-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .arm3d-head .label { font: 500 0.95rem/1.2 var(--f-ui); color: var(--c); }
-#arm-view { flex: 1 1 auto; min-height: 14rem; position: relative; margin: 0 -0.4rem; }
+.arm3d-body { flex: 1 1 auto; min-height: 14rem; display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 0.9rem; }
+#arm-view { min-height: 0; position: relative; margin-left: -0.4rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 55%, transparent); }
 #arm-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-#arm-source { margin: 0; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); }
+#arm-source { margin: 0; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #arm-error { margin: 0; color: var(--accent); }
 #arm-error:empty { display: none; }
-.arm-table { font-size: 0.82rem; }
-.arm-table td { padding: 0.18rem 0.6rem 0.18rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
-.arm-table td:first-child { font: var(--w-lines) 0.8rem/1.3 var(--f-lines); color: var(--text-dim); }
-.arm-table td:nth-child(2) { font: 0.85rem/1.3 var(--f-digits); color: var(--hot); text-align: right; width: 6.5em; white-space: nowrap; }
-.arm-table td:nth-child(3) { color: var(--accent); font-size: 0.78rem; }
-.monitor .arm-table { display: none; }  /* the monitor shows the joints as gauges instead */
+.arm-readout { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+/* one joint: name and degrees on a line, its note (clamped, outside the limits) on a line of its own,
+   always there (empty when fine) and cut with … when long: every row the same height */
+.jrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1.35rem 1.05rem; column-gap: 0.6rem;
+  padding: 0.2rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.jrow:first-child { border-top: 0; }
+.jn { font: var(--w-lines) 0.8rem/1.35rem var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jv { font: 0.9rem/1.35rem var(--f-digits); color: var(--hot); text-align: right; white-space: nowrap; min-width: 5.5em; }
+.jf { grid-column: 1 / -1; font: 0.72rem/1.05rem var(--f-ui); color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.monitor .arm-readout { display: none; }  /* the monitor shows the joints as gauges instead */
+.monitor .arm3d-body { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 900px), (orientation: portrait) {
+  /* narrow: the readout under the view, two joints a row (a fixed height) */
+  .arm3d-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .arm-joints { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1rem; }
+  .jrow:nth-child(2) { border-top: 0; }
+}
 
 /* teleop: the ways to drive it */
 .sources { display: grid; gap: 0.6rem; }

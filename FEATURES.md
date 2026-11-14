@@ -55,7 +55,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | 3D arm in the headset (see-through ghost in AR), movable onto the real arm | ✅ | |
 | Desktop control without a headset: keyboard + trackpad act as a controller | ✅ | |
 | Record and replay controller sessions (`--record`, `lab-os-teleop replay`) | ✅ | For testing without a headset |
-| Redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | Old pages at `/classic/…` |
+| Redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | Old pages at `/classic/…`. Teleop: the 3D view in a fixed box with the joint readout in its own column, so it no longer resizes while jogging (2026-11-14) |
 | Freezes on release, lost tracking, disconnect or stale input; STOP on every page | ✅ | |
 
 ## AI tools driving the arm (MCP)

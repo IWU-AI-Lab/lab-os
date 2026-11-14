@@ -4,6 +4,7 @@ taken. No hardware, no internet; settings are only ever written into a temporary
 
 import asyncio
 import socket
+from pathlib import Path
 
 import pytest
 from aiohttp import web
@@ -251,3 +252,23 @@ async def test_training_starts_only_when_safe_and_only_here(aiohttp_client, monk
     monkeypatch.setattr(hub_server, "is_local", lambda request: False)  # another screen
     assert (await client.post("/api/green/start")).status == 403
     assert started == [1]
+
+
+def test_teleop_3d_view_and_joints_in_their_own_boxes():
+    """Quick job 14: a jog names only the joints that move; the readout still keeps one row per
+    joint (fixed height, notes cut with …) in a column beside the 3D view, so the view never
+    resizes. Checked in headless Chrome on 2026-11-14 (one view size over 10 s of jogging)."""
+    web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
+    js = (web / "arm" / "arm-panel.js").read_text()
+    css = (web / "pages.css").read_text()
+    assert 'class="arm3d-body"' in js and 'class="arm-readout"' in js
+    assert "shown.set(name" in js and "feed.status?.joints" in js  # every joint keeps its row
+    assert "<table" not in js
+    body = css.split(".arm3d-body {", 1)[1].split("}", 1)[0]
+    assert "grid-template-columns: minmax(0, 1fr) 15rem" in body  # the readout: a fixed column
+    row = css.split(".jrow {", 1)[1].split("}", 1)[0]
+    assert "grid-template-rows: 1.35rem 1.05rem" in row  # every row the same height
+    assert "text-overflow: ellipsis" in css.split(".jf {", 1)[1].split("}", 1)[0]
+    assert css.index(
+        "@media (max-width: 900px), (orientation: portrait) {\n  /* narrow: the readout"
+    ) > css.index(".arm3d-body {")
