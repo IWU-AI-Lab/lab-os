@@ -524,10 +524,79 @@ async def test_the_spoken_greeting(aiohttp_client, aiohttp_server, key, tmp_path
     end = await until(ws, "audio_end", events)
     assert end["greeting"] is True
     said = " ".join(e["text"] for e in events if e["type"] == "audio")
-    assert said == "Good evening. All local systems are up. You can talk to me: hold the mic."
+    assert said == "Good evening. You can talk to me: hold the mic."  # not the persona's line
     await ws.send_json({"type": "greet", "way": "push_to_talk"})  # not again right away
     await asyncio.sleep(0.2)
     assert sum(1 for s in seen if "tts" in s) == 1  # one request: the free key's limits
+    await ws.close()
+
+
+async def test_the_second_start_plays_the_recording(aiohttp_client, aiohttp_server, key, tmp_path):
+    """Quick job 4: each greeting is spoken once per voice, saved, then played from the file."""
+    from lab_os import config
+
+    seen = []
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, seen=seen)
+    client = await aiohttp_client(app)
+
+    async def start(opening, way="push_to_talk"):
+        conv.clear(opening=opening)
+        ws = await client.ws_connect("/ws/voice")  # a new start: a new page connection
+        await ws.send_json({"type": "greet", "way": way})
+        events = []
+        end = await until(ws, "audio_end", events)
+        await ws.close()
+        audio = [e for e in events if e["type"] == "audio"]
+        assert end["count"] == len(audio) == 1
+        return audio[0]
+
+    first = await start("Good evening. Step 8, Devices, was finished today.")
+    second = await start("Good evening. 25 commits today.")  # other news: the same recording
+    assert first["text"] == second["text"] == "Good evening. You can talk to me: hold the mic."
+    assert first["data"] == second["data"]
+    assert sum(1 for s in seen if "tts" in s) == 1  # the second start made no request
+    saved = list((config.recordings_dir() / "greetings").glob("*.wav"))
+    assert len(saved) == 1 and saved[0].name.startswith("test-")
+    spoken_s = sum(e.get("spoken_s", 0) for e in conv.spend.entries())
+    assert spoken_s > 0  # the first one counted; the recording costs nothing
+
+    await start("Good morning. All local systems are up.")  # another time of day: a new file
+    await start("Good evening.", way="wake_word")  # another hint: a new file
+    assert sum(1 for s in seen if "tts" in s) == 3
+    assert len(list((config.recordings_dir() / "greetings").glob("*.wav"))) == 3
+
+
+def test_a_new_voice_or_line_makes_a_new_recording(tmp_path):
+    from lab_os.hub.voice import greeting_file, spoken_greeting
+
+    setup = VoiceSetup("main", "openai", "http://x/v1", "h", "tts-1", speaker="fable")
+    text = spoken_greeting("Good evening. News.", "You can talk to me: hold the mic.")
+    assert text == "Good evening. You can talk to me: hold the mic."
+    path = greeting_file(tmp_path, setup, text)
+    assert path == greeting_file(tmp_path, setup, text)
+    assert path != greeting_file(
+        tmp_path, VoiceSetup("main", "openai", "http://x/v1", "h", "tts-1", speaker="onyx"), text
+    )
+    assert path != greeting_file(tmp_path, setup, text.replace("hold", "tap"))
+    assert spoken_greeting("", "Hi.").split()[0] == "Good"  # no opening: the time of day now
+
+
+async def test_a_saved_greeting_plays_while_voice_is_paused(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    seen = []
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, seen=seen)
+    conv.clear(opening="Good evening.")
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "greet", "way": "push_to_talk"})
+    await until(ws, "audio_end", [])
+    await ws.close()
+    conv.spend.budget_usd = 0.0  # voice paused (the budget): the recording still plays
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "greet", "way": "push_to_talk"})
+    end = await until(ws, "audio_end", [])
+    assert end["count"] == 1 and sum(1 for s in seen if "tts" in s) == 1
     await ws.close()
 
 
@@ -550,7 +619,7 @@ async def test_the_greeting_without_a_microphone_has_no_hint(
     events = []
     await until(ws, "audio_end", events)
     said = [e["text"] for e in events if e["type"] == "audio"]
-    assert said == ["Good morning. Step 7, Voice, was finished today."]  # one piece, no hint
+    assert said == ["Good morning."]  # no hint, and the news stays on the screen
     await ws.close()
 
 

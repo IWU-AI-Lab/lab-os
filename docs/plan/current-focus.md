@@ -10,7 +10,7 @@ A demo of every feature on Thursday 2026-11-19 (decision 2026-11-12). The design
 ## Until the demo, in order
 1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 are done (moves without asking, switchable limits, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
 2. **Devices** (step 8): built 2026-11-14; left: the lab check (`docs/guides/lab-checklist.md` part 11).
-3. **Voice and the assistant** (step 7): a snappier wake word with adjustable sensitivity; the assistant opens pages when asked ("pull up the teleop page", decision 2026-11-14); the greeting from a recording (quick job 4); the Newline's microphone.
+3. **Voice and the assistant** (step 7): a snappier wake word with adjustable sensitivity; the assistant opens pages when asked ("pull up the teleop page", decision 2026-11-14); the Newline's microphone (the greeting from a recording is done).
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale), then the Quest with the real arm in 1:1.
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
 6. **Existing work instead of ours, if there's time** (decision 2026-11-14, a preference): compare our Quest teleop and our AI arm control with existing projects (`docs/plan/ideas.md` → "Teleop: compare…" and "AI arm control: compare…"), and switch where theirs is better.
@@ -51,8 +51,8 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 6. **Project helper** (done 2026-11-10). `docs/dev/chat.md` → "What it knows".
 
-7. **Voice.** Push-to-talk, the spoken greeting, dictation and the wake word, built 2026-11-12 (`docs/guides/voice.md`). In the lab (2026-11-13) push-to-talk and the wake word work on the desktop with a USB microphone (sometimes only spoken louder) and on the Quest (the wake word sometimes misses there).
-   - **Left:** the greeting from a recording (quick job 4); the Newline's microphone (Chrome's flag, `docs/guides/voice.md` → "Secure pages"). After the demo: a better room microphone, the Quest's misses.
+7. **Voice.** Push-to-talk, the spoken greeting, dictation and the wake word, built 2026-11-12 (`docs/guides/voice.md`); the greeting from a recording 2026-11-14. In the lab (2026-11-13) push-to-talk and the wake word work on the desktop with a USB microphone (sometimes only spoken louder) and on the Quest (the wake word sometimes misses there).
+   - **Left:** the Newline's microphone (Chrome's flag, `docs/guides/voice.md` → "Secure pages"). After the demo: a better room microphone, the Quest's misses.
    - The free Gemini key speaks only ~15–20 answers a day (`docs/dev/GOTCHAS.md`): keep them for the demo.
 
 8. **Devices.** Built 2026-11-14 (`docs/guides/hub.md` → "Devices"), tried with headless browser pages as devices: each hub page connects under a name (`/?device=desk`), the brain lists the devices with the hub open (each monitor a window) and keeps "This device" settings under the name (`hub-devices.yaml`); "Open on…" next to Back in a module (the free monitor, or it asks), Back there or "Bring it back" closes it; pages reconnect by themselves after a restart; `lab-os icon` ("Start lab-os", `lab-os serve --open desk`) and a "Lab hub" icon from ⚙ → This device. Before: a page on another monitor of the brain's computer (now Open on… → "Another monitor of this computer"); other computers view-only while a real arm is connected (`--drive-from` lets one drive).

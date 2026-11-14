@@ -84,6 +84,12 @@ def logs_dir() -> Path:
     return REPO_ROOT / "logs" if is_default() else active_dir() / "logs"
 
 
+def recordings_dir() -> Path:
+    """Where this place's recordings go (the spoken greetings, ...): like `logs_dir()`, not in
+    git."""
+    return REPO_ROOT / "recordings" if is_default() else active_dir() / "recordings"
+
+
 def env_file() -> Path:
     """The place's .env: next to its config files, or the repo's .env for the repo's config/."""
     return REPO_ROOT / ".env" if is_default() else active_dir() / ".env"

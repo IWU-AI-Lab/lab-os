@@ -641,6 +641,7 @@ def create_brain_app(
         internet=lambda: internet.online if internet else None,
         voices=voices or load_voices,
         greeting=lambda: _opening(chat),
+        recordings=lambda: config.recordings_dir() / "greetings",
         venue_wake=lambda: venue.wake_word_on,
     )
     app[BRAIN] = Brain(
