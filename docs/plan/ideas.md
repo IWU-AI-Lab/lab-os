@@ -21,6 +21,13 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
 - **A real-Quest recording as a test fixture** (`serve --record`, commit a short clip).
 - **Check:** in the XR emulator, Shift+WASD moving the arm while the clutch is *released* would be a bug.
 
+### Teleop: compare with existing Quest teleop before refining ours (found 2026-11-14)
+- **Why:** our Quest teleop is hard to pilot and less accurate than the leader arm (the builder, 2026-11-14), so it's not good enough to record training data with yet. Others have built and refined the same thing:
+  - **LeRobot's Isaac Teleop example** (`examples/isaac_teleop_to_so101/` in the LeRobot repo, with NVIDIA, https://huggingface.co/docs/lerobot/en/isaac_teleop): a Quest controller drives an SO-101 (squeeze = clutch, analog trigger = gripper, controller tilt = wrist, Placo IK) and **records LeRobot datasets** directly. Needs NVIDIA's CloudXR streaming (Linux, an NVIDIA GPU) instead of a web page.
+  - **telegrip** (github.com/DipFlip/telegrip, ~145 stars, MIT): Quest 3 WebXR page → SO-100 arms, both arms at once (one per controller), PyBullet IK, keyboard control.
+  - **XLeRobot** (github.com/Vector-Wangel/XLeRobot, ~5.8k stars): a dual-SO-101 home robot with Quest 3 VR teleop (simulation first; real-robot VR code by others).
+- **What to do (after the demo):** a session reads these and writes a comparison (how they map hand to arm, IK, clutch, wrist, smoothing, what they record), then the builder picks: borrow their ideas, use one of them for data collection, or keep ours. Nothing in the lerobot conda env (use our `so101` extra).
+
 ### Core plumbing (waits for the lab router)
 From the first draft of the core focus (2026-10-30); the builder chose the hub first. Build when the router is here (Milestone 1):
 - **Map what exists** → `docs/architecture.md`: the `Arm` protocol + drivers (fake, xArm, SO-101), device registry with off-limits devices, venue profiles, the WebSocket server with control handover + STOP, `docs/dev/protocol.md`, the theme file; which slot each belongs to, what's still teleop-specific.
