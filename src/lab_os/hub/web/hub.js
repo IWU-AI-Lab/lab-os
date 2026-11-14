@@ -9,6 +9,7 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
+import { connectDevice, fillOpenOn, fillSent, isPrefsKey, shouldRefill } from "/web/device.js";
 import { createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
@@ -18,6 +19,7 @@ const hubCfg = theme.hub || {};
 const S = {
   screen: "start", // start | hub
   module: null, // the open module ({id, title, page}) or null
+  sentFrom: null, // the open module came from another device: {from, from_window}
   modules: [],
   startedFull: false, // started while full screen: losing it returns to the start screen
   fullFailed: false, // the browser refused full screen once: don't keep asking for tap 1
@@ -137,7 +139,8 @@ document.addEventListener("keydown", (e) => {
   onStartPress();
 });
 
-function start() {
+// quiet: opened for a page sent from another device: no greeting, no fresh conversation
+function start(quiet = false) {
   S.startedFull = isFull();
   S.screen = "hub";
   body.classList.remove("waiting");
@@ -145,8 +148,9 @@ function start() {
   $("#hub").hidden = false;
   noteInput();
   refreshFacts();
-  greet();
+  if (!quiet) greet();
   quick.focus();
+  device.update();
 }
 
 // The start press: a fresh conversation whose first message is the greeting (built by the brain
@@ -185,6 +189,7 @@ function toStart(why) {
   $("#ignite").hidden = false;
   S.startGuardUntil = performance.now() + 600;
   renderStart();
+  device.update();
 }
 
 /* ---------- nobody there: back to the start screen ---------- */
@@ -225,9 +230,12 @@ function renderMods() {
   body.dataset.mods = S.modules.length;
 }
 
-function openModule(m) {
+function openModule(m, sentFrom = null) {
   if (S.module) return;
   S.module = m;
+  S.sentFrom = sentFrom;
+  $("#mod-from").hidden = !sentFrom;
+  $("#mod-from").textContent = sentFrom ? `opened from ${sentFrom.from || "another device"}` : "";
   const frame = document.createElement("iframe");
   frame.src = m.page;
   frame.title = m.title;
@@ -239,6 +247,7 @@ function openModule(m) {
   body.dataset.mod = m.id;
   $("#orb-dock").appendChild($("#orb"));
   $("#mod-back").focus();
+  device.update();
 }
 
 function closeModule() {
@@ -249,8 +258,65 @@ function closeModule() {
   delete body.dataset.mod;
   $(".core").prepend($("#orb"));
   S.module = null;
+  S.sentFrom = null;
+  closeOpenOn();
+  device.update();
 }
 $("#mod-back").addEventListener("click", closeModule);
+
+/* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
+const device = connectDevice({
+  look: "plain",
+  state: () => ({
+    stage: S.screen,
+    showing: S.module?.id || null,
+    from: S.sentFrom?.from || "",
+    from_window: S.sentFrom?.from_window || "",
+  }),
+  onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
+  onClose: () => closeModule(),
+  onDevices: () => {
+    renderSent();
+    if (shouldRefill($("#open-on")) && S.module) fillMenu(); // the list changed while it's open
+  },
+  onSettings: () => renderMic(),
+});
+
+// a module sent from another device: shown at once, even from the start screen (that device has the hub
+// open, so it's there for this); a module already open here gives way
+function openHere(id, sentFrom) {
+  const m = S.modules.find((x) => x.id === id);
+  if (!m) return device.update();
+  if (S.screen !== "hub") start(true);
+  closeModule();
+  openModule(m, sentFrom);
+  noteInput(); // someone wants this on screen: no reset right away
+}
+
+function fillMenu() {
+  fillOpenOn($("#open-on"), device, S.module.id, { title: S.module.title, onSent: () => setTimeout(closeModule, 900) });
+}
+function closeOpenOn() {
+  $("#open-on").hidden = true;
+  $("#mod-open-on").setAttribute("aria-expanded", "false");
+}
+$("#mod-open-on").addEventListener("click", () => {
+  if (!S.module) return;
+  if (!$("#open-on").hidden) return closeOpenOn();
+  fillMenu();
+  $("#open-on").hidden = false;
+  $("#mod-open-on").setAttribute("aria-expanded", "true");
+});
+
+function renderSent() {
+  fillSent($("#sent"), device, {
+    onBack: (it) => {
+      if (S.screen !== "hub" || S.module) return;
+      const m = S.modules.find((x) => x.id === it.showing.id);
+      if (m) openModule(m);
+    },
+  });
+}
 
 // The module page is on the same brain, so the hub can hear its keys and taps: they count as
 // input (no reset while someone uses it), and Esc there means Back too.
@@ -258,6 +324,7 @@ function watchFrame(frame) {
   try {
     const w = frame.contentWindow;
     for (const ev of INPUT_EVENTS) w.addEventListener(ev, noteInput, { passive: true, capture: true });
+    w.addEventListener("pointerdown", closeOpenOn, { capture: true }); // a tap on the page closes "Open on…"
     w.addEventListener("keydown", (e) => e.key === "Escape" && onEsc(e, w.document));
   } catch (e) {
     console.warn(`hub: can't watch the module page (${e.message}); use the Back button`);
@@ -491,7 +558,7 @@ const voice = createVoice({
   },
 });
 
-// the wake word (Settings → This screen): while the hub is up, no module or conversation page open and the tab
+// the wake word (Settings → This device): while the hub is up, no module or conversation page open and the tab
 // in front, the brain listens for the phrase (the dot in the strip). After it, the question ends after a silence.
 let VW = null;
 function syncWake() {
@@ -543,10 +610,10 @@ function renderMic() {
     b.title = dict ? "Tap to dictate (or tap Space): the words go into the ask line" : "Hold to talk (or hold Space)";
   });
 }
-addEventListener("storage", (e) => e.key === "lab-os.screen" && renderMic());
+addEventListener("storage", (e) => isPrefsKey(e.key) && renderMic());
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && renderMic());
 
-// dictation (the way in chosen in Settings → This screen): tap the mic (or Space on an empty ask line); the words
+// dictation (the way in chosen in Settings → This device): tap the mic (or Space on an empty ask line); the words
 // go into the ask line while you talk; it stops after a short silence, a second tap or Space; Enter stops and
 // sends; Esc or any other key stops and keeps what's there, to fix and send like typing
 let VD = null;

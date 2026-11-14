@@ -24,8 +24,8 @@ Browsers give the microphone (and Wake Lock, app install, WebXR) only to `https:
 
 No secure page or no microphone: no mic button; typing works.
 
-## The way in, per screen
-⚙ → **This screen** → **Talking to it**: how this screen listens. Kept in this screen's browser, like its level of detail, so each screen has its own.
+## The way in, per device
+⚙ → **This device** → **Talking to it**: how this device listens. Kept by the brain under the device's name (`?device=` in the hub's address, `docs/guides/hub.md` → "Devices"), like its level of detail, so each device has its own (a page with no name keeps it in its browser).
 - **push-to-talk** (the default): hold the mic (or Space), talk, let go; it answers aloud.
 - **wake word**: say **"hey Jarvis"** from anywhere in the room, then your question; it answers aloud. Push-to-talk still works. See "The wake word" below.
 - **dictation**: tap the mic (or tap Space with the ask line empty). The words go **into the ask line** while you talk. It stops after a short silence (~1.6 s once you've said something; 8 s if you say nothing), a second tap, or Space. **Enter** stops and sends; **Esc** or any other key stops and keeps what's there. Then fix it and send it like typing. The answer comes as text, like a typed question.
@@ -53,7 +53,7 @@ The hub in VR is a screen like the others, with the headset's own microphone and
 
 ## The spoken greeting
 **Changing (decision 2026-11-13, quick job 4):** each voice's greeting is recorded once and played from the file (time of day + the hint, no news line), so it costs no voice request. Today: after the start tap, the greeting ("Good morning." + one line of real news, `docs/dev/personas.md` → "The greeting") is also **spoken**, with a hint how to talk ("You can talk to me: hold the mic.", "tap the mic." with dictation, 'say hey Jarvis.' with the wake word). On the designed hub, the speech is asked for at the start tap and plays while the greeting is typed under the title after the jump, so there's no wait. The start tap is what lets the browser play it.
-- Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This screen, or `?sound=0`). No voice or no internet: silent, as before.
+- Only where voice works at the brain (see "No mic button?" above, minus the microphone) and this screen's sound is on (⚙ → This device, or `?sound=0`). No voice or no internet: silent, as before.
 - A screen without a microphone (or not a secure page) hears the greeting without the hint.
 - Holding the mic (or Space) during the greeting cuts it short.
 

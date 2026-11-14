@@ -14,6 +14,10 @@ def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
     monkeypatch.setattr(config, "_active", None)
     logs = tmp_path_factory.mktemp("logs")
     monkeypatch.setattr(config, "logs_dir", lambda: logs)
+    from lab_os.hub import hub_devices  # each device's settings: never into the repo's config/
+
+    devices_file = tmp_path_factory.mktemp("hub-devices") / "hub-devices.yaml"
+    monkeypatch.setattr(hub_devices, "settings_file", lambda: devices_file)
     monkeypatch.delenv("LAB_OS_CONFIG", raising=False)
     monkeypatch.delenv("LAB_OS_VENUE", raising=False)
     monkeypatch.delenv("LAB_OS_PERSONA", raising=False)

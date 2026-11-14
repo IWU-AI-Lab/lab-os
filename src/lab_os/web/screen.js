@@ -1,8 +1,10 @@
-// This screen's drawing resolution, for every page that draws (canvases, the 3D arm): canvas pixels per CSS
+// This device's drawing resolution, for every page that draws (canvases, the 3D arm): canvas pixels per CSS
 // pixel. `?res=` in the address wins (the page's own, or the hub's when the page is open inside it), then
-// "This screen" in Settings (kept in this browser), then "auto" = the device's, up to 2×. Lower draws fewer
+// "This device" in Settings (kept by the brain under the device's name: /web/device.js), then "auto" = the
+// screen's own, up to 2×. Lower draws fewer
 // pixels and the screen scales them up: softer, but far lighter on a 4K panel with a phone-class chip.
 // Same scale as /perf?res=. The designed hub (design.html) has the same rule inline.
+import { prefs } from "/web/device.js";
 
 function wanted() {
   const own = new URLSearchParams(location.search).get("res");
@@ -13,11 +15,7 @@ function wanted() {
   } catch {
     // another origin above us: only our own address counts
   }
-  try {
-    return JSON.parse(localStorage.getItem("lab-os.screen"))?.res || "auto";
-  } catch {
-    return "auto";
-  }
+  return prefs().res || "auto";
 }
 
 export function drawRes() {

@@ -30,6 +30,12 @@ POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (d
 POST /api/chat/clear     put the conversation aside (the hub's reset; kept chat_keep_minutes)
 POST /api/chat/restore   bring back the conversation put aside
 GET /ws/voice            voice: the page's microphone in, spoken answers out (hub/voice.py)
+GET /ws/hub-device       one hub page of a device (?device=desk): the brain's list of devices,
+                         "open on…" and the device's settings (hub/hub_devices.py)
+GET /api/hub-devices     the devices with the hub open now, their windows, what each shows
+POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on another device
+POST /api/hub-devices/close  {"device", "window"}: close it there ("bring it back")
+GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
@@ -55,6 +61,7 @@ from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
+from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.voice import VoiceDesk, voice_ws
@@ -107,6 +114,7 @@ class Brain:
 BRAIN = web.AppKey("brain", Brain)
 TOOLS = web.AppKey("tools", RobotTools)
 MCP = web.AppKey("mcp", McpHttp | None)
+HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -448,6 +456,84 @@ async def api_voice_ws(request: web.Request) -> web.WebSocketResponse:
     return await voice_ws(request, request.app[BRAIN].voice)
 
 
+async def api_hub_device_ws(request: web.Request) -> web.WebSocketResponse:
+    return await request.app[HUB_DEVICES].connection(request)
+
+
+async def api_hub_devices(request: web.Request) -> web.Response:
+    devices = request.app[HUB_DEVICES]
+    return web.json_response({"devices": devices.listing(), "sent": devices.sent()})
+
+
+async def _body(request: web.Request) -> dict:
+    try:
+        body = await request.json()
+    except ValueError:
+        body = None
+    if not isinstance(body, dict):
+        raise web.HTTPBadRequest(text="send a JSON object")
+    return body
+
+
+def _refused(e: DeviceError) -> web.Response:
+    return web.json_response({"ok": False, "message": str(e)}, status=400)
+
+
+async def api_hub_devices_open(request: web.Request) -> web.Response:
+    """Open a module on another device's hub ("open on…"). Any hub page may: it only changes
+    what that screen shows, and only on a device that has the hub open."""
+    b = await _body(request)
+    try:
+        r = await request.app[HUB_DEVICES].open_on(
+            str(b.get("module", "")),
+            str(b.get("device", "")),
+            window=str(b.get("window") or ""),
+            sender=str(b.get("from") or "")[:32],
+            sender_window=str(b.get("from_window") or ""),
+        )
+    except DeviceError as e:
+        return _refused(e)
+    if r["ok"]:
+        log.info("open on: %s → %s (from %s)", b.get("module"), r["device"], b.get("from") or "?")
+    return web.json_response(r)
+
+
+async def api_hub_devices_close(request: web.Request) -> web.Response:
+    b = await _body(request)
+    try:
+        r = await request.app[HUB_DEVICES].close_on(
+            str(b.get("device", "")), str(b.get("window", ""))
+        )
+    except DeviceError as e:
+        return _refused(e)
+    return web.json_response(r)
+
+
+async def api_hub_device_settings_get(request: web.Request) -> web.Response:
+    devices = request.app[HUB_DEVICES]
+    try:
+        values = await asyncio.to_thread(devices.settings.get, request.match_info["name"])
+    except DeviceError as e:
+        return _refused(e)
+    return web.json_response({"ok": True, "settings": values})
+
+
+async def api_hub_device_settings_post(request: web.Request) -> web.Response:
+    """Change a device's own settings; every window of that device gets them at once. Any page
+    may (they were per browser before, so any screen could change its own)."""
+    devices = request.app[HUB_DEVICES]
+    name = request.match_info["name"]
+    b = await _body(request)
+    try:
+        values = await asyncio.to_thread(devices.settings.update, name, b)
+    except DeviceError as e:
+        return _refused(e)
+    except OSError as e:
+        return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
+    await devices.push_settings(name, values)
+    return web.json_response({"ok": True, "settings": values})
+
+
 async def api_spend(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
     if brain.venue.public:
@@ -514,12 +600,15 @@ def create_brain_app(
     recorder: Recorder | None = None,
     drive_from: frozenset[str] = frozenset(),
     voices: Callable[[], dict[str, VoiceSetup]] | None = None,
+    device_settings: DeviceSettings | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
     default = the active config folder's place.yaml. `local_control_only`: only pages on this
     computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
-    input (`lab-os serve --record`). `voices`: the voice setups (default: models.yaml's)."""
+    input (`lab-os serve --record`). `voices`: the voice setups (default: models.yaml's).
+    `device_settings`: where each device's own settings are kept (default: the place's
+    hub-devices.yaml)."""
     app = create_app(
         loop,
         recorder,
@@ -557,6 +646,9 @@ def create_brain_app(
     app[BRAIN] = Brain(
         place, venue, internet, assistant, focus_file, repo, chat, persona, project, voice, check_ai
     )
+    app[HUB_DEVICES] = HubDevices(
+        lambda: {m["id"]: m["title"] for m in hub_modules(load_theme())}, device_settings
+    )
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
@@ -585,6 +677,12 @@ def create_brain_app(
     app.router.add_post("/api/chat/restore", api_chat_restore)
     app.router.add_get("/api/spend", api_spend)
     app.router.add_get("/ws/voice", api_voice_ws)
+    app.router.add_get("/ws/hub-device", api_hub_device_ws)
+    app.router.add_get("/api/hub-devices", api_hub_devices)
+    app.router.add_post("/api/hub-devices/open", api_hub_devices_open)
+    app.router.add_post("/api/hub-devices/close", api_hub_devices_close)
+    app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
+    app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)

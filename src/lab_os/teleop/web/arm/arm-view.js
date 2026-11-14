@@ -8,7 +8,7 @@ const DEG = Math.PI / 180;
 
 export function createArmView(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(drawRes()); // this screen's drawing resolution (Settings → This screen, ?res=)
+  renderer.setPixelRatio(drawRes()); // this screen's drawing resolution (Settings → This device, ?res=)
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();

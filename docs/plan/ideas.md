@@ -104,7 +104,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **What:** a version of the designed hub made for weak screens (the Newline, Pi screens, phones, the portable kit): the same colors, fonts, frame and core, but effects that cost little to draw (few moving dots, no blur, short glows, the startup as a simple line animation instead of 3000 stars), so it stays smooth where `reduced` still lags.
 - **Why:** the Newline lagged even at `reduced` (2026-11-10). Measured 2026-11-13 (focus step 12): its own Chrome manages `/perf` at 44–59 fps but the startup still lags; this is the next step if a lighter startup isn't enough.
 - **Watch out:** it's a design change: settle it in a design session (`DESIGN.md`, the concept, the theme together), probably as a quality level below `minimal`'s look but with its own small animations.
-- **Plugs into:** quality levels (theme), "This screen" settings.
+- **Plugs into:** quality levels (theme), "This device" settings.
 
 ### Teleop with a webcam instead of the Quest
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.

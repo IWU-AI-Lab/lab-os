@@ -94,7 +94,7 @@ async function pollArm() {
 /* ---------- the side view ---------- */
 const cv = $("#side"), cx = cv.getContext("2d");
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const res = drawRes(); // this screen's drawing resolution (Settings → This screen, ?res=)
+const res = drawRes(); // this screen's drawing resolution (Settings → This device, ?res=)
 function draw() {
   requestAnimationFrame(draw);
   const box = cv.getBoundingClientRect(), dpr = res;

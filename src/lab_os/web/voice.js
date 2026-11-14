@@ -21,15 +21,13 @@
 // it plays (the core follows it). onLevel(0..1): the microphone's level while listening.
 // onChange(): the mic button should be shown or hidden (plugging, unplugging, the brain's status).
 
-// The way in, chosen per screen (Settings → This screen, kept in this browser): push-to-talk (the
-// default), dictation or the wake word. The setting's words → the brain's names (the greeting's hint).
+import { prefs } from "/web/device.js";
+
+// The way in, chosen per device (Settings → This device, kept by the brain under its name): push-to-talk
+// (the default), dictation or the wake word. The setting's words → the brain's names (the greeting's hint).
 export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation", "wake word": "wake_word" };
 export function wayIn() {
-  try {
-    return WAYS[JSON.parse(localStorage.getItem("lab-os.screen"))?.voice] || "push_to_talk";
-  } catch {
-    return "push_to_talk";
-  }
+  return WAYS[prefs().voice] || "push_to_talk";
 }
 
 // Can this screen hear at all? (A secure page and a microphone; the brain's side is in /api/status.)
