@@ -62,6 +62,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 |---|---|---|
 | Robot tools for an AI agent (Claude Code, Codex, …): `arm_status`, `list_poses`, `move_joints`, `gripper`, `move_to`, `go_to_pose`, `stop` | ✅ | `so101-white`. Claude Code runs every tool without asking, moves included (repo settings, 2026-11-14); STOP and the brain's limits are the brake. The cube pick on 2026-11-12 closed just past the cube: the height reads 1–2 cm low |
 | Safety built into the tools: soft limits, max 30° / 10 cm per call, table floor, "can't reach" instead of guessing, "stopped short" with by how much | ✅ | Every call logged to `logs/ai-tools/` |
+| The per-move limit, the speed cap and the floor can each be switched off (venue file or Settings → Safety limits); never on public or visit-day venues | ✅ | Tested on the fake arm (2026-11-14). STOP, the soft limits and one controller at a time always stay |
 | `pose_view`: a picture of the arm's 3D model in its current pose, with the AI's marks for where it thinks things are | ✅ | Used in the cube pick on the real arm (2026-11-12); also at `/api/pose-view.png` |
 | `camera_snapshot`: one real picture from a camera (the white arm's: above the table and on the wrist) | ✅ | Used in the cube pick (2026-11-12). The overhead picture gives a direction, not a place (it doesn't know where the camera is) |
 | AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |

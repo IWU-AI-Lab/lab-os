@@ -36,6 +36,9 @@
     .section-help { margin: -0.3rem 0 0.4rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
     #screens li { font: var(--w-lines) 0.85rem/1.6 var(--f-lines); }
     :disabled { cursor: default !important; opacity: 0.55; }
+    /* a safety limit that's off: an accent bar and "OFF" after its name, and a chip in the bar */
+    .field.limit-off { box-shadow: inset 3px 0 0 var(--accent); padding-left: 0.7rem; }
+    .field.limit-off label::after { content: " · OFF"; color: var(--accent); font-weight: 600; }
   </style>
 </head>
 <!--
@@ -48,7 +51,7 @@
   <header class="bar">
     <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-gear"/></svg><span>Settings</span></div>
     <span class="place"></span>
-    <div class="chips"><span class="chip"><b>Changes</b><span id="mode" class="pill off">—</span></span></div>
+    <div class="chips"><span class="chip"><b>Changes</b><span id="mode" class="pill off">—</span></span><span class="chip" id="limits-off" hidden><b>Limits off</b><span class="pill bad"></span></span></div>
     <span class="grow"></span>
     <span class="clock"></span>
   </header>

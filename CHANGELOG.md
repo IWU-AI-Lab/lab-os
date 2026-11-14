@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-14
+- **Safety limits that can be switched off** (quick job 2): the AI tools' per-move limit, the speed cap and the floor, each `on` by default, `off` under `limits:` in the venue file or on Settings → Safety limits (marked "OFF" there; the brain prints `LIMITS OFF …`). Refused on public venues and the visit-day venue (`limits_locked: true`). Teleop's floor now comes from the venue's `min_z_cm` too (still 1 cm).
 - **The AI's arm moves no longer ask** (quick job 1): the repo's Claude Code settings allow every brain tool, the four move tools and the read tools (`pose_view`, `camera_snapshot`, the project tools) included. STOP, the soft limits and one controller at a time stay; a coding session still asks before running something that moves a real arm.
 
 ## 2026-11-13
