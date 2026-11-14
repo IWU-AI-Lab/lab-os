@@ -93,10 +93,11 @@ export class Ask {
         this.watch = null;
         if (spoke) { this.V.finish(); this.state = "thinking"; }
         else { this.V.cancel(); this._show("I didn't hear a question.", "", now); this._end(); }
-      }, { quietMs: 1500, idleMs: 6000, maxMs: 20_000 });
+      }, { quietMs: this.VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: this.V.noiseFloor });
       return;
     }
-    if (["wake_on", "wake_off", "wake_elsewhere"].includes(ev.type)) return;
+    if (ev.type === "ended") { this.watch?.cancel(); this.watch = null; this.state = "thinking"; return; } // the brain heard the pause
+    if (["wake_on", "wake_off", "wake_elsewhere", "mic_stalled"].includes(ev.type)) return;
     if ((ev.type === "error" || ev.type === "voice_error") && this.greeting && !this.voiced) { this.greeting = false; this._note(ev.message, now); this.state = null; return; }
     if (ev.type === "heard" && !ev.final) this.watch?.words();
     if ((ev.type === "error" || ev.type === "mic_error") && this.watch) { this.watch.cancel(); this.watch = null; }

@@ -228,6 +228,14 @@ Open **http://localhost:8080/design** in Chrome and press start.
 - [ ] While its own answer plays, saying "hey Jarvis" doesn't wake it (expected: it doesn't listen for the phrase while speaking).
 - [ ] When done, set Talking to it back to **push-to-talk** (or keep the wake word for the demo).
 
+**e2. Snappier, and the sensitivity (built 2026-11-14):** keep the brain's terminal visible.
+- [ ] Right after "hey Jarvis" a short quiet two-note sound plays. Does it come at once (before you start the question)? ________
+- [ ] Ask three questions with the wake word. After each, the terminal prints a `voice timing (…)` line; or open **http://localhost:8080/api/voice/timings**. Copy the three lines here: the "question over → words final", "first text" and "waited … after the question" numbers: ________. The line should say `warm` (the hearing was connected ahead of time); if not, the terminal says why (`couldn't connect a hearing ahead of time`).
+- [ ] "Hey Jarvis what's the next step" **in one breath**: the question shown keeps "what's" (nothing cut off at the start, no "vis" left).
+- [ ] After the question, it stops listening by itself within about a second (the line says `ended by the pause` when the voice service ended it). Turn the fans/AC on and try again: it still stops (it used to keep listening up to 20 s in noise).
+- [ ] ⚙ → This device → **Wake word sensitivity**: from where it missed at 5 (across the room, or spoken softly), try 7, then 8. Note the lowest level that hears it reliably: ________. Then a minute of normal talk near it at that level: any false wake? ________ (lower one step if so). The terminal's `heard something like "hey Jarvis" (0.38; it takes 0.50 …)` lines show near misses while you test.
+- [ ] To keep it: the slider saves itself for this device (`desk`); nothing else to do.
+
 **f.** Note the results in `docs/plan/current-focus.md` step 7 (status) and surprises in `docs/dev/GOTCHAS.md`.
 
 ## 10. The hub in VR (step 10; 20–30 min, the Quest on USB)
@@ -245,6 +253,10 @@ In the Quest's browser: `http://localhost:8080/xr`. If **Allow the microphone** 
 - [ ] **Teleop** (left of the core): the arm room opens, the TELEOP tab top left. Grip and move: does the fake arm follow (watch `/monitor` on the desktop)? A/X stops; left grip moves the 3D arm; Y puts it back. **B** (or the right controller on ← and the trigger) goes back to the hub; the desktop's `/teleop` can take control again.
 - [ ] **Monitor / AI Control:** the arm hologram with joint angles; move the arm from the desktop's `/teleop` and watch the hologram follow; **STOP** stops it. AI Control lists tool calls if Claude Code drives the arm meanwhile.
 - [ ] **Asking:** point at "Ask anything", hold the trigger, ask "what's next?", let go: the answer types out under the core and is spoken. Then say "hey Jarvis, what's next?" without pressing anything (the dot in the strip should be on). Then ask on the desktop (its mic): does the question and answer show in VR?
+- [ ] **The Quest's missed wake word (GOTCHAS 2026-11-14):** open the Quest's browser as a named device once, so the brain logs its name: `http://localhost:8080/design?device=quest` (then `/xr` in the same browser keeps the name). Watch the desktop's terminal while you: say "hey Jarvis" 10 times in VR (count the misses: ________); take the headset off for a minute, put it back on, and say it again; leave VR to the browser and come back. For each miss, which line did the terminal show?
+  - `quest sent no audio for the wake word for … s` or `quest's microphone: …`: the page's sound had stopped. Did it come back by itself (the next "hey Jarvis" worked without pressing anything)? ________
+  - `quest heard something like "hey Jarvis" (0.3…)`: too strict for the Quest's microphone: raise its slider (⚙ → This device on `/design?device=quest`) to 7 and try again.
+  - nothing at all: note it in GOTCHAS (the audio arrived but didn't score: a different cause).
 - [ ] Note what felt wrong in `docs/plan/current-focus.md` step 10 and surprises in `docs/dev/GOTCHAS.md`. With time: the real `so101-white` through Teleop in VR (you at the arm, `--speed 0.2`, part 7's setup).
 
 ## 11. Devices (step 8; 20–30 min, the desktop and the Newline, or a laptop instead of the Newline)

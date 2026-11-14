@@ -32,10 +32,11 @@ HEARD = "what is the next step"
 # ---------- a fake voice service ----------
 
 
-def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=()):
+def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=(), pause_at=None):
     """Gemini's Live transcription (WebSocket) and TTS (generateContent), OpenAI's audio endpoints.
     The Live fake sends the words so far after each audio frame, and the final words after the
-    audio ends, like the real one (checked 2026-11-12)."""
+    audio ends, like the real one (checked 2026-11-12). `pause_at`: at that audio frame it hears a
+    pause instead (the final words and ACTIVITY_END while the audio still streams)."""
     seen = seen if seen is not None else []
     words = heard.split()
 
@@ -55,6 +56,12 @@ def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=
             ri = data.get("realtimeInput") or {}
             if "audio" in ri:
                 frames += 1
+                if pause_at and frames == pause_at:
+                    await ws.send_json({"serverContent": {"inputTranscription": {"text": heard}}})
+                    await ws.send_json({"voiceActivity": {"type": "ACTIVITY_END"}})
+                    continue
+                if pause_at and frames > pause_at:
+                    continue  # quiet after the question
                 if frames == 1 and words:
                     await ws.send_json({"voiceActivity": {"type": "ACTIVITY_START"}})
                 part = " ".join(words[:frames])
@@ -63,7 +70,7 @@ def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=
                         {"serverContent": {"interimInputTranscription": {"text": part}}}
                     )
             if ri.get("audioStreamEnd"):
-                if words:
+                if words and not (pause_at and frames >= pause_at):
                     await ws.send_json({"serverContent": {"inputTranscription": {"text": heard}}})
                     await ws.send_json({"voiceActivity": {"type": "ACTIVITY_END"}})
                 await ws.send_json({"serverContent": {"generationComplete": True}})

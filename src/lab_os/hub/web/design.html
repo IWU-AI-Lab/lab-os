@@ -122,6 +122,7 @@ body[data-layout="panels"] #hub {
 .fact.off, .fact.off .ico { color: var(--offline); }
 /* listening for the wake word: a small dot, separate from the core's own `listening` */
 #f-wake[hidden] { display: none; }
+#f-wake.stalled .wdot { background: var(--accent); animation: none; opacity: 0.9; }  /* the microphone gives no audio */
 #f-wake .wdot { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--c); opacity: 0.5; animation: wdot 4s ease-in-out infinite; }
 @keyframes wdot { 50% { opacity: 0.15; } }
 .clock { font-family: var(--f-digits); font-size: 1.05rem; color: var(--c); letter-spacing: 0.04em; }
@@ -2072,7 +2073,9 @@ function syncWake() {
 function renderWakeDot() {
   const on = !!V?.wakeOn, f = $("#f-wake");
   f.hidden = !on;
-  if (on) f.title = `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
+  f.classList.toggle("stalled", !!V?.micStalled);
+  if (on) f.title = V.micStalled ? "Not hearing the microphone (the browser paused it): press the mic once to wake it"
+    : `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
 }
 function wakeTurnStart() {
   VS.greeting = false;
@@ -2087,7 +2090,7 @@ function wakeTurnStart() {
     VW = null;
     if (spoke) { V.finish(); setState("thinking"); }
     else { V.cancel(); r.querySelector(".q").textContent = "I didn't hear a question."; endVoice(); }
-  }, { quietMs: 1500, idleMs: 6000, maxMs: 20_000 });
+  }, { quietMs: VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: V.noiseFloor });
 }
 function renderMic() {
   const ok = !!V?.can().ok, dict = WAY() === "dictation", phrase = S.status?.voice?.wake?.phrase;
@@ -2172,7 +2175,9 @@ function onVoiceEvent(ev) {
     return;
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
-  if (ev.type === "wake") { wakeTurnStart(); return; }
+  if (ev.type === "wake") { wakeTurnStart(); return; }  // (its listening sound is the "I heard you")
+  if (ev.type === "ended") { VW?.cancel(); VW = null; setState("thinking"); return; }  // the brain heard the pause
+  if (ev.type === "mic_stalled") { renderWakeDot(); return; }
   if (ev.type === "wake_on" || ev.type === "wake_off") { renderWakeDot(); if (ev.type === "wake_off" && WAY() === "wake_word") voiceNote(ev.why); return; }
   if (ev.type === "wake_elsewhere") return;  // another screen heard it better and answers
   if (ev.type === "heard" && !ev.final) VW?.words();

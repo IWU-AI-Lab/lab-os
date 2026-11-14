@@ -18,6 +18,13 @@ A new voice or a changed line has a new file name (a hash of both), so it's made
 The wake word: a page that chose it streams its microphone while the hub is awake; the brain listens
 for the phrase itself (lab_os.ai.wake, nothing leaves the computer) and only then starts hearing,
 like a push-to-talk press. If several screens hear it, the one that heard it best answers.
+
+Snappier (2026-11-14): one screen listening answers at once (no wait for others); a hearing is kept
+connected ahead of time while a screen listens for the phrase (Gemini's Live API takes a moment to
+connect); the audio from just before the phrase was detected goes to the hearing (no lost first
+words); the question ends when the service hears a pause after it, or after the page's shorter
+silence; the chat's and the voice's connections are opened while the person talks. Each turn's
+timing is logged ("voice timing …") and kept for `GET /api/voice/timings`.
 """
 
 import asyncio
@@ -40,9 +47,15 @@ from aiohttp import web
 
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
-from lab_os.ai.speech import VoiceError, hearing_for, speak_any, wav_seconds
+from lab_os.ai.speech import Hearing, VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
-from lab_os.ai.wake import PHRASES, THRESHOLD, WakeDetector, WakeModels
+from lab_os.ai.wake import (
+    DEFAULT_SENSITIVITY,
+    PHRASES,
+    WakeDetector,
+    WakeModels,
+    sensitivity_level,
+)
 from lab_os.hub.greeting import HELLOS, time_of_day
 from lab_os.personas import Persona
 
@@ -53,9 +66,18 @@ PLAYBACK_GRACE_S = 120.0  # a page that never says it finished playing doesn't h
 GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
 WAKE_UTTERANCE_S = 20.0  # after the wake word: the longest question
-WAKE_WINDOW_S = 0.25  # several screens heard it: wait this long for the others, best one answers
+WAKE_WINDOW_S = 0.15  # several screens listen: wait this long for the others, best one answers
 WAKE_QUIET_S = 2.0  # after a wake, ignore the phrase for this long (the same words, other screens)
-WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from just before the wake goes to the hearing
+WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from before the phrase was detected goes to the hearing
+WAKE_RING_BYTES = 32_000  # 1 s of the latest audio kept while listening for the phrase
+WAKE_END_HOLD_S = 0.35  # the service heard a pause after the question: end if it stays quiet
+STANDBY_MAX_S = 240.0  # a hearing kept connected ahead of time is renewed after this long
+STANDBY_RETRY_S = 30.0  # it couldn't connect: try again after this long
+WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
+NEAR_MISS = 0.25  # a score this high but under the threshold is logged (sensitivity, the Quest)
+NEAR_MISS_EVERY_S = 3.0
+AUDIO_GAP_S = 2.0  # a screen listening for the phrase sent no audio this long: logged
+TIMINGS_KEPT = 20
 HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
     "dictation": "You can talk to me: tap the mic.",
@@ -81,12 +103,79 @@ def greeting_file(folder: Path, setup: VoiceSetup, text: str) -> Path:
 
 
 def strip_wake(text: str, phrase: str) -> str:
-    """The question without the wake phrase heard at its start ("Hey Jarvis, what's next?")."""
+    """The question without the wake phrase heard at its start ("Hey Jarvis, what's next?"). The
+    audio from just before the detection may hold only the phrase's end ("…vis, what's next?")."""
     words = [re.escape(w) for w in phrase.split()]
     if not words:
         return text
     optional = "".join(rf"(?:{w}\W+)?" for w in words[:-1])
-    return re.sub(rf"^\W*{optional}{words[-1]}\b\W*", "", text, flags=re.I).strip()
+    last = phrase.split()[-1]
+    tails = "|".join(re.escape(last[i:]) for i in range(len(last) - 3, 0, -1))  # "vis", "rvis"…
+    end = rf"(?:{words[-1]}|{tails})" if tails else words[-1]
+    return re.sub(rf"^\W*{optional}{end}\b\W*", "", text, flags=re.I).strip()
+
+
+# the steps of a voice turn, in order, and how the log names them
+STEPS = (
+    ("detected", "heard the phrase"),
+    ("picked", "this screen picked"),
+    ("listening", "listening"),
+    ("connected", "voice service ready"),
+    ("ended", "question over"),
+    ("words", "words final"),
+    ("first_text", "first text"),
+    ("first_audio", "first audio sent"),
+    ("playing", "first word playing"),
+)
+
+
+def _s(seconds: float) -> str:
+    return f"{seconds * 1000:.0f} ms" if seconds < 1 else f"{seconds:.2f} s"
+
+
+@dataclass
+class TurnTiming:
+    """When each step of one voice turn happened (time.monotonic()): where the time goes from the
+    end of "hey Jarvis" (its detection: on the recordings, ~0.1 s before the last sound) to the
+    first spoken word."""
+
+    how: str  # "wake word", "push-to-talk", "dictation"
+    device: str = ""
+    warm: bool = False  # the hearing was connected ahead of time
+    ended_by: str = ""  # "pause" (the service), "page" (the page's silence or a release)
+    marks: dict = field(default_factory=dict)
+
+    def mark(self, step: str, at: float | None = None) -> None:
+        self.marks.setdefault(step, time.monotonic() if at is None else at)
+
+    def summary(self) -> dict:
+        order = [k for k, _ in STEPS if k in self.marks]
+        t0 = self.marks[order[0]] if order else 0.0
+        out = {"how": self.how, "device": self.device, "warm": self.warm}
+        out |= {"ended_by": self.ended_by, "at": round(time.time(), 1)}
+        out["ms"] = {k: round((self.marks[k] - t0) * 1000) for k in order}
+        if "ended" in self.marks and "playing" in self.marks:
+            out["waited_ms"] = round((self.marks["playing"] - self.marks["ended"]) * 1000)
+        return out
+
+    def line(self) -> str:
+        parts, prev = [], None
+        for key, label in STEPS:
+            if key not in self.marks:
+                continue
+            if prev is not None:
+                parts.append(f"{label} +{_s(self.marks[key] - prev)}")
+            else:
+                parts.append(label)
+            prev = self.marks[key]
+        extra = [self.device or "no name", self.how] + (["warm"] if self.warm else [])
+        if self.ended_by:
+            extra.append(f"ended by the {self.ended_by}")
+        line = f"voice timing ({', '.join(extra)}): " + " · ".join(parts)
+        if "ended" in self.marks and "playing" in self.marks:
+            waited = self.marks["playing"] - self.marks["ended"]
+            line += f" · waited {_s(waited)} after the question"
+        return line
 
 
 def speakable(text: str) -> str:
@@ -128,9 +217,14 @@ class VoiceDesk:
     resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
     venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
     wake_models: WakeModels = field(default_factory=WakeModels)
+    timings: deque = field(default_factory=lambda: deque(maxlen=TIMINGS_KEPT))
     _session: aiohttp.ClientSession | None = None
     _wake_candidates: dict | None = None  # screens that heard the phrase in this window → score
     _wake_quiet_until: float = 0.0
+    _standby: Hearing | None = None  # a hearing connected ahead of time (the wake word)
+    _standby_task: asyncio.Task | None = None
+    _standby_retry_at: float = 0.0
+    _closing: set = field(default_factory=set)  # warm hearings being let go
 
     def setup(self) -> VoiceSetup:
         return pick_voice(self.persona().voice, self.voices())
@@ -185,7 +279,12 @@ class VoiceDesk:
             return
         if self._wake_candidates is None:
             self._wake_candidates = {}
-            asyncio.get_running_loop().call_later(WAKE_WINDOW_S, self._wake_pick)
+            if sum(lk.wake_on for lk in self.links) > 1:  # others may have heard it too
+                asyncio.get_running_loop().call_later(WAKE_WINDOW_S, self._wake_pick)
+            else:  # the only screen listening: no one to wait for
+                self._wake_candidates[link] = score
+                self._wake_pick()
+                return
         self._wake_candidates[link] = max(score, self._wake_candidates.get(link, 0.0))
 
     def _wake_pick(self) -> None:
@@ -200,15 +299,119 @@ class VoiceDesk:
                 lk.wake_elsewhere()
         asyncio.get_running_loop().create_task(winner.woken(heard[winner]))
 
+    # ---------- warm connections: no waiting for the voice service after the phrase ----------
+
+    def warm(self) -> None:
+        """While a screen listens for the wake word, keep one hearing connected ahead of time
+        (Gemini's Live API: OpenAI's hears after the question, so there's nothing to connect)."""
+        if not any(lk.wake_on for lk in self.links):
+            self.cool()
+            return
+        if self._standby_task and not self._standby_task.done():
+            return
+        try:
+            if self.why_not():
+                return
+            setup = self.setup()
+        except NoVoice:
+            return
+        sb = self._standby
+        if sb is not None and self._usable(sb, setup):
+            return
+        if setup.service != "gemini" or time.monotonic() < self._standby_retry_at:
+            return
+        self._standby_task = asyncio.get_running_loop().create_task(self._make_standby(setup))
+
+    def _usable(self, h: Hearing, setup: VoiceSetup) -> bool:
+        fresh = h.started_at is not None and time.monotonic() - h.started_at < STANDBY_MAX_S
+        return h.setup == setup and h.alive() and fresh
+
+    async def _make_standby(self, setup: VoiceSetup) -> None:
+        old, self._standby = self._standby, None
+        if old is not None:
+            await old.close()
+        h = hearing_for(self.session(), setup, lambda text: None)
+        try:
+            await h.start()
+        except VoiceError as e:
+            log.info("voice: couldn't connect a hearing ahead of time (%s)", e)
+            self._standby_retry_at = time.monotonic() + STANDBY_RETRY_S
+            return
+        if any(lk.wake_on for lk in self.links) and not self._session_closing:
+            self._standby = h
+        else:
+            await h.close()
+
+    def cool(self) -> None:
+        """No screen listens for the phrase: let the warm hearing go."""
+        sb, self._standby = self._standby, None
+        if sb is not None:
+            self._let_go(sb)
+
+    def _let_go(self, h: Hearing) -> None:
+        task = asyncio.get_running_loop().create_task(h.close())
+        self._closing.add(task)
+        task.add_done_callback(self._closing.discard)
+
+    def take_hearing(self, setup: VoiceSetup, on_words) -> tuple[Hearing, bool]:
+        """A hearing for this turn: the warm one if it's still good (True), else a new one."""
+        sb, self._standby = self._standby, None
+        if sb is not None and self._usable(sb, setup):
+            sb.on_words = on_words
+            asyncio.get_running_loop().call_soon(self.warm)  # the next one
+            return sb, True
+        if sb is not None:
+            self._let_go(sb)
+        return hearing_for(self.session(), setup, on_words), False
+
+    def prewarm_speech(self, setup: VoiceSetup) -> None:
+        """The answer will be spoken soon: open the connection to the voice service now (listing
+        its models: free, nothing generated), so the first sentence doesn't wait for it."""
+
+        async def touch() -> None:
+            hdr = {"x-goog-api-key": setup.key or ""} if setup.service == "gemini" else {}
+            if setup.service != "gemini" and setup.key:
+                hdr = {"Authorization": f"Bearer {setup.key}"}
+            try:
+                async with self.session().get(
+                    f"{setup.base_url}/models", headers=hdr, timeout=aiohttp.ClientTimeout(total=5)
+                ) as resp:
+                    await resp.read()
+            except (aiohttp.ClientError, TimeoutError, OSError):
+                pass  # only a head start
+
+        asyncio.get_running_loop().create_task(touch())
+
+    def chat_warm(self) -> None:
+        """A question is coming: open the chat's connection while the person talks."""
+        asyncio.get_running_loop().create_task(self.chat.warm())
+
+    def keep_timing(self, timing: "TurnTiming") -> None:
+        self.timings.append(timing.summary())
+        log.info("%s", timing.line())
+
     def active(self) -> bool:
         return any(link.active() for link in self.links)
 
     def session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            # connections kept a minute (default 15 s): the voice's, from the warm-up to the answer
+            conn = aiohttp.TCPConnector(keepalive_timeout=60)
+            self._session = aiohttp.ClientSession(connector=conn)
         return self._session
 
+    _session_closing: bool = False
+
     async def close(self) -> None:
+        self._session_closing = True
+        if self._standby_task and not self._standby_task.done():
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await asyncio.wait_for(self._standby_task, 3)
+        if self._standby is not None:
+            await self._standby.close()
+            self._standby = None
+        if self._closing:
+            await asyncio.gather(*self._closing, return_exceptions=True)
         if self._session:
             await self._session.close()
 
@@ -274,6 +477,8 @@ class Speaker:
             return
         self.said_chars += len(text)
         self.seconds += wav_seconds(wav)
+        if self.link.timing:
+            self.link.timing.mark("first_audio")
         self.link.send_audio(self.sent, text, wav)
         self.sent += 1
 
@@ -281,8 +486,8 @@ class Speaker:
 class VoiceLink:
     """One page's voice connection."""
 
-    def __init__(self, desk: VoiceDesk, ws: web.WebSocketResponse):
-        self.desk, self.ws = desk, ws
+    def __init__(self, desk: VoiceDesk, ws: web.WebSocketResponse, device: str = ""):
+        self.desk, self.ws, self.device = desk, ws, device
         self.hearing = None
         self._starting: asyncio.Task | None = None  # connecting to the service (audio waits)
         self.mode = "ask"
@@ -291,7 +496,14 @@ class VoiceLink:
         self.wake_on = False  # this page streams its microphone for the wake word
         self.detector: WakeDetector | None = None
         self.from_wake = False  # this hearing began with the wake word
-        self._recent: deque[bytes] = deque()  # the last audio before a wake (its tail is kept)
+        self.sensitivity = DEFAULT_SENSITIVITY  # this device's (Settings → This device)
+        self._ring: deque[tuple[int, bytes]] = deque()  # the latest audio: (its offset, PCM)
+        self._ring_total = 0  # bytes of wake audio received so far
+        self._detected_at: tuple[float, int] | None = None  # when, and the audio offset
+        self._last_audio = 0.0
+        self._next_warm = 0.0
+        self._near_logged = 0.0
+        self.timing: TurnTiming | None = None  # this turn's steps
         self.last_greet = 0.0
         self.started_at = 0.0
         self._out: asyncio.Queue = asyncio.Queue()
@@ -350,30 +562,66 @@ class VoiceLink:
         elif kind == "greet":
             self.greet(str(msg.get("way") or "push_to_talk"))
         elif kind == "wake":
-            await self.wake(bool(msg.get("on")))
+            await self.wake(bool(msg.get("on")), msg.get("sensitivity"))
+        elif kind == "playing":
+            if self.timing and msg.get("seq") == 0:
+                self.timing.mark("playing")
+                self._timing_done()
+        elif kind == "wake_mic":  # the page's microphone stopped or came back (the Quest)
+            why = msg.get("why") or "ok"
+            log.info("voice: %s's microphone: %s", self.device or "a screen", why)
 
     def on_audio(self, pcm: bytes) -> None:
+        now = time.monotonic()
         if self.hearing is not None:
             self.hearing.feed(pcm)
             limit = WAKE_UTTERANCE_S if self.from_wake else MAX_UTTERANCE_S
-            if time.monotonic() - self.started_at > limit:
+            if now - self.started_at > limit:
                 self.end()
             return
         if not self.wake_on or self.detector is None or self.active():
             return  # not listening for the phrase (or a turn runs, or the answer plays)
-        self._recent.append(pcm)
-        while sum(map(len, self._recent)) > WAKE_PREROLL_BYTES:
-            self._recent.popleft()
-        if self.detector.feed(pcm) >= THRESHOLD:
-            self.desk.wake_heard(self, self.detector.last)
+        if self._last_audio and now - self._last_audio > AUDIO_GAP_S:
+            log.info(
+                "voice: %s sent no audio for the wake word for %.1f s (its microphone paused?)",
+                self.device or "a screen",
+                now - self._last_audio,
+            )
+        self._last_audio = now
+        if now >= self._next_warm:
+            self._next_warm = now + WARM_EVERY_S
+            self.desk.warm()
+        self._ring.append((self._ring_total, pcm))
+        self._ring_total += len(pcm)
+        while self._ring and self._ring[0][0] + WAKE_RING_BYTES < self._ring_total:
+            self._ring.popleft()
+        score = self.detector.feed(pcm)
+        if self.detector.fired:
+            if self._detected_at is None or now - self._detected_at[0] > 1.0:
+                self._detected_at = (now, self._ring_total)
+            self.desk.wake_heard(self, score)
+        elif score >= NEAR_MISS and now - self._near_logged > NEAR_MISS_EVERY_S:
+            self._near_logged = now
+            log.info(
+                'voice: %s heard something like "%s" (%.2f; it takes %.2f at sensitivity %d)',
+                self.device or "a screen",
+                self.desk.wake_phrase(),
+                score,
+                self.detector.threshold,
+                self.detector.sensitivity,
+            )
 
     # ---------- the wake word ----------
 
-    async def wake(self, on: bool) -> None:
-        """The page starts or stops streaming its microphone for the wake word."""
+    async def wake(self, on: bool, sensitivity=None) -> None:
+        """The page starts or stops streaming its microphone for the wake word (`sensitivity`:
+        this device's setting, 1–9)."""
         if not on:
             self.wake_on, self.detector = False, None
+            self._last_audio = 0.0
+            self.desk.warm()  # lets the warm hearing go when no screen listens
             return
+        self.sensitivity = sensitivity_level(sensitivity)
         why = self.desk.wake_why_not()
         if why:
             self.wake_on = False
@@ -383,8 +631,16 @@ class VoiceLink:
         if self.detector is None or self.detector.word != word:
             # loading the models the first time takes a moment: not on the brain's main loop
             self.detector = await asyncio.to_thread(WakeDetector, self.desk.wake_models, word)
+        self.detector.set_sensitivity(self.sensitivity)
+        if not self.wake_on:
+            log.info(
+                "voice: %s listens for the wake word (sensitivity %d)",
+                self.device or "a screen",
+                self.sensitivity,
+            )
         self.wake_on = True
         self.send({"type": "wake_on", "phrase": self.desk.wake_phrase()})
+        self.desk.warm()
 
     def wake_elsewhere(self) -> None:
         if self.detector:
@@ -393,16 +649,42 @@ class VoiceLink:
 
     async def woken(self, score: float) -> None:
         """This screen heard the phrase best: hear the question, like a push-to-talk press."""
-        log.info("voice: wake word heard (%.2f)", score)
+        self.send({"type": "wake", "score": round(score, 2)})  # first: the page's sound
+        log.info("voice: wake word heard on %s (%.2f)", self.device or "a screen", score)
         if self.detector:
             self.detector.reset()
-        preroll, self._recent = list(self._recent), deque()
-        self.send({"type": "wake", "score": round(score, 2)})
+        detected = self._detected_at or (time.monotonic(), self._ring_total)
+        self._detected_at = None
+        start = detected[1] - WAKE_PREROLL_BYTES  # from just before the detection, to now
+        preroll = [pcm for off, pcm in self._ring if off + len(pcm) > start]
+        self._ring.clear()
+        self.timing = TurnTiming("wake word", self.device)
+        self.timing.mark("detected", detected[0])
+        self.timing.mark("picked")
         await self.listen("ask")
-        if self.hearing is not None:
+        if self.hearing is None:
+            self.timing = None  # refused (busy, no voice): already said why
+        else:
             self.from_wake = True
+            self.hearing.on_pause = lambda h=self.hearing: self._question_paused(h)
             for pcm in preroll:  # the words right after the phrase may already be here
                 self.hearing.feed(pcm)
+            self.desk.chat_warm()
+
+    def _question_paused(self, hearing: Hearing) -> None:
+        """The service heard a pause after words: the question may be over (not if only the
+        phrase was said so far)."""
+        if self.hearing is not hearing or not strip_wake(hearing.text, self.desk.wake_phrase()):
+            return
+        loop = asyncio.get_running_loop()
+        loop.call_later(WAKE_END_HOLD_S, self._end_if_quiet, hearing)
+
+    def _end_if_quiet(self, hearing: Hearing) -> None:
+        if self.hearing is hearing and not hearing.in_speech:
+            if self.timing:
+                self.timing.ended_by = "pause"
+            self.send({"type": "ended"})  # the page stops its own silence watch
+            self.end()
 
     async def listen(self, mode: str) -> None:
         if self.hearing is not None or (self.task and not self.task.done()):
@@ -425,16 +707,28 @@ class VoiceLink:
                 last["text"] = text
                 self.send({"type": "heard", "text": text, "final": False})
 
-        hearing = self.hearing = hearing_for(self.desk.session(), setup, words)
+        hearing, warm = self.desk.take_hearing(setup, words)
+        self.hearing = hearing
         self.started_at = time.monotonic()
+        if self.timing is None or "listening" in self.timing.marks:  # else: the wake word's
+            how = "dictation" if self.mode == "dictate" else "push-to-talk"
+            self.timing = TurnTiming(how, self.device)
+        self.timing.warm = warm
+        self.timing.mark("listening")
         self.desk.assistant.set("listening")
         self.send({"type": "listening", "mode": self.mode})
+        if warm:
+            self.timing.mark("connected")
+            self._starting = None
+            return
         # connect in the background: the audio arriving meanwhile is kept and sent after
         self._starting = asyncio.create_task(self._start(hearing))
 
     async def _start(self, hearing) -> bool:
         try:
             await hearing.start()
+            if self.timing:
+                self.timing.mark("connected")
             return True
         except VoiceError as e:
             if self.hearing is hearing:
@@ -447,6 +741,11 @@ class VoiceLink:
         if self.hearing is None:
             return
         hearing, self.hearing = self.hearing, None
+        if self.timing:
+            self.timing.ended_by = self.timing.ended_by or "page"
+            self.timing.mark("ended")
+        if self.mode == "ask":
+            self.desk.prewarm_speech(hearing.setup)
         self.task = asyncio.create_task(self._after_hearing(hearing, self._starting))
 
     async def _after_hearing(self, hearing, starting: asyncio.Task | None) -> None:
@@ -464,11 +763,19 @@ class VoiceLink:
         if self.from_wake:
             self.from_wake = False
             text = strip_wake(text, self.desk.wake_phrase())
+        if self.timing:
+            self.timing.mark("words")
         self.send({"type": "heard", "text": text, "final": True})
         if self.mode == "dictate" or not text:
+            self._timing_done()
             self._settle()
             return
         await self._turn(text, setup)
+
+    def _timing_done(self) -> None:
+        timing, self.timing = self.timing, None
+        if timing is not None:
+            self.desk.keep_timing(timing)
 
     async def _turn(self, text: str, setup: VoiceSetup) -> None:
         speaker = Speaker(self, setup)
@@ -476,6 +783,8 @@ class VoiceLink:
             async for ev in self.desk.chat.ask(text):
                 self.send(ev)
                 if ev["type"] == "text":
+                    if self.timing:
+                        self.timing.mark("first_text")
                     speaker.add(ev["text"])
         finally:
             speaker.close()
@@ -485,10 +794,12 @@ class VoiceLink:
             if speaker.sent:
                 self.desk.assistant.set("speaking", 0.5)
             else:
+                self._timing_done()  # nothing to play: done here
                 self._settle()
 
     async def cancel(self) -> None:
         self.from_wake = False
+        self.timing = None
         if self.hearing is not None:
             hearing, self.hearing = self.hearing, None
             if self._starting and not self._starting.done():
@@ -500,6 +811,7 @@ class VoiceLink:
 
     def played(self, msg: dict) -> None:
         if msg.get("done"):
+            self._timing_done()  # (a page that never said "playing")
             self.playing_until = 0.0
             self._settle()
         elif not self.desk.chat.busy:
@@ -570,7 +882,8 @@ class VoiceLink:
 async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketResponse:
     ws = web.WebSocketResponse(heartbeat=20, max_msg_size=4 * 1024 * 1024)
     await ws.prepare(request)
-    link = VoiceLink(desk, ws)
+    device = re.sub(r"[^a-z0-9-]", "", request.query.get("device", "").lower())[:32]
+    link = VoiceLink(desk, ws, device)
     desk.links.add(link)
     try:
         async for msg in ws:
@@ -588,4 +901,5 @@ async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketRespon
         desk.links.discard(link)
         await link.close()
         link._settle()
+        desk.warm()  # the last listening screen left: the warm hearing goes
     return ws

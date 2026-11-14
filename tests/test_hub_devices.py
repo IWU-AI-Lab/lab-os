@@ -280,3 +280,12 @@ def test_device_settings_reject_junk_in_the_file(tmp_path):
     assert DeviceSettings(lambda: f).get("desk") == {}
     json.dumps(DeviceSettings(lambda: f).update("desk", {"quality": "minimal"}))
     assert "minimal" in f.read_text()
+
+
+def test_the_wake_word_sensitivity_is_a_device_setting(tmp_path):
+    s = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    assert s.update("quest", {"wake_sensitivity": 8}) == {"wake_sensitivity": 8}
+    for junk in (True, 10, 0, "8"):
+        with pytest.raises(DeviceError, match="wake_sensitivity can be 1, 2"):
+            s.update("quest", {"wake_sensitivity": junk})
+    assert s.update("quest", {"wake_sensitivity": ""}) == {}  # back to the default (5)
