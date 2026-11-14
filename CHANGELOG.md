@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-14
+- **Teleop page: the 3D view and the joint readout in their own boxes** (quick job 14): a jog command names only the joints that move, so rows used to appear and disappear and the 3D model kept resizing. Now the readout is a fixed column beside the view with one fixed-height row per joint (under the view, two a row, on narrow screens).
 - **The AI budget on the Settings page applies at once** (quick job 5): the brain re-reads `ai_budget_usd_month` each time it checks, so raising it un-pauses the chat without a restart (it used to be read only at start).
 - **The spoken greeting from a recording** (quick job 4): only the time of day and the hint are spoken (the news stays on the screen); each voice says each one once, saved in the place's `recordings/greetings/`, then played from the file with no voice request (also offline). A new voice or a changed line makes a new file.
 - **The floor at −0.5 cm** (quick job 3): `min_z_cm: -0.5` in both venues, for the AI tools and teleop alike (the SO-101 stands on the overhead camera's base). Check the height with a ruler first (lab checklist part 3).
