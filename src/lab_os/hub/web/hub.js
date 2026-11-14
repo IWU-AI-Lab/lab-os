@@ -9,8 +9,8 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
-import { connectDevice, fillOpenOn, fillSent, isPrefsKey, shouldRefill } from "/web/device.js";
-import { createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
+import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
+import { WAKE_QUIET_MS, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -571,7 +571,10 @@ function syncWake() {
 }
 function renderWakeDot() {
   $("#f-wake").hidden = !voice.wakeOn;
-  $("#f-wake").title = `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
+  $("#f-wake").classList.toggle("stalled", voice.micStalled);
+  $("#f-wake").title = voice.micStalled
+    ? "Not hearing the microphone (the browser paused it): press the mic once to wake it"
+    : `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
 }
 function wakeTurnStart() {
   VS.greeting = false;
@@ -580,6 +583,7 @@ function wakeTurnStart() {
     return;
   }
   if (VS.voiced && !VS.turn) endVoice();
+  if (prefs().sound !== false) voice.chime(); // "I heard you", at once
   S.asking = VS.voiced = true;
   showError(null);
   $("#reply .q").textContent = "Listening…";
@@ -598,7 +602,7 @@ function wakeTurnStart() {
         setAssistant("idle", 0);
       }
     },
-    { quietMs: 1500, idleMs: 6000, maxMs: 20_000 },
+    { quietMs: WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: voice.noiseFloor },
   );
 }
 document.addEventListener("visibilitychange", syncWake);
@@ -727,6 +731,13 @@ function onVoiceEvent(ev) {
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
   if (ev.type === "wake") return wakeTurnStart();
+  if (ev.type === "ended") { // the brain heard the pause after the question
+    VW?.cancel();
+    VW = null;
+    setAssistant("thinking", 0);
+    return;
+  }
+  if (ev.type === "mic_stalled") return renderWakeDot();
   if (ev.type === "wake_on" || ev.type === "wake_off" || ev.type === "wake_elsewhere") {
     renderWakeDot();
     if (ev.type === "wake_off" && wayIn() === "wake_word") showError(ev.why);

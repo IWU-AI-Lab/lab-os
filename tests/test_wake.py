@@ -7,12 +7,19 @@ import json
 import wave
 from pathlib import Path
 
+import numpy as np
 import pytest
 from aiohttp import WSMsgType
-from test_voice import HEARD, key, until, voice_app  # noqa: F401 (key is a fixture)
+from test_voice import HEARD, SECOND, key, until, voice_app  # noqa: F401 (key is a fixture)
 
-from lab_os.ai.wake import THRESHOLD, WakeDetector, WakeModels
-from lab_os.hub.voice import strip_wake
+from lab_os.ai.wake import (
+    SENSITIVITY,
+    THRESHOLD,
+    WakeDetector,
+    WakeModels,
+    sensitivity_level,
+)
+from lab_os.hub.voice import TurnTiming, strip_wake
 from lab_os.venues import Venue
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -57,6 +64,71 @@ def test_strip_wake():
     assert strip_wake("Hey Jarvis, what's next?", "hey Jarvis") == "what's next?"
     assert strip_wake("jarvis open teleop", "hey Jarvis") == "open teleop"
     assert strip_wake("What does Jarvis do?", "hey Jarvis") == "What does Jarvis do?"
+    # the audio from just before the detection may hold only the phrase's end
+    assert strip_wake("vis, pull up teleop", "hey Jarvis") == "pull up teleop"
+    assert strip_wake("Rvis. What's next?", "hey Jarvis") == "What's next?"
+    assert strip_wake("visit the lab page", "hey Jarvis") == "visit the lab page"
+
+
+# ---------- sensitivity: openWakeWord's threshold and patience, per device ----------
+
+
+def noisy(name: str, gain: float, noise: float, seed: int) -> bytes:
+    """A recording made quieter in a noisy room (white noise: harsher than a real room)."""
+    x = np.frombuffer(pcm(name), np.int16).astype(float)
+    r = np.random.default_rng(seed)
+    return np.clip(x * gain + r.normal(0, noise, len(x)), -32768, 32767).astype(np.int16).tobytes()
+
+
+def fires(models, data: bytes, sensitivity: int) -> bool:
+    d = WakeDetector(models, sensitivity=sensitivity)
+    heard = False
+    for p in pieces(data):
+        d.feed(p)
+        heard = heard or d.fired
+    return heard
+
+
+def test_sensitivity_levels():
+    assert SENSITIVITY[5] == (THRESHOLD, 1)  # the default is openWakeWord's
+    thresholds = [SENSITIVITY[i][0] for i in range(1, 10)]
+    assert thresholds == sorted(thresholds, reverse=True)  # higher = hears more readily
+    assert sensitivity_level("7") == 7 and sensitivity_level(None) == 5
+    assert sensitivity_level(0) == 5 and sensitivity_level("loud") == 5
+
+
+def test_a_noisy_room_needs_a_higher_sensitivity(models):
+    quiet_voice_loud_room = noisy("hey_jarvis", 0.1, 2000, 0)  # peaks at ~0.40
+    assert not fires(models, quiet_voice_loud_room, 5)
+    assert fires(models, quiet_voice_loud_room, 8)
+    assert fires(models, pcm("hey_jarvis"), 1)  # a clear "hey Jarvis" even at the lowest
+
+
+def test_even_the_highest_doesnt_wake_on_other_speech_in_noise(models):
+    for noise in (300, 1000, 3000):
+        for seed in range(3):
+            assert not fires(models, noisy("not_jarvis", 1, noise, seed), 9)
+
+
+def test_patience_wants_chunks_in_a_row(models):
+    d = WakeDetector(models, sensitivity=9)
+    assert d.patience == 2
+    d.set_sensitivity(3)
+    assert (d.threshold, d.patience) == (0.6, 1)
+
+
+def test_the_turn_timing_line():
+    t = TurnTiming("wake word", "quest", warm=True, ended_by="pause")
+    for i, step in enumerate(["detected", "picked", "listening", "connected", "ended", "words"]):
+        t.mark(step, 100.0 + i * 0.1)
+    t.mark("first_text", 103.0)
+    t.mark("first_audio", 104.5)
+    t.mark("playing", 104.6)
+    line = t.line()
+    assert line.startswith("voice timing (quest, wake word, warm, ended by the pause): heard the")
+    assert "first text +2.50 s" in line and "first word playing +100 ms" in line
+    assert line.endswith("waited 4.20 s after the question")
+    assert t.summary()["ms"]["playing"] == 4600 and t.summary()["waited_ms"] == 4200
 
 
 def test_the_venue_decides():
@@ -118,6 +190,94 @@ async def test_the_wake_word_starts_a_turn(aiohttp_client, aiohttp_server, key, 
     await ws.close()
 
 
+async def test_one_screen_answers_at_once_warm_and_timed(
+    aiohttp_client,
+    aiohttp_server,
+    key,
+    tmp_path,  # noqa: F811
+):
+    """One screen listening: no waiting for others; the hearing was connected ahead of time; each
+    step's time is logged and kept for /api/voice/timings."""
+    seen: list = []
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, seen=seen)
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice?device=quest")
+    await ws.send_json({"type": "wake", "on": True, "sensitivity": 7})
+    await events_until(ws, {"wake_on"}, timeout=20)
+    await stream(ws, pcm("not_jarvis"))  # meanwhile the brain connects a hearing ahead of time
+    for _ in range(50):
+        if sum("setup" in s for s in seen) >= 1:
+            break
+        await asyncio.sleep(0.05)
+    assert sum("setup" in s for s in seen) == 1  # the warm one, before anyone said the phrase
+    await stream(ws, pcm("hey_jarvis"))
+    evs = await events_until(ws, {"listening"})
+    assert [e["type"] for e in evs][-2:] == ["wake", "listening"]
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    evs = await events_until(ws, {"audio_end"})
+    assert conv.messages[-2] == {"role": "user", "content": HEARD}
+    await ws.send_json({"type": "playing", "seq": 0})  # the page plays the first piece
+    from lab_os.hub.server import BRAIN
+
+    for _ in range(50):
+        if app[BRAIN].voice.timings:
+            break
+        await asyncio.sleep(0.02)
+    timings = (await (await client.get("/api/voice/timings")).json())["timings"]
+    t = timings[-1]
+    assert (t["how"], t["device"], t["warm"], t["ended_by"]) == ("wake word", "quest", True, "page")
+    steps = list(t["ms"])
+    assert steps[:2] == ["detected", "picked"] and steps[-1] == "playing"
+    assert t["ms"]["picked"] < 100  # no 0.25 s wait for other screens
+    assert t["ms"]["connected"] == t["ms"]["listening"]  # warm: nothing to wait for
+    await ws.close()
+
+
+async def test_the_service_hearing_a_pause_ends_the_question(
+    aiohttp_client,
+    aiohttp_server,
+    key,
+    tmp_path,  # noqa: F811
+):
+    """No "end" from the page: the voice service heard the pause after the question (a noisy room's
+    hum can keep the page's own silence watch from ever ending it)."""
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, pause_at=8)
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "wake", "on": True})
+    await events_until(ws, {"wake_on"}, timeout=20)
+    await stream(ws, pcm("hey_jarvis"))
+    await events_until(ws, {"listening"})
+    await stream(ws, SECOND)  # the question, then the room keeps humming
+    evs = await events_until(ws, {"audio_end"})
+    kinds = [e["type"] for e in evs]
+    assert "ended" in kinds and kinds.index("ended") < kinds.index("audio_end")
+    assert conv.messages[-2] == {"role": "user", "content": HEARD}
+    await ws.close()
+
+
+async def test_the_sensitivity_comes_from_the_page(
+    aiohttp_client,
+    aiohttp_server,
+    key,
+    tmp_path,  # noqa: F811
+):
+    app, _, _ = await voice_app(aiohttp_server, tmp_path)
+    from lab_os.hub.server import BRAIN
+
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "wake", "on": True, "sensitivity": 8})
+    await events_until(ws, {"wake_on"}, timeout=20)
+    (link,) = app[BRAIN].voice.links
+    assert (link.detector.threshold, link.detector.patience) == SENSITIVITY[8]
+    await ws.send_json({"type": "wake", "on": True, "sensitivity": 2})  # changed in Settings
+    await events_until(ws, {"wake_on"})
+    assert link.detector.threshold == SENSITIVITY[2][0]
+    await ws.close()
+
+
 async def test_not_while_the_answer_plays(aiohttp_client, aiohttp_server, key, tmp_path):  # noqa: F811
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
@@ -176,3 +336,10 @@ def test_the_pages_have_the_wake_word():
     assert '"wake word"' in (src / "hub/web/settings.js").read_text()
     js = (src / "web/voice.js").read_text()
     assert '"wake word": "wake_word"' in js and "export function silenceWatch" in js
+    # snappier (2026-11-14): the sensitivity, the Quest's stalled microphone, the brain's "ended"
+    assert "wakeSensitivity()" in js and "watchMic" in js and '"ended"' in js
+    assert "wake_sensitivity" in (src / "hub/web/settings.js").read_text()
+    for page in ("hub/web/design.html", "hub/web/hub.js", "hub/web/xr/ask.js"):
+        text = (src / page).read_text()
+        assert '"ended"' in text and "WAKE_QUIET_MS" in text and "noiseFloor" in text, page
+    assert "voice.chime()" in (src / "hub/web/hub.js").read_text()

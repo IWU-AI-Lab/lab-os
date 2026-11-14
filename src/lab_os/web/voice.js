@@ -10,18 +10,24 @@
 //   v.greet(way)                the spoken greeting: asked for at the start press, held until
 //   v.playHeld()                ... the page plays it (after the jump); talking first drops it
 //   v.stopSpeaking()            cut the answer short
-//   v.wake(on)                  stream the microphone for the wake word (the brain listens for it);
-//                               on "wake", the brain hears the question: v.finish() when it's said
-//                               (silenceWatch), v.cancel() to drop it
+//   v.wake(on)                  stream the microphone for the wake word (the brain listens for it, at
+//                               this device's sensitivity); on "wake", the brain hears the question:
+//                               v.finish() when it's said (silenceWatch), v.cancel() to drop it; the
+//                               brain may end it first ("ended": it heard a pause after the question)
+//   v.chime()                   the short, quiet "I heard you" sound (the plain hub; the designed hub
+//                               and VR play their own listening sound)
+//   v.noiseFloor                the room's level while listening for the phrase (for silenceWatch)
+//   v.micStalled                the microphone gave no audio for a while (the Quest after sleeping)
 //
 // onEvent gets everything the brain sends (heard, state, text, tool, done, error, audio_end,
 // voice_error), plus {type: "playing", seq, text, duration} as each spoken piece starts (so the page
 // can show the text as it's said: revealPacer), {type: "played"} once the last word has played and
-// {type: "mic_error", message} when the browser won't give the microphone. onLoud(0..1): the answer's loudness while
+// {type: "mic_error", message} when the browser won't give the microphone, {type: "mic_stalled", on} when
+// the microphone stops giving audio while the wake word is on (and when it's back). onLoud(0..1): the answer's loudness while
 // it plays (the core follows it). onLevel(0..1): the microphone's level while listening.
 // onChange(): the mic button should be shown or hidden (plugging, unplugging, the brain's status).
 
-import { prefs } from "/web/device.js";
+import { deviceName, prefs } from "/web/device.js";
 
 // The way in, chosen per device (Settings → This device, kept by the brain under its name): push-to-talk
 // (the default), dictation or the wake word. The setting's words → the brain's names (the greeting's hint).
@@ -29,6 +35,17 @@ export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation", "w
 export function wayIn() {
   return WAYS[prefs().voice] || "push_to_talk";
 }
+// How readily this device hears the wake word (Settings → This device): 1 = fewest false wakes … 9 = hears
+// the most (noisy rooms, weak microphones). 5 = openWakeWord's own default.
+export const WAKE_SENSITIVITY = 5;
+export function wakeSensitivity() {
+  const v = Number(prefs().wake_sensitivity);
+  return Number.isInteger(v) && v >= 1 && v <= 9 ? v : WAKE_SENSITIVITY;
+}
+
+// The question after the wake word ends after this much quiet (it was 1.5 s; the brain may end it sooner,
+// when the voice service hears the pause).
+export const WAKE_QUIET_MS = 1000;
 
 // Can this screen hear at all? (A secure page and a microphone; the brain's side is in /api/status.)
 export async function screenCanHear() {
@@ -81,15 +98,17 @@ export function revealPacer(length, render) {
 
 // Stop listening after a short silence once something was said, or after a while with nothing said.
 // level(l): the microphone's level (onLevel); words(): the brain heard words (counts as speech).
-export function silenceWatch(onStop, { quietMs = 1600, idleMs = 8000, maxMs = 45_000 } = {}) {
+// floor: the room's level so far (v.noiseFloor): in a noisy room, its hum isn't taken for talking. The floor
+// also creeps up while it's "loud" (a steady noise is the room, not a voice).
+export function silenceWatch(onStop, { quietMs = 1600, idleMs = 8000, maxMs = 45_000, floor: floor0 = 0.005 } = {}) {
   const t0 = performance.now();
-  let spoke = false, quietSince = t0, floor = 0.005, done = false;
+  let spoke = false, quietSince = t0, floor = Math.max(0.005, floor0 || 0), done = false;
   const stop = () => { if (!done) { done = true; onStop(spoke); } };
   return {
     level(l) {
       if (done) return;
       const now = performance.now();
-      if (l > Math.max(0.02, floor * 3)) { spoke = true; quietSince = now; } else floor = floor * 0.95 + l * 0.05;
+      if (l > Math.max(0.02, floor * 3)) { spoke = true; quietSince = now; floor = floor * 0.99 + l * 0.01; } else floor = floor * 0.95 + l * 0.05;
       if ((spoke && now - quietSince > quietMs) || (!spoke && now - t0 > idleMs) || now - t0 > maxMs) stop();
     },
     words() { spoke = true; quietSince = performance.now(); },
@@ -98,6 +117,23 @@ export function silenceWatch(onStop, { quietMs = 1600, idleMs = 8000, maxMs = 45
 }
 
 const MIC_KEEP_MS = 60_000; // keep the microphone open this long after the last use (no lost words)
+const MIC_STALL_MS = 1500; // the wake word is on but no audio came this long: wake the microphone up
+
+// "I heard you": two short, quiet notes (like the designed hub's listening sound), on the page's own sound.
+export function chimeOn(ctx) {
+  if (!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime;
+  [[523, 0, 0.1], [784, 0.08, 0.16]].forEach(([f, at, dur]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t + at);
+    g.gain.exponentialRampToValueAtTime(0.06, t + at + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
+    o.connect(g).connect(ctx.destination);
+    o.start(t + at);
+    o.stop(t + at + dur + 0.02);
+  });
+}
 const QUEUE_MAX = 400; // audio pieces kept while the connection opens (20 s)
 
 export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {} } = {}) {
@@ -125,6 +161,11 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     wakeWanted: false, // the page wants the wake word on (the brain may say no: wake_off)
     wakeOn: false, // the brain listens for it
     wakeTurn: false, // the brain heard it and hears the question
+    wakeSens: 0, // the sensitivity last sent
+    lastPiece: 0, // when the microphone last gave audio
+    floor: 0.005, // the room's level while listening for the phrase
+    stalled: false,
+    watchTimer: 0,
     analyser: null,
     loudTimer: 0,
     lastReport: 0,
@@ -164,11 +205,12 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   // ---------- the connection ----------
   function connect() {
     if (st.ws) return;
-    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/voice`);
+    const name = deviceName(); // for the brain's log ("voice timing (quest, …)")
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/voice${name ? `?device=${name}` : ""}`);
     st.ws = ws;
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
-      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true })); // again after a reconnect
+      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true, sensitivity: st.wakeSens })); // again after a reconnect
       for (const m of st.pending.splice(0)) ws.send(m);
     };
     ws.onmessage = (e) => {
@@ -184,6 +226,10 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       else if (ev.type === "wake") {
         stopSpeaking();
         st.wakeTurn = true;
+      } else if (ev.type === "ended") { // the brain heard the pause after the question: it's over
+        if (!st.wakeTurn) return;
+        st.wakeTurn = false;
+        st.awaitingEnd = true;
       }
       else if (ev.type === "audio_end") {
         st.awaitingEnd = false;
@@ -245,6 +291,11 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       // pressed, or the wake word (not while the answer plays: its own voice shouldn't wake it)
       const forWake = st.wakeOn && !st.playing.length && st.ws?.readyState === WebSocket.OPEN;
       if (st.sending || forWake || st.wakeTurn) send(e.data.pcm);
+      st.lastPiece = performance.now();
+      if (forWake) { // the room's level: follows quiet down fast, noise up slowly
+        const l = e.data.level;
+        st.floor = l < st.floor ? st.floor * 0.8 + l * 0.2 : st.floor * 0.995 + l * 0.005;
+      }
       onLevel(e.data.level);
     };
     ctx.createMediaStreamSource(stream).connect(node);
@@ -295,10 +346,18 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   }
   // the wake word: the microphone stays open while it's on (the browser shows its recording sign)
   async function wake(on) {
-    if (on === st.wakeWanted) return true;
+    const sens = wakeSensitivity();
+    if (on === st.wakeWanted && (!on || sens === st.wakeSens)) return true;
+    if (on && st.wakeWanted) { // only the sensitivity changed (Settings → This device)
+      st.wakeSens = sens;
+      send({ type: "wake", on: true, sensitivity: sens });
+      return true;
+    }
     st.wakeWanted = on;
     if (!on) {
       st.wakeOn = false;
+      clearInterval(st.watchTimer);
+      setStalled(false);
       send({ type: "wake", on: false });
       if (!st.pressed && !st.wakeTurn) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
       return true;
@@ -310,8 +369,54 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       onEvent({ type: "mic_error", message: micWhy(e) });
       return false;
     }
-    send({ type: "wake", on: true });
+    st.wakeSens = sens;
+    st.lastPiece = performance.now();
+    send({ type: "wake", on: true, sensitivity: sens });
+    clearInterval(st.watchTimer);
+    st.watchTimer = setInterval(watchMic, 1000);
     return true;
+  }
+  // The Quest (GOTCHAS 2026-11-13): after the headset sleeps or the browser loses audio focus, the page's
+  // sound stops (the AudioContext is suspended, or the microphone track is muted) and nothing reaches the
+  // brain, until a push-to-talk press wakes the sound again. While the wake word is on, check every second
+  // and wake it ourselves: resume the sound, else open the microphone again; tell the brain (its log) and
+  // the page (the dot) while it's stuck.
+  let reviving = false;
+  async function watchMic() {
+    if (!st.wakeWanted || reviving) return;
+    const quiet = performance.now() - st.lastPiece > MIC_STALL_MS;
+    const track = st.mic?.stream.getAudioTracks()[0];
+    if (!quiet && st.ctx?.state === "running") return setStalled(false);
+    reviving = true;
+    let why = "";
+    try {
+      if (st.ctx && st.ctx.state !== "running") {
+        why = `the page's sound is ${st.ctx.state}`;
+        await st.ctx.resume().catch(() => {});
+      } else if (!st.mic || track?.readyState === "ended") {
+        why = "the microphone was closed";
+        closeMic();
+        await openMic();
+      } else if (track?.muted) {
+        why = "the system muted the microphone";
+      } else {
+        why = "no audio from the microphone";
+        closeMic();
+        await openMic();
+      }
+    } catch (e) {
+      why = `${why}; reopening it failed (${e?.message || e})`;
+    } finally {
+      reviving = false;
+    }
+    // still nothing after the try: say so (once)
+    setTimeout(() => setStalled(st.wakeWanted && (performance.now() - st.lastPiece > MIC_STALL_MS || st.ctx?.state !== "running"), why), 600);
+  }
+  function setStalled(on, why = "") {
+    if (on === st.stalled) return;
+    st.stalled = on;
+    send({ type: "wake_mic", ok: !on, why: on ? why : "" });
+    onEvent({ type: "mic_stalled", on, why });
   }
   function finish() {  // the question after the wake word is said
     if (!st.wakeTurn) return;
@@ -358,8 +463,10 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
         src.start(at);
         st.playEnd = at + buf.duration;
         st.playing.push(src);
-        setTimeout(() => {  // say when this piece is heard, so its text can appear with it
-          if (st.playing.includes(src)) onEvent({ type: "playing", seq: ev.seq, text: ev.text || "", duration: buf.duration });
+        setTimeout(() => {  // say when this piece is heard, so its text can appear with it (and the brain's timing)
+          if (!st.playing.includes(src)) return;
+          onEvent({ type: "playing", seq: ev.seq, text: ev.text || "", duration: buf.duration });
+          send({ type: "playing", seq: ev.seq });
         }, Math.max(0, (at - ctx.currentTime) * 1000));
         src.onended = () => {
           st.playing = st.playing.filter((s) => s !== src);
@@ -445,6 +552,13 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     speaking,
     wake,
     finish,
+    chime: () => chimeOn(st.ctx),
+    get noiseFloor() {
+      return st.floor;
+    },
+    get micStalled() {
+      return st.stalled;
+    },
     get wakeOn() {
       return st.wakeOn;
     },

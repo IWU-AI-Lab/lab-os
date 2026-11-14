@@ -5,7 +5,9 @@ Audio in is what the hub page sends: 16-bit PCM, 16 kHz, mono (`RATE`). Audio ou
 - `hearing_for()` starts hearing one utterance: `feed()` audio while the person talks, `finish()`
   when they're done → the words. Gemini hears while the audio streams in (its Live API, a
   transcription model), so `on_words` gets the words so far as they come (dictation shows them);
-  OpenAI hears the whole recording after the release.
+  OpenAI hears the whole recording after the release. A Gemini hearing can be started before
+  anyone talks (`VoiceDesk` keeps one warm while a screen listens for the wake word), and it calls
+  `on_pause` when the service hears a pause after words (the wake word's question can end there).
 - `speak()` turns a piece of text into a WAV.
 """
 
@@ -132,7 +134,9 @@ class Hearing:
 
     def __init__(self, session: aiohttp.ClientSession, setup: VoiceSetup, on_words: Words):
         self.session, self.setup, self.on_words = session, setup, on_words
+        self.on_pause: Callable[[], None] | None = None  # the service heard a pause after words
         self.audio_bytes = 0  # for the spend log: how much was heard
+        self.started_at: float | None = None  # when start() finished (connected)
 
     @property
     def seconds(self) -> float:
@@ -140,6 +144,16 @@ class Hearing:
 
     async def start(self) -> None:
         """Get ready (connect). Audio fed before it's ready is kept and sent after."""
+        self.started_at = time.monotonic()
+
+    def alive(self) -> bool:
+        """Still connected (a warm one may have been closed by the service meanwhile)."""
+        return True
+
+    @property
+    def in_speech(self) -> bool:
+        """The service hears someone talking right now."""
+        return False
 
     def feed(self, pcm: bytes) -> None:
         self.audio_bytes += len(pcm)
@@ -194,6 +208,7 @@ class GeminiHearing(Hearing):
         if "setupComplete" not in _json(msg):
             await self.close()
             raise self._closed(msg)
+        self.started_at = time.monotonic()
         self._tasks = [asyncio.create_task(self._send()), asyncio.create_task(self._receive())]
 
     def _closed(self, msg) -> VoiceError:
@@ -208,9 +223,20 @@ class GeminiHearing(Hearing):
             return _http_error(self.setup, 404, str(reason))
         return VoiceError(f"{_who(self.setup)} stopped listening ({reason or 'no reason given'}).")
 
+    def alive(self) -> bool:
+        return self._ws is not None and not self._ws.closed and self._failed is None
+
+    @property
+    def in_speech(self) -> bool:
+        return self._in_activity or bool(self._interim)
+
     def feed(self, pcm: bytes) -> None:
         super().feed(pcm)
         self._queue.put_nowait(pcm)
+
+    def _paused(self) -> None:
+        if self.on_pause and self._finals and not self.in_speech:
+            self.on_pause()
 
     async def _send(self) -> None:
         assert self._ws is not None
@@ -235,6 +261,7 @@ class GeminiHearing(Hearing):
                 self._speech = self._in_activity = True
             elif activity == "ACTIVITY_END":
                 self._in_activity = False
+                self._paused()
             if "interimInputTranscription" in content:
                 self._interim = (content["interimInputTranscription"].get("text") or "").strip()
                 self.on_words(self.text)
@@ -245,6 +272,8 @@ class GeminiHearing(Hearing):
                     self._speech = True
                 self._interim = ""
                 self.on_words(self.text)
+                if final:
+                    self._paused()
             self._changed.set()
         if self._ws.close_code not in (None, 1000):
             self._failed = self._closed(
@@ -275,8 +304,12 @@ class GeminiHearing(Hearing):
     async def close(self) -> None:
         for t in self._tasks:
             t.cancel()
+        # let the cancelled reader leave the socket first: closing while it still waits in
+        # receive() can hang until the server goes away
+        await asyncio.gather(*self._tasks, return_exceptions=True)
         if self._ws is not None and not self._ws.closed:
-            await self._ws.close()
+            with contextlib.suppress(asyncio.TimeoutError, aiohttp.ClientError, OSError):
+                await asyncio.wait_for(self._ws.close(), 3)
 
 
 class RecordedHearing(Hearing):

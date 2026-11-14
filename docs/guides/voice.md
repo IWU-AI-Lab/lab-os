@@ -35,11 +35,37 @@ The choice is greyed out, with the reason, where the screen can't listen at all 
 ## The wake word
 On a screen set to **wake word**, while the hub is up and awake (not on the start screen, not dimmed, no module open, the tab in front), the page streams its microphone to the brain. **The brain listens for the phrase itself**, with openWakeWord's models on its own CPU (~2 % of one core per screen): nothing goes to a voice service until the phrase is heard. A **small dot** in the status strip says it's listening for the phrase; it's separate from the core, whose `listening` starts only after the phrase (or a push-to-talk press).
 
-After "hey Jarvis", the core listens like a push-to-talk press: say the question; it ends after ~1.5 s of quiet (nothing said in 6 s: it gives up), then it answers aloud. "Hey Jarvis, what's next?" in one breath works too (the phrase is taken off the question). Esc drops the question. It doesn't listen for the phrase while its own answer plays.
+After "hey Jarvis", a short quiet two-note sound says it heard you (the designed hub's and VR's listening sound; the plain hub plays the same notes; only where the device's sound is on), and the core listens like a push-to-talk press: say the question; it ends when the voice service hears the pause after it (~0.4 s), or after ~1 s of quiet on the page (nothing said in 6 s: it gives up), then it answers aloud. "Hey Jarvis, what's next?" in one breath works too (the phrase is taken off the question). Esc drops the question. It doesn't listen for the phrase while its own answer plays.
 - **Where:** a secure page with a microphone the browser lets stay open (allowed once for the page). The browser shows its recording sign the whole time the dot is on.
 - **Which phrase:** the persona's `wake_word:` (both personas: `hey_jarvis`; `none` = no wake word). openWakeWord ships "hey jarvis" (and "alexa", "hey mycroft", "hey rhasspy"); another phrase needs its model file in `models/openwakeword/` (custom ones can be trained; Porcupine is the paid alternative for custom words).
 - **Venues:** `wake_word:` in the venue's file (⚙ → The assistant → Wake word in this venue): `on`, `off`, or `default` = **off on a `public: true` venue**, on otherwise. Restart the brain after changing it.
-- **Several screens** hear it: the one that heard it best answers; the others ignore it.
+- **Several screens** hear it: the one that heard it best answers; the others ignore it. (With one screen listening, it answers at once; with several, the brain waits 0.15 s for the others.)
+- **Sensitivity, per device:** ⚙ → This device → **Wake word sensitivity**, a slider from 1 (fewest false wakes) to 9 (hears the most), shown when the wake word is offered. 5 is openWakeWord's own default (a score of 0.5). Raise it for a noisy room or a weak microphone; lower it if it wakes by itself. Kept by the brain under the device's name like the other "This device" settings, and applies at once. What each level means: below.
+- **The Quest** (GOTCHAS 2026-11-13, 2026-11-14): when the page's sound or microphone stops (the headset slept, the browser lost audio focus), the page now notices within a second and wakes it again by itself; while it can't, the dot in the strip turns orange on the hub pages ("Not hearing the microphone: press the mic once"; in VR only the log shows it). The brain's terminal logs it too ("voice: quest sent no audio for the wake word for 12.3 s").
+
+### Sensitivity: what the levels do
+The slider sets openWakeWord's own two knobs (`src/lab_os/ai/wake.py` → `SENSITIVITY`): the **threshold** (the score that counts) and the **patience** (that many 80 ms steps in a row at or over it).
+| Level | 1 | 2 | 3 | 4 | **5** | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|
+| Threshold | 0.8 | 0.7 | 0.6 | 0.55 | **0.5** | 0.45 | 0.4 | 0.33 | 0.25 |
+| Patience | 1 | 1 | 1 | 1 | **1** | 1 | 1 | 2 | 2 |
+
+Measured on the recordings (`tests/test_wake.py`, white noise added, harsher than a real room): **a quiet voice alone isn't the problem** (the recording at 1 % of its loudness still scores 0.999); **noise is**: "hey Jarvis" at 10 % loudness under loud noise scored ~0.40, missed at 5 and heard at 8. Other speech under noise never scored over ~0.26, and noise alone up to ~0.2, so 8 and 9 also want two steps in a row. The brain's terminal logs near misses: `voice: desk heard something like "hey Jarvis" (0.38; it takes 0.50 at sensitivity 5)`: seeing those while saying the phrase means raise the slider.
+
+**openWakeWord's other options, tried and left out (2026-11-14):** its **Silero voice-activity filter** (`vad_threshold`) is meant to stop false wakes from non-speech noise, but on the recordings it zeroed a real "hey Jarvis" in loud noise (0.98 → 0.00), the opposite of what a noisy room needs. Its **Speex noise suppression** needs the `speexdsp_ns` C package (Linux only), and the browser already runs its own noise suppression, echo cancellation and gain control on the microphone before the audio reaches the brain.
+
+### How fast (2026-11-14)
+From the end of "hey Jarvis" to its first spoken word, each step is timed and logged by the brain, one line per turn:
+```
+voice timing (desk, wake word, warm, ended by the pause): heard the phrase · this screen picked +1 ms · listening +2 ms · voice service ready +0 ms · question over +2.31 s · words final +0.40 s · first text +3.10 s · first audio sent +2.20 s · first word playing +60 ms · waited 5.76 s after the question
+```
+The last voice turns are also at **http://localhost:8080/api/voice/timings** (milliseconds from the detection, per step). What was cut:
+- **Detection:** openWakeWord's score crosses 0.5 about 0.1 s *before* the phrase's last sound (on the recordings), so there's nothing to win there.
+- **Picking the screen:** one screen listening answers at once (it used to wait 0.25 s for other screens; with several, 0.15 s).
+- **Connecting to the voice service:** while a screen listens for the phrase, the brain keeps one Gemini Live hearing connected ahead of time (renewed every 4 minutes, one for the whole brain; idle, it sends nothing and costs nothing). Without it, connecting took a moment after the phrase. OpenAI's hearing has nothing to connect (it hears the recording after the question).
+- **First words:** the audio from 0.3 s before the detection goes to the hearing, so "hey Jarvis what's next" in one breath keeps "what's"; a leftover "…vis" at the start is taken off too.
+- **The end of the question:** the voice service's own pause detection ends it (~0.4 s after the words), else the page's silence of 1 s (was 1.5 s). The page's silence watch also learns the room's hum while it listens for the phrase, so a noisy room no longer keeps it "listening" for 20 s.
+- **The answer:** the chat's connection is opened while you're still talking, the voice's when the question ends (connections are kept a minute instead of 15 s). The rest is the AI's thinking and the speech service: on the free Gemini key typically 3–11 s and 2–4 s.
 - **The models** (`models/openwakeword/`, README there): openWakeWord's, run with `onnxruntime` directly (its own package doesn't install on Linux with Python 3.12). Non-commercial license (CC BY-NC-SA 4.0).
 - **The room microphone:** from across the room it needs a decent microphone (a conference speakerphone or a microphone array; weak USB dongles only hear you up close). At the lab (2026-11-13) the desktop's USB microphone heard it at the desk, sometimes only when spoken louder; on the Quest it usually fires and sometimes misses (`docs/dev/GOTCHAS.md`).
 

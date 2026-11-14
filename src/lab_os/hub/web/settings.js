@@ -53,6 +53,18 @@ function control(f, value, onSave, disabled) {
   } else if (f.kind === "number") {
     wrap.innerHTML = `<input type="number" ${off} value="${value ?? ""}" min="${f.min ?? ""}" max="${f.max ?? ""}" step="${f.step ?? "any"}"><span class="unit">${esc(f.unit)}</span>`;
     wrap.querySelector("input").addEventListener("change", (e) => onSave(e.target.value === "" ? null : Number(e.target.value)));
+  } else if (f.kind === "range") {
+    // a slider: saved when let go; the words under it say what the number means
+    wrap.innerHTML = `<input type="range" ${off} value="${value}" min="${f.min}" max="${f.max}" step="1" aria-label="${esc(f.label)}"><span class="unit"></span>`;
+    const slider = wrap.querySelector("input"), unit = wrap.querySelector(".unit");
+    const show = () => (unit.textContent = f.words ? f.words(Number(slider.value)) : slider.value);
+    let saved = value;
+    show();
+    slider.addEventListener("input", show);
+    slider.addEventListener("change", async () => {
+      if (await onSave(Number(slider.value))) saved = Number(slider.value);
+      else { slider.value = saved; show(); }
+    });
   } else if (f.kind === "text") {
     wrap.innerHTML = `<input type="text" ${off} value="${esc(value)}" maxlength="60">`;
     wrap.querySelector("input").addEventListener("change", (e) => onSave(e.target.value));
@@ -133,8 +145,18 @@ async function voiceRow() {
     f = { ...VOICE, choices: [...VOICE.choices, "wake word"],
       help: `${VOICE.help}. wake word: say "${wake.phrase}" from anywhere in the room (heard on the brain's computer; this device's microphone stays open while the hub is up), and push-to-talk still works` };
   } else if (can.ok && wake) f = { ...VOICE, help: `${VOICE.help}. wake word: not here (${wake.why})` };
-  return fieldRow(f, can.ok ? f.value() : "push-to-talk", (v) => f.save(v), !can.ok);
+  const rows = [fieldRow(f, can.ok ? f.value() : "push-to-talk", (v) => f.save(v), !can.ok)];
+  if (can.ok && wake?.available) rows.push(fieldRow(SENSITIVITY, SENSITIVITY.value(), (v) => SENSITIVITY.save(v), false));
+  return rows;
 }
+
+/* ---------- how readily this device hears the wake word (docs/guides/voice.md → "Sensitivity") ---------- */
+const SENS_WORDS = { 1: "fewest false wakes", 3: "quiet room", 5: "the default", 7: "noisy room or weak microphone", 9: "hears the most" };
+const SENSITIVITY = { key: "wake_sensitivity", label: "Wake word sensitivity", kind: "range", min: 1, max: 9,
+  help: "this device only. Higher hears \"hey Jarvis\" more readily: for a noisy room or a weak microphone. Too high and it may wake by itself; lower it if it does. 5 is openWakeWord's default. Applies at once",
+  words: (v) => `${v}${SENS_WORDS[v] ? ` · ${SENS_WORDS[v]}` : ""}`,
+  value: () => Number(screenGet().wake_sensitivity) || 5,
+  save: (v) => screenSet("wake_sensitivity", v === 5 ? "" : v) };
 
 /* ---------- the "Lab hub" icon for this device: one tap opens the hub under its name ---------- */
 function iconRow() {
@@ -169,7 +191,7 @@ $("#this-device-help").textContent = NAME
   : "This device has no name, so these are kept in this browser only. Name it by opening the hub with ?device=<name> in the address (desk, newline, quest…): the brain then keeps them under that name.";
 for (const f of LOCAL) local.append(fieldRow(f, f.value(), (v) => f.save(v), false));
 const voiceSlot = local.appendChild(document.createElement("div"));
-voiceRow().then((row) => voiceSlot.replaceWith(row), () => voiceSlot.remove());
+voiceRow().then((rows) => voiceSlot.replaceWith(...rows), () => voiceSlot.remove());
 local.append(screensRow());
 local.append(iconRow());
 

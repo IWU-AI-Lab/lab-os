@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-14 — openWakeWord's voice-activity filter makes a noisy room worse
+**What:** for the sensitivity setting, openWakeWord 0.6's own options were tried on the recordings (its package, on the Mac). Its Silero VAD filter (`vad_threshold` 0.3 or 0.5) left a clear "hey Jarvis" alone, but with the voice at 30 % under loud noise it turned a 0.98 score into **0.00**: the filter looks at the audio 0.3–0.6 s back and decides there's no speech. Its Speex noise suppression needs `speexdsp_ns` (a Linux C package). Also measured: a quiet voice alone scores the same as a loud one (the recording at 1 % loudness: 0.999); what lowers the score is noise relative to the voice.
+**Fix:** neither is used. The sensitivity slider sets openWakeWord's threshold and patience (`ai/wake.py` → `SENSITIVITY`); the browser's own noise suppression already runs on the microphone. `docs/guides/voice.md` → "Sensitivity".
+
+### 2026-11-14 — The Quest's missed wake word: the page's sound can stop without telling anyone (likely cause, not yet seen in the lab)
+**What:** looking for why the Quest sometimes misses "hey Jarvis" while push-to-talk always works (entry 2026-11-13): the page sends the microphone through its WebAudio recorder. If the browser suspends the page's sound (the headset sleeps when taken off, or the browser loses audio focus) or mutes the microphone track, the recorder stops and nothing reaches the brain; the microphone counted as "open", so nothing tried again. A push-to-talk press resumes the sound (`unlock()`), which is why push-to-talk always worked and the wake word worked again after it. Not reproduced on a real Quest (no headset here): that's the code's only path where the wake word goes deaf while push-to-talk works.
+**Fix (2026-11-14):** while the wake word is on, the page checks every second: no audio for 1.5 s or the sound not running → resume it, else open the microphone again; while it can't, the dot turns orange and the brain logs `voice: quest's microphone: …`; the brain also logs gaps in the audio and near misses (a score over 0.25 but under the threshold). If the Quest still misses with audio flowing and no near misses logged, it's something else (lab checklist part 10). Other things found on the way: the old wake turns waited 0.25 s for other screens even with one, and a noisy room could keep the page's silence watch from ever ending the question (20 s), both fixed.
+
+### 2026-11-14 — A hearing's WebSocket close could hang until the server went away
+**What:** writing the warm-hearing tests, one test's teardown took 2 minutes: `GeminiHearing.close()` cancelled its reader task and closed the socket right away, and the close waited on the still-cancelling reader until the (fake) service shut down. A test on `main` already took 31 s in teardown for a similar reason (not chased further).
+**Fix:** `close()` waits for its cancelled tasks first, then closes with a 3 s limit (`ai/speech.py`).
+
 ### 2026-11-14 — The AI budget wasn't read live, though the docs said so
 **What:** `docs/dev/chat.md` said raising `ai_budget_usd_month` un-pauses the chat with no restart, and the Settings page said "applies when the brain restarts". The second was true: the brain read the number once at start (`SpendLog(budget_usd=…)`).
 **Fix:** quick job 5: `SpendLog(budget_from=config.ai_budget)` re-reads `place.yaml` each time it checks (a broken file keeps the last good number); the Settings field says "applies from the next question". (`load_place()` wasn't used for it: it logs a warning per unknown field on every call, and `/api/spend` is polled.)

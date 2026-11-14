@@ -48,6 +48,7 @@ SETTINGS = {
     "sound": None,
     "full": None,
     "voice": ("", "push-to-talk", "dictation", "wake word"),
+    "wake_sensitivity": ("", *range(1, 10)),  # 1–9 (lab_os.ai.wake.SENSITIVITY); "" = 5
 }
 
 
@@ -105,13 +106,17 @@ class DeviceSettings:
             if key not in SETTINGS:
                 raise DeviceError(f"{key!r} isn't a device setting ({', '.join(SETTINGS)})")
             allowed = SETTINGS[key]
-            ok = isinstance(value, bool) if allowed is None else value in allowed
+            if allowed is None:
+                ok = isinstance(value, bool)
+            else:  # (True == 1 in Python: a bool is never a number setting)
+                ok = not isinstance(value, bool) and value in allowed
             if value is None or value == "":
                 mine.pop(key, None)
             elif ok:
                 mine[key] = value
             else:
-                want = "true or false" if allowed is None else ", ".join(a for a in allowed if a)
+                choices = (str(a) for a in allowed or () if a != "")
+                want = "true or false" if allowed is None else ", ".join(choices)
                 raise DeviceError(f"{key} can be {want}, not {value!r}")
         if mine:
             devices[name] = mine

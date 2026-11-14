@@ -30,6 +30,7 @@ POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (d
 POST /api/chat/clear     put the conversation aside (the hub's reset; kept chat_keep_minutes)
 POST /api/chat/restore   bring back the conversation put aside
 GET /ws/voice            voice: the page's microphone in, spoken answers out (hub/voice.py)
+GET /api/voice/timings   the last voice turns' timing: where the time went, step by step
 GET /ws/hub-device       one hub page of a device (?device=desk): the brain's list of devices,
                          "open on…" and the device's settings (hub/hub_devices.py)
 GET /api/hub-devices     the devices with the hub open now, their windows, what each shows
@@ -456,6 +457,10 @@ async def api_voice_ws(request: web.Request) -> web.WebSocketResponse:
     return await voice_ws(request, request.app[BRAIN].voice)
 
 
+async def api_voice_timings(request: web.Request) -> web.Response:
+    return web.json_response({"timings": list(request.app[BRAIN].voice.timings)})
+
+
 async def api_hub_device_ws(request: web.Request) -> web.WebSocketResponse:
     return await request.app[HUB_DEVICES].connection(request)
 
@@ -682,6 +687,7 @@ def create_brain_app(
     app.router.add_post("/api/chat/restore", api_chat_restore)
     app.router.add_get("/api/spend", api_spend)
     app.router.add_get("/ws/voice", api_voice_ws)
+    app.router.add_get("/api/voice/timings", api_voice_timings)
     app.router.add_get("/ws/hub-device", api_hub_device_ws)
     app.router.add_get("/api/hub-devices", api_hub_devices)
     app.router.add_post("/api/hub-devices/open", api_hub_devices_open)

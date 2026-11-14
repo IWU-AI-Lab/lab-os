@@ -9,6 +9,7 @@ With a `store` (lab_os.ai.history) the conversation is kept for a short while: s
 answer, put aside by a reset, brought back with `restore()`.
 """
 
+import contextlib
 import logging
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime
@@ -122,6 +123,12 @@ class Conversation:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession()
         return self._session
+
+    async def warm(self) -> None:
+        """Open the connection to the service ahead of a question (the wake word was heard):
+        lists the models, free, nothing generated. Failures don't matter here."""
+        with contextlib.suppress(NoSetup):
+            await check(self._session_(), self.setup())
 
     async def close(self) -> None:
         if self._session:

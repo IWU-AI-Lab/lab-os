@@ -67,6 +67,7 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 .mic[hidden] { display: none; }
 #f-wake { color: #6c6; opacity: 0.6; }
 #f-wake[hidden] { display: none; }
+#f-wake.stalled { color: #e9a23b; opacity: 1; } /* the microphone gives no audio */
 .mic.on { background: #2a4a2a; border-color: #8c8; }
 #open-chat { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; }
 #reply { width: min(32em, 80vw); white-space: pre-wrap; }

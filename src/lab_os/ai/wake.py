@@ -7,6 +7,13 @@ Linux it needs tflite-runtime, which has no Python 3.12 build):
 last 76 frames (one per chunk) → the phrase's model over the last 16 embeddings → a score 0–1.
 
 `WakeModels` loads the files once for the brain; each screen's audio gets its own `WakeDetector`.
+
+How sensitive (a setting per device, 1–9): openWakeWord's own two knobs, `threshold` (the score
+that counts) and `patience` (that many 80 ms chunks in a row at or over it). Its other two options
+were tried on the recordings and left out (docs/guides/voice.md → "Sensitivity"): its Silero VAD
+filter zeroed a real "hey Jarvis" in loud noise (the opposite of what a noisy room needs), and its
+Speex noise suppression is a Linux-only C package; the browser already suppresses noise before the
+audio gets here.
 """
 
 import logging
@@ -24,8 +31,32 @@ THRESHOLD = 0.5  # openWakeWord's default
 MEL_FRAMES = 76  # per embedding
 FEATURES = 16  # embeddings per score
 WARMUP = 5  # the first scores are noise (openWakeWord zeroes them too)
+# sensitivity (1 = fewest false wakes … 9 = hears the most) → (threshold, patience). 5 is
+# openWakeWord's default. On the recordings, noise alone scored up to ~0.2, so the most sensitive
+# levels also want two chunks in a row.
+SENSITIVITY = {
+    1: (0.8, 1),
+    2: (0.7, 1),
+    3: (0.6, 1),
+    4: (0.55, 1),
+    5: (THRESHOLD, 1),
+    6: (0.45, 1),
+    7: (0.4, 1),
+    8: (0.33, 2),
+    9: (0.25, 2),
+}
+DEFAULT_SENSITIVITY = 5
 # the phrase a persona's `wake_word:` names → its model file in MODELS_DIR, and how it's said
 PHRASES = {"hey_jarvis": ("hey_jarvis_v0.1.onnx", "hey Jarvis")}
+
+
+def sensitivity_level(value) -> int:
+    """A device's setting (1–9, a number or its text) → a level; anything else = the default."""
+    try:
+        level = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_SENSITIVITY
+    return level if level in SENSITIVITY else DEFAULT_SENSITIVITY
 
 
 class WakeModels:
@@ -87,8 +118,17 @@ class WakeModels:
 class WakeDetector:
     """One screen's audio: `feed()` 16-bit 16 kHz PCM, get the best score in it."""
 
-    def __init__(self, models: WakeModels, word: str = "hey_jarvis", seed: int = 0):
+    def __init__(
+        self,
+        models: WakeModels,
+        word: str = "hey_jarvis",
+        seed: int = 0,
+        sensitivity: int = DEFAULT_SENSITIVITY,
+    ):
         self.models, self.word = models, word
+        self.set_sensitivity(sensitivity)
+        self._run = 0  # chunks in a row at or over the threshold
+        self.fired = False  # the last feed heard the phrase (threshold and patience)
         self._pending = np.zeros(0, np.int16)
         self._audio = np.zeros(0, np.int16)  # the last chunk + 3 frames of context
         self._mel = np.ones((MEL_FRAMES, 32), np.float32)
@@ -102,13 +142,21 @@ class WakeDetector:
         self._chunks = 0
         self.last = 0.0  # the best score of the last feed
 
+    def set_sensitivity(self, sensitivity) -> None:
+        self.sensitivity = sensitivity_level(sensitivity)
+        self.threshold, self.patience = SENSITIVITY[self.sensitivity]
+
     def feed(self, pcm: bytes) -> float:
+        """Returns the best score in this audio; `fired` says whether the phrase counts as heard."""
         samples = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16)
         self._pending = np.concatenate([self._pending, samples])
-        best = 0.0
+        best, self.fired = 0.0, False
         while self._pending.shape[0] >= CHUNK:
             chunk, self._pending = self._pending[:CHUNK], self._pending[CHUNK:]
-            best = max(best, self._step(chunk))
+            score = self._step(chunk)
+            best = max(best, score)
+            self._run = self._run + 1 if score >= self.threshold else 0
+            self.fired = self.fired or self._run >= self.patience
         self.last = best
         return best
 
@@ -124,4 +172,4 @@ class WakeDetector:
     def reset(self) -> None:
         """Forget what was heard (after a wake, or while the answer is spoken)."""
         self._pending = np.zeros(0, np.int16)
-        self._chunks = 0
+        self._chunks = self._run = 0
