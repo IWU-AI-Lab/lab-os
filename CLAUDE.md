@@ -26,6 +26,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
 
 ## Project rules
 - **Robots stay thin**: no editors / Claude Code / heavy tools on robots. Edit in this repo, then deploy (rsync). Never edit code on a robot.
+- **Look for existing work first.** Before building a feature or a big part of one, search for existing implementations (GitHub, LeRobot and its examples, papers, libraries). If you find a good one (maintained and actually used, e.g. an official project or one with real stars, not an empty repo), **stop and tell the builder** what it is and how it compares with what's planned, before writing code. Small fixes don't need a search.
 - **Fake robot first** (`lab_os.robots.fake.FakeArm`), then the real one. Every robot plug-in declares its requirements.
 - **Ask before**: anything that makes a real robot move, `sudo`, deleting files, rebooting devices.
 - **Hacks are labeled**: `# HACK: …` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
