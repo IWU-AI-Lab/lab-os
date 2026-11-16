@@ -23,19 +23,12 @@ Not ideas any more: agreed features, paused when the teleop focus closed (the de
 - **A real-Quest recording as a test fixture** (`serve --record`, commit a short clip).
 - **Check:** in the XR emulator, Shift+WASD moving the arm while the clutch is *released* would be a bug.
 
-### Teleop: compare with existing Quest teleop before refining ours (found 2026-11-14)
-- **Why:** our Quest teleop is hard to pilot and less accurate than the leader arm (the builder, 2026-11-14), so it's not good enough to record training data with yet. Others have built and refined the same thing:
-  - **LeRobot's Isaac Teleop example** (`examples/isaac_teleop_to_so101/` in the LeRobot repo, with NVIDIA, https://huggingface.co/docs/lerobot/en/isaac_teleop): a Quest controller drives an SO-101 (squeeze = clutch, analog trigger = gripper, controller tilt = wrist, Placo IK) and **records LeRobot datasets** directly. Needs NVIDIA's CloudXR streaming (Linux, an NVIDIA GPU) instead of a web page.
-  - **telegrip** (github.com/DipFlip/telegrip, ~145 stars, MIT): Quest 3 WebXR page → SO-100 arms, both arms at once (one per controller), PyBullet IK, keyboard control.
-  - **XLeRobot** (github.com/Vector-Wangel/XLeRobot, ~5.8k stars): a dual-SO-101 home robot with Quest 3 VR teleop (simulation first; real-robot VR code by others).
-- **What to do (after the demo):** a session reads these and writes a comparison (how they map hand to arm, IK, clutch, wrist, smoothing, what they record), then the builder picks: borrow their ideas, use one of them for data collection, or keep ours. Nothing in the lerobot conda env (use our `so101` extra).
-
-### AI arm control: compare with existing projects (found 2026-11-14)
-- **Why:** the same reason as the teleop entry above: others have connected LLMs to SO-101s. Ours must stay model-agnostic (Fable 5.2 until 2026-11-16, then any frontier model).
-  - **Google's robotics-pointing-sample** (github.com/google-gemini/robotics-pointing-sample, official): an SO-101 + one USB camera + Gemini Robotics-ER, which finds objects by name and points at them. It calibrates the camera to the arm with a printed ChArUco board, which is the fix for "the stand camera's guess was 8 cm off" (GOTCHAS 2026-11-12).
-  - **robot_MCP** (github.com/IliaLarchenko/robot_MCP, ~87 stars, last change 2025-08): an MCP server + agent for SO-100/101 with a camera, for Claude, Gemini and GPT; the author found Claude best. Older LeRobot.
-  - Write-ups: an LLM picking up a pen with an SO-101 through a side camera (Frank Dou, MIT, 2026-09).
-- **What to do:** a session compares (tools, how the camera becomes positions, how a grab is done, how many steps the AI takes) and recommends what to borrow; the builder decides.
+### Isaac Teleop as an input to the brain (decided 2026-11-16, after the demo)
+- **What:** LeRobot's Isaac Teleop example (`examples/isaac_teleop_to_so101/`, Hugging Face + NVIDIA) reads the Quest through NVIDIA CloudXR. A thin layer runs its controller reader (`XRController.get_action()`: hand position and rotation, grip, trigger) inside the brain as another input source, converts it to our controller message and feeds our teleop loop, so our clutch, IK, floor, speed limits, STOP, dead-man and one-controller rule all stay. Optional second step: their Placo IK (soft full-orientation tracking) as a mapping option behind a switch. Their `teleoperate.py` alone (no recording) is the quick way to feel their mapping first.
+- **Why:** the comparison (`docs/dev/existing-work-teleop-ai.md`, 2026-11-16): theirs is the best-engineered and maintained by HF + NVIDIA; ours keeps the brain's safety and pages.
+- **Watch out:** CloudXR runtime + EULA; `isaacteleop` is Linux only and needs a newer LeRobot than our pinned 0.6.1 (all in our `so101` extra, never the lerobot conda env); always `HF_LEROBOT_HOME` set to a lab-os folder (it writes into LeRobot's cache: GOTCHAS 2026-11-16); `so101-white` only at first. In the headset you probably see CloudXR's view, not our Quest hub or 3D arm (unconfirmed). Recording training data through the brain is a separate piece ("Our own recording and training page").
+- **Plugs into:** teleop inputs (`teleop/loop.py`, `InputState`), the SO-101 kinematics, the `so101` extra.
+- **Cost:** about one session (faked first with recorded readings) + a lab day for CloudXR.
 
 ### Core plumbing (waits for the lab router)
 From the first draft of the core focus (2026-10-30); the builder chose the hub first. Build when the router is here (Milestone 1):
@@ -64,7 +57,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **What:** fixes suggested by the missed cube pick (`docs/dev/GOTCHAS.md`, 2026-11-12):
   1. **Check the height zero:** put the jaw tips on the table by hand (torque off), read `arm_status`, and correct the gripper-point offset or the model if z isn't ~0.
   2. **Allow for the elbow sag:** add the steady ~3° to the elbow command, or have `move_to` send a small second correction after a short stop. Then `stopped_short` only fires for real misses (e.g. above 1° or 0.5 cm), so the warning means something again.
-  3. **Place the overhead camera:** a printed square marker (AprilTag) at a known spot in front of the arm lets `cam-a` turn a pixel into table cm, so the AI's first guess is close and the wrist camera only fine-tunes.
+  3. **Decided 2026-11-16 as the stand camera's cm grid** (`docs/plan/current-focus.md` item 6; a printed calibration sheet instead of an AprilTag). Was: **Place the stand camera:** a printed square marker (AprilTag) at a known spot in front of the arm lets `cam-a` turn a pixel into table cm, so the AI's first guess is close and the wrist camera only fine-tunes.
   4. **Say before moving:** move tools take a short `plan` sentence that the hub shows (and the voice says) before the arm moves, so people can follow along and the AI can't skip saying it.
 - **Why:** the 2026-12-03 demo has the AI picking things up while people watch. This time it took 10 small moves to get beside the cube, then closed above it.
 - **Watch out:** 1 needs the white arm's torque off and hands on the arm (ask first). Never on the green arms (their calibration is read-only).
