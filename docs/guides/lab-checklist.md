@@ -155,7 +155,7 @@ uv run lab-os serve
 adb reverse tcp:8080 tcp:8080
 ```
 In the Quest's browser: open `http://localhost:8080/design?device=quest` once, then `http://localhost:8080/xr`. Allow the microphone. **Enter VR**.
-- **10.1** Pull the trigger to start. After the jump, look around. → is there a tight cluster of linked dots far away? (yes / no)
+- **10.1** Pull the trigger to start; let the startup play (don't skip it). After the jump, look around. → is there a tight cluster of linked dots far away? (yes / no) If yes: where (straight ahead / left / right / behind / up / down), does it stay or slowly drift into place, about how many dots? Then ⏻ (top right), start again and **skip** the startup with a second pull. → cluster then? (yes / no)
 - **10.2** Point at a callout and pull the trigger. Press **B**. → did the page open and close? (yes / no)
 - **10.3** Point at "Ask anything", hold the trigger, ask three long questions in a row. → does the newest chat text stay visible? (yes / no)
 - **10.4** Say "Hey Jarvis" 10 times, with a pause between. → number of times nothing happened. For each miss, copy the newest line in the desktop's terminal.

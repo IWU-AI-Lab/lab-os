@@ -186,7 +186,10 @@ export class Ask {
         g.font = `${FONT.linesW} ${h * 0.12}px ${FONT.lines}`; g.fillStyle = C.dim;
         g.fillText(wrap(g, this.q, w * 0.95, 1)[0] || "", w / 2, h * 0.02);
         g.font = `500 ${h * 0.15}px ${FONT.ui}`; g.fillStyle = C.text;
-        const lines = wrap(g, a.replace(/\s+/g, " ") + (cursor ? " ▌" : ""), w * 0.95, 3);
+        // the newest three lines (it scrolls as it types; quick job 11): "…" where earlier ones went
+        const all = wrap(g, a.replace(/\s+/g, " ") + (cursor ? " ▌" : ""), w * 0.9);
+        const lines = all.slice(-3);
+        if (all.length > 3) lines[0] = `… ${lines[0]}`;
         lines.forEach((l, i) => g.fillText(l, w / 2, h * 0.24 + i * h * 0.24));
       }, `${this.q}|${a.length}|${cursor}`);
     }

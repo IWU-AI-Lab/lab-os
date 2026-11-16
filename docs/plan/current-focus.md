@@ -67,7 +67,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 9. **Demo check** (done 2026-11-12).
 
 10. **Design polish.** The designed hub (`/design`) and the hub in VR (`/xr`) are built; the VR hub worked in the headset on 2026-11-13.
-    - **Left:** quick jobs 10–11 (a far-away cluster of dots, the chat that doesn't scroll); the bugs from the 2026-11-12 demo check (the builder to list them); alerts from real events; how a page sent to another device looks (plain is fine if time is short).
+    - **Left:** quick job 10 (a far-away cluster of dots; 11, the chat that didn't scroll, done 2026-11-16); the bugs from the 2026-11-12 demo check (the builder to list them); alerts from real events; how a page sent to another device looks (plain is fine if time is short).
 
 11. **Green arms.** Built 2026-11-12, tested without hardware (`docs/guides/ai-control.md` → "The green arm").
     - **Left:** in the lab with LeLab closed (`docs/guides/lab-checklist.md` part 8): `--watch`, then moving with the builder present, then the AI; which camera is which (`so101-green-cam-a`/`-b` until then).
