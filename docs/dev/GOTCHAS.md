@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-16 — 1:1 teleop: the hand was measured from the wrong base on a headset without a floor
+**What:** checking the 1:1 scale without the lab (quick job 13). The Quest page sends each hand's position minus the 3D arm's base. The hands are drawn under the scene's `root` exactly as WebXR gives them, but `armBase()` returned the base's *world* position. With a "local" reference space (no floor level) `root` is shifted down 1.4 m, so the brain would see the hand 1.4 m from the gripper and 1:1 could never be grabbed. With `local-floor` (the Quest's usual) the shift is 0, so it never showed. Not a scale error.
+**Fix:** `armBase()` gives the base in `root`'s space, like the hands (`teleop/web/xr-scene.js`). The rest checked out, none of it a scale error: the SO-101 model's links are the real arm's (11.60 and 13.50 cm, as XLeRobot and robot_MCP measured), the gripper point is LeRobot's (`gripper_frame_link`), WebXR and the brain both use metres with no factor anywhere, the 3D arm is the URDF at real size, and a test moves the hand 6 cm and gets 6 cm. So a real 1:1 that feels off is the real arm (the elbow sag, the height offset) or the lag: lab checks 7.2–7.4.
+
 ### 2026-11-16 — LeRobot's Isaac Teleop example writes into LeRobot's cache
 **What:** reading `examples/isaac_teleop_to_so101` (for `docs/dev/existing-work-teleop-ai.md`): on its first run it downloads the SO-101 URDF to `HF_LEROBOT_HOME/robot-urdfs/so101/`, and `override_reset_pose.py` saves poses to `HF_LEROBOT_HOME/reset_poses/`. By default that's `~/.cache/huggingface/lerobot/`, the folder holding the green arms' calibration (read-only for lab-os, CLAUDE.md). The leader-arm path reads the calibration from there too.
 **Fix:** not used yet. If it's ever tried, run it with `HF_LEROBOT_HOME` set to a lab-os folder, and only on `so101-white`.

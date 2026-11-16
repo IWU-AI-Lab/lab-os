@@ -60,10 +60,13 @@ export class XRScene {
     this.armHolder.rotation.y = Math.PI / 2 + yaw;
   }
 
-  /** Where the 3D arm's base is in the room (WebXR space), for hand positions relative to it. */
+  /** Where the 3D arm's base is, in the same space as the hands' positions (WebXR space; the
+   * hands are drawn under `root` as they come), for hand positions relative to it. Not the world
+   * position: with a "local" space `root` is shifted down 1.4 m, and the hand would look 1.4 m
+   * from the gripper to the brain (found 2026-11-16, quick job 13). */
   armBase() {
     this.armHolder.updateWorldMatrix(true, false);
-    return this.armHolder.getWorldPosition(new THREE.Vector3());
+    return this.root.worldToLocal(this.armHolder.getWorldPosition(new THREE.Vector3()));
   }
 
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
