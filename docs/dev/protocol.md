@@ -68,7 +68,7 @@ How the hand drives the arm, from the teleop page's "Hand → arm" choice. From 
 ```json
 {"type": "set_mode", "mode": "one_to_one"}
 ```
-- `"relative"` (the default): the gripper moves by how far the hand moved since the grab, at half scale (`tip_m_per_hand_m`); limits and the table slip, so hand and arm drift apart over a session.
+- `"relative"` (the default): the gripper moves by how far the hand moved since the grab, at the same scale (`tip_m_per_hand_m`, 1.0 since 2026-11-16; half before); limits and the table slip, so hand and arm can drift apart over a session.
 - `"one_to_one"` (1:1, arms with kinematics, venues with `one_to_one_max_deg_per_s` set, `xr_input` with `"frame": "arm"`): the gripper point goes where the hand is, at scale 1, as fast as the venue's 1:1 cap allows (not the Speed slider). The clutch engages only with the hand within `capture_cm` (8) of the gripper point, keeping that small offset (no jump); nothing slips (out of reach, the arm waits as close as it gets). Orientation stays relative.
 - A change drops the clutch: release and grip again. `status.mode` says what's set. Doesn't take control.
 
