@@ -35,6 +35,7 @@ uv run lab-os serve
 - **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
 - **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
 - **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.
+- **6.7** In Chrome, open http://localhost:8080/teleop on its own (not in the hub) → **Full screen** → **Desktop control** → hold a jog key → tap **Esc** once. → did the arm stop? (yes / no) Is the page still full screen? (yes / no)
 
 ## 1. The hub on the desktop (5 min)
 ```bash

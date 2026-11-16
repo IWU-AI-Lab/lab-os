@@ -23,7 +23,7 @@ Controls: **grip** held = clutch (arm follows, relative to where it is) · **tri
 `uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop` plays a synthetic 7-second session (grab, move, squeeze, release, move back without the arm following, grab again). Open the monitor page to watch it. Add `--speed 0.5` to slow it down.
 
 ## 2. At a computer: desktop control
-`uv run lab-os-teleop serve` (fake SO-101), `--arm fake-xarm1` (software xArm) or `--arm xarm1 --speed 0.2` (the real one). Open **http://localhost:8080/**, pick a **mode** under "Desktop control: mode and keys", then click **Desktop control**. The page captures the pointer; **Esc** leaves (the arm freezes and another page may take over). **X** = STOP in every mode. The key table on the page is built from the connected arm's joints.
+`uv run lab-os-teleop serve` (fake SO-101), `--arm fake-xarm1` (software xArm) or `--arm xarm1 --speed 0.2` (the real one). Open **http://localhost:8080/**, pick a **mode** under "Desktop control: mode and keys", then click **Desktop control**. The page captures the pointer; **Esc** leaves (the arm freezes and another page may take over). In full screen in Chrome or Edge, Esc does only that and the page stays full screen (Keyboard Lock; hold Esc to leave full screen; since 2026-11-16). **X** = STOP in every mode. The key table on the page is built from the connected arm's joints.
 
 | Mode | How | Goes through |
 |---|---|---|
