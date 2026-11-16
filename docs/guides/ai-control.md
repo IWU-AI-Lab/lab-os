@@ -60,6 +60,7 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | `list_docs` / `read_doc` / `search_docs` | The docs (one doc, or one section of it, e.g. `read_doc("ideas", "On hold")`), and a search. Includes `docs/design/` (since 2026-11-12) |
 | `git_status` / `git_log` | Branch, changed files, recent commits (nothing is fetched) |
 | `list_devices` | The place's device list (off limits, borrowed, active in the venue) |
+| `lab_status` | The lab in one call: the arm, the devices with the hub open, voice, AI, spend, the next step, warnings |
 
 For example: "Use the lab-os tools: what's next, and what's on hold? Then draft a plan for the next step."
 

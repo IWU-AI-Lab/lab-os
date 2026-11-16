@@ -73,7 +73,7 @@ from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import CONTROL, LOOP, create_app, is_local
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
-from lab_os.tools.mcp_server import McpHttp, create_mcp_server
+from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
 from lab_os.tools.project import ProjectTools
 from lab_os.tools.robot import Refused, RobotTools
 from lab_os.venues import Venue
@@ -115,6 +115,7 @@ class Brain:
 
 BRAIN = web.AppKey("brain", Brain)
 TOOLS = web.AppKey("tools", RobotTools)
+TOOLS_PROJECT = web.AppKey("tools_project", ProjectTools)
 MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 
@@ -302,6 +303,61 @@ async def api_status(request: web.Request) -> web.Response:
             "time_ms": int(time.time() * 1000),
         }
     )
+
+
+def lab_status(app: web.Application) -> dict:
+    """The lab in one report (quick job 16): only what the brain knows right now; nothing is
+    guessed, and what isn't known is left out. For the hub's assistant ("give me a status report")
+    and any AI tool (the `lab_status` MCP tool)."""
+    brain, loop = app[BRAIN], app[LOOP]
+    control = (
+        "ai" if loop.motion_active else "teleop" if app[CONTROL].get("ws") is not None else "free"
+    )
+    arm = {
+        "name": loop.arm.name,
+        "driven_by": control,
+        "held_still": loop.frozen,
+        "motion_allowed": brain.venue.motion_allowed,
+    }
+    warnings = []
+    if loop.health:
+        hottest = max(h["temp_c"] for h in loop.health.values())
+        arm["hottest_servo_c"] = hottest
+        if loop.servos_hot:
+            warnings.append(f"servos warm ({hottest:.0f} °C): 1:1 teleop is slowed")
+    voice = brain.voice.status()
+    ai = brain.chat.status()
+    out = {
+        "venue": brain.venue.name,
+        "arm": arm,
+        "hub_open_on": [d["name"] for d in app[HUB_DEVICES].listing()],
+        "voice": {
+            "available": voice["available"],
+            "service": voice.get("service"),
+            "wake_word": voice["wake"]["available"],
+        }
+        | ({"why_not": voice["why"]} if voice.get("why") else {}),
+        "ai": {"connected": ai["connected"], "setup": ai["setup"], "paused": ai["paused"]},
+        "internet": brain.internet.online if brain.internet else None,
+    }
+    if not brain.venue.public:  # a public screen doesn't say what's spent
+        m = brain.chat.spend.month()
+        out["ai_spend"] = {"month": m["month"], "spent_usd": round(m["spent_usd"], 2)} | (
+            {"budget_usd": m["budget_usd"]} if m["budget_usd"] is not None else {}
+        )
+    nxt = app[TOOLS_PROJECT].project_status().get("next") if TOOLS_PROJECT in app else None
+    if nxt:
+        out["next_step"] = nxt
+    for name in brain.venue.limits_off:
+        warnings.append(f"safety limit switched off in this venue: {name}")
+    if ai["paused"]:
+        warnings.append("the AI chat is paused (the monthly budget)")
+    if ai.get("problem"):
+        warnings.append(f"AI: {ai['problem']}")
+    if out["internet"] is False:
+        warnings.append("no internet")
+    out["warnings"] = warnings
+    return out
 
 
 def side_view_cm(kin, joints: dict[str, float]) -> list[dict] | None:
@@ -640,7 +696,9 @@ def create_brain_app(
     # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the
     # hub's own chat (always, in-process)
     project = ProjectTools(repo, venue)
+    app[TOOLS_PROJECT] = project
     server = create_mcp_server(app[TOOLS], project)
+    add_lab_status(server, lambda: lab_status(app), app[TOOLS].calls)
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     own_place = place is None  # the active place's files: the budget is re-read as it changes
     place = place or config.load_place()
