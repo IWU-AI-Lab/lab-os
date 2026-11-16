@@ -268,8 +268,26 @@ export function initDesktop(link, ui) {
     }
   }
 
+  // Esc stops without leaving full screen (quick job 9): in full screen, Keyboard Lock hands Esc to
+  // the page (holding Esc still leaves: the browser's rule), so the page lets go of the pointer
+  // itself, which ends desktop control and freezes the arm. Inside the hub, the hub does both.
+  // Where Keyboard Lock isn't there (Firefox, Safari), Esc works as before.
+  const onOwn = window.self === window.top;
+  const lockEsc = () => {
+    if (!onOwn || !navigator.keyboard?.lock) return;
+    if (document.fullscreenElement) navigator.keyboard.lock(["Escape"]).catch(() => {});
+    else navigator.keyboard.unlock?.();
+  };
+  document.addEventListener("fullscreenchange", lockEsc);
+  lockEsc();
+
   document.addEventListener("keydown", (e) => {
     if (!active) return;
+    if (e.code === "Escape") {
+      e.preventDefault();
+      document.exitPointerLock(); // → pointerlockchange → stopControl: the arm freezes
+      return;
+    }
     if (e.code === "KeyX") {
       e.preventDefault();
       if (!e.repeat) link.send({ type: "stop" }); // X = STOP in every mode
