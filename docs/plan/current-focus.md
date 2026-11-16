@@ -14,8 +14,12 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale), then the Quest with the real arm in 1:1.
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
 6. **Existing work instead of ours, if there's time** (decision 2026-11-14, a preference): compare our Quest teleop and our AI arm control with existing projects (`docs/plan/ideas.md` → "Teleop: compare…" and "AI arm control: compare…"), and switch where theirs is better.
-7. **The Newline** (step 12): pick the route if it's used; not blocking.
-8. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-12-03` (demo only from a tag).
+7. **Three previews** (decision 2026-11-16), shown at the end of the demo as "what's next". Started only after devices, the quick jobs and the voice polish are merged; each on its own page or behind a switch that's off by default, so it can't break what works; cut if it hasn't run on the real hardware by 2026-11-24:
+   - **Point and "move there"** in the headset: in the Quest with the 3D arm lined up, point at a spot on the table, say or press "move there", and the gripper goes there. No AI. The first piece of "put that there".
+   - **"What's on the table?"**: the stand camera's picture goes to Gemini, which names the objects; the hub shows the picture with labels and the assistant says them.
+   - **Two arms at once:** in the Quest, the left hand drives one SO-101 and the right hand the other (`docs/plan/ideas.md` → "Two arms at once").
+8. **The Newline** (step 12): pick the route if it's used; not blocking.
+9. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-12-03` (demo only from a tag).
 
 Lab checks for each step: `docs/guides/lab-checklist.md`.
 

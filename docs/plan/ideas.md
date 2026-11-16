@@ -77,6 +77,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 - **Plugs into:** a hub module, the robot slot, the green launcher (could replace it).
 
 ### Two arms at once
+- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo").
 - **What:** drive two arms at the same time: in the Quest, the left controller (or hand) drives one arm and the right the other; on the desktop, perhaps one arm on the keyboard and one on the mouse, or a quick switch between them. Two-handed tasks become possible (pass a block from one arm to the other).
 - **Which arms:** both SO-101 followers (`so101-white` + `so101-green`, the builder's choice 2026-11-12, once step 11 makes the greens drivable); xArms also possible.
 - **Watch out:** today each hand has a job (left pinch = clutch for the right hand, right pinch = gripper), so two-arm control needs its own controls; the 3D scene shows both arms; the brain desktop's USB sockets are full (an arm on another computer: "Robots report in" above); STOP stops both.
