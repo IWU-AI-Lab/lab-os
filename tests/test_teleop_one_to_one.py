@@ -1,6 +1,6 @@
 """Teleop's 1:1 mode (decision 2026-11-10): the gripper goes where the hand is, at scale 1, so hand
-and arm stay together; the relative mode drifts apart (scale ½, slips). The SO-101 model, a fake
-arm, hand paths made up in code. No hardware, no headset."""
+and arm stay together; the relative mode can drift apart (it slips at limits). The SO-101 model,
+a fake arm, hand paths made up in code. No hardware, no headset."""
 
 import math
 
@@ -283,3 +283,60 @@ def test_servo_health_is_logged_and_hot_servos_slow_1to1(tmp_path):
     loop.check_health(106.0)
     assert loop.status()["servos"]["hot"]
     assert loop.one_to_one_cap() == loop.mapper.config.max_deg_per_s  # back to relative speed
+
+
+# Relative mode's follow speed (decision 2026-11-16, docs/dev/existing-work-teleop-ai.md): scale 1
+# and the 1:1 follow speed, scaled by the speed control; the old 45°/s left the arm behind.
+
+
+def test_relative_follow_speed_is_the_1to1_speed_scaled_by_the_speed_control():
+    loop, _ = make_loop()
+    loop.max_speed_scale = 0.5  # the lab venue's
+    loop.set_speed(0.5)
+    assert loop.relative_cap() == 180.0  # speed control at its top = the follow speed
+    loop.set_speed(0.25)
+    assert loop.relative_cap() == 90.0  # half way = half
+    loop.one_to_one_deg_per_s = math.inf  # speed cap switched off
+    assert loop.relative_cap() == math.inf
+    loop.one_to_one_deg_per_s = 0.0  # visit day: 1:1 off → the old relative speed
+    assert loop.relative_cap() is None
+
+
+def test_a_relative_grab_drives_the_arm_at_the_follow_speed():
+    loop, arm = make_loop()
+    seen = []
+    move = arm.move_joints
+    arm.move_joints = lambda t, s, deg_per_s=None: (seen.append(deg_per_s), move(t, s, deg_per_s))
+    loop.mapper.needs_release = False
+    t0 = tip(arm.read_joints())
+    for i, p in enumerate([t0] * 3 + [add(t0, (0.02, 0, 0))] * 5):
+        loop.inputs.update(parse_frame(quest(p)), now=i * DT)
+        loop.step(i * DT, DT)
+    assert loop.mapper.engaged and not loop.mapper.absolute
+    assert seen and set(seen) == {180.0}
+
+
+def test_relative_keeps_up_with_a_quick_hand():
+    """A quick 8 cm reach in 0.2 s: at the follow speed the gripper is there after 0.4 s; at the
+    old 90°/s × 0.5 it is still well short."""
+
+    def reach(relative_deg_per_s):
+        m = ClutchMapper(MappingConfig(), kinematics=KIN)
+        joints = dict(SO101_HOME)
+        t0 = tip(joints)
+        path = [t0] + [add(t0, (0.08 * min(i / 10, 1), 0, 0)) for i in range(1, 21)]
+        for p in path:
+            c = ControllerState(
+                pos=page_pos(p),
+                quat=(0.0, 0.0, 0.0, 1.0),
+                trigger=0.0,
+                grip=1.0,
+                buttons={},
+                thumbstick=(0.0, 0.0),
+            )
+            out = m.step(c, joints, DT, 0.5, LIMITS, relative_deg_per_s=relative_deg_per_s)
+            joints = {**joints, **(out or {})}
+        return math.dist(tip(joints), add(t0, (0.08, 0, 0)))
+
+    assert reach(180.0) < 0.005
+    assert reach(None) > 0.02

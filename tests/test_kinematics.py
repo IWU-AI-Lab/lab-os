@@ -157,18 +157,18 @@ def drive_arm(arm, c_end, ticks=200):
 @pytest.mark.parametrize(
     ("move", "axis", "sign"),
     [
-        ((0.0, 0.0, -0.06), 0, +1),  # hand forward (−z) → gripper forward (+x)
-        ((-0.06, 0.0, 0.0), 1, +1),  # hand left → gripper to the arm's left (+y)
-        ((0.06, 0.0, 0.0), 1, -1),  # hand right → arm's right
-        ((0.0, 0.06, 0.0), 2, +1),  # hand up → gripper up
-        ((0.0, -0.06, 0.0), 2, -1),  # hand down → gripper down
+        ((0.0, 0.0, -0.03), 0, +1),  # hand forward (−z) → gripper forward (+x)
+        ((-0.03, 0.0, 0.0), 1, +1),  # hand left → gripper to the arm's left (+y)
+        ((0.03, 0.0, 0.0), 1, -1),  # hand right → arm's right
+        ((0.0, 0.03, 0.0), 2, +1),  # hand up → gripper up
+        ((0.0, -0.03, 0.0), 2, -1),  # hand down → gripper down
     ],
 )
 def test_gripper_follows_the_hand(arm, move, axis, sign):
     end = tuple(h + d for h, d in zip(HAND, move, strict=True))
     (tip0, angle0), (tip1, angle1), _ = drive_arm(arm, hand(end))
     delta = [b - a for a, b in zip(tip0, tip1, strict=True)]
-    assert sign * delta[axis] == pytest.approx(0.03, abs=0.002)  # 6 cm hand → 3 cm gripper
+    assert sign * delta[axis] == pytest.approx(0.03, abs=0.002)  # 3 cm hand → 3 cm (scale 1)
     for other in {0, 1, 2} - {axis}:
         assert abs(delta[other]) < 0.002  # and only along that axis
     assert angle1 == pytest.approx(angle0, abs=1.0)  # tilt kept

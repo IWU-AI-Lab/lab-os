@@ -158,6 +158,16 @@ class TeleopLoop:
             return min(self.one_to_one_deg_per_s, self.mapper.config.max_deg_per_s)
         return self.one_to_one_deg_per_s
 
+    def relative_cap(self) -> float | None:
+        """The top joint speed for a relative grab: the 1:1 follow speed scaled by the speed
+        control (its top = the follow speed; half way = half). None where 1:1 isn't available
+        (visit days, no kinematics): then the old `max_deg_per_s` × speed (decision 2026-11-16:
+        the old 45°/s left the arm far behind the hand)."""
+        if "one_to_one" not in self.modes():
+            return None
+        share = self.speed_scale / self.max_speed_scale if self.max_speed_scale > 0 else 1.0
+        return self.one_to_one_cap() * min(max(share, 0.0), 1.0)
+
     def check_health(self, now: float) -> None:
         """Every health_every_s: read the servos (if the driver can) and log it."""
         read = getattr(self.arm, "read_health", None)
@@ -259,6 +269,7 @@ class TeleopLoop:
                 one_to_one_deg_per_s=self.one_to_one_cap()
                 if "one_to_one" in self.modes()
                 else None,
+                relative_deg_per_s=self.relative_cap(),
             )
         if targets is None:
             return
@@ -266,8 +277,11 @@ class TeleopLoop:
             self.arm.resume()
             self.frozen = False
             self._emit({"type": "arm_resume"})
+        relative = self.relative_cap()
         if self.mapper.absolute and self.mapper.engaged and kind == "pose":
             self.arm.move_joints(targets, self.speed_scale, deg_per_s=self.one_to_one_cap())
+        elif self.mapper.engaged and kind == "pose" and relative is not None:
+            self.arm.move_joints(targets, self.speed_scale, deg_per_s=relative)
         else:
             self.arm.move_joints(targets, self.speed_scale)
         self._emit(

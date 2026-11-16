@@ -10,7 +10,8 @@ Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
 - Grip held = clutch engaged = the arm follows the controller. Released = the arm freezes.
 - Relative (`mode: relative`, the default): on engage, remember the controller pose and the arm's
   *current* joints; afterwards the arm moves by how far the controller has moved since then,
-  scaled. No snapping, ever.
+  scaled (1.0 since 2026-11-16, like LeRobot's Isaac Teleop and telegrip:
+  docs/dev/existing-work-teleop-ai.md). No snapping, ever.
 - **1:1** (`mode: one_to_one`, IK only, decision 2026-11-10): the gripper point goes where the hand
   is, at scale 1, so hand and arm stay together (the relative mode drifts apart: scale ½, slips at
   limits). Needs hand positions measured from the 3D arm's base (`XRFrame.arm_frame`: the Quest
@@ -55,7 +56,7 @@ class MappingConfig:
     grip_on: float = 0.6  # hysteresis: engage above this...
     grip_off: float = 0.4  # ...release below this
     deg_per_m: float = 200.0  # joint space: 10 cm of hand motion → 20° of joint motion
-    tip_m_per_hand_m: float = 0.5  # IK: 10 cm of hand motion → 5 cm of gripper motion
+    tip_m_per_hand_m: float = 1.0  # IK: 10 cm of hand motion → 10 cm of gripper motion
     slip_m: float = 0.002  # IK: a target further than this from what the arm reached slips
     # (IK: the direction of wrist_roll for a hand roll is the arm's `Kinematics.roll_sign`.)
     max_deg_per_s: float = 90.0  # ramp limit at speed_scale = 1
@@ -168,11 +169,14 @@ class ClutchMapper:
         limits: dict[str, JointLimit] | None = None,
         arm_frame: bool = False,
         one_to_one_deg_per_s: float | None = None,
+        relative_deg_per_s: float | None = None,
     ) -> dict[str, float] | None:
         """Return joint targets for this tick, or None when the arm should hold still.
         `arm_frame`: the controller's position is measured from the arm's base (1:1 possible).
         `one_to_one_deg_per_s`: a 1:1 grab's top joint speed (the venue's; inf = no cap) instead
-        of `max_deg_per_s` × speed_scale, so the arm keeps up with the hand."""
+        of `max_deg_per_s` × speed_scale, so the arm keeps up with the hand.
+        `relative_deg_per_s`: the same for a relative grab (the loop's follow speed; None = the
+        old `max_deg_per_s` × speed_scale)."""
         cfg = self.config
         if controller is None or not controller.tracked:
             self.engaged = False  # tracking lost = clutch released
@@ -228,6 +232,9 @@ class ClutchMapper:
             desired[joint] = clamped
         if self.absolute and one_to_one_deg_per_s is not None:
             fast = one_to_one_deg_per_s
+            max_step = math.inf if math.isinf(fast) else fast * dt
+        elif not self.absolute and relative_deg_per_s is not None:
+            fast = relative_deg_per_s
             max_step = math.inf if math.isinf(fast) else fast * dt
         else:
             max_step = cfg.max_deg_per_s * min(max(speed_scale, 0.0), 1.0) * dt

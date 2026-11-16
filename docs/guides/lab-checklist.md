@@ -135,6 +135,7 @@ In the Quest's browser: `http://localhost:8080/teleop` → **Hand → arm → 1:
 - **7.4** Wave your hand slowly side to side. → did the arm keep up? (yes / late by about ___ s)
 - **7.5** After about 5 minutes of 1:1, in a second terminal: `tail -n 1 logs/servo-health/*so101-white.jsonl`. → the highest `temp_c` in the line.
 - **7.6** Switch to relative on the page and drive for a minute. → which is easier to steer? (1:1 / relative / same)
+- **7.7** Still in relative, push the right thumbstick up until the speed stops rising. Grab, move your hand forward by the paper's long edge, at a normal pace. → did the gripper travel the same edge? (same / short / long) Did it keep up? (yes / late by about ___ s) Did it shake or jerk? (no / a little / a lot)
 
 ## 10. The hub in VR (20 min)
 Setup: the Quest on USB. No arm.
