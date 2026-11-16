@@ -1,7 +1,7 @@
 """The devices that have the hub open (focus step 8, docs/guides/hub.md → "Devices").
 
 A *device* is a computer or screen with the hub open under a name in its address: `/?device=desk`,
-`/?device=newline`, `/?device=quest`. Each hub page (a *window*; one per monitor of a device) keeps
+`/?device=newline`, `/?device=quest-a`. Each hub page (a *window*; one per monitor of a device) keeps
 a WebSocket to the brain (`/ws/hub-device`, docs/dev/protocol.md → "Devices"), so the brain knows
 which devices are there right now and what each window shows. Nothing is remembered about a window
 after it closes: when the brain restarts, the pages reconnect and the list fills again.

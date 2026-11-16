@@ -95,7 +95,7 @@ A **device** is a computer or screen with the hub open under a name in its addre
 - **Only devices with the hub open are listed**, so a device used for something else (the Newline showing a slide) is never taken over. The menu opens on the left, so it never covers a page's STOP.
 - **When the brain restarts,** every hub page reconnects by itself within a few seconds and tells the brain again what it shows; "Bring it back" still works afterwards. (A page opened while the brain was off doesn't load at all: tap the icon again once it runs.)
 - **Who may:** any hub page can open a page on another device that has the hub open (it only changes what that screen shows; a real arm's teleop page on another computer is still view-only).
-- The Quest's VR hub (`/xr`) isn't a device yet: open `/design?device=quest` in its browser to have the Quest listed.
+- The Quest's VR hub (`/xr`) isn't a device yet: open `/design?device=quest-a` (or `quest-b`/`-c`: `config/devices.yaml`) in its browser to have the Quest listed.
 
 **One tap per device** (nothing starts by itself):
 - **The brain's computer: "Start lab-os".** Make the icon once, in `~/lab-os`:
