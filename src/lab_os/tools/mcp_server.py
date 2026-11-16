@@ -37,9 +37,17 @@ message say how far): don't grip or carry on as if it had. Refusals say why; don
 refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
 camera_snapshot takes a real picture from a camera; on a camera with a table map it has a
 cm grid of the table on it (table_point turns a pixel into cm): use it for an object's x and y,
-then the wrist camera to fine-tune.
-The user approves each move. pose_view draws the arm as it is now (no camera): look at it after
-a move, with marks where you think the objects are, before you grip.
+then the wrist camera to fine-tune. pose_view draws the arm as it is now (no camera): look at it
+after a move, with marks where you think the objects are, before you grip. Moves don't wait for
+approval; someone watches the arm with STOP in reach, so say one short line before each move.
+
+Picking something up: find it on the stand camera's grid; move_to within max_move_cm of the
+point above it; then pick_at (open, above, straight down, close, lift in one call). By hand: come
+down from above pointing straight down (tool angle 180), with the gripper fully open; look with
+the wrist camera before closing (the object between the jaw tips); close fully (gripper 0); lift
+a few cm and look again: a held object fills much of the wrist picture and the gripper stops
+part-way open. If unsure, stop and look instead of guessing; if a pick missed, look before
+trying again. (Tips adapted from robot_MCP: docs/dev/existing-work-teleop-ai.md.)
 
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
@@ -140,6 +148,26 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
         call again). Refuses points it can't reach or below min_z_cm, instead of guessing."""
         return await run(
             "move_to", x_cm=x_cm, y_cm=y_cm, z_cm=z_cm, tool_angle_deg=tool_angle_deg, arm=arm
+        )
+
+    @server.tool(annotations=MOVE)
+    async def pick_at(
+        x_cm: float,
+        y_cm: float,
+        height_cm: float = 2.5,
+        open_pct: float = 100.0,
+        arm: str | None = None,
+    ) -> dict:
+        """Pick up the object standing at (x, y) cm on the table (its middle, where it touches
+        the table: the stand camera's grid), in one call: open the gripper (open_pct), go
+        height_cm + 6 cm above it pointing straight down, straight down to half its height,
+        close, lift. Start within max_move_cm of the point above it (move_to there first).
+        Every point is checked before anything moves; each step shows on the AI Control page
+        before it moves. "result": "holding" (the gripper stopped on something), "missed" (it
+        shut all the way), or the step where it stopped ("steps" lists them). Check with the
+        wrist camera afterwards."""
+        return await run(
+            "pick_at", x_cm=x_cm, y_cm=y_cm, height_cm=height_cm, open_pct=open_pct, arm=arm
         )
 
     @server.tool(annotations=MOVE)

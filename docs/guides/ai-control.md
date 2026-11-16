@@ -23,7 +23,7 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 **Which model:** type `/model` and pick Fable 5.2 if it's in the list (the builder's access ends 2026-11-16). Any model works; nothing is tied to Fable.
 
 ## 3. Permissions
-The repo's `.claude/settings.json` (decision 2026-11-13, built 2026-11-14) **allows every brain tool without asking**, for everyone who opens the project: the read tools (`arm_status`, `list_poses`, `pose_view`, `camera_snapshot`, `table_point`, the project tools below), `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`). Nothing waits for a click; what keeps it safe is the brain itself: **STOP** on every screen, the soft joint limits and one controller at a time always stay, plus the per-move limit, the speed cap and the floor (safety rules below). Someone stays at a real arm with STOP in reach.
+The repo's `.claude/settings.json` (decision 2026-11-13, built 2026-11-14) **allows every brain tool without asking**, for everyone who opens the project: the read tools (`arm_status`, `list_poses`, `pose_view`, `camera_snapshot`, `table_point`, the project tools below), `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`, `pick_at`). Nothing waits for a click; what keeps it safe is the brain itself: **STOP** on every screen, the soft joint limits and one controller at a time always stay, plus the per-move limit, the speed cap and the floor (safety rules below). Someone stays at a real arm with STOP in reach.
 
 A coding session (one working on lab-os's code) still asks you before it runs anything that moves a real arm (CLAUDE.md); a session you started to drive the arm uses the tools freely. To be asked before each move anyway (in your own Claude Code settings only): add the four move tools as `"ask"` rules in `.claude/settings.local.json` (in Claude Code, ask beats allow).
 
@@ -50,6 +50,7 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | `gripper` | move | 0 = closed … 100 = fully open |
 | `move_to` | move | The gripper point in a **straight line** to (x, y, z), optionally with a tool angle. Says "can't reach" instead of guessing |
 | `go_to_pose` | move | A named pose |
+| `pick_at` | move | A whole pick in one call: open, above, straight down, close, lift ("Picking up" below) |
 | `stop` | always | Stop now and hold still, whoever has control |
 
 **Project tools** (read; the hub's own chat uses the same ones):
@@ -133,6 +134,11 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table, s
 5. Take the sheet away. From now on `camera_snapshot` of that camera has the grid (`grid: false` for the plain picture).
 
 No camera needed for a try: `--image picture.jpg` uses a saved picture.
+
+## Picking up (`pick_at`, since 2026-11-16)
+`pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object standing at (x, y) on the table in one call, instead of ~17 small ones (the cube pick of 2026-11-12). Five steps, each through the same safety path as `gripper` and `move_to`: **1** open the gripper, **2** go `height_cm` + 6 cm above it pointing straight down, **3** straight down to half its height (never below the floor), **4** close, **5** lift back up. Before anything moves it checks that both points are reachable pointing down, that the point above is within `max_move_cm` (10 cm) of the gripper (else: `move_to` near it first), and the usual rules. Each step appears on **AI Control** (`/ai`) as "Pick · next · 2/5 go above it…" just before it moves, then the move itself. It ends early on STOP (`stopped`) or if a step lands more than 1.5 cm off (the gripper stays open). Result: `holding` (the gripper stopped more than 15 % open after the lift) or `missed` (it shut: the real arm reads ~8 % with nothing in it), with `steps`.
+
+Where the x and y come from: the stand camera's grid (above). The height reading and the elbow sag (`docs/plan/ideas.md` → "AI picking") still decide whether step 3 ends low enough: fix those first.
 
 ## Seeing the pose (`pose_view`)
 Without a camera the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
