@@ -4,6 +4,33 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-16 — Green arms: LeLab writes a calibration into the motors at every teleop start, and it has two setups
+**What:** lab check part 8. `--watch` on `so101-green` worked with `calibration_file` set to `sheep.json`, then later refused: "motors hold a different calibration than its file". Cause, read from LeLab's code and saved setups (nothing written): LeLab's teleop writes the chosen setup's two calibration files into both arms' motors every time it starts. LeLab has **two saved setups for the same green pair**, and their names are crossed:
+
+| LeLab setup | follower file (written to the follower) | leader file |
+|---|---|---|
+| `SO-101_Green_Follower` | `sheep.json` | `SO-101_Green_Follower.json` |
+| `SO-101_Green_Leader` | `SO-101_Green_Leader.json` | `shepherd.json` |
+
+`sheep` and `shepherd` are the builder's own calibrations from LeRobot's command line (the ones used for training, as far as the builder remembers); the two `SO-101_Green_…` files came from LeLab's calibration page. The two follower files differ by up to 43 motor steps (about 3°). So the motors hold whichever setup LeLab ran last, and a lab-os pinned to one file refuses after the other. Each setup also saves only one camera (one `wrist_cam`, the other `overhead_camera`, both camera number 2); adding cameras in LeLab is finicky (they don't always show up or save).
+**Fix:** decided 2026-11-16: lab-os matches the motors. It uses whichever file in LeLab's follower folder equals what the motors hold, says which, and refuses only if none does (quick job 18). Still read-only. For training, the builder keeps to one LeLab setup, so recordings and the policy use the same calibration.
+
+### 2026-11-16 — The training launcher started LeLab while the brain was driving the green arm
+**What:** lab check 8.12: with `lab-os serve --arm so101-green` running, the "SO-101 Training (LeLab)" icon started LeLab instead of refusing. The brain then logged `so101-green: read failed (… Incorrect status packet!); using the last reading`: two programs on one port, which rule 4 forbids. The launcher skips its "is the port open elsewhere" check when LeLab's page already answers ("then it's LeLab's"), `green.check`.
+**Fix:** quick job 17: the launcher refuses whenever a program that isn't LeLab has a green port open, whether or not LeLab is running. Until then: stop the brain (Ctrl+C) before the training icon.
+
+### 2026-11-16 — Brave: Esc still leaves full screen; in desktop control STOP can't be clicked
+**What:** lab check 6.7 in Brave: Esc stopped the arm but also left full screen. Keeping Esc needs the browser's Keyboard Lock, which Chrome and Edge have and Brave doesn't. And in desktop control the pointer is captured, so the STOP button can't be clicked (8.10).
+**Fix:** **X is STOP in every desktop-control mode** (already built) and leaves full screen alone. Quick job 19 shows that on the page. Use Chrome for the hub.
+
+### 2026-11-16 — Green follower stayed stiff during `--watch`
+**What:** lab check 8.8: the joints could only be moved a little by hand. `--watch` never switches the motors on or off, and LeLab had left them holding.
+**Fix:** none in lab-os (it doesn't write to a borrowed arm in watch mode). Unplug and replug the arm's power to make it limp.
+
+### 2026-11-16 — The closet router (Linksys WRK54G) is too old to be the lab router
+**What:** a 2.4 GHz 802.11g router from about 2005: measured 1.46 Mbps down, 13.5 Mbps up, 7 ms. Its Wi-Fi tops out near 20 Mbps real, wired ports 100 Mbps, and it gets no security updates.
+**Fix:** not for cameras, the Quest or the internet. It could carry small messages (a Raspbot reporting in) on its own, with nothing in its Internet port, as a stand-in until the real router. Plugging it into the wall is the same question to IT as any router.
+
 ### 2026-11-16 — An exited process still shows in `ps` on Linux until its parent collects it
 **What:** Stop LeLab (quick job 7) checks that the LeLab it stops is gone by asking `ps` for its pid. In CI (Linux) the test's stand-in LeLab had exited but `ps` still listed it, `[lelab] <defunct>` with the same start time, because the test (its parent) hadn't collected it yet: a zombie. On the Mac the same test passed. Real LeLab's parent is its terminal, which collects it at once.
 **Fix:** a process whose `ps` state has `Z` counts as stopped (`green.started_lelab`).
