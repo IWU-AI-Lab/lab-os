@@ -11,6 +11,9 @@ refuses; it never trusts the numbers it's given:
 - **clipped** (it moves, and says so): targets past the soft limits (3° inside the real ones, like
   teleop); more than `max_joint_change_deg` per call (all joints go the same fraction of the way;
   the gripper is exempt); more than `max_move_cm` per call for move_to.
+- **pick_at**: one call for a whole pick (open, above, straight down, close, lift), built from
+  the same moves; it checks every point first and says each step on the AI Control page before
+  it moves (decision 2026-11-16, docs/dev/existing-work-teleop-ai.md).
 - **stop**: always allowed. STOP on any page also ends a move ("stopped").
 - **checked**: after a move, the motors' real position is compared with the target; further than
   `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
@@ -52,6 +55,13 @@ HOLD_S = 0.5  # after the last waypoint, keep sending it this long so trailing s
 SETTLE_S = 0.2  # after the hold and the freeze, before reading where the arm really is
 SHORT_CM = 0.5  # the gripper point ended further than this from the target: "stopped_short"
 SHORT_DEG = 2.0  # a joint ended further than this from its target: "stopped_short"
+PICK_ABOVE_CM = 6.0  # pick_at: the hover point is this far above the object's top
+PICK_OFF_CM = 1.5  # pick_at: a step that ends further off than this ends the pick
+PICK_HEIGHT_CM = (0.5, 8.0)  # objects pick_at takes (cm tall)
+# Closed on nothing, the real so101-white read 7.8 % open (GOTCHAS 2026-11-12): more than this
+# after the lift = holding something. A guess between that and a 2.5 cm cube; lab check part 3.
+PICK_HELD_PCT = 15.0
+DOWN_DEG = 180.0  # tool angle: pointing straight down
 SHORT_PCT = 5.0  # the gripper's opening ended further than this from the one asked for
 FLOOR_SAMPLES = 20  # points checked along a joint-space move
 
@@ -581,6 +591,104 @@ class RobotTools:
         self.last_target = (end, angle0 + d_angle * k)
         return await self._run(path, notes, aim=self.last_target)
 
+    def _reaches(self, seed: dict, point_cm: tuple, angle: float) -> dict | None:
+        """The joints that put the gripper point at `point_cm` with `angle`, or None."""
+        bounds = {
+            j: JointLimit(lo, hi)
+            for j, (lo, hi) in soft_bounds(self.arm.limits, seed, LIMIT_MARGIN_DEG).items()
+        }
+        q = solve_ik(self.kin, seed, tuple(v / 100 for v in point_cm), angle, bounds, 120)
+        (rx, ry, rz), ra = self.kin.fk(q)
+        miss = math.dist(point_cm, (rx * 100, ry * 100, rz * 100))
+        if miss > REACH_TOLERANCE_CM or abs(_angle_diff(ra, angle)) > ANGLE_TOLERANCE_DEG:
+            return None
+        return q
+
+    async def pick_at(
+        self,
+        x_cm: float,
+        y_cm: float,
+        height_cm: float = 2.5,
+        open_pct: float = 100.0,
+        arm: str | None = None,
+    ) -> dict:
+        """Pick up the object standing at (x, y) on the table: open, go above it pointing
+        straight down, go straight down to half its height, close, lift. Every point is checked
+        before anything moves; each step is logged (and shown on AI Control) before it moves."""
+        self._check_can_move(arm)
+        if not self.kin:
+            raise Refused(f"no kinematics for the {self.arm.model} model; pick with move_joints")
+        _finite(x_cm=x_cm, y_cm=y_cm, height_cm=height_cm, open_pct=open_pct)
+        lo_h, hi_h = PICK_HEIGHT_CM
+        if not lo_h <= height_cm <= hi_h:
+            raise Refused(
+                f"height_cm {height_cm:g}: pick_at takes objects {lo_h:g}–{hi_h:g} cm tall"
+            )
+        above = (x_cm, y_cm, height_cm + PICK_ABOVE_CM)
+        grip = (x_cm, y_cm, max(height_cm / 2, self.limits.min_z_cm))
+        current = self.arm.read_joints()
+        (tx, ty, tz), _ = self.kin.fk(current)
+        here = (tx * 100, ty * 100, tz * 100)
+        far = math.dist(here, above)
+        if far > self.limits.max_move_cm:
+            raise Refused(
+                f"the point above the object ({above[0]:.1f}, {above[1]:.1f}, {above[2]:.1f}) cm "
+                f"is {far:.1f} cm from the gripper; pick_at starts within "
+                f"{self.limits.max_move_cm:g} cm of it. Nothing moved: move_to near it first, then "
+                "pick_at."
+            )
+        q_above = self._reaches(current, above, DOWN_DEG)
+        q_grip = q_above and self._reaches(q_above, grip, DOWN_DEG)
+        if q_grip is None:
+            which = "above" if q_above is None else "at"
+            raise Refused(
+                f"can't reach {which} ({x_cm:g}, {y_cm:g}) pointing straight down; nothing moved. "
+                "Too near the base or too far out: pick something else or move it."
+            )
+        steps: list[dict] = []
+
+        async def step(n: int, say: str, tool: str, **args) -> dict:
+            self.calls.write("pick_at", {"step": f"{n}/5 {say}"}, "next", say)
+            r = await self.call(tool, **args)
+            steps.append({"step": f"{n}/5 {say}", "result": r.get("result")} | _brief(r))
+            return r
+
+        def ended(why: str, r: dict) -> dict:
+            return {"result": r.get("result"), "steps": steps, "message": why} | self._where()
+
+        r = await step(1, "open the gripper", "gripper", open_pct=open_pct)
+        if r["result"] == "stopped":
+            return ended("stopped at step 1. Don't move again until the user says so.", r)
+        moves = [(2, "go above it, pointing down", above), (3, "go straight down", grip)]
+        for n, say, (x, y, z) in moves:
+            r = await step(n, say, "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
+            if r["result"] == "stopped":
+                return ended(f"stopped at step {n}. Don't move again until the user says so.", r)
+            if r.get("off_by_cm", 0.0) > PICK_OFF_CM:
+                return ended(
+                    f"step {n} ended {r['off_by_cm']} cm off, so the pick stopped there with the "
+                    "gripper open. Look (wrist camera), then move_to and pick_at again.",
+                    r,
+                )
+        r = await step(4, "close the gripper", "gripper", open_pct=0)
+        if r["result"] == "stopped":
+            return ended("stopped at step 4. Don't move again until the user says so.", r)
+        x, y, z = above
+        r = await step(5, "lift", "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
+        if r["result"] == "stopped":
+            return ended("stopped at step 5. Don't move again until the user says so.", r)
+        held = r.get("gripper_open_pct", 0.0) > PICK_HELD_PCT
+        out = ended(
+            f"holding something: the gripper stopped at {r['gripper_open_pct']:.0f} % open. "
+            "Check with the wrist camera."
+            if held
+            else "closed on nothing (the gripper shut all the way): missed. Look with the "
+            "cameras before trying again.",
+            r,
+        )
+        out["result"] = "holding" if held else "missed"
+        return out
+
     async def stop(self, arm: str | None = None) -> dict:
         """Always allowed: freeze now, whoever has control."""
         self.loop.stop()
@@ -613,6 +721,12 @@ class RobotTools:
                 logged[key] = f"{len(logged[key])} bytes"
         self.calls.write(tool, args, outcome, logged)
         return result
+
+
+def _brief(r: dict) -> dict:
+    """What a pick step's own result says that matters afterwards."""
+    keep = ("off_by_cm", "message", "gripper_open_pct", "gripper_point_cm")
+    return {k: r[k] for k in keep if k in r}
 
 
 def _grab_jpeg(path: str, width_px: int) -> bytes:

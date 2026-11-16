@@ -28,6 +28,7 @@
       "mcp__lab-os__gripper",
       "mcp__lab-os__move_to",
       "mcp__lab-os__go_to_pose",
+      "mcp__lab-os__pick_at",
       "mcp__lab-os__project_status",
       "mcp__lab-os__list_docs",
       "mcp__lab-os__read_doc",

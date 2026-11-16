@@ -9,7 +9,8 @@ $("#stop").addEventListener("click", () => link.send({ type: "stop" }));
 
 const TOOL = {
   arm_status: "Read the arm", list_poses: "Listed the poses", move_joints: "Move joints", gripper: "Gripper",
-  move_to: "Move to", go_to_pose: "Go to pose", stop: "Stop",
+  move_to: "Move to", go_to_pose: "Go to pose", stop: "Stop", pick_at: "Pick",
+  camera_snapshot: "Took a picture", table_point: "Pixel → table", pose_view: "Drew the pose",
 };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function setPill(id, text, cls) {

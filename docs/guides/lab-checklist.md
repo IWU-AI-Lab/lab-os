@@ -97,6 +97,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
 - **3b.2** Drive the arm up and to the side so it covers none of the sheet. In a second terminal: `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (the numbers from 3b.1). → corners seen ___ of 24, worst ___ mm (or the error it printed)
 - **3b.3** Open the preview it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines run along the sheet's squares? (yes / no)
 - **3b.4** Take the sheet away. Put the cube anywhere in front of the arm. New Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what it said ___; is the gripper over the cube? (yes / off by about ___ cube-widths, which way ___)
+- **3b.5** Same session. Prompt: `Pick it up with pick_at, then tell me whether you're holding it.` Watch `/ai`. → is the cube in the jaws? (yes / no) What did it say: holding or missed? Did `/ai` show each step before it moved? (yes / no)
 
 ## 8. Green arms in lab-os (40 min)
 Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.

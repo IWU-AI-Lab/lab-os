@@ -10,7 +10,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 log = logging.getLogger(__name__)
 
-NEVER = {"move_joints", "gripper", "move_to", "go_to_pose", "stop"}  # belt and braces
+NEVER = {"move_joints", "gripper", "move_to", "go_to_pose", "pick_at", "stop"}  # belt and braces
 NOT_FOR_CHAT = {
     "pose_view",
     "camera_snapshot",
