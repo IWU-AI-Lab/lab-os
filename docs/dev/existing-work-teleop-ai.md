@@ -58,7 +58,7 @@ None of the newer finds clears the "maintained and actually used" bar. I only to
 **What this says:** our tools are already the safest and most model-agnostic of the lot. What we lack is what made the 2026-11-12 pick slow and wrong: **no mapping from the camera to the table**, and **no grab skill**, so the AI spends 10+ calls getting close.
 
 **Recommendation: keep ours, borrow two parts (and one optional).**
-1. **Camera → table cm with a printed board** (Google's method, ~60 lines of OpenCV, Apache-2.0). Print their calibration PDF and lay it at a measured spot in front of `so101-white`. A one-time `lab-os` step saves the homography per camera. `camera_snapshot` of `cam-a` then draws a **cm grid of the table** on the picture (and/or a `locate(camera, x_px, y_px)` tool returns table cm). A grid works with every model, not only Gemini, because no model has to name exact pixels. OpenCV 4.13 is already in our `so101` extra, so nothing new gets installed. It's only right on the table plane: a 2.5 cm cube's centre is ~1 cm off, and the wrist camera fine-tunes. *Cost: one session (fake picture, tests) before 11-19; 15 min in the lab on 11-19 (print, place, measure, calibrate).*
+1. **Camera → table cm with a printed board** (Google's method, ~60 lines of OpenCV, Apache-2.0). Print their calibration PDF and lay it at a measured spot in front of `so101-white`. A one-time `lab-os` step saves the homography per camera. `camera_snapshot` of `cam-stand` then draws a **cm grid of the table** on the picture (and/or a `locate(camera, x_px, y_px)` tool returns table cm). A grid works with every model, not only Gemini, because no model has to name exact pixels. OpenCV 4.13 is already in our `so101` extra, so nothing new gets installed. It's only right on the table plane: a 2.5 cm cube's centre is ~1 cm off, and the wrist camera fine-tunes. *Cost: one session (fake picture, tests) before 11-19; 15 min in the lab on 11-19 (print, place, measure, calibrate).*
 2. **A `grasp` skill** (Google's hover-then-descend, VELMA's `grasp`): one move tool, `pick_at(x, y)`. Open, go 8 cm above, look straight down, descend, close, lift 5 cm. It's built from our existing `move_to` steps, through the same safety path and STOP, and says each stage (this also covers "say before moving", ideas → "AI picking" 4). The AI's ~17 calls become ~3: look, `pick_at`, check. *Cost: one session before 11-19. It depends on the height zero and the sag being fixed first (focus item 1), or it closes above the cube like on 11-12.*
 3. *(Optional)* **robot_MCP's prompt rules** in our MCP instructions. A `look` option on move tools that returns a picture with the result (saves calls, costs tokens). *Cost: ~30 min.*
 
@@ -69,6 +69,6 @@ None of the newer finds clears the "maintained and actually used" bar. I only to
 |---|---|---|---|
 | Teleop | scale 1.0 + higher relative speed | ~1 h | try on 11-19 |
 | Teleop | pose filter; grab from the measured pose | ~1 h each, only if the lab shows a need | 11-19 / 11-23 |
-| AI | printed board → cm grid on `cam-a` | 1 session | 15 min on 11-19 |
+| AI | printed board → cm grid on `cam-stand` | 1 session | 15 min on 11-19 |
 | AI | `pick_at` skill | 1 session (after the height/sag fix) | 11-19 or 11-23 |
 | Later | Isaac Teleop for recording training data | — | after the demo |

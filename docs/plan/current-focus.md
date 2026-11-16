@@ -13,7 +13,7 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 3. **Voice and the assistant** (step 7): the snappier wake word with adjustable sensitivity is built (2026-11-14; its lab check: `docs/guides/lab-checklist.md` part 9e, the Quest in part 10); the assistant opens pages when asked is built (2026-11-14, typed and spoken, all three hubs; lab check: part 9g); the Newline's microphone (the greeting from a recording is done).
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale), then the Quest with the real arm in 1:1.
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
-6. **Borrowed from existing work** (decision 2026-11-16; the comparison: `docs/dev/existing-work-teleop-ai.md`), before the 2026-11-19 lab day where possible: **teleop relative mode at scale 1.0 with a higher speed limit** (built 2026-11-16; lab: checklist 7.7); **the stand camera's cm grid** (Google's printed calibration sheet → pixels to table cm, drawn on `cam-a`'s picture); **`pick_at(x, y)`**, a one-call pick (after the height and sag fix in item 1); optionally robot_MCP's pick tips in the AI instructions. Isaac Teleop as an input to the brain comes after the demo (`docs/plan/ideas.md` → "On hold").
+6. **Borrowed from existing work** (decision 2026-11-16; the comparison: `docs/dev/existing-work-teleop-ai.md`), before the 2026-11-19 lab day where possible: **teleop relative mode at scale 1.0 with a higher speed limit** (built 2026-11-16; lab: checklist 7.7); **the stand camera's cm grid** (Google's printed calibration sheet → pixels to table cm, drawn on `cam-stand`'s picture); **`pick_at(x, y)`**, a one-call pick (after the height and sag fix in item 1); optionally robot_MCP's pick tips in the AI instructions. Isaac Teleop as an input to the brain comes after the demo (`docs/plan/ideas.md` → "On hold").
 7. **Three previews** (decision 2026-11-16), shown at the end of the demo as "what's next". Started only after devices, the quick jobs and the voice polish are merged; each on its own page or behind a switch that's off by default, so it can't break what works; cut if it hasn't run on the real hardware by 2026-11-24:
    - **Point and "move there"** in the headset: in the Quest with the 3D arm lined up, point at a spot on the table, say or press "move there", and the gripper goes there. No AI. The first piece of "put that there".
    - **"What's on the table?"**: the stand camera's picture goes to Gemini, which names the objects; the hub shows the picture with labels and the assistant says them.
@@ -46,7 +46,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
    - **Done when:** the real arm does the cube task from a Claude Code prompt.
 
 3. **Cameras for the AI.** `pose_view` (2026-11-11) and `camera_snapshot` (2026-11-12) are built and were used in the cube pick.
-   - **Left:** placing things from the overhead picture (the AI doesn't know where that camera is: a printed marker, `docs/plan/ideas.md` → "AI picking"); a camera for each arm by name (hack below).
+   - **Left:** placing things from the stand camera's picture (the AI doesn't know where that camera is: a printed marker, `docs/plan/ideas.md` → "AI picking"); a camera for each arm by name (hack below).
    - **Done when:** "pick up the red block" works with no positions given in words.
 
 4. **Personas** (done 2026-11-10). `docs/dev/personas.md`.
@@ -81,7 +81,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - **The lab router** (the professor's OK): "Up next" below.
 
 ## Hacks to clean up
-- `config/devices.yaml`: `so101-white-cam-a` / `-b` (2026-11-12; to be renamed `-cam-stand` / `-cam-wrist`, quick job 15) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
+- `config/devices.yaml`: `so101-white-cam-stand` / `-cam-wrist` (2026-11-12; `-cam-a` / `-b` until quick job 15, 2026-11-16) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
 - `config/poses.yaml`: the SO-101 `rest` pose comes from forward kinematics only; check it on the real `so101-white` (slowly, builder present) before relying on it.
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 

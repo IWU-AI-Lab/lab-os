@@ -50,14 +50,14 @@ devices:
 
   # HACK (2026-11-12, temporary, for today's camera test with the AI): the two cameras plugged in
   # now are the WHITE arm's, but they sit in sockets 7 and 8, which are registered above as the
-  # green set's. These two names point at the same sockets so the AI can use them. Clean up:
-  # real names per setup, see docs/plan/current-focus.md -> "Hacks to clean up".
-  so101-white-cam-a:
+  # green set's. These two names point at the same sockets so the AI can use them (renamed -cam-a/-b →
+  # -cam-stand/-cam-wrist 2026-11-16, quick job 15). Clean up: own sockets per setup, see docs/plan/current-focus.md -> "Hacks to clean up".
+  so101-white-cam-stand:
     kind: camera
     socket: usb-0:7
-    notes: White arm's camera, in the lab desktop's USB socket 7. Fixed above the table, behind the arm, looking forward over it.
+    notes: White arm's camera, in the lab desktop's USB socket 7. The stand camera, on the 3D-printed stand about 2 ft up, behind the arm, looking forward and down over it.
 
-  so101-white-cam-b:
+  so101-white-cam-wrist:
     kind: camera
     socket: usb-0:8
     notes: White arm's camera, in the lab desktop's USB socket 8. On the wrist, looking along the jaws.

@@ -88,9 +88,9 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
     @server.tool(annotations=READ)
     async def camera_snapshot(camera: str, width_px: int = 640) -> list:
         """One picture from a camera (names in list_devices; the white arm's two:
-        so101-white-cam-a, fixed above the table behind the arm, and so101-white-cam-b, on the
-        wrist looking along the jaws). Returns a JPEG `width_px` wide (160-1280). If a picture is
-        very dark or washed out, take another. Use it to look before you reach
+        so101-white-cam-stand, on a stand about 2 ft up behind the arm, and so101-white-cam-wrist,
+        on the wrist looking along the jaws). Returns a JPEG `width_px` wide (160-1280). If a
+        picture is very dark or washed out, take another. Use it to look before you reach
         and after you move; pose_view is drawn from the joints, this is real. A camera another
         program is using is refused."""
         r = await run("camera_snapshot", camera=camera, width_px=width_px)
