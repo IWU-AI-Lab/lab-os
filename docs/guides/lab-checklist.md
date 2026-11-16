@@ -2,7 +2,7 @@
 
 Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-**About one hour, shortest first: parts 0, 6, 1, 5, 9.** Then, on later lab days: 3, 8, 11, 7, 10, 2.
+**About one hour, shortest first: parts 0, 6, 1, 5, 9.** Then, on later lab days: 3, 3b, 8, 11, 7, 10, 2.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
@@ -87,6 +87,16 @@ In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reco
 - **3.6** Same run. → was it put down about 10 cm to the left? (yes / no)
 - **3.7** Same run, only if 3.5 was no. → where did the gripper close: in front of, behind, left of, right of or above the cube, and by about how many cube-widths?
 - **3.8** Same run. → did it say one line before each move? (yes / no)
+
+## 3b. The stand camera's cm grid (15 min)
+Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
+```bash
+uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+```
+- **3b.1** Lay the sheet flat in front of the arm, long edge pointing straight away from it, roughly centred. On `http://localhost:8080/teleop`, drive the gripper (keyboard) until the jaw tips touch the sheet's **"Board origin"** corner (top left as you look from the arm). Read the gripper's x and y on the AI Control page (`/ai`). → x ___ cm, y ___ cm
+- **3b.2** Drive the arm up and to the side so it covers none of the sheet. In a second terminal: `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (the numbers from 3b.1). → corners seen ___ of 24, worst ___ mm (or the error it printed)
+- **3b.3** Open the preview it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines run along the sheet's squares? (yes / no)
+- **3b.4** Take the sheet away. Put the cube anywhere in front of the arm. New Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what it said ___; is the gripper over the cube? (yes / off by about ___ cube-widths, which way ___)
 
 ## 8. Green arms in lab-os (40 min)
 Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.
