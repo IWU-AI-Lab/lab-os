@@ -1,6 +1,6 @@
 # CLAUDE.md — lab-os
 
-Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub, voice, and AI driving the SO-101 arms through the brain's tools, for a demo of every feature on 2026-11-19 (`docs/plan/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
+Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub, voice, and AI driving the SO-101 arms through the brain's tools, for a demo of every feature on 2026-12-03 (`docs/plan/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
 
 ## Read first, every session
 1. `docs/plan/current-focus.md` — what to work on now (and "Up next").

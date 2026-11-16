@@ -1,11 +1,11 @@
 # Current Focus: the JARVIS hub, voice, and AI driving the SO-101 arms
 
-**Read this at the start of every Claude Code session.** It says what's left before the demo on **Thursday 2026-11-19**, and nothing else. What already works: `FEATURES.md`. Small decided jobs: `docs/plan/quick-jobs.md`. Plan, decisions, devices and how the pieces fit together: `docs/plan/lab-jarvis-log.md`. Ideas: `docs/plan/ideas.md`. Rewritten 2026-11-13; the long version, with each step's history and details: `docs/archive/focus-2026-11-13-hub-voice-ai.md`. When this focus closes, move it to `docs/archive/` and write the next one.
+**Read this at the start of every Claude Code session.** It says what's left before the demo on **Thursday 2026-12-03**, and nothing else. What already works: `FEATURES.md`. Small decided jobs: `docs/plan/quick-jobs.md`. Plan, decisions, devices and how the pieces fit together: `docs/plan/lab-jarvis-log.md`. Ideas: `docs/plan/ideas.md`. Rewritten 2026-11-13; the long version, with each step's history and details: `docs/archive/focus-2026-11-13-hub-voice-ai.md`. When this focus closes, move it to `docs/archive/` and write the next one.
 
 ## The goal
-A demo of every feature on Thursday 2026-11-19 (decision 2026-11-12). The designed hub (`/design`) full screen on the lab desktop's own screen: one tap, the startup with sound and a spoken greeting, the hub. Someone asks it something, typed or by voice (push-to-talk, dictation or "hey jarvis"), and it answers aloud. An AI drives the SO-101 arms (white and green) through the brain's tools, looking through the cameras. Teleop from the Quest (relative or 1:1) and the desktop. A page sent to another device. The hub in VR. The Newline only if it's smooth.
+A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 2026-11-16). The designed hub (`/design`) full screen on the lab desktop's own screen: one tap, the startup with sound and a spoken greeting, the hub. Someone asks it something, typed or by voice (push-to-talk, dictation or "hey jarvis"), and it answers aloud. An AI drives the SO-101 arms (white and green) through the brain's tools, looking through the cameras. Teleop from the Quest (relative or 1:1) and the desktop. A page sent to another device. The hub in VR. The Newline only if it's smooth.
 
-**Time:** the builder has assignments due Wednesday 2026-11-18, so Claude Code sessions do most of the coding; lab time is scarce. **Fable 5.2 access ends Monday 2026-11-16**: real-arm AI runs come first (afterwards the same tools work with any model).
+**Time (decision 2026-11-16):** the demo moved from 2026-11-19 to **Thursday 2026-12-03, 3–4:30 pm (the AI club's meeting)**; nothing is shown before then. Lab days for trying things on the real hardware: Thursday 2026-11-19, Monday and Tuesday 2026-11-23/24. **Nothing new after Tuesday 2026-11-24:** from then on, sessions only fix what the lab days found, and whatever doesn't work on the hardware by then is left out of the demo. The builder's coursework (a research paper above all) comes first; Claude Code sessions do most of the coding.
 
 ## Until the demo, in order
 1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 are done (moves without asking, switchable limits, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
@@ -15,7 +15,7 @@ A demo of every feature on Thursday 2026-11-19 (decision 2026-11-12). The design
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
 6. **Existing work instead of ours, if there's time** (decision 2026-11-14, a preference): compare our Quest teleop and our AI arm control with existing projects (`docs/plan/ideas.md` → "Teleop: compare…" and "AI arm control: compare…"), and switch where theirs is better.
 7. **The Newline** (step 12): pick the route if it's used; not blocking.
-8. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-11-19` (demo only from a tag).
+8. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-12-03` (demo only from a tag).
 
 Lab checks for each step: `docs/guides/lab-checklist.md`.
 
