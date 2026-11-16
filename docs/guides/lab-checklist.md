@@ -2,7 +2,7 @@
 
 A walk-in list for the lab desktop (`ai-comp-lab-ubuntu-76358`). Each part works without the next. Results go in the focus step's status (`docs/plan/current-focus.md`), surprises in `docs/dev/GOTCHAS.md`. The plans and results of earlier visits: `docs/archive/lab-checklist-plans-2026-11-10-to-12.md`.
 
-**The next visits, in this order** (Fable 5.2 ends Monday 2026-11-16, so the real-arm AI first; the demo is Thursday 2026-12-03):
+**The next visits, in this order** (the demo is Thursday 2026-12-03; lab days before it: 2026-11-19, 11-23, 11-24):
 1. Part 0.
 2. Part 3, the AI on `so101-white`: the height checked with a ruler first (at the new −0.5 cm floor), then the cube pick (quick jobs 1–3 are merged).
 3. Part 8, the green arms in lab-os (plugged in as for training, their cameras back in sockets 7 and 8).
