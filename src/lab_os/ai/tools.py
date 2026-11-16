@@ -14,7 +14,8 @@ NEVER = {"move_joints", "gripper", "move_to", "go_to_pose", "stop"}  # belt and 
 NOT_FOR_CHAT = {
     "pose_view",
     "camera_snapshot",
-}  # read tools whose answer is a picture: the chat takes text
+    "table_point",
+}  # read tools about a picture: the chat takes text
 MAX_RESULT_CHARS = 14_000
 
 

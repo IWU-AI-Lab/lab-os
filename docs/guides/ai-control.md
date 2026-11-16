@@ -23,7 +23,7 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 **Which model:** type `/model` and pick Fable 5.2 if it's in the list (the builder's access ends 2026-11-16). Any model works; nothing is tied to Fable.
 
 ## 3. Permissions
-The repo's `.claude/settings.json` (decision 2026-11-13, built 2026-11-14) **allows every brain tool without asking**, for everyone who opens the project: the read tools (`arm_status`, `list_poses`, `pose_view`, `camera_snapshot`, the project tools below), `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`). Nothing waits for a click; what keeps it safe is the brain itself: **STOP** on every screen, the soft joint limits and one controller at a time always stay, plus the per-move limit, the speed cap and the floor (safety rules below). Someone stays at a real arm with STOP in reach.
+The repo's `.claude/settings.json` (decision 2026-11-13, built 2026-11-14) **allows every brain tool without asking**, for everyone who opens the project: the read tools (`arm_status`, `list_poses`, `pose_view`, `camera_snapshot`, `table_point`, the project tools below), `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`). Nothing waits for a click; what keeps it safe is the brain itself: **STOP** on every screen, the soft joint limits and one controller at a time always stay, plus the per-move limit, the speed cap and the floor (safety rules below). Someone stays at a real arm with STOP in reach.
 
 A coding session (one working on lab-os's code) still asks you before it runs anything that moves a real arm (CLAUDE.md); a session you started to drive the arm uses the tools freely. To be asked before each move anyway (in your own Claude Code settings only): add the four move tools as `"ask"` rules in `.claude/settings.local.json` (in Claude Code, ask beats allow).
 
@@ -44,6 +44,8 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | `arm_status` | read | Joints, gripper opening (%), gripper position (cm) and tool angle, limits, who has control (`free` / `teleop` / `ai`), held still or not, whether the venue allows motion, the per-call limits |
 | `list_poses` | read | Named poses (`config/poses.yaml`: `home`, `rest`, …) |
 | `pose_view` | read | A **picture** of the arm's 3D model as it is now (side + top, grid in cm, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera: see "Seeing the pose" |
+| `camera_snapshot` | read | One real picture from a camera; a camera with a table map gets the table's **cm grid** on it ("Table map" below) |
+| `table_point` | read | A pixel of such a picture → x, y on the table in cm (for models that point well) |
 | `move_joints` | move | Some joints to angles, or by amounts (`relative: true`) |
 | `gripper` | move | 0 = closed … 100 = fully open |
 | `move_to` | move | The gripper point in a **straight line** to (x, y, z), optionally with a tool angle. Says "can't reach" instead of guessing |
@@ -116,6 +118,22 @@ Not checked on the real arm yet: the `rest` pose (computed only; `docs/plan/curr
 ## Looking through a camera (`camera_snapshot`)
 `camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. The white arm's: `so101-white-cam-stand` (the stand camera, about 2 ft up behind the arm, looking forward and down) and `so101-white-cam-wrist` (the wrist camera, along the jaws); called `-cam-a`/`-cam-b` until 2026-11-16. They share USB sockets with the green set's cameras for now (`docs/plan/current-focus.md` → "Hacks to clean up").
 
+## Table map: the stand camera's cm grid (since 2026-11-16)
+A printed sheet tells lab-os where the stand camera's pixels are on the table, so its pictures get a **cm grid** (yellow lines = x forward, blue = y, every 5 cm, labelled every 10; a red dot at the middle of the base) and the AI reads off where the cube is instead of guessing (it was 8 cm off: GOTCHAS 2026-11-12). `table_point(camera, x_px, y_px)` turns a pixel into cm too. Google's method (`docs/dev/existing-work-teleop-ai.md`). Only right on the table's plane: read where an object **touches** the table; the wrist camera fine-tunes.
+
+**Once (and again whenever the camera or the arm moves):**
+1. Print `models/charuco/calibration-sheet-letter.pdf` at **100 %** ("Actual size", not "Fit to page"). If in doubt, measure one square: 35 mm? If not, add `--square-mm <what you measured>` below.
+2. Lay it flat in front of the arm, the long edge pointing straight away from the arm, roughly centred.
+3. Find the sheet's **"Board origin" corner** (printed on it, top left as you look from the arm) in the arm's cm: drive the jaw tips onto it (teleop) and read the gripper's x and y (`/ai`, or `arm_status`). A ruler from the middle of the base works too, but the arm's own numbers are what the AI uses.
+4. Move the arm off the sheet, then (the brain may keep running; the camera is only open for a moment):
+   ```bash
+   uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>
+   ```
+   It says how many of the 24 corners it saw and how far the worst one is off (≤ 5 mm is good), saves `config/table-maps/so101-white-cam-stand.yaml`, and writes a preview with the grid to `logs/table-maps/`. Open the preview: the red dot should sit on the base and the lines along the squares.
+5. Take the sheet away. From now on `camera_snapshot` of that camera has the grid (`grid: false` for the plain picture).
+
+No camera needed for a try: `--image picture.jpg` uses a saved picture.
+
 ## Seeing the pose (`pose_view`)
 Without a camera the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
 - **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;
@@ -136,4 +154,4 @@ Anything that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1
 ## Later
 - Access from other computers with a token (`docs/plan/lab-jarvis-log.md` → "AI-assisted development").
 
-Code: `src/lab_os/tools/robot.py` (the tools and their rules), `tools/mcp_server.py` (MCP), `tools/calllog.py`; tests in `tests/test_robot_tools.py`.
+Code: `src/lab_os/tools/robot.py` (the tools and their rules), `tools/table_map.py` (the cm grid), `tools/mcp_server.py` (MCP), `tools/calllog.py`; tests in `tests/test_robot_tools.py`.

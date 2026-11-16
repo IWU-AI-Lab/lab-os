@@ -35,7 +35,9 @@ call again to continue. Every move returns where the arm really ended up: check 
 move. "result": "stopped_short" means the arm didn't get there (off_by_cm, joints_short_deg and a
 message say how far): don't grip or carry on as if it had. Refusals say why; don't retry a
 refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
-camera_snapshot takes a real picture from a camera.
+camera_snapshot takes a real picture from a camera; on a camera with a table map it has a
+cm grid of the table on it (table_point turns a pixel into cm): use it for an object's x and y,
+then the wrist camera to fine-tune.
 The user approves each move. pose_view draws the arm as it is now (no camera): look at it after
 a move, with marks where you think the objects are, before you grip.
 
@@ -86,16 +88,26 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
         return [Image(data=png, format="png"), r]
 
     @server.tool(annotations=READ)
-    async def camera_snapshot(camera: str, width_px: int = 640) -> list:
+    async def camera_snapshot(camera: str, width_px: int = 640, grid: bool = True) -> list:
         """One picture from a camera (names in list_devices; the white arm's two:
         so101-white-cam-stand, on a stand about 2 ft up behind the arm, and so101-white-cam-wrist,
         on the wrist looking along the jaws). Returns a JPEG `width_px` wide (160-1280). If a
         picture is very dark or washed out, take another. Use it to look before you reach
-        and after you move; pose_view is drawn from the joints, this is real. A camera another
-        program is using is refused."""
-        r = await run("camera_snapshot", camera=camera, width_px=width_px)
+        and after you move; pose_view is drawn from the joints, this is real. A camera with a
+        table map has the table's cm grid drawn on it ("table_grid" says how to read it; `grid`
+        false = the plain picture): read where an object touches the table to get its x and y for
+        move_to. A camera another program is using is refused."""
+        r = await run("camera_snapshot", camera=camera, width_px=width_px, grid=grid)
         jpeg = r.pop("image_jpeg")
         return [Image(data=jpeg, format="jpeg"), r]
+
+    @server.tool(annotations=READ)
+    async def table_point(camera: str, x_px: float, y_px: float, width_px: int = 640) -> dict:
+        """Where a pixel of a camera_snapshot picture is on the table: x (forward) and y (left)
+        in cm from the middle of the arm's base, as move_to takes them. `width_px`: the
+        picture's width you asked for. Give the pixel where the object touches the table. Only
+        cameras with a table map (the ones whose snapshot shows a grid)."""
+        return await run("table_point", camera=camera, x_px=x_px, y_px=y_px, width_px=width_px)
 
     @server.tool(annotations=MOVE)
     async def move_joints(

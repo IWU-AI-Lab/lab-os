@@ -35,6 +35,7 @@ from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
 from lab_os.tools import pose_view as pv
+from lab_os.tools import table_map
 from lab_os.tools.calllog import CallLog
 from lab_os.venues import Venue
 
@@ -272,9 +273,11 @@ class RobotTools:
             "image_png": png,
         }
 
-    async def camera_snapshot(self, camera: str, width_px: int = 640) -> dict:
+    async def camera_snapshot(self, camera: str, width_px: int = 640, grid: bool = True) -> dict:
         """One picture from a camera in devices.yaml (read tier): opens it, grabs a frame, closes
-        it. A camera another program has open is refused. The JPEG is under "image_jpeg"."""
+        it. A camera another program has open is refused. The JPEG is under "image_jpeg". A
+        camera with a table map (`lab-os table-map`) gets the table's cm grid drawn on it unless
+        `grid` is false."""
         from lab_os import devices
 
         width_px = max(160, min(int(width_px), 1280))
@@ -283,7 +286,31 @@ class RobotTools:
         except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed) as e:
             raise Refused(str(e)) from e
         jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
-        return {"camera": camera, "width_px": width_px, "image_jpeg": jpeg}
+        out = {"camera": camera, "width_px": width_px, "image_jpeg": jpeg}
+        m = table_map.load(camera)
+        if m is not None and grid:
+            out["image_jpeg"] = await asyncio.to_thread(table_map.draw_grid, jpeg, m)
+            out["table_grid"] = table_map.describe(m)
+        elif m is None:
+            out["table_grid"] = "none: this camera has no table map, so no cm grid"
+        return out
+
+    async def table_point(self, camera: str, x_px: float, y_px: float, width_px: int = 640) -> dict:
+        """A pixel of a `camera_snapshot` picture `width_px` wide → where that is on the table, in
+        cm from the middle of the arm's base (read tier). Needs the camera's table map."""
+        m = table_map.load(camera)
+        if m is None:
+            raise Refused(f"{camera} has no table map (lab-os table-map {camera})")
+        _finite(x_px=x_px, y_px=y_px, width_px=width_px)
+        try:
+            x, y = m.to_table(float(x_px), float(y_px), int(width_px))
+        except ValueError as e:
+            raise Refused(str(e)) from e
+        return {
+            "camera": camera,
+            "table_cm": {"x": round(x, 1), "y": round(y, 1)},
+            "note": "on the table's plane: give the pixel where the object touches the table",
+        }
 
     # ---------- checks shared by every move ----------
 
@@ -593,6 +620,20 @@ def _grab_jpeg(path: str, width_px: int) -> bytes:
     it, and return it as a JPEG `width_px` wide."""
     import cv2  # headless OpenCV, imported late
 
+    frame = grab_frame(path)
+    h, w = frame.shape[:2]
+    if w > width_px:
+        frame = cv2.resize(frame, (width_px, round(h * width_px / w)), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    if not ok:
+        raise Refused("couldn't encode the picture")
+    return buf.tobytes()
+
+
+def grab_frame(path: str):
+    """One settled frame (BGR array, the camera's own size) from the camera at `path`."""
+    import cv2
+
     cap = cv2.VideoCapture(path, cv2.CAP_V4L2)
     try:
         if not cap.isOpened():
@@ -617,10 +658,4 @@ def _grab_jpeg(path: str, width_px: int) -> bytes:
             raise Refused(f"the camera at {path} gave no picture")
     finally:
         cap.release()
-    h, w = frame.shape[:2]
-    if w > width_px:
-        frame = cv2.resize(frame, (width_px, round(h * width_px / w)), interpolation=cv2.INTER_AREA)
-    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-    if not ok:
-        raise Refused("couldn't encode the picture")
-    return buf.tobytes()
+    return frame

@@ -54,6 +54,48 @@ def _addresses(names: list[str]) -> frozenset[str]:
     return frozenset(out)
 
 
+def _table_map(args) -> None:
+    """`lab-os table-map CAMERA`: one picture of the sheet → the camera's table map + a preview."""
+    try:
+        import cv2
+    except ImportError:
+        raise SystemExit(
+            "needs OpenCV: run it with uv run --extra so101 lab-os table-map …"
+        ) from None
+    from lab_os import devices
+    from lab_os.tools import table_map
+    from lab_os.tools.robot import Refused, grab_frame
+
+    try:
+        config.use(args.config)
+    except config.ConfigError as e:
+        raise SystemExit(str(e)) from None
+    origin = tuple(args.origin) if args.origin else table_map.DEFAULT_ORIGIN_CM
+    if args.image:
+        frame = cv2.imread(args.image)
+        if frame is None:
+            raise SystemExit(f"can't read the picture {args.image}")
+    else:
+        try:
+            frame = grab_frame(devices.camera_device(args.camera))
+        except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed, Refused) as e:
+            raise SystemExit(f"{args.camera}: {e}") from None
+    try:
+        m = table_map.calibrate(frame, args.camera, origin, args.square_mm)
+    except table_map.BoardNotFound as e:
+        raise SystemExit(f"No table map: {e}") from None
+    path = table_map.save(m)
+    _, jpeg = cv2.imencode(".jpg", frame)
+    preview = config.logs_dir() / "table-maps" / f"{args.camera}.jpg"
+    preview.parent.mkdir(parents=True, exist_ok=True)
+    preview.write_bytes(table_map.draw_grid(jpeg.tobytes(), m))
+    print(f"Saw {m.corners} of 24 corners; the fit's worst corner is {m.worst_mm} mm off.")
+    if not table_map.fit_ok(m):
+        print("That's more than 5 mm: is the sheet flat? Check it, then run this again.")
+    print(f"Saved {path}.\nLook at {preview}: the red dot should sit at the middle of the arm's")
+    print("base, and where the x30 and y+0 lines cross should measure 30 cm straight ahead of it.")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="lab-os", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -123,7 +165,27 @@ def main(argv: list[str] | None = None) -> None:
     )
     i.add_argument("--device", default="desk", help="this computer's device name (default: desk)")
     i.add_argument("serve_args", nargs=argparse.REMAINDER, help="-- --arm so101-white …")
+    tm = sub.add_parser(
+        "table-map",
+        help="calibrate a fixed camera to the table with the printed sheet (models/charuco/), so "
+        "its pictures get a cm grid (docs/guides/ai-control.md → Table map)",
+    )
+    tm.add_argument("camera", help="e.g. so101-white-cam-stand (names in devices.yaml)")
+    tm.add_argument(
+        "--origin",
+        nargs=2,
+        type=float,
+        metavar=("X_CM", "Y_CM"),
+        default=None,
+        help="the sheet's 'Board origin' corner from the middle of the arm's base: cm forward, cm "
+        "to the left (default 29 5.25: the sheet on Google's outline)",
+    )
+    tm.add_argument("--square-mm", type=float, default=35.0, help="one printed square (35)")
+    tm.add_argument("--image", help="calibrate from this picture instead of the camera")
+    tm.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
     args = parser.parse_args(argv)
+    if args.command == "table-map":
+        return _table_map(args)
     if args.command == "icon":
         return _icon(args)
     if args.command == "green":

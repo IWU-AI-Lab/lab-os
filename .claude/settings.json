@@ -23,6 +23,7 @@
       "mcp__lab-os__list_poses",
       "mcp__lab-os__pose_view",
       "mcp__lab-os__camera_snapshot",
+      "mcp__lab-os__table_point",
       "mcp__lab-os__move_joints",
       "mcp__lab-os__gripper",
       "mcp__lab-os__move_to",
