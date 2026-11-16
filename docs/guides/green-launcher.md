@@ -5,6 +5,7 @@ driven from **LeLab**, Hugging Face's web page for LeRobot) after checking that 
 
 ## How to start it
 - **The desktop icon** "SO-101 Training (LeLab)" (Ubuntu's app list; right-click → Add to Favorites puts it in the dock). It opens a terminal that shows the check, then runs LeLab there (Ctrl+C stops it).
+- **Stopping LeLab** (since 2026-11-16): Ctrl+C in its terminal, **Stop LeLab** on the hub's Training page (on the brain's computer, with a confirmation), or `uv run lab-os green --stop`. The button and `--stop` stop only the LeLab the launcher started (it notes the process in `logs/green-lelab.json` and checks it's still that same LeLab), the way Ctrl+C does; a LeLab started some other way is left alone and they say so. A recording or training run in LeLab stops with it.
 - **The hub's Training button** (on the brain's computer only): the same check on the page; Start opens that terminal.
 - **A terminal:** `uv run lab-os green` in `~/lab-os`.
 

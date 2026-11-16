@@ -18,9 +18,11 @@ the desktop icon (docs/guides/green-launcher.md) and the hub's Training page all
 import json
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -31,6 +33,7 @@ BY_ID = Path("/dev/serial/by-id")
 # LeLab's ports/ and robots/ (its calibration/ is never read or touched)
 LELAB_HOME = Path.home() / ".cache/huggingface/lerobot"
 LAST_GOOD = REPO_ROOT / "logs/green-last-start.json"  # which green serial was the follower
+STARTED = REPO_ROOT / "logs/green-lelab.json"  # the LeLab the launcher started: pid + start time
 LELAB_PORT = 8000
 LELAB_URL = f"http://127.0.0.1:{LELAB_PORT}"
 GREEN = ("so101-green", "so101-green-leader")  # the follower and the leader
@@ -196,6 +199,63 @@ def open_terminal() -> None:
     )
 
 
+# ---------- Stop LeLab (quick job 7): only the one the launcher started ----------
+
+
+def _ps(pid: int, field_: str) -> str:
+    """One `ps` field of a process ("" if it's gone). Reads only; Linux and macOS alike."""
+    out = subprocess.run(["ps", "-o", f"{field_}=", "-p", str(pid)], capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def _note_started(pid: int, path: Path | None = None) -> None:
+    path = path or STARTED
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"pid": pid, "started": _ps(pid, "lstart")}))
+
+
+def started_lelab(path: Path | None = None) -> int | None:
+    """The pid of the LeLab the launcher started, if that same process still runs (same start
+    time, still lelab); else None. A pid reused by another program never matches."""
+    path = path or STARTED
+    try:
+        d = json.loads(path.read_text())
+        pid, when = int(d["pid"]), d["started"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not when or _ps(pid, "lstart") != when or "lelab" not in _ps(pid, "command"):
+        return None
+    return pid
+
+
+def stop_lelab(path: Path | None = None, wait_s: float = 5.0) -> str:
+    """Stop the launcher's LeLab like Ctrl+C in its terminal (SIGINT, then SIGTERM after
+    `wait_s`). Nothing else: one started another way is left alone. Returns a sentence."""
+    pid = started_lelab(path)
+    if pid is None:
+        if _answers(LELAB_PORT):
+            return (
+                "LeLab is running, but not one the launcher started, so it was left alone: "
+                "close it where it was started (Ctrl+C in its terminal)."
+            )
+        return "LeLab isn't running."
+    group = os.getpgid(pid) == pid  # its own group: its helpers stop too, as with Ctrl+C
+    send = (lambda s: os.killpg(pid, s)) if group else (lambda s: os.kill(pid, s))
+    send(signal.SIGINT)
+    end = time.monotonic() + wait_s
+    while time.monotonic() < end:
+        if started_lelab(path) is None:
+            return "LeLab stopped."
+        time.sleep(0.2)
+    send(signal.SIGTERM)
+    time.sleep(1.0)
+    return (
+        "LeLab stopped."
+        if started_lelab(path) is None
+        else "LeLab didn't stop; close its terminal."
+    )
+
+
 def main(wait: bool = False) -> int:
     """`lab-os green`: check, then start LeLab in this terminal (or just say so if it runs)."""
     c = check()
@@ -215,5 +275,6 @@ def main(wait: bool = False) -> int:
             input("\nPress Enter to close.")
         return 0
     print(f"\nStarting LeLab ({LELAB_URL}; it opens in the browser). Ctrl+C here stops it.\n")
+    _note_started(os.getpid())  # exec keeps the pid: this process becomes LeLab
     os.execv(_lelab(), ["lelab"])
     return 0  # not reached

@@ -9,6 +9,7 @@ GET /training            the training launcher's page (so101-green + LeLab,
                          docs/guides/green-launcher.md)
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
+POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
@@ -206,6 +207,16 @@ async def api_green_start(request: web.Request) -> web.Response:
         green.open_terminal()
         log.info("green launcher: LeLab starting in a terminal")
     return web.json_response(c.as_dict() | {"here": True, "started": c.ok and not c.running})
+
+
+async def api_green_stop(request: web.Request) -> web.Response:
+    """Stop LeLab: only the one the launcher started (lab_os.green.stop_lelab)."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="LeLab can be stopped only from the brain's computer.")
+    said = await asyncio.to_thread(green.stop_lelab)
+    log.info("green launcher: %s", said)
+    c = await asyncio.to_thread(green.check)
+    return web.json_response(c.as_dict() | {"here": True, "said": said})
 
 
 async def api_ai_calls(request: web.Request) -> web.Response:
@@ -670,6 +681,7 @@ def create_brain_app(
     app.router.add_get("/xr", xr_page)
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
+    app.router.add_post("/api/green/stop", api_green_stop)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)

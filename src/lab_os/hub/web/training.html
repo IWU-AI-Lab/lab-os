@@ -40,6 +40,7 @@
       <ul id="lines"><li><span></span><span>Checking…</span></li></ul>
       <div class="actions">
         <button id="start" class="btn primary" type="button" disabled>Start</button>
+        <button id="stop-lelab" class="btn small" type="button" hidden>Stop LeLab</button>
         <button id="again" class="btn small" type="button">Check again</button>
         <a id="open" class="btn small" target="_blank" rel="noopener" hidden>Open LeLab</a>
       </div>
@@ -59,6 +60,7 @@
     st.className = `pill ${c.running ? "on" : c.ok ? "off" : "warn"}`;
     $("#start").disabled = !c.ok || c.running || !c.here;
     $("#open").hidden = !c.running;
+    $("#stop-lelab").hidden = !c.running || !c.here;
     $("#open").href = c.url;  // LeLab's own page, on this computer
     $("#msg").textContent = !c.here ? "It starts only on the brain's computer."
       : c.started ? "Starting in a terminal on this desktop; LeLab opens in the browser (Ctrl+C in the terminal stops it)."
@@ -70,6 +72,14 @@
     else $("#msg").textContent = "The brain didn't answer.";
   }
   $("#again").onclick = load;
+  $("#stop-lelab").onclick = async () => {
+    if (!confirm("Stop LeLab? A recording or training run in it stops too.")) return;
+    $("#stop-lelab").disabled = true;
+    const r = await fetch("/api/green/stop", { method: "POST" }).catch(() => null);
+    $("#stop-lelab").disabled = false;
+    if (r?.ok) { const d = await r.json(); show(d); $("#msg").textContent = d.said; }
+    else $("#msg").textContent = r ? await r.text() : "The brain didn't answer.";
+  };
   $("#start").onclick = async () => {
     $("#start").disabled = true;
     const r = await fetch("/api/green/start", { method: "POST" }).catch(() => null);
