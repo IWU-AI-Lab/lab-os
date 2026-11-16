@@ -8,7 +8,7 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 **Time (decision 2026-11-16):** the demo moved from 2026-11-19 to **Thursday 2026-12-03, 3–4:30 pm (the AI club's meeting)**; nothing is shown before then. Lab days for trying things on the real hardware: Thursday 2026-11-19, Monday and Tuesday 2026-11-23/24. **Nothing new after Tuesday 2026-11-24:** from then on, sessions only fix what the lab days found, and whatever doesn't work on the hardware by then is left out of the demo. The builder's coursework (a research paper above all) comes first; Claude Code sessions do most of the coding.
 
 ## Until the demo, in order
-1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 are done (moves without asking, switchable limits, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (`docs/guides/lab-checklist.md` part 8).
+1. **The AI on the real arms** (steps 2, 3, 11), before Monday: quick jobs 1–3 are done (moves without asking, switchable limits, the floor at −0.5 cm); the height checked with a ruler and the elbow sag (`docs/plan/ideas.md` → "AI picking"); the cube actually picked on `so101-white`; then the green arm (first lab check done 2026-11-16; quick jobs 17, 18, 20, then part 8b).
 2. **Devices** (step 8): built 2026-11-14; left: the lab check (`docs/guides/lab-checklist.md` part 11).
 3. **Voice and the assistant** (step 7): the snappier wake word with adjustable sensitivity is built (2026-11-14; its lab check: `docs/guides/lab-checklist.md` part 9e, the Quest in part 10); the assistant opens pages when asked is built (2026-11-14, typed and spoken, all three hubs; lab check: part 9g); the Newline's microphone (the greeting from a recording is done).
 4. **VR and teleop fixes** (step 10): quick jobs 10, 11 and 13 (1:1 scale: done without the lab 2026-11-16), then the Quest with the real arm in 1:1.
@@ -70,7 +70,8 @@ The Current Project panel reads this list: each step's **bold title** is what th
     - **Left:** quick job 10 (a far-away cluster of dots; 11, the chat that didn't scroll, done 2026-11-16); the bugs from the 2026-11-12 demo check (the builder to list them); alerts from real events; how a page sent to another device looks (plain is fine if time is short).
 
 11. **Green arms.** Built 2026-11-12, tested without hardware (`docs/guides/ai-control.md` → "The green arm").
-    - **Left:** in the lab with LeLab closed (`docs/guides/lab-checklist.md` part 8): `--watch`, then moving with the builder present, then the AI; which camera is which (`so101-green-cam-a`/`-b` until then).
+    In the lab 2026-11-16 (checklist part 8): the refusals, `--watch`, jogging, the AI's move to home and LeLab afterwards all worked, and the calibration files were unchanged.
+    - **Left:** quick jobs 17 (the launcher started LeLab while the brain had the arm), 18 (the calibration file that matches the motors), 20 (home is the folded pose) and 25 (camera names), then checklist part 8b (`docs/dev/GOTCHAS.md`, 2026-11-16).
 
 12. **Newline.** Not blocking: the demo is on the desktop's own screen. Measured 2026-11-13 (`docs/dev/GOTCHAS.md`): by HDMI from the desktop, choppy at 1920×1080 though the desktop draws 60 fps, smooth at 1600×900; in its own Chrome `/perf` gives 44–59 fps but the startup lags and there's no mic button.
     - **Next, if it's used:** HDMI at 1600×900 is the simplest route (first check the refresh rate Ubuntu picks at 1920×1080 and the Newline's picture mode). Its own Chrome needs a lighter startup on slow devices (fewer stars, `?res=`) and Chrome's flag for the microphone. No extra hardware so far.

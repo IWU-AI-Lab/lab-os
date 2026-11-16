@@ -2,7 +2,7 @@
 
 Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-**About one hour, shortest first: parts 0, 6, 1, 5, 9.** Then, on later lab days: 3, 3b, 8, 11, 7, 10, 2.
+**Done 2026-11-16: parts 0, 6, 1, 5, 8** (results: `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md` 17–25). **Next lab day (2026-11-19), in this order: 9, 3, 3b, 8b, 7, 11, 10, 2.**
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
@@ -35,7 +35,7 @@ uv run lab-os serve
 - **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
 - **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
 - **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.
-- **6.7** In Chrome, open http://localhost:8080/teleop on its own (not in the hub) → **Full screen** → **Desktop control** → hold a jog key → tap **Esc** once. → did the arm stop? (yes / no) Is the page still full screen? (yes / no)
+- **6.7** In Chrome, open http://localhost:8080/teleop on its own (not in the hub) → **Full screen** → **Desktop control** → hold a jog key → tap **Esc** once. → did the arm stop? (yes / no) Is the page still full screen? (yes / no) (2026-11-16, Brave: stopped, left full screen. Brave can't keep it; use Chrome, or X to stop.)
 
 ## 1. The hub on the desktop (5 min)
 ```bash
@@ -88,6 +88,7 @@ In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reco
 - **3.6** Same run. → was it put down about 10 cm to the left? (yes / no)
 - **3.7** Same run, only if 3.5 was no. → where did the gripper close: in front of, behind, left of, right of or above the cube, and by about how many cube-widths?
 - **3.8** Same run. → did it say one line before each move? (yes / no)
+- **3.9** Run `ls -l /dev/v4l/by-path/`. Unplug the white arm's wrist camera. Run it again. Plug it back in. → which disappeared: `usb-0:7` or `usb-0:8`?
 
 ## 3b. The stand camera's cm grid (15 min)
 Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
@@ -117,6 +118,13 @@ Setup: green follower, green leader and both training cameras plugged in as for 
 - **8.13** Hold the arm. Ctrl+C in the brain's terminal. Run `sha256sum -c /tmp/green-cal-before.txt`. → does every line say `OK`? (yes / no)
 - **8.14** Start LeLab with the icon, press teleop, move the leader. Close LeLab. → did the follower follow? (yes / no)
 - **8.15** Run `ls -l /dev/v4l/by-path/`. Unplug the wrist camera's cable. Run it again. Plug the cable back in. → which disappeared: `usb-0:7` or `usb-0:8`?
+
+## 8b. Green arms again, after quick jobs 17, 18 and 20 (15 min)
+Setup: as part 8. LeLab closed. Run `git pull` first.
+- **8.16** Put the follower in the folded position you always return it to, gripper slightly open. Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
+- **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
+- **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm.
+- **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no)
 
 ## 11. Devices (30 min)
 Setup: the desktop and the Newline (or a laptop in place of the Newline). No arm.
