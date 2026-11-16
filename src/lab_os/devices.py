@@ -71,6 +71,9 @@ class Device:
     borrowed: bool = False  # another project's: drive/use it, never set it up (CLAUDE.md)
     calibration: str = ""  # "lerobot" = LeRobot's cache, read only; "" = lab-os's calibration/
     calibration_id: str = ""  # which file there (<id>.json); "" = the only one
+    calibration_file: str = (
+        ""  # exact file under the cache root, e.g. "teleoperators/so_leader/x.json"
+    )
     socket: str = ""  # cameras: the USB socket in /dev/v4l/by-path/ names, e.g. "usb-0:7"
 
 
@@ -122,6 +125,7 @@ def _read_devices(path: Path) -> dict[str, Device]:
             borrowed=bool(spec.get("borrowed", False)),
             calibration=spec.get("calibration", ""),
             calibration_id=str(spec.get("calibration_id", "")),
+            calibration_file=str(spec.get("calibration_file", "")),
             socket=spec.get("socket", ""),
         )
         for name, spec in (raw.get("devices") or {}).items()

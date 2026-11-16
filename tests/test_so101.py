@@ -243,6 +243,7 @@ def lerobot_cache(tmp_path, monkeypatch):
         path.chmod(stat.S_IRUSR | (stat.S_IXUSR if path.is_dir() else 0))
     monkeypatch.setattr(so101, "lerobot_calibration_root", lambda: root)
     green = load_registry().devices["so101-green"]
+    green = devices.Device(**{**green.__dict__, "calibration_file": ""})  # pick by folder here
     monkeypatch.setattr(so101, "guarded_port", lambda name: (green, PORT))
     yield source
     for path in (root, folder.parent, folder, source):
@@ -277,8 +278,20 @@ def test_green_with_a_different_calibration_in_its_motors_is_not_fixed_by_lab_os
     assert robot.bus.writes == [] and not robot.bus.connected
 
 
+def test_calibration_file_names_an_exact_file_inside_the_cache(tmp_path):
+    green = load_registry().devices["so101-green"]
+    (tmp_path / "teleoperators" / "x").mkdir(parents=True)
+    (tmp_path / "teleoperators" / "x" / "f.json").write_text("{}")
+    exact = devices.Device(**{**green.__dict__, "calibration_file": "teleoperators/x/f.json"})
+    assert so101.lerobot_calibration_file(exact, tmp_path).name == "f.json"
+    outside = devices.Device(**{**green.__dict__, "calibration_file": "../f.json"})
+    with pytest.raises(LookupError, match="not found"):
+        so101.lerobot_calibration_file(outside, tmp_path)
+
+
 def test_the_calibration_file_must_be_unambiguous(tmp_path):
     green = load_registry().devices["so101-green"]
+    green = devices.Device(**{**green.__dict__, "calibration_file": ""})
     folder = tmp_path / "robots" / "so101_follower"
     folder.mkdir(parents=True)
     with pytest.raises(LookupError, match="found: none"):
@@ -290,6 +303,7 @@ def test_the_calibration_file_must_be_unambiguous(tmp_path):
     picked = devices.Device(**{**green.__dict__, "calibration_id": "b"})
     assert so101.lerobot_calibration_file(picked, tmp_path) == folder / "b.json"
     leader = load_registry().devices["so101-green-leader"]
+    leader = devices.Device(**{**leader.__dict__, "calibration_file": ""})
     (tmp_path / "teleoperators" / "x").mkdir(parents=True)
     (tmp_path / "teleoperators" / "x" / "l.json").write_text("{}")
     assert so101.lerobot_calibration_file(leader, tmp_path).parent.parent.name == "teleoperators"
