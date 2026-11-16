@@ -76,6 +76,13 @@ def lerobot_calibration_file(device: Device, root: Path | None = None) -> Path:
     follower, teleoperators/<type>/<id>.json for a leader. `calibration_id` in devices.yaml picks
     one; without it there must be exactly one. Only looks; reads nothing yet."""
     root = root or lerobot_calibration_root()
+    if device.calibration_file:  # exact file, even if LeLab filed it under the other role
+        path = (root / device.calibration_file).resolve()
+        if root.resolve() not in path.parents or not path.is_file():
+            raise LookupError(
+                f"{device.name}: calibration_file {device.calibration_file} not found in {root}."
+            )
+        return path
     folder = root / ("teleoperators" if device.kind == "so101-leader" else "robots")
     files = sorted(folder.glob("*/*.json"))
     if device.calibration_id:

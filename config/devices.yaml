@@ -13,7 +13,8 @@ devices:
     kind: so101
     borrowed: true
     calibration: lerobot   # ~/.cache/huggingface/lerobot/calibration/robots/…, read only
-    # calibration_id: …    # only if that folder holds several follower files (<id>.json)
+    # the file whose values the motors really hold (tried every candidate 2026-11-16; LeLab's own label differs)
+    calibration_file: robots/so_follower/sheep.json
     notes: >-
       Follower of the SO-101 training set (the builder's training project, LeLab). Drivable by
       lab-os since 2026-11-12 with four rules: no motor setup, calibration read only, the lerobot
@@ -27,6 +28,7 @@ devices:
     kind: so101-leader
     borrowed: true
     calibration: lerobot
+    calibration_file: teleoperators/so_leader/shepherd.json   # what LeLab says the leader uses
     notes: Leader of the SO-101 training set (same rules as so101-green).
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00
