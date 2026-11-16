@@ -98,7 +98,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 ## Training launcher (so101-green)
 | Feature | Status | Notes |
 |---|---|---|
-| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab | 🧪 | Not yet tried with the green arms plugged in. The launcher opens no green port; it refuses while another program (e.g. the brain driving `so101-green`) has one open. `docs/guides/green-launcher.md` |
+| `lab-os green` (desktop icon, hub's Training page): checks the green arms' ports, then starts LeLab; **Stop LeLab** / `--stop` stops only the LeLab it started (2026-11-16) | 🧪 | Not yet tried with the green arms plugged in. The launcher opens no green port; it refuses while another program (e.g. the brain driving `so101-green`) has one open. `docs/guides/green-launcher.md` |
 
 ---
 

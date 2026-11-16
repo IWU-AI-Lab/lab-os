@@ -151,6 +151,7 @@ def main(argv: list[str] | None = None) -> None:
         "opens nothing itself (docs/guides/green-launcher.md)",
     )
     g.add_argument("--wait", action="store_true", help="wait for Enter before closing")
+    g.add_argument("--stop", action="store_true", help="stop the LeLab this launcher started")
     n = sub.add_parser(
         "new-place",
         help="write a starter config folder for another place (a home): place.yaml, devices.yaml "
@@ -191,6 +192,9 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "green":
         from lab_os import green
 
+        if args.stop:
+            print(green.stop_lelab())
+            return
         raise SystemExit(green.main(wait=args.wait))
     if args.command == "new-place":
         try:
