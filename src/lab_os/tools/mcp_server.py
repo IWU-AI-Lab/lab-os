@@ -183,6 +183,23 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
     return server
 
 
+def add_lab_status(server: MCPServer, report, calls) -> None:
+    """The `lab_status` read tool (quick job 16): `report()` builds it (the hub server's
+    lab_status, which knows the devices, voice and spend). Each call is logged."""
+
+    @server.tool(annotations=READ)
+    def lab_status() -> dict:
+        """The lab right now, in one call: the arm (who drives it, held still, servo heat), the
+        devices with the hub open, voice and the AI (connected? paused?), internet, this month's
+        AI spend and budget (not on a public venue), the focus's next step, and warnings (limits
+        switched off, warm servos, the chat paused). Only what the brain knows; anything not
+        listed isn't known. For "how's the lab?" / "give me a status report": say it in a few
+        sentences, warnings first."""
+        r = report()
+        calls.write("lab_status", {}, "ok", {"warnings": r.get("warnings", [])})
+        return r
+
+
 def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
     """The project helper's read tools (step 6). Each call is logged, with the result's size."""
 
