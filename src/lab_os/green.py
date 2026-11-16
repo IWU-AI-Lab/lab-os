@@ -225,6 +225,8 @@ def started_lelab(path: Path | None = None) -> int | None:
         return None
     if not when or _ps(pid, "lstart") != when or "lelab" not in _ps(pid, "command"):
         return None
+    if "Z" in _ps(pid, "stat"):  # exited, not yet collected by its parent (a zombie): gone
+        return None
     return pid
 
 
