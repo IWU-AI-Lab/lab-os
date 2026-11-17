@@ -3,7 +3,9 @@ kept at /classic/…, the settings (src/lab_os/settings.py) and what keeps the b
 taken. No hardware, no internet; settings are only ever written into a temporary place."""
 
 import asyncio
+import shutil
 import socket
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -277,13 +279,13 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
 def test_x_stop_is_shown_where_you_look():
     """Quick job 19: while desktop control is on, "X = STOP" sits beside the STOP button, the X row
     is the key help's first row and the on-button says it. Hidden while X doesn't stop (it only
-    works in desktop control), so the page never claims what isn't true. Esc is unchanged."""
+    works in desktop control), so the page never claims what isn't true."""
     web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
     js = (web / "desktop-input.js").read_text()
     start = js.split("function startControl", 1)[1].split("function stopControl")[0]
     stop = js.split("function stopControl", 1)[1].split("function tick")[0]
     assert "stopKey(true)" in start and "stopKey(false)" in stop
-    assert "(X = STOP, Esc to leave)" in js
+    assert "(X = STOP, \\` to leave)" in js  # escaped: the text is inside a `template`
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
     for page in ("index.html", "classic/index.html"):
         html = (web / page).read_text()
@@ -293,6 +295,24 @@ def test_x_stop_is_shown_where_you_look():
         table = html.split('<table class="keys">', 1)[1]
         assert table.index("<kbd>X</kbd>") < table.index('id="desk-keys"'), page  # first row
         assert "<kbd>Esc</kbd>" in table, page
+
+
+def test_backtick_leaves_desktop_control_like_esc():
+    """Backtick (`) frees the pointer and ends desktop control, the same as Esc (2026-11-17): a key
+    no mode uses, so leaving doesn't need a reach to Esc. Esc stays (browsers always allow it)."""
+    web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
+    js = (web / "desktop-input.js").read_text()
+    keydown = js.split('document.addEventListener("keydown"', 1)[1].split("keyup")[0]
+    leave = keydown.split('e.code === "Escape" || e.code === "Backquote"', 1)[1].split("return;")[0]
+    assert "document.exitPointerLock()" in leave
+    assert js.count("Backquote") == 1  # no mode uses the key for anything else
+    assert "(X = STOP, \\` to leave)" in js  # escaped: the text is inside a `template`
+    node = shutil.which("node")
+    if node:  # a bare ` inside the button's template string once broke the whole script
+        subprocess.run([node, "--check", str(web / "desktop-input.js")], check=True)
+    for page in ("index.html", "classic/index.html"):
+        table = (web / page).read_text().split('<table class="keys">', 1)[1].split("</table>")[0]
+        assert "<kbd>`</kbd> or <kbd>Esc</kbd>" in table, page
 
 
 def test_settings_scroll_down_not_off_to_the_side():

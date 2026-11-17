@@ -126,6 +126,7 @@ Setup: as part 8. LeLab closed. Run `git pull` first.
 - **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm.
 - **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
 - **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".
+- **8.21** Same page, in desktop control and in full screen: press **`** (backtick, the key above Tab). → did the pointer come back and desktop control end (the button says "Desktop control" again)? (yes / no) Still full screen? (yes / no) Then the same inside the hub's teleop module: did \` leave only desktop control, not the module? (yes / no)
 
 ## 11. Devices (30 min)
 Setup: the desktop and the Newline (or a laptop in place of the Newline). No arm.
