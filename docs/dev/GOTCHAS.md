@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-17 — The teleop readout said "outside model limits" for a joint held at its limit
+**What:** lab check 8.9 on `so101-green`: `elbow_flex` read "97.4 clamped by driver → 96.8; outside model limit". The row shows the *command* (97.4°), and the "outside" note compared that command with the 3D model's URDF limit (±96.8°), so every command the driver cut to its limit was also called "outside", though the arm itself sat at the limit, inside it. The driver's own limits (the URDF narrowed by the calibration, sent in `status.limits`) weren't used at all.
+**Fix:** quick job 24: the note compares the angle the driver holds with the driver's limits in force (`teleop/web/arm/joint-flags.js`, tested with node); the model's limits only until the driver's status has arrived. Lab check 8.20.
+
 ### 2026-11-16 — Green arms: LeLab writes a calibration into the motors at every teleop start, and it has two setups
 **What:** lab check part 8. `--watch` on `so101-green` worked with `calibration_file` set to `sheep.json`, then later refused: "motors hold a different calibration than its file". Cause, read from LeLab's code and saved setups (nothing written): LeLab's teleop writes the chosen setup's two calibration files into both arms' motors every time it starts. LeLab has **two saved setups for the same green pair**, and their names are crossed:
 
