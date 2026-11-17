@@ -5,13 +5,12 @@ Small jobs that are **already decided** and can be built in one Claude Code sess
 Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a focus step (`docs/plan/current-focus.md`).
 
 ## To do
-Order: 18 first (the green arms), then the rest from the top.
+Order: from the top (20 and 25 next: the green arms).
 
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue.
 10. **VR hub: a cluster of linked dots far away.** In `/xr` after the jump, a tight clump of connected dots sits off in the distance (seen in the headset, 2026-11-13). Find why (`hub/web/xr/network.js`) and spread them like the rest.
 12. **A diagram of the system**, and a way to see it on the hub: one clear drawing (the brain, the hub pages, the devices and how each connects: USB, network, MCP), as SVG made by hand (no CDN, `docs/` and the hub), opened from the Devices panel ("How it connects"). Matches the design.
 
-18. **Green arms: use the calibration file that matches the motors** (decided 2026-11-16). LeLab writes one of two files into the follower at each teleop start (`docs/dev/GOTCHAS.md`). For a borrowed arm, lab-os reads what the motors hold and uses the file in LeLab's folder for that arm that equals it, logs its name, and refuses with a sentence only if none matches. `calibration_file` in `devices.yaml` goes away. Never writes. Same for the leader.
 19. **Show "X = STOP" in desktop control.** X already stops in every mode and leaves full screen alone; the page doesn't say so where you look. Put it next to STOP and in the key help. Esc stays as it is (it can't keep full screen in Brave).
 20. **Home is the folded pose** (decided 2026-11-16): `home` for the SO-101 becomes the compact rest position the builder always returns the arm to, with the gripper slightly open. Today's `home` (reaching forward, 5 cm up) is renamed `ready` and stays teleop's and the fake arm's start. The joint numbers come from the real arm: lab check 8.16.
 21. **AI budget and safety limits in the hub's own ⚙.** They're on `/settings` but not in the settings that open from the gear on the designed hub (lab check 6.3). Same controls, same place.
@@ -35,3 +34,4 @@ Order: 18 first (the green arms), then the rest from the top.
 - 15. **Camera names: stand and wrist** (done 2026-11-16). `so101-white-cam-stand` / `-cam-wrist` in `devices.yaml`, the tool description and the docs; "overhead" → "stand camera". The green cameras keep `-a`/`-b` until the lab check says which is which.
 - 14. **Teleop page: the 3D view and the joint readout in their own boxes.** (done 2026-11-14, PR #79). Fixed 3D box, one fixed-height row per joint beside it. Lab: lab-checklist part 6.
 - 17. **The training launcher refuses while anything else has a green port** (done 2026-11-17, PR #102). Checked whether or not LeLab runs; only LeLab (told apart by its command line) may already hold a green port; a computer that can't tell refuses. Lab: lab-checklist 8.18.
+- 18. **Green arms: the calibration file that matches the motors** (done 2026-11-17, PR #104). The driver reads what the motors hold and uses the equal file in LeRobot's folder (role folder first), says which, refuses if none; `calibration_file` gone. Same for the leader. Lab: lab-checklist 8.16, 8.17.
