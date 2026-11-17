@@ -280,8 +280,9 @@ def test_x_stop_is_shown_where_you_look():
     works in desktop control), so the page never claims what isn't true. Esc is unchanged."""
     web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
     js = (web / "desktop-input.js").read_text()
-    assert "stopKey(true)" in js.split("function startControl", 1)[1].split("function stopControl")[0]
-    assert "stopKey(false)" in js.split("function stopControl", 1)[1].split("function tick")[0]
+    start = js.split("function startControl", 1)[1].split("function stopControl")[0]
+    stop = js.split("function stopControl", 1)[1].split("function tick")[0]
+    assert "stopKey(true)" in start and "stopKey(false)" in stop
     assert "(X = STOP, Esc to leave)" in js
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
     for page in ("index.html", "classic/index.html"):
