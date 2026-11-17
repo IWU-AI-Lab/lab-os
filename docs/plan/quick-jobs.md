@@ -11,8 +11,6 @@ Order: from the top.
 10. **VR hub: a cluster of linked dots far away.** In `/xr` after the jump, a tight clump of connected dots sits off in the distance (seen in the headset, 2026-11-13). Find why (`hub/web/xr/network.js`) and spread them like the rest.
 12. **A diagram of the system**, and a way to see it on the hub: one clear drawing (the brain, the hub pages, the devices and how each connects: USB, network, MCP), as SVG made by hand (no CDN, `docs/` and the hub), opened from the Devices panel ("How it connects"). Matches the design.
 
-24. **Teleop readout: "outside model limit" shown wrongly.** On `so101-green`, `elbow_flex` read "97.4 clamped by driver → 96.8; outside model limit" while inside the limit (lab check 8.9). The flag should compare with the limit actually in force.
-
 ## Done
 - 23. **Startup: find the stutter** (done 2026-11-17, PR #109). Not reproduced at full speed on a fast Mac; with the CPU slowed 4×, the core's arrival made 2.6 s of fresh noise for its sound right before a heavy frame, and the jump's throwaway arrays caused garbage collections at random moments, sometimes on the arrival (`docs/dev/GOTCHAS.md` 2026-11-17). Noise made at load, batches kept between frames. Lab: lab-checklist 1.3 (five starts).
 - 22. **Ask bar: icons centred in their cells** (done 2026-11-17, PR #105). The buttons were narrower than their cells (the bar's gap and right padding), so the icons sat 4–5 px left; each button now fills its cell (designed hub and concept). Lab: lab-checklist 1.3.
@@ -35,3 +33,4 @@ Order: from the top.
 - 18. **Green arms: the calibration file that matches the motors** (done 2026-11-17, PR #104). The driver reads what the motors hold and uses the equal file in LeRobot's folder (role folder first), says which, refuses if none; `calibration_file` gone. Same for the leader. Lab: lab-checklist 8.16, 8.17.
 - 20. **Home is the folded pose** (done 2026-11-17, PR #106). Today's `home` is `ready` (teleop's and the fake arm's start); the new `home` is the old `rest` numbers with the gripper at 10, computed only; `rest` removed. Lab: lab-checklist 8.16 gives the real numbers.
 - 25. **Green camera names** (done 2026-11-17, PR #107). `so101-green-cam-wrist` (socket 7) and `so101-green-cam-stand` (socket 8), from lab check 8.15. The white arm's names wait for lab check 3.9.
+- 24. **Teleop readout: "outside" judged against the limit in force** (done 2026-11-17, PR #108). The note compares the angle the driver holds with the driver's own limits (`status.limits`), not the command with the 3D model's; tested with node. Lab: lab-checklist 8.20.

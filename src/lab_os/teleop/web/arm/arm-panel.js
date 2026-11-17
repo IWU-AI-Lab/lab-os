@@ -2,7 +2,8 @@
 //
 // Draws the joints of every `arm_command` (the arguments of Arm.move_joints), unclamped. Before the
 // first command it shows the driver's reported joints from `status`. The joint readout flags joints
-// the driver clamped (command ≠ driver state) and commands outside the 3D model's limits.
+// the driver clamped (command ≠ driver state) and joints the driver holds outside its own limits
+// (joint-flags.js; the 3D model's limits only until the driver has sent its own).
 //
 // Layout (quick job 14): the 3D view in its own box, the joint readout in a column beside it with one
 // row per joint of the arm, always all of them, in the arm's order, each a fixed height. A command
@@ -12,6 +13,7 @@ import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
 import { getArmFeed } from "./arm-feed.js";
+import { jointFlags } from "./joint-flags.js";
 import { color } from "/web/theme.js";
 
 const $ = (id) => document.getElementById(id);
@@ -81,12 +83,12 @@ function render() {
   for (const [name, deg] of Object.entries(feed.status?.joints || {})) {
     if (!shown.has(name) || shown.get(name).cmd == null) shown.set(name, { cmd: deg ?? null, flags: [] });
   }
+  const limits = feed.status?.limits || {}; // the driver's limits in force (quick job 24)
   for (const [name, cmd] of Object.entries(joints)) {
-    const drv = after[name];
-    const flags = [];
-    if (drv !== undefined && Math.abs(drv - cmd) > 0.05) flags.push(`clamped by driver → ${drv.toFixed(1)}°`);
-    if (outOfRange.includes(name)) flags.push("outside model limits");
-    if (unknown.includes(name)) flags.push("not in this model");
+    const flags = jointFlags(cmd, after[name], limits[name], {
+      outOfModel: outOfRange.includes(name),
+      unknown: unknown.includes(name),
+    });
     shown.set(name, { cmd, flags });
   }
   $("arm-joints").innerHTML = [...shown].map(([name, { cmd, flags }]) => {
