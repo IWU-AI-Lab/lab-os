@@ -29,7 +29,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-16 — The training launcher started LeLab while the brain was driving the green arm
 **What:** lab check 8.12: with `lab-os serve --arm so101-green` running, the "SO-101 Training (LeLab)" icon started LeLab instead of refusing. The brain then logged `so101-green: read failed (… Incorrect status packet!); using the last reading`: two programs on one port, which rule 4 forbids. The launcher skips its "is the port open elsewhere" check when LeLab's page already answers ("then it's LeLab's"), `green.check`.
-**Fix:** quick job 17: the launcher refuses whenever a program that isn't LeLab has a green port open, whether or not LeLab is running. Until then: stop the brain (Ctrl+C) before the training icon.
+**Fix (2026-11-17, quick job 17):** the launcher refuses whenever a program that isn't LeLab has a green port open, whether or not LeLab is running. LeLab is told apart by its command line (a part of it is a `lelab` folder or script: `~/.local/bin/lelab`, or LeLab's own Python in `~/.local/share/uv/tools/lelab/`), not by its page answering. Lab check: part 8b.
 
 ### 2026-11-16 — Brave: Esc still leaves full screen; in desktop control STOP can't be clicked
 **What:** lab check 6.7 in Brave: Esc stopped the arm but also left full screen. Keeping Esc needs the browser's Keyboard Lock, which Chrome and Edge have and Brave doesn't. And in desktop control the pointer is captured, so the STOP button can't be clicked (8.10).

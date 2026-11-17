@@ -5,13 +5,12 @@ Small jobs that are **already decided** and can be built in one Claude Code sess
 Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a focus step (`docs/plan/current-focus.md`).
 
 ## To do
-Order: 17 and 18 first (the green arms), then the rest from the top.
+Order: 18 first (the green arms), then the rest from the top.
 
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue.
 10. **VR hub: a cluster of linked dots far away.** In `/xr` after the jump, a tight clump of connected dots sits off in the distance (seen in the headset, 2026-11-13). Find why (`hub/web/xr/network.js`) and spread them like the rest.
 12. **A diagram of the system**, and a way to see it on the hub: one clear drawing (the brain, the hub pages, the devices and how each connects: USB, network, MCP), as SVG made by hand (no CDN, `docs/` and the hub), opened from the Devices panel ("How it connects"). Matches the design.
 
-17. **The training launcher refuses while anything else has a green port.** Today it skips that check when LeLab's page already answers, and it started LeLab while the brain drove `so101-green` (lab check 8.12, `docs/dev/GOTCHAS.md`). Refuse whenever a program that isn't LeLab has a green port open. First, because it's one of the four green rules.
 18. **Green arms: use the calibration file that matches the motors** (decided 2026-11-16). LeLab writes one of two files into the follower at each teleop start (`docs/dev/GOTCHAS.md`). For a borrowed arm, lab-os reads what the motors hold and uses the file in LeLab's folder for that arm that equals it, logs its name, and refuses with a sentence only if none matches. `calibration_file` in `devices.yaml` goes away. Never writes. Same for the leader.
 20. **Home is the folded pose** (decided 2026-11-16): `home` for the SO-101 becomes the compact rest position the builder always returns the arm to, with the gripper slightly open. Today's `home` (reaching forward, 5 cm up) is renamed `ready` and stays teleop's and the fake arm's start. The joint numbers come from the real arm: lab check 8.16.
 24. **Teleop readout: "outside model limit" shown wrongly.** On `so101-green`, `elbow_flex` read "97.4 clamped by driver → 96.8; outside model limit" while inside the limit (lab check 8.9). The flag should compare with the limit actually in force.
@@ -35,3 +34,4 @@ Order: 17 and 18 first (the green arms), then the rest from the top.
 - 13. **1:1 teleop scale, the part without the lab** (done 2026-11-16). No scale error in the chain (model, units, 3D arm, gripper point); fixed the hand's base on a headset without a floor (`docs/dev/GOTCHAS.md`). Lab: checks 7.2–7.4.
 - 15. **Camera names: stand and wrist** (done 2026-11-16). `so101-white-cam-stand` / `-cam-wrist` in `devices.yaml`, the tool description and the docs; "overhead" → "stand camera". The green cameras keep `-a`/`-b` until the lab check says which is which.
 - 14. **Teleop page: the 3D view and the joint readout in their own boxes.** (done 2026-11-14, PR #79). Fixed 3D box, one fixed-height row per joint beside it. Lab: lab-checklist part 6.
+- 17. **The training launcher refuses while anything else has a green port** (done 2026-11-17, PR #102). Checked whether or not LeLab runs; only LeLab (told apart by its command line) may already hold a green port; a computer that can't tell refuses. Lab: lab-checklist 8.18.

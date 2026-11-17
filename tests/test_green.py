@@ -78,11 +78,16 @@ def test_swapped_since_last_start_refuses(tmp_path):
     assert any("swapped" in t for ok, t in c.lines if not ok)
 
 
-def hold(paths, tty, program="python3", pid="4321"):
-    """A program (lab-os driving so101-green, say) has this fake tty open."""
+BRAIN = ["/home/lab/lab-os/.venv/bin/python3", "/home/lab/lab-os/.venv/bin/lab-os", "serve"]
+LELAB = ["/home/lab/.local/share/uv/tools/lelab/bin/python", "/home/lab/.local/bin/lelab"]
+
+
+def hold(paths, tty, program="python3", pid="4321", argv=BRAIN):
+    """A program (by default the brain driving so101-green) has this fake tty open."""
     fd = paths["proc"] / pid / "fd"
     fd.mkdir(parents=True)
     (paths["proc"] / pid / "comm").write_text(program + "\n")
+    (paths["proc"] / pid / "cmdline").write_bytes(b"\0".join(a.encode() for a in argv) + b"\0")
     (fd / "9").symlink_to(paths["by_id"].parent / "dev" / tty)
 
 
@@ -96,11 +101,45 @@ def test_a_green_port_open_in_another_program_refuses(tmp_path, monkeypatch):
 
 
 def test_lelab_already_running_may_hold_the_ports(tmp_path, monkeypatch):
-    monkeypatch.setattr(green, "_answers", lambda port: True)  # LeLab answers: the ports are its
+    monkeypatch.setattr(green, "_answers", lambda port: True)  # LeLab answers
     paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
-    hold(paths, "ttyACM1", program="lelab")
+    hold(paths, "ttyACM1", program="lelab", argv=LELAB)
     c = check(**paths)
     assert c.ok and c.running, c.lines
+
+
+def test_the_brain_on_a_green_port_refuses_even_while_lelab_runs(tmp_path, monkeypatch):
+    # lab check 8.12: LeLab's page answered, the brain drove so101-green, and LeLab started anyway
+    monkeypatch.setattr(green, "_answers", lambda port: True)
+    paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
+    hold(paths, "ttyACM1", program="lab-os", pid="777")
+    c = check(**paths)
+    assert not c.ok
+    assert any("…3501 is open in lab-os (pid 777)" in t for ok, t in c.lines if not ok)
+
+
+def test_lelabs_own_helper_counts_as_lelab(tmp_path, monkeypatch):
+    # a teleop run LeLab starts runs on LeLab's own Python: its command line goes through lelab/
+    monkeypatch.setattr(green, "_answers", lambda port: True)
+    paths = setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"})
+    hold(paths, "ttyACM0", program="python", argv=[LELAB[0], "-m", "lerobot.teleoperate"])
+    assert check(**paths).ok
+
+
+def test_a_name_that_only_contains_lelab_is_not_lelab(tmp_path):
+    proc = tmp_path / "proc"
+    (proc / "5").mkdir(parents=True)
+    (proc / "5" / "cmdline").write_bytes(b"/home/x/notlelab/run\0")
+    assert not green._is_lelab("run (pid 5)", proc)
+    (proc / "5" / "cmdline").write_bytes(b"/home/x/.local/bin/lelab\0")
+    assert green._is_lelab("lelab (pid 5)", proc)
+
+
+def test_cant_tell_who_has_the_port_refuses(tmp_path, monkeypatch):
+    monkeypatch.setattr(green, "users_of", lambda path, proc: None)  # no /proc and no lsof
+    c = check(**setup(tmp_path, {LEADER: "ttyACM0", FOLLOWER: "ttyACM1"}))
+    assert not c.ok
+    assert any("can't tell" in t for ok, t in c.lines if not ok)
 
 
 # ---------- Stop LeLab (quick job 7): only the one the launcher started ----------
