@@ -10,7 +10,7 @@ Rules:
 - Green arms: never change motor IDs or firmware, never recalibrate, never touch the `lerobot` conda env, never start lab-os on them while LeLab is running.
 - The free voice key speaks about 15–20 answers a day. Silent answers with "sending too much voice" = used up until midnight Pacific.
 
-No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm), a bank card (8.6 cm long, 5.4 cm wide), the cube (about 2.5 cm), your phone lying flat (about 1 cm thick).
+No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm), a bank card (8.6 cm long, 5.4 cm wide), the cube (3 cm), your phone lying flat (about 1 cm thick).
 
 ---
 
@@ -45,7 +45,7 @@ Setup: green follower, green leader and both training cameras plugged in as for 
 - Hold the arm. Ctrl+C in the brain's terminal.
 
 ## 3. AI drives so101-white (30 min)
-Setup: `so101-white` plugged in, green arms unplugged. A sheet of letter paper, the cube, your phone.
+Setup: `so101-white` plugged in, green arms unplugged. The cube.
 ```bash
 ls -l /dev/serial/by-id/
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
@@ -53,12 +53,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reconnect. Give the prompts one at a time.
 - **3.1** Prompt: `Use the lab-os tools. Read the arm's status, then go to the ready pose.` → did Claude Code ask permission before moving? (yes / no)
 - **3.2** Prompt: `Move to x 20, y 0, z 2, pointing straight down.` Stand the cube next to the jaw tips. → are the tips above, level with, or below the cube's top?
-- **3.3** Prompt: `Move to z 0.5.` Try to slide your phone, lying flat, under the jaw tips. → does the phone fit under? (yes / no) Do the tips touch the table? (yes / no)
-- **3.4** Only if the tips did **not** touch the table in 3.3. Prompt: `Move to z -0.5.` → do the tips touch the table? (yes / no; or "skipped")
-- **3.5** Lay the paper flat with one short edge touching the middle of the arm's base, the paper pointing straight away from the arm. Put the cube at the middle of the far short edge. Take the paper away. Prompt: `There's a cube 28 cm in front of the base and 0 cm to the left, about 2.5 cm wide. Pick it up and put it down 10 cm to the left. Look with both cameras and pose_view before you close the gripper. Say one line before each move.` → was the cube picked up? (yes / no)
-- **3.6** Same run. → was it put down about 10 cm to the left? (yes / no)
-- **3.7** Same run, only if 3.5 was no. → where did the gripper close: in front of, behind, left of, right of or above the cube, and by about how many cube-widths?
-- **3.8** Same run. → did it say one line before each move? (yes / no)
+- **3.3** Stand the cube (3 cm) right under the jaw tips, about 0.5 cm below them. Prompt: `There's a cube directly below the gripper, .5 cm away from it. The gripper is too narrow, so it would need to open; the cube is 3x3x3 cm. Use the cameras if needed. Go fast. Pick it up and then move it somewhere else (don't go too far to the right or left; there's stuff there), back on the table.` → was the cube picked up and set down on the table somewhere else? (yes / no)
 - **3.9** Run `ls -l /dev/v4l/by-path/`. Unplug the white arm's wrist camera. Run it again. Plug it back in. → which disappeared: `usb-0:7` or `usb-0:8`?
 
 ## 7. Teleop 1:1 on the real arm (20 min)

@@ -4,6 +4,19 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-17 — so101-white's two cameras answer to each other's names
+**What:** during an AI pick, `camera_snapshot so101-white-cam-wrist` showed the table from above (the arm, the Quest, a box), and `so101-white-cam-stand` showed the view along the jaws (the cube between them). The names in `config/devices.yaml` point at the wrong video ports.
+**Fix:** not yet. Lab check 3.9 (unplug the wrist camera, see which `/dev/v4l/by-path/` entry disappears) gives the right port; then swap them in `config/devices.yaml`.
+
+### 2026-11-17 — so101-white stands on a ~1.6 cm plate, so its "z = 0" is above the table
+**What:** the arm sits on the stand camera's base plate. Its z = 0 is the bottom of the arm's own base, so the real table is about z −1.6 cm (the builder measured the jaw tips 3 cm off the table at a reading of 1.4 cm). `pick_at` goes down to half the object's height *in the arm's numbers*, so it would close near the top of a 3 cm cube; the 0.5 cm floor also stops the tips ~1 cm above the real table. Done by hand instead (open, `move_to` z 0 ≈ the cube's middle, close, lift): picked and placed fine. The elbow also sags ~3° on most moves (the gripper ends ~1 cm low/short): harmless at this size.
+**Fix:** not yet: lab-os needs a per-arm table height (offset) setting.
+
+### 2026-11-17 — so101-white jumped far past a go_to_pose step (cause not found yet)
+**What:** before the move, `arm_status` put the gripper point at z = −3.9 cm (below the table, impossible unless it was pressing on it). `go_to_pose ready` was capped to 34 % of the way (shoulder_lift 45.3° → about 23°), but the arm **jumped** and read shoulder_lift −28.7°, elbow 24°: about 52° and 22° *past* the command, beyond the ready pose itself. The builder saw the upper arm about 60° from the table, which matches the −28.7° reading (0 = straight up), so the reading *after* the move was right. The software path looked right (the cap clipped the target; the motion starts from the read position and ramps). Suspect the reading *before* the move (gripper below the table): if the start was misread, the ramp starts from the wrong place and the arm lurches. Also: the result said "short of the command … by 51.9°" though the arm *overshot*; the message ignores direction.
+After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and two more `go_to_pose ready` steps arrived exactly. So the motors and calibration look fine now. But the "below the table" start may not have been a bad reading: so101-white stands on a ~1 cm plate (the stand camera's), so the real table is at z ≈ −1 cm in the arm's frame (z = 0 is the bottom of the arm's base), and the model's gripper point isn't checked against the real arm near the table. The driver already sets goals to the current position before torque goes on, so a stale goal is unlikely too. Cause still unknown.
+**Fix:** none yet. If it happens again, note what ran on the arm just before (teleop, a restart, the arm being moved by hand).
+
 ### 2026-11-17 — A backtick in the button's text broke all of desktop control
 **What:** the desktop-control button's text is a JavaScript template string (between backticks), so writing "` to leave" in it ended the string early: the whole `desktop-input.js` failed to load and the Desktop control button did nothing. A test that only reads the text passed anyway.
 **Fix:** write it as \` inside the template. The test now runs `node --check` on the script where node is installed, and the page was tried in a headless browser.
