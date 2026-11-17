@@ -3,8 +3,9 @@
 Needs the optional extra (`uv sync --extra so101`) and a calibration: lab-os's own from
 `python -m lab_os.robots.so101_setup calibrate` (calibration/<name>/<name>.json), or, for an arm
 with `calibration: lerobot` in devices.yaml (the borrowed green arms), LeRobot's cache
-(~/.cache/huggingface/lerobot/calibration/robots/…), READ ONLY: the file is copied into a temporary
-folder and LeRobot only ever sees the copy, so nothing can write to the original.
+(~/.cache/huggingface/lerobot/calibration/…), READ ONLY: the driver reads what the motors hold and
+uses the file there that equals it (LeLab writes one of two setups into the arms, quick job 18).
+The file is copied into a temporary folder and LeRobot only ever sees the copy.
 
 READ-ONLY by default: until `allow_motion=True`, nothing is written to the motors (no torque, no
 goal, not even the calibration). Turn motion on only after the builder's OK (SAFETY.md).
@@ -15,7 +16,7 @@ goal, not even the calibration). Turn motion on only after the builder's OK (SAF
 - `close()` switches torque off (LeRobot's default), so the arm sags: park it first.
 """
 
-import contextlib
+import json
 import logging
 import math
 import os
@@ -23,7 +24,7 @@ import shutil
 import sys
 import tempfile
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -71,47 +72,47 @@ def lerobot_calibration_root() -> Path:
     return Path(hf_home) / "lerobot" / "calibration"
 
 
-def lerobot_calibration_file(device: Device, root: Path | None = None) -> Path:
-    """The borrowed arm's calibration file in LeRobot's cache: robots/<type>/<id>.json for a
-    follower, teleoperators/<type>/<id>.json for a leader. `calibration_id` in devices.yaml picks
-    one; without it there must be exactly one. Only looks; reads nothing yet."""
+def lerobot_calibration_files(device: Device, root: Path | None = None) -> list[Path]:
+    """Every calibration file LeLab/LeRobot saved that could be this arm's: <role>/<type>/*.json
+    (robots/ for a follower, teleoperators/ for a leader) first, then the other role's folder
+    (LeLab has filed a file under the other role before). Only lists; reads nothing."""
     root = root or lerobot_calibration_root()
-    if device.calibration_file:  # exact file, even if LeLab filed it under the other role
-        path = (root / device.calibration_file).resolve()
-        if root.resolve() not in path.parents or not path.is_file():
-            raise LookupError(
-                f"{device.name}: calibration_file {device.calibration_file} not found in {root}."
-            )
-        return path
-    folder = root / ("teleoperators" if device.kind == "so101-leader" else "robots")
-    files = sorted(folder.glob("*/*.json"))
-    if device.calibration_id:
-        files = [f for f in files if f.stem == device.calibration_id]
-    if len(files) != 1:
-        found = ", ".join(str(f.relative_to(root)) for f in files) or "none"
-        which = f" named {device.calibration_id}.json" if device.calibration_id else ""
-        raise LookupError(
-            f"{device.name}: need exactly one calibration file{which} in {folder} (found: {found})."
-            " Set calibration_id in devices.yaml. lab-os never calibrates a borrowed arm: "
-            "calibrate it in its own project (LeLab)."
+    roles = (
+        ("teleoperators", "robots")
+        if device.kind == "so101-leader"
+        else ("robots", "teleoperators")
+    )
+    return [f for folder in roles for f in sorted((root / folder).glob("*/*.json"))]
+
+
+def _same(held: dict, saved: dict) -> bool:
+    """LeRobot's own test (FeetechMotorsBus.is_calibrated): the same motors, and per motor the
+    same homing offset and range. `held` is what the motors hold (objects), `saved` a file."""
+    if set(held) != set(saved):
+        return False
+    try:
+        return all(
+            (cal.homing_offset, cal.range_min, cal.range_max)
+            == (saved[m]["homing_offset"], saved[m]["range_min"], saved[m]["range_max"])
+            for m, cal in held.items()
         )
-    return files[0]
+    except (KeyError, TypeError):
+        return False
 
 
-@contextlib.contextmanager
-def calibration_dir(name: str, device: Device | None, root: Path | None = None) -> Iterator[Path]:
-    """The folder LeRobot loads `<name>.json` from: lab-os's own calibration/<name>/, or for
-    `calibration: lerobot` a temporary folder with a COPY of LeRobot's file (read only: LeRobot
-    never learns where the original is). The copy is gone when the block ends."""
-    if device is None or device.calibration != "lerobot":
-        yield CALIBRATION_DIR / name
-        return
-    source = lerobot_calibration_file(device, root)
-    with tempfile.TemporaryDirectory(prefix=f"lab-os-{name}-") as tmp:
-        with source.open("rb") as src, open(Path(tmp) / f"{name}.json", "wb") as dst:
-            shutil.copyfileobj(src, dst)
-        log.info("%s: calibration read from %s (read only)", name, source)
-        yield Path(tmp)
+def matching_calibration(held: dict, files: list[Path]) -> list[Path]:
+    """The files whose values equal what the motors hold (quick job 18). LeLab writes one of its
+    setups' files into the arms at every teleop start, so the right file is whichever matches
+    now. Reads the files; writes nothing."""
+    out = []
+    for f in files:
+        try:
+            saved = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(saved, dict) and _same(held, saved):
+            out.append(f)
+    return out
 
 
 def lerobot_follower(name: str, port: str, calibration_dir: Path):
@@ -152,6 +153,7 @@ class SO101Arm:
     num_read_retries: int = 2
     stopped: bool = False
     make_robot: Callable[[str, str, Path], object] = lerobot_follower  # replaceable for tests
+    calibration_source: Path | None = None  # a borrowed arm: the file its motors hold
     _robot: object = field(default=None, repr=False)
     _last: dict[str, float] = field(default_factory=dict, repr=False)  # last reading
     _last_read_t: float = field(default=-math.inf, repr=False)
@@ -161,26 +163,23 @@ class SO101Arm:
     def connect(self) -> None:
         # by-id name, board serial, plugged in, and no other program has the port (LeLab, a run)
         device, port = guarded_port(self.name)
-        borrowed = device is not None and device.calibration == "lerobot"
-        with calibration_dir(self.name, device) as folder:
+        if device is not None and device.calibration == "lerobot":
+            robot = self._connect_borrowed(device, port)
+        else:
+            folder = CALIBRATION_DIR / self.name
             robot = self.make_robot(self.name, port, folder)  # LeRobot loads the file now
-        if not robot.calibration:
-            raise RuntimeError(
-                f"{self.name} has no calibration in {folder}: run "
-                "uv run --extra so101 python -m lab_os.robots.so101_setup calibrate"
-            )
-        robot.bus.connect()  # checks all six motors answer
+            if not robot.calibration:
+                raise RuntimeError(
+                    f"{self.name} has no calibration in {folder}: run "
+                    "uv run --extra so101 python -m lab_os.robots.so101_setup calibrate"
+                )
+            robot.bus.connect()  # checks all six motors answer
         try:
             if not robot.bus.is_calibrated:
-                fix = (
-                    "lab-os never writes a borrowed arm's calibration: check the arm in its own "
-                    "project (LeLab)."
-                    if borrowed
-                    else "Run so101_setup calibrate and press Enter to write the file to the "
-                    "motors (or 'c' to calibrate anew)."
-                )
                 raise RuntimeError(
-                    f"{self.name}'s motors hold a different calibration than its file. {fix}"
+                    f"{self.name}'s motors hold a different calibration than its file. Run "
+                    "so101_setup calibrate and press Enter to write the file to the motors (or "
+                    "'c' to calibrate anew)."
                 )
             self._robot = robot
             self.limits = calibrated_limits(robot.calibration, self.limits)
@@ -196,6 +195,46 @@ class SO101Arm:
             robot.bus.disconnect(disable_torque=False)
             self._robot = None
             raise
+
+    def _connect_borrowed(self, device: Device, port: str):
+        """A borrowed arm (the greens): read what its motors hold, then load the file in
+        LeRobot's cache that equals it (quick job 18). READ ONLY: nothing is written to the
+        motors or the cache; LeRobot only ever sees a temporary copy of the file."""
+        files = lerobot_calibration_files(device)
+        with tempfile.TemporaryDirectory(prefix=f"lab-os-{self.name}-") as tmp:
+            robot = self.make_robot(self.name, port, Path(tmp))  # empty folder: loads nothing
+            robot.bus.connect()  # checks all six motors answer
+            try:
+                held = robot.bus.read_calibration()  # reads the motors' registers only
+                found = matching_calibration(held, files)
+                if not found:
+                    names = ", ".join(f.name for f in files) or "none"
+                    raise RuntimeError(
+                        f"{self.name}'s motors hold a calibration that matches none of the files "
+                        f"in LeRobot's folder ({names}). lab-os never writes a borrowed arm's "
+                        "calibration: start teleop once in LeLab (it writes one of its setups "
+                        "into the arm), then try again."
+                    )
+                copy = Path(tmp) / f"{self.name}.json"
+                shutil.copyfile(found[0], copy)
+                saved = json.loads(copy.read_text())
+                robot.calibration = {  # LeRobot's MotorCalibration objects, the file's values
+                    m: type(cal)(**{k: saved[m].get(k, v) for k, v in vars(cal).items()})
+                    for m, cal in held.items()
+                }
+                robot.bus.calibration = robot.calibration
+            except Exception:
+                robot.bus.disconnect(disable_torque=False)
+                raise
+        same = [f.name for f in found[1:]]
+        log.info(
+            "%s: the motors hold %s; using it (read only)%s",
+            self.name,
+            found[0].relative_to(found[0].parents[2]),
+            f"; also the same: {', '.join(same)}" if same else "",
+        )
+        self.calibration_source = found[0]
+        return robot
 
     def read_measured(self) -> dict[str, float]:
         """Positions straight from the motors (degrees, shared names)."""
@@ -328,6 +367,10 @@ def main() -> None:
         arm.connect()
     except (PortNotAllowed, LookupError, KeyError) as e:
         raise SystemExit(f"Not opening anything: {e}") from None
+    except RuntimeError as e:
+        raise SystemExit(str(e)) from None
+    if arm.calibration_source:
+        print(f"calibration: {arm.calibration_source} (it matches what the motors hold)")
     if "--watch" in sys.argv:
         try:
             watch(arm)
