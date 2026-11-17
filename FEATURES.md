@@ -57,7 +57,7 @@ The features that are built and working today, plus a few lab robot projects tha
 | Speed slider and right thumbstick (capped by the venue); the gripper and wrist stay above the venue's floor (`min_z_cm`, −0.5 cm since 2026-11-14) | ✅ | |
 | Relative mode at scale 1 (10 cm of hand = 10 cm of gripper) and the 1:1 follow speed (up to 180°/s in the lab, scaled by the Speed slider), 2026-11-16 | 🧪 | Fake arm only so far (`docs/guides/lab-checklist.md` 7.7) |
 | 3D arm in the headset (see-through ghost in AR), movable onto the real arm | ✅ | |
-| Desktop control without a headset: keyboard + trackpad act as a controller; **X** = STOP in every mode, shown as "X = STOP" beside the STOP button while it's on (2026-11-17) | ✅ | The "X = STOP" label is 🧪 (headless browser) |
+| Desktop control without a headset: keyboard + trackpad act as a controller; **X** = STOP in every mode, shown as "X = STOP" beside the STOP button while it's on (2026-11-17); **`** (backtick) or Esc leaves it and frees the pointer (2026-11-17) | ✅ | The "X = STOP" label is 🧪 (headless browser) |
 | Record and replay controller sessions (`--record`, `lab-os-teleop replay`) | ✅ | For testing without a headset |
 | Redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | Old pages at `/classic/…`. Teleop: the 3D view in a fixed box with the joint readout in its own column, so it no longer resizes while jogging (2026-11-14). "Outside the arm's limits" is judged against the driver's limits in force, at the angle the driver holds (2026-11-17; before, a command clamped to the limit also read "outside model limits") |
 | Freezes on release, lost tracking, disconnect or stale input; STOP on every page | ✅ | |

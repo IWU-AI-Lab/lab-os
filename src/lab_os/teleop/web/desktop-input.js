@@ -6,8 +6,8 @@
 //
 // Keys and Mouse jog motors directly (never IK). The virtual hand sends the same messages as the
 // Quest, so it goes through the same mapping (IK on arms that have kinematics). Click the button
-// to start (the page captures the pointer), Esc to leave: leaving freezes the arm and hands
-// control over. Messages are sent at 60 Hz while active, even when nothing is pressed: if they
+// to start (the page captures the pointer), ` (backtick) or Esc to leave: leaving freezes the arm
+// and hands control over. Messages are sent at 60 Hz while active, even when nothing is pressed: if they
 // stop (tab hidden, page closed), the arm freezes (dead-man). Format: docs/dev/protocol.md.
 
 const SHARED_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"];
@@ -237,7 +237,7 @@ export function initDesktop(link, ui) {
     document.activeElement?.blur(); // a key on a focused button would click it again
     ui.setActive("desktop");
     $("desk-help").open = true;
-    button.textContent = `Desktop control on: ${select.options[select.selectedIndex].text} (X = STOP, Esc to leave)`;
+    button.textContent = `Desktop control on: ${select.options[select.selectedIndex].text} (X = STOP, \` to leave)`;
     stopKey(true);
     last = performance.now();
     // A timer, not requestAnimationFrame: input must not stall when rendering is slow. Browsers
@@ -291,7 +291,9 @@ export function initDesktop(link, ui) {
 
   document.addEventListener("keydown", (e) => {
     if (!active) return;
-    if (e.code === "Escape") {
+    // ` (backtick) leaves too, the same as Esc: one key, above Tab, that no mode uses and nobody
+    // presses by accident; Esc stays (the browser always lets it free the pointer anyway)
+    if (e.code === "Escape" || e.code === "Backquote") {
       e.preventDefault();
       document.exitPointerLock(); // → pointerlockchange → stopControl: the arm freezes
       return;
