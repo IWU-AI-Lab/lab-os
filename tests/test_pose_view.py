@@ -11,7 +11,7 @@ from test_hub_server import make_app  # same folder (pytest puts it on the path)
 from test_robot_tools import venue
 
 from lab_os.kinematics import so101_kinematics
-from lab_os.robots.fake import SO101_HOME, FakeArm
+from lab_os.robots.fake import SO101_READY, FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.tools import pose_view as pv
 from lab_os.tools.mcp_server import create_mcp_server
@@ -50,7 +50,7 @@ def test_the_meshes_load_and_shrink():
 def test_link_frames_agree_with_the_ik_model():
     """The picture and the move tools must agree on where the gripper point is."""
     _, joints, base = pv.load_model(pv.URDFS["so101"])
-    q = dict(SO101_HOME) | {"shoulder_pan": 30, "elbow_flex": 20}
+    q = dict(SO101_READY) | {"shoulder_pan": 30, "elbow_flex": 20}
     tip_link = pv.link_frames(joints, base, q)["gripper_frame_link"][0]
     tip_ik = so101_kinematics().fk(q)[0]
     assert all(abs(a - b) < 1e-9 for a, b in zip(tip_link, tip_ik, strict=True))
@@ -66,8 +66,8 @@ def test_the_red_dot_moves_with_the_gripper():
         side = [p for p in reds if p[0] < pv.PANEL_W]
         return sum(p[0] for p in side) / len(side), sum(p[1] for p in side) / len(side)
 
-    low = dot(dict(SO101_HOME))
-    high = dot(dict(SO101_HOME) | {"shoulder_lift": -40})  # upper arm back: gripper higher
+    low = dot(dict(SO101_READY))
+    high = dot(dict(SO101_READY) | {"shoulder_lift": -40})  # upper arm back: gripper higher
     assert high[1] < low[1] - 20  # higher up in the picture
 
 

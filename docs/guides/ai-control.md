@@ -42,7 +42,7 @@ Positions are **cm from the arm's base**: x forward (where the arm faces with `s
 | Tool | Tier | What it does |
 |---|---|---|
 | `arm_status` | read | Joints, gripper opening (%), gripper position (cm) and tool angle, limits, who has control (`free` / `teleop` / `ai`), held still or not, whether the venue allows motion, the per-call limits |
-| `list_poses` | read | Named poses (`config/poses.yaml`: `home`, `rest`, …) |
+| `list_poses` | read | Named poses (`config/poses.yaml`: `ready`, the working pose teleop starts from; `home`, the folded pose the arm is left in) |
 | `pose_view` | read | A **picture** of the arm's 3D model as it is now (side + top, grid in cm, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera: see "Seeing the pose" |
 | `camera_snapshot` | read | One real picture from a camera; a camera with a table map gets the table's **cm grid** on it ("Table map" below) |
 | `table_point` | read | A pixel of such a picture → x, y on the table in cm (for models that point well) |
@@ -95,7 +95,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
 4. Small steps first (Claude Code doesn't ask before moves: watch, with STOP in reach):
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
 
-   > Go to the home pose.
+   > Go to the ready pose.
 
    > Move the gripper 3 cm lower, pointing straight down.
 
@@ -115,7 +115,7 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 - It's active in the `lab` venue only (`config/venues/lab.yaml`), not on visit days.
 - Connecting with motion on writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, like LeLab does when it connects. Never IDs, baud rate, firmware or calibration.
 
-Not checked on the real arm yet: the `rest` pose (computed only; `docs/plan/current-focus.md` → "Hacks to clean up"). Prefer `home` until it is.
+**Poses (since 2026-11-17, quick job 20):** `ready` is the working pose (reaching forward, ~5 cm up; teleop's and the fake arm's start; called `home` before). `home` is the folded pose the builder leaves the arm in, gripper slightly open (it was called `rest`, closed). `home`'s numbers are computed only, not yet checked on the real arm: lab check 8.16 gives the real ones (`docs/plan/current-focus.md` → "Hacks to clean up"). Until then, go there slowly with someone at STOP.
 
 ## Looking through a camera (`camera_snapshot`)
 `camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. The white arm's: `so101-white-cam-stand` (the stand camera, about 2 ft up behind the arm, looking forward and down) and `so101-white-cam-wrist` (the wrist camera, along the jaws); called `-cam-a`/`-cam-b` until 2026-11-16. They share USB sockets with the green set's cameras for now (`docs/plan/current-focus.md` → "Hacks to clean up").
