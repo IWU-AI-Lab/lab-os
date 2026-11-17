@@ -2,7 +2,7 @@
 
 Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-**Done 2026-11-16: parts 0, 6, 1, 5, 8** (results: `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md` 17–25). **Tuesday 2026-11-17 (2–3 hours), in this order:** 0; 6.3, 6.4 and 1.3 again (changed); 8b (green arms plugged in); then swap to `so101-white` for 3 (with 3.9), 3b, 7 and 10; 9 whenever the room is quiet. **Thursday 2026-11-19:** 11 and 2, and whatever is left.
+Only what's still to do; finished steps are removed (their results are in `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md`). **Today, Tuesday 2026-11-17 (2–3 hours), top to bottom:** 0, R1, 8b, then swap to `so101-white` for 3, 7 and 10; 9 whenever the room is quiet. **Thursday 2026-11-19:** everything under "Thursday" (3b needs the printed sheet).
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
@@ -11,8 +11,6 @@ Rules:
 - The free voice key speaks about 15–20 answers a day. Silent answers with "sending too much voice" = used up until midnight Pacific.
 
 No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm), a bank card (8.6 cm long, 5.4 cm wide), the cube (about 2.5 cm), your phone lying flat (about 1 cm thick).
-
-The older, longer version with explanations: `docs/archive/lab-checklist-long-2026-11-16.md`.
 
 ---
 
@@ -25,53 +23,25 @@ uv run pytest -q
 ```
 - **0.1** Read the last line `pytest` printed. → copy the line.
 
-## 6. Quick checks, fake arm (10 min)
-```bash
-uv run lab-os serve
-```
-- **6.1** Open http://localhost:8080/teleop → Desktop control. Hold two jog keys at once, then one, then two others. → did the 3D model change size? (yes / no)
-- **6.2** Same page. → do all six joint rows stay in place? (yes / no)
-- **6.3** Open the designed hub → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
-- **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
-- **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
-- **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.
-- **6.7** In Chrome, open http://localhost:8080/teleop on its own (not in the hub) → **Full screen** → **Desktop control** → hold a jog key → tap **Esc** once. → did the arm stop? (yes / no) Is the page still full screen? (yes / no) (2026-11-16, Brave: stopped, left full screen. Brave can't keep it; use Chrome, or X to stop.)
-
-## 1. The hub on the desktop (5 min)
+## R1. Re-checks on the fake arm (10 min)
+These steps changed since 2026-11-16.
 ```bash
 uv run lab-os serve --host 0.0.0.0
 ```
-Open http://localhost:8080/design. Press start.
-- **1.1** Open and close Teleop, Monitor and AI Control. → did all three open and close? (yes / no; name the one that didn't)
-- **1.2** Press Esc. Press the ⛶ button in the strip. → did full screen come back? (yes / no)
-- **1.3** Look at the whole startup and hub (the mic and history icons on the ask line should sit in the middle between their lines since 2026-11-17). Start it five times (⏻, then start again): did the core stutter as it arrived in any of them? (how many of 5) → anything that stuttered or looked wrong (one line each, or "nothing").
+- **6.3** Open http://localhost:8080/design → start → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
+- **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
+- **1.3** Press ⏻, then start, five times. → in how many of the 5 did the core stutter as it appeared? Do the mic and history icons on the ask line sit in the middle between their lines? (yes / no) Anything else that looked wrong (one line each, or "nothing").
+- Ctrl+C in the terminal when done.
 
-## 5. Training launcher (10 min)
-Setup: `so101-white` unplugged, both green arms plugged in.
-- **5.1** Double-click the desktop icon "SO-101 Training (LeLab)". → did every check line pass? (yes / no; if no, copy the failing line)
-- **5.2** On LeLab's page (http://127.0.0.1:8000) press teleop. Move the leader. → did the follower follow? (yes / no)
-- **5.3** Close LeLab (Ctrl+C in its terminal). → nothing to report.
-
-## 9. Voice (20 min)
-Setup: USB microphone plugged in and picked in Ubuntu Settings → Sound → Input. Speakers on.
-```bash
-uv run lab-os serve --persona jarvis
-```
-Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visible.
-- **9.1** Listen to the greeting. → was it spoken? (yes / no)
-- **9.2** Press ⏻, wait 10 seconds, press start again. → did the greeting start at once? (yes / no)
-- **9.3** Hold the mic button, say "What's the next step?", let go. Count the seconds until the first spoken word. → seconds.
-- **9.4** ⚙ → This device → Talking to it → **wake word** → Back. Say "Hey Jarvis, what's the next step" in one breath. → was the start of your question cut off on the screen? (yes / no)
-- **9.5** Do 9.4 two more times. → copy the three `voice timing` lines from the terminal.
-- **9.6** Walk backwards, one step at a time, saying "Hey Jarvis" at each step, until it stops working. → number of steps from the microphone.
-- **9.7** From that spot: ⚙ → This device → Wake word sensitivity → 7. Try. Then 8. Try. → the lowest of 5, 7, 8 that works there.
-- **9.8** At that sensitivity, talk normally near the microphone for one minute. Say "Jarvis" inside a sentence once. → number of times it woke by mistake.
-- **9.9** Say "Hey Jarvis, pull up the teleop page." → did Teleop open? (yes / no)
-- **9.10** Say "Hey Jarvis, show me the AI spend." → did the AI Spend page open? (yes / no)
-- **9.11** Say "Hey Jarvis, go back to the hub." → did everything close? (yes / no)
-- **9.12** Type in the ask line: `show me the commits`. → did the Commits page open? (yes / no)
-
----
+## 8b. Green arms (20 min)
+Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.
+- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
+- **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
+- **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no; it should refuse) Copy the line that mentions the green arm. Press Enter to close that window.
+- **8.19** Open http://localhost:8080/teleop → **Full screen** → **Desktop control**, jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
+- **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".
+- **8.21** Same page, in desktop control and in full screen: press **`** (backtick, the key above Tab). → did the pointer come back and desktop control end (the button says "Desktop control" again)? (yes / no) Still full screen? (yes / no) Then the same inside the hub's teleop module: did \` leave only desktop control, not the module? (yes / no)
+- Hold the arm. Ctrl+C in the brain's terminal.
 
 ## 3. AI drives so101-white (30 min)
 Setup: `so101-white` plugged in, green arms unplugged. A sheet of letter paper, the cube, your phone.
@@ -89,60 +59,6 @@ In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reco
 - **3.7** Same run, only if 3.5 was no. → where did the gripper close: in front of, behind, left of, right of or above the cube, and by about how many cube-widths?
 - **3.8** Same run. → did it say one line before each move? (yes / no)
 - **3.9** Run `ls -l /dev/v4l/by-path/`. Unplug the white arm's wrist camera. Run it again. Plug it back in. → which disappeared: `usb-0:7` or `usb-0:8`?
-
-## 3b. The stand camera's cm grid (15 min)
-Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
-```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
-```
-- **3b.1** Lay the sheet flat in front of the arm, long edge pointing straight away from it, roughly centred. On `http://localhost:8080/teleop`, drive the gripper (keyboard) until the jaw tips touch the sheet's **"Board origin"** corner (top left as you look from the arm). Read the gripper's x and y on the AI Control page (`/ai`). → x ___ cm, y ___ cm
-- **3b.2** Drive the arm up and to the side so it covers none of the sheet. In a second terminal: `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (the numbers from 3b.1). → corners seen ___ of 24, worst ___ mm (or the error it printed)
-- **3b.3** Open the preview it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines run along the sheet's squares? (yes / no)
-- **3b.4** Take the sheet away. Put the cube anywhere in front of the arm. New Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what it said ___; is the gripper over the cube? (yes / off by about ___ cube-widths, which way ___)
-- **3b.5** Same session. Prompt: `Pick it up with pick_at, then tell me whether you're holding it.` Watch `/ai`. → is the cube in the jaws? (yes / no) What did it say: holding or missed? Did `/ai` show each step before it moved? (yes / no)
-
-## 8. Green arms in lab-os (40 min)
-Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.
-- **8.1** Run `cat logs/green-last-start.json`. → the `follower` value. **If it is `5B41531599`, stop part 8 here.**
-- **8.2** Run `ls -l ~/.cache/huggingface/lerobot/calibration/robots/*/`. → the `.json` file names.
-- **8.3** Run `sha256sum ~/.cache/huggingface/lerobot/calibration/robots/*/*.json > /tmp/green-cal-before.txt`. → nothing to report.
-- **8.4** Double-click the icon "SO-101 Training (LeLab)". On LeLab's page press teleop. Leave it running. Then run `uv run --extra so101 python -m lab_os.robots.so101 so101-green`. → copy the line it printed.
-- **8.5** Stop LeLab's teleop. Ctrl+C in LeLab's terminal. → nothing to report.
-- **8.6** Run `uv run --extra so101 python -m lab_os.robots.so101_setup check --arm so101-green`. → copy the line it printed.
-- **8.7** Run `uv run --extra so101 python -m lab_os.robots.so101_setup calibrate --arm so101-green-leader`. → copy the line it printed.
-- **8.8** Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. Move each joint of the follower by hand. Then Ctrl+C. → did the numbers follow every joint? (yes / no; name the joints that didn't; copy any error)
-- **8.9** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Open http://localhost:8080/teleop → Desktop control. → does the 3D arm match the real arm's pose? (yes / no)
-- **8.10** Jog one joint a little. Press STOP. → did the real arm move and then stop? (yes / no)
-- **8.11** In Claude Code (`/mcp` → `lab-os` → reconnect), prompt: `Use the lab-os tools. Read so101-green's status, then go to the home pose.` → did it reach the home pose without hitting anything? (yes / no) (Done 2026-11-16, when `home` was the working pose; that pose is called `ready` since quick job 20.)
-- **8.12** With the brain still running, double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm. Then press Enter to close that window.
-- **8.13** Hold the arm. Ctrl+C in the brain's terminal. Run `sha256sum -c /tmp/green-cal-before.txt`. → does every line say `OK`? (yes / no)
-- **8.14** Start LeLab with the icon, press teleop, move the leader. Close LeLab. → did the follower follow? (yes / no)
-- **8.15** Run `ls -l /dev/v4l/by-path/`. Unplug the wrist camera's cable. Run it again. Plug the cable back in. → which disappeared: `usb-0:7` or `usb-0:8`?
-
-## 8b. Green arms again, after quick jobs 17, 18, 20 and 24 (15 min)
-Setup: as part 8. LeLab closed. Run `git pull` first.
-- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose; today's `home` is computed only). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
-- **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
-- **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm.
-- **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
-- **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".
-- **8.21** Same page, in desktop control and in full screen: press **`** (backtick, the key above Tab). → did the pointer come back and desktop control end (the button says "Desktop control" again)? (yes / no) Still full screen? (yes / no) Then the same inside the hub's teleop module: did \` leave only desktop control, not the module? (yes / no)
-
-## 11. Devices (30 min)
-Setup: the desktop and the Newline (or a laptop in place of the Newline). No arm.
-- **11.1** Stop any running brain (Ctrl+C). Run `uv run lab-os icon --device desk`. Ubuntu's app list → click **Start lab-os**. → did a terminal and a full-screen hub open? (yes / no)
-- **11.2** Look at the hub's address. → does it contain `?device=desk`? (yes / no)
-- **11.3** Click **Start lab-os** a second time. → did a second brain start? (yes / no)
-- **11.4** On the desktop run `hostname -I` and take the first address. On the Newline's Chrome open `http://<address>:8080/?device=newline`. → did the page load? (yes / no)
-- **11.5** On the Newline: ⚙ → This device → Drawing resolution → 0.5. On the desktop run `cat ~/lab-os/config/hub-devices.yaml`. → does it show `newline:` with `res: '0.5'`? (yes / no)
-- **11.6** On the Newline: Chrome menu → Add to Home screen. Close Chrome. Tap the new icon. Open ⚙. → does it say "This device: newline"? (yes / no)
-- **11.7** On the Newline: open Monitor → **Open on…** → **desk**. → did Monitor open on the desk? (yes / no)
-- **11.8** Look at the Newline. → does it show "Monitor is on desk"? (yes / no)
-- **11.9** On the desk press **Back**. → did Monitor close on the desk and the line disappear on the Newline? (yes / no)
-- **11.10** On the Newline: Monitor → Open on… → desk. Then on the Newline press **Bring it back**. → did Monitor come back to the Newline? (yes / no)
-- **11.11** On the desk: open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
-- **11.12** Send Monitor to the desk again. Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without reloading? (yes / no) After how many seconds?
-- **11.13** Shut down the desktop and switch the Newline off. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names, the Newline's resolution still 0.5? (yes / no)
 
 ## 7. Teleop 1:1 on the real arm (20 min)
 Setup: `so101-white` plugged in, green arms unplugged, the Quest on USB. Lay a sheet of letter paper on the table beside the arm, long edge pointing away from the arm.
@@ -174,6 +90,58 @@ In the Quest's browser: open `http://localhost:8080/design?device=quest-a` once 
 - **10.6** Press **B**. → are you back in the hub? (yes / no)
 - **10.7** Say "Hey Jarvis, open teleop." → did Teleop open? (yes / no)
 - **10.8** Say "Hey Jarvis, back to the hub." → did it go back? (yes / no)
+
+## 9. Voice (20 min)
+Setup: USB microphone plugged in and picked in Ubuntu Settings → Sound → Input. Speakers on.
+```bash
+uv run lab-os serve --persona jarvis
+```
+Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visible.
+- **9.1** Listen to the greeting. → was it spoken? (yes / no)
+- **9.2** Press ⏻, wait 10 seconds, press start again. → did the greeting start at once? (yes / no)
+- **9.3** Hold the mic button, say "What's the next step?", let go. Count the seconds until the first spoken word. → seconds.
+- **9.4** ⚙ → This device → Talking to it → **wake word** → Back. Say "Hey Jarvis, what's the next step" in one breath. → was the start of your question cut off on the screen? (yes / no)
+- **9.5** Do 9.4 two more times. → copy the three `voice timing` lines from the terminal.
+- **9.6** Walk backwards, one step at a time, saying "Hey Jarvis" at each step, until it stops working. → number of steps from the microphone.
+- **9.7** From that spot: ⚙ → This device → Wake word sensitivity → 7. Try. Then 8. Try. → the lowest of 5, 7, 8 that works there.
+- **9.8** At that sensitivity, talk normally near the microphone for one minute. Say "Jarvis" inside a sentence once. → number of times it woke by mistake.
+- **9.9** Say "Hey Jarvis, pull up the teleop page." → did Teleop open? (yes / no)
+- **9.10** Say "Hey Jarvis, show me the AI spend." → did the AI Spend page open? (yes / no)
+- **9.11** Say "Hey Jarvis, go back to the hub." → did everything close? (yes / no)
+- **9.12** Type in the ask line: `show me the commits`. → did the Commits page open? (yes / no)
+
+---
+
+---
+
+# Thursday 2026-11-19
+
+## 3b. The stand camera's cm grid (15 min)
+Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
+```bash
+uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+```
+- **3b.1** Lay the sheet flat in front of the arm, long edge pointing straight away from it, roughly centred. On `http://localhost:8080/teleop`, drive the gripper (keyboard) until the jaw tips touch the sheet's **"Board origin"** corner (top left as you look from the arm). Read the gripper's x and y on the AI Control page (`/ai`). → x ___ cm, y ___ cm
+- **3b.2** Drive the arm up and to the side so it covers none of the sheet. In a second terminal: `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (the numbers from 3b.1). → corners seen ___ of 24, worst ___ mm (or the error it printed)
+- **3b.3** Open the preview it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines run along the sheet's squares? (yes / no)
+- **3b.4** Take the sheet away. Put the cube anywhere in front of the arm. New Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what it said ___; is the gripper over the cube? (yes / off by about ___ cube-widths, which way ___)
+- **3b.5** Same session. Prompt: `Pick it up with pick_at, then tell me whether you're holding it.` Watch `/ai`. → is the cube in the jaws? (yes / no) What did it say: holding or missed? Did `/ai` show each step before it moved? (yes / no)
+
+## 11. Devices (30 min)
+Setup: the desktop and the Newline (or a laptop in place of the Newline). No arm.
+- **11.1** Stop any running brain (Ctrl+C). Run `uv run lab-os icon --device desk`. Ubuntu's app list → click **Start lab-os**. → did a terminal and a full-screen hub open? (yes / no)
+- **11.2** Look at the hub's address. → does it contain `?device=desk`? (yes / no)
+- **11.3** Click **Start lab-os** a second time. → did a second brain start? (yes / no)
+- **11.4** On the desktop run `hostname -I` and take the first address. On the Newline's Chrome open `http://<address>:8080/?device=newline`. → did the page load? (yes / no)
+- **11.5** On the Newline: ⚙ → This device → Drawing resolution → 0.5. On the desktop run `cat ~/lab-os/config/hub-devices.yaml`. → does it show `newline:` with `res: '0.5'`? (yes / no)
+- **11.6** On the Newline: Chrome menu → Add to Home screen. Close Chrome. Tap the new icon. Open ⚙. → does it say "This device: newline"? (yes / no)
+- **11.7** On the Newline: open Monitor → **Open on…** → **desk**. → did Monitor open on the desk? (yes / no)
+- **11.8** Look at the Newline. → does it show "Monitor is on desk"? (yes / no)
+- **11.9** On the desk press **Back**. → did Monitor close on the desk and the line disappear on the Newline? (yes / no)
+- **11.10** On the Newline: Monitor → Open on… → desk. Then on the Newline press **Bring it back**. → did Monitor come back to the Newline? (yes / no)
+- **11.11** On the desk: open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
+- **11.12** Send Monitor to the desk again. Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without reloading? (yes / no) After how many seconds?
+- **11.13** Shut down the desktop and switch the Newline off. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names, the Newline's resolution still 0.5? (yes / no)
 
 ## 2. The Newline (20 min)
 Setup for 2.1–2.4: an Ethernet cable from the desktop to the Newline. Brain: `uv run lab-os serve --host 0.0.0.0`. The desktop's address: `hostname -I`, the first one.
