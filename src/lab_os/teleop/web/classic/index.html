@@ -19,7 +19,8 @@
     <div class="sources">
       <button id="enter" disabled>Checking WebXR…</button>
       <button id="desktop">Desktop control</button>
-      <button id="stop" class="stop" title="Freeze the arm (works from every page)">STOP</button>
+      <button id="stop" class="stop" title="Freeze the arm (works from every page; X on the keyboard in desktop control)">STOP</button>
+      <span id="stop-key" class="stop-key" hidden title="Desktop control is on: X on the keyboard freezes the arm"><kbd>X</kbd> = STOP</span>
       <button id="fs-btn" type="button" hidden>Full screen</button>
     </div>
     <p id="xr-msg" class="hint"></p>
@@ -52,9 +53,11 @@
         </label>
       </div>
       <table class="keys">
+        <tbody>
+          <tr class="stop-row"><td><kbd>X</kbd></td><td><b>STOP</b>: the arm freezes; let go of everything to continue</td></tr>
+        </tbody>
         <tbody id="desk-keys"></tbody>
         <tbody>
-          <tr><td><kbd>X</kbd></td><td>STOP: the arm freezes; let go of everything to continue</td></tr>
           <tr><td><kbd>Esc</kbd></td><td>leave desktop control (the arm freezes, another page may take over)</td></tr>
         </tbody>
       </table>

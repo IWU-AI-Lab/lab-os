@@ -31,7 +31,7 @@ uv run lab-os serve
 ```
 - **6.1** Open http://localhost:8080/teleop → Desktop control. Hold two jog keys at once, then one, then two others. → did the 3D model change size? (yes / no)
 - **6.2** Same page. → do all six joint rows stay in place? (yes / no)
-- **6.3** Open http://localhost:8080/settings → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
+- **6.3** Open the designed hub → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
 - **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
 - **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
 - **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.
@@ -44,7 +44,7 @@ uv run lab-os serve --host 0.0.0.0
 Open http://localhost:8080/design. Press start.
 - **1.1** Open and close Teleop, Monitor and AI Control. → did all three open and close? (yes / no; name the one that didn't)
 - **1.2** Press Esc. Press the ⛶ button in the strip. → did full screen come back? (yes / no)
-- **1.3** Look at the whole startup and hub. → anything that stuttered or looked wrong (one line each, or "nothing").
+- **1.3** Look at the whole startup and hub (the mic and history icons on the ask line should sit in the middle between their lines since 2026-11-17). Start it five times (⏻, then start again): did the core stutter as it arrived in any of them? (how many of 5) → anything that stuttered or looked wrong (one line each, or "nothing").
 
 ## 5. Training launcher (10 min)
 Setup: `so101-white` unplugged, both green arms plugged in.
@@ -124,7 +124,7 @@ Setup: as part 8. LeLab closed. Run `git pull` first.
 - **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose; today's `home` is computed only). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
 - **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
 - **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm.
-- **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no)
+- **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
 - **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".
 
 ## 11. Devices (30 min)

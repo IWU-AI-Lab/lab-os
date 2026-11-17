@@ -87,3 +87,36 @@ def test_the_fonts_are_bundled_with_their_license():
     for name in ("Orbitron", "ChakraPetch-500", "Inter", "JetBrainsMono-400", "DSEG7"):
         assert f"{name}" in css and any(fonts.glob(f"{name}*.woff2")), name
     assert "SIL OPEN FONT LICENSE" in (fonts / "OFL.txt").read_text().upper()
+
+
+def test_ask_bar_icons_sit_in_the_middle_of_their_cells():
+    """Quick job 22: the mic and history buttons were narrower than the space between their lines
+    (the bar's flex gap after the mic, its right padding after the last button), so the icons sat
+    3.7 and 4.9 px left of the middle at 1600×900 (headless Chrome, 2026-11-17; now 0.5 px). The
+    concept had the same history button and gets the same fix."""
+    concept = Path(__file__).resolve().parents[1] / "docs" / "design" / "hub-concept.html"
+    for page in (DESIGN, concept):
+        css = page.read_text()
+        assert "#ask-btn .in > button { align-self: stretch; }" in css, page
+        assert "#ask-btn .in > button:not([hidden]) ~ button { margin-left: -0.55rem; }" in css
+        assert "#ask-btn .in { padding-right: 0; }" in css
+        assert "#open-chat b:empty { display: none; }" in css
+        # the gap the negative margin undoes is the bar's own
+        assert "#ask-btn .in { display: flex; align-items: center; gap: 0.55rem;" in css
+
+
+def test_the_startup_builds_nothing_big_as_the_core_arrives():
+    """Quick job 23 (headless Chrome, 4× CPU slowdown, 2026-11-17): as the core arrived, the
+    arrival sound made 2.6 s of fresh noise (130,000 random numbers) in the same task, and each
+    jump frame threw away its line batches (megabytes), so garbage collections fell on random
+    frames. Now the noise is made once at load and the batches are kept between frames."""
+    html = DESIGN.read_text()
+    noise = html.index("const NOISE = new Float32Array(")
+    assert noise < html.index("function audio()")  # made at load, before anything plays
+    whoosh = html.split("function whoosh(", 1)[1].split("\n}\n", 1)[0]
+    assert "createBuffer(" not in whoosh and "Math.random() * 2 - 1" not in whoosh
+    assert "src.buffer = noise; src.loop = true;" in whoosh and "src.stop(t + dur + 0.05)" in whoosh
+    stars = html.split("function drawStars(", 1)[1].split("\n}\n", 1)[0]
+    assert ".push(" not in stars and "Array.from(" not in stars  # nothing new per frame
+    assert "put4(lineB[" in stars and "put2(pointB[" in stars
+    assert "lastLines" not in html  # the impact frame reads the kept batch
