@@ -81,7 +81,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Robot | Status | Notes |
 |---|---|---|
 | `so101-white` (SO-101 arm, LeRobot) | ✅ | Driver, guarded motor setup and calibration, read-only `--watch` mode. `uv sync --extra so101` |
-| `so101-green` (the training set's follower, borrowed) | 🧪 | `--arm so101-green`: same driver, calibration read only from LeRobot's cache, motor setup refused, refused while LeLab has the port. Tested without hardware only. `docs/guides/ai-control.md` → "The green arm" |
+| `so101-green` (the training set's follower, borrowed) | 🧪 | `--arm so101-green`: same driver, calibration read only from LeRobot's cache (since 2026-11-17 the file that equals what the motors hold, whichever LeLab setup wrote it; it says which), motor setup refused, refused while LeLab has the port. The arm itself was driven in the lab 2026-11-16 (checklist part 8); the matching is tested without hardware only (lab: part 8b). `docs/guides/ai-control.md` → "The green arm" |
 | The training cameras (`so101-green-cam-a`, `-b`) | 🧪 | Listed by USB socket; a camera another program uses is refused. `camera_snapshot` can use them. Which is which isn't known yet |
 | `xarm1` (Hiwonder xArm 1S, USB) | ✅ | Driver, jogging, inverse kinematics, hand calibration of the limits. `--arm xarm1` |
 | Fake arm | ✅ | Every feature runs on it first; no hardware needed |

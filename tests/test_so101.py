@@ -47,6 +47,9 @@ class FakeBus:
     def connect(self):
         self.connected = True
 
+    def read_calibration(self):  # a borrowed arm's motors: what LeLab wrote last (reads only)
+        return dict(self.held)
+
     @property
     def is_calibrated(self):
         return self.calibrated
@@ -225,88 +228,149 @@ def test_limits_are_the_urdf_narrowed_by_the_calibration():
 
 
 # ---- the green follower: borrowed, calibration read only (step 11) ------------------------------
-GREEN_CAL = {"shoulder_pan": {"id": 1, "range_min": 1048, "range_max": 3048}}
+@dataclass
+class MotorCal:  # like LeRobot's MotorCalibration
+    id: int
+    drive_mode: int
+    homing_offset: int
+    range_min: int
+    range_max: int
+
+
+def green_file(offset: int) -> dict:
+    """A calibration file like LeRobot's for all six motors; `offset` tells setups apart."""
+    return {
+        j: {
+            "id": i + 1,
+            "drive_mode": 0,
+            "homing_offset": offset + i,
+            "range_min": 1048,
+            "range_max": 3048,
+        }
+        for i, j in enumerate(SO101_JOINTS)
+    }
+
+
+SHEEP = green_file(-30)  # the builder's own follower calibration
+LELABS = green_file(13)  # LeLab's, up to 43 steps away (GOTCHAS 2026-11-16)
+
+
+def holding(cal: dict) -> dict:
+    """What the motors hold when `cal` was last written into them."""
+    return {m: MotorCal(**v) for m, v in cal.items()}
+
+
+def green_robot(held: dict, loaded: list):
+    """A stand-in LeRobot follower for a borrowed arm: loads nothing from its (empty) folder,
+    and its motors hold `held`. `loaded` gets (folder, files in it) when it's made."""
+
+    def make(name, port, calibration_dir):
+        loaded.append((calibration_dir, sorted(p.name for p in calibration_dir.iterdir())))
+        robot = FakeRobot(START, calibration={})
+        robot.bus.held = holding(held)
+        return robot
+
+    return make
 
 
 @pytest.fixture
 def lerobot_cache(tmp_path, monkeypatch):
-    """A LeRobot calibration cache like the training project's, made READ ONLY (files and
-    folders), so any write into it would fail."""
+    """A LeRobot calibration cache like the training project's, with LeLab's two setups (names
+    crossed, as on the lab desktop), made READ ONLY (files and folders): any write would fail."""
     root = tmp_path / "lerobot-calibration"
-    folder = root / "robots" / "so101_follower"
-    folder.mkdir(parents=True)
-    source = folder / "green_follower.json"
-    source.write_text(json.dumps(GREEN_CAL))
-    (root / "teleoperators" / "so101_leader").mkdir(parents=True)
-    (root / "teleoperators" / "so101_leader" / "green_leader.json").write_text("{}")
-    for path in (source, folder, folder.parent, root):
+    robots, leaders = root / "robots" / "so_follower", root / "teleoperators" / "so_leader"
+    for folder in (robots, leaders):
+        folder.mkdir(parents=True)
+    (robots / "sheep.json").write_text(json.dumps(SHEEP))
+    (robots / "SO-101_Green_Leader.json").write_text(json.dumps(LELABS))
+    (leaders / "shepherd.json").write_text(json.dumps(green_file(500)))
+    (leaders / "SO-101_Green_Follower.json").write_text(json.dumps(green_file(900)))
+    files = [*robots.iterdir(), *leaders.iterdir()]
+    for path in [*files, robots, leaders, robots.parent, leaders.parent, root]:
         path.chmod(stat.S_IRUSR | (stat.S_IXUSR if path.is_dir() else 0))
     monkeypatch.setattr(so101, "lerobot_calibration_root", lambda: root)
-    green = load_registry().devices["so101-green"]
-    green = devices.Device(**{**green.__dict__, "calibration_file": ""})  # pick by folder here
-    monkeypatch.setattr(so101, "guarded_port", lambda name: (green, PORT))
-    yield source
-    for path in (root, folder.parent, folder, source):
+    registry = load_registry()
+    monkeypatch.setattr(so101, "guarded_port", lambda name: (registry.devices[name], PORT))
+    before = {f: (f.read_bytes(), f.stat().st_mtime_ns) for f in files}
+    yield root
+    assert {f: (f.read_bytes(), f.stat().st_mtime_ns) for f in files} == before  # untouched
+    for path in [root, robots.parent, leaders.parent, robots, leaders, *files]:
         path.chmod(0o700)
 
 
-def test_green_reads_lerobots_calibration_through_a_copy(lerobot_cache):
-    before = (lerobot_cache.read_bytes(), lerobot_cache.stat().st_mtime_ns)
-    seen = {}
-
-    def make_robot(name, port, calibration_dir):
-        copy = calibration_dir / f"{name}.json"
-        seen["dir"], seen["data"] = calibration_dir, json.loads(copy.read_text())
-        copy.write_text("{}")  # LeRobot saving its calibration would land in the copy only
-        return FakeRobot(START)
-
-    arm = SO101Arm(name="so101-green", make_robot=make_robot)
+@pytest.mark.parametrize(
+    "held, name", [(SHEEP, "sheep.json"), (LELABS, "SO-101_Green_Leader.json")]
+)
+def test_green_uses_the_file_its_motors_hold(lerobot_cache, held, name):
+    loaded = []
+    arm = SO101Arm(name="so101-green", make_robot=green_robot(held, loaded))
     arm.connect()
-    assert seen["data"] == GREEN_CAL  # the training project's file, as is
-    assert seen["dir"] != lerobot_cache.parent  # LeRobot never learns the real folder
-    assert not seen["dir"].exists()  # the copy is gone once the robot has loaded it
-    assert (lerobot_cache.read_bytes(), lerobot_cache.stat().st_mtime_ns) == before
+    assert arm.calibration_source.name == name
+    folder, files_then = loaded[0]
+    assert files_then == []  # LeRobot was given an empty temporary folder, never the cache
+    assert not folder.exists()  # and it's gone once connected
+    robot = arm._robot
+    assert robot.bus.writes == []  # nothing written to the motors
+    assert robot.calibration["elbow_flex"].homing_offset == held["elbow_flex"]["homing_offset"]
+    assert robot.bus.calibration is robot.calibration
     assert arm.limits["shoulder_pan"].high == pytest.approx(87.9, abs=0.1)
     arm.close()
 
 
-def test_green_with_a_different_calibration_in_its_motors_is_not_fixed_by_lab_os(lerobot_cache):
-    robot = FakeRobot(START, calibrated=False)
-    arm = SO101Arm(name="so101-green", make_robot=lambda n, p, d: robot, allow_motion=True)
-    with pytest.raises(RuntimeError, match="never writes a borrowed arm's calibration"):
+def test_after_lelab_switches_setups_the_next_connect_follows(lerobot_cache):
+    names = []
+    for held in (SHEEP, LELABS, SHEEP):  # LeLab's teleop wrote the other setup in between
+        arm = SO101Arm(name="so101-green", make_robot=green_robot(held, []))
         arm.connect()
-    assert robot.bus.writes == [] and not robot.bus.connected
+        names.append(arm.calibration_source.name)
+        arm.close()
+    assert names == ["sheep.json", "SO-101_Green_Leader.json", "sheep.json"]
 
 
-def test_calibration_file_names_an_exact_file_inside_the_cache(tmp_path):
-    green = load_registry().devices["so101-green"]
-    (tmp_path / "teleoperators" / "x").mkdir(parents=True)
-    (tmp_path / "teleoperators" / "x" / "f.json").write_text("{}")
-    exact = devices.Device(**{**green.__dict__, "calibration_file": "teleoperators/x/f.json"})
-    assert so101.lerobot_calibration_file(exact, tmp_path).name == "f.json"
-    outside = devices.Device(**{**green.__dict__, "calibration_file": "../f.json"})
-    with pytest.raises(LookupError, match="not found"):
-        so101.lerobot_calibration_file(outside, tmp_path)
+def test_green_holding_no_known_calibration_is_refused_and_not_fixed(lerobot_cache):
+    robots = []
+
+    def make(name, port, folder):
+        robots.append(green_robot(green_file(7), [])(name, port, folder))
+        return robots[-1]
+
+    arm = SO101Arm(name="so101-green", make_robot=make, allow_motion=True)
+    with pytest.raises(RuntimeError, match="matches none of the files.*never writes"):
+        arm.connect()
+    assert robots[0].bus.writes == [] and not robots[0].bus.connected
+    assert arm._robot is None
 
 
-def test_the_calibration_file_must_be_unambiguous(tmp_path):
-    green = load_registry().devices["so101-green"]
-    green = devices.Device(**{**green.__dict__, "calibration_file": ""})
-    folder = tmp_path / "robots" / "so101_follower"
-    folder.mkdir(parents=True)
-    with pytest.raises(LookupError, match="found: none"):
-        so101.lerobot_calibration_file(green, tmp_path)
-    (folder / "a.json").write_text("{}")
-    (folder / "b.json").write_text("{}")
-    with pytest.raises(LookupError, match="Set calibration_id"):
-        so101.lerobot_calibration_file(green, tmp_path)
-    picked = devices.Device(**{**green.__dict__, "calibration_id": "b"})
-    assert so101.lerobot_calibration_file(picked, tmp_path) == folder / "b.json"
-    leader = load_registry().devices["so101-green-leader"]
-    leader = devices.Device(**{**leader.__dict__, "calibration_file": ""})
-    (tmp_path / "teleoperators" / "x").mkdir(parents=True)
-    (tmp_path / "teleoperators" / "x" / "l.json").write_text("{}")
-    assert so101.lerobot_calibration_file(leader, tmp_path).parent.parent.name == "teleoperators"
+def test_the_leader_finds_its_file_among_the_leader_files(lerobot_cache):
+    arm = SO101Arm(name="so101-green-leader", make_robot=green_robot(green_file(500), []))
+    arm.connect()
+    assert arm.calibration_source.name == "shepherd.json"
+    assert arm.calibration_source.parent.parent.name == "teleoperators"
+    arm.close()
+
+
+def test_matching_needs_every_motor_offset_and_range(tmp_path):
+    held = holding(SHEEP)
+    good, off_by_one, missing, broken = (tmp_path / f"{n}.json" for n in "abcd")
+    good.write_text(json.dumps(SHEEP))
+    nudged = json.loads(json.dumps(SHEEP))
+    nudged["wrist_roll"]["range_max"] += 1
+    off_by_one.write_text(json.dumps(nudged))
+    missing.write_text(json.dumps({k: v for k, v in SHEEP.items() if k != "gripper"}))
+    broken.write_text("{not json")
+    files = [good, off_by_one, missing, broken]
+    assert so101.matching_calibration(held, files) == [good]
+
+
+def test_the_follower_looks_in_robots_first_then_teleoperators(tmp_path):
+    for f in ("robots/a/x.json", "teleoperators/b/y.json"):
+        (tmp_path / f).parent.mkdir(parents=True)
+        (tmp_path / f).write_text("{}")
+    registry = load_registry()
+    follower = so101.lerobot_calibration_files(registry.devices["so101-green"], tmp_path)
+    leader = so101.lerobot_calibration_files(registry.devices["so101-green-leader"], tmp_path)
+    assert [f.name for f in follower] == ["x.json", "y.json"]
+    assert [f.name for f in leader] == ["y.json", "x.json"]
 
 
 def test_white_still_uses_lab_os_calibration_folder(no_port_check):
