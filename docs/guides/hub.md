@@ -62,7 +62,7 @@ Ask the assistant, typed or by voice: "pull up the teleop page", "show me the AI
 
 ## The module pages (teleop, monitor, AI Control)
 Since 2026-11-10 they're in the hub's design too (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub they drop their own frame and title; on their own screen they have both, the place's name, the clock and a **Full screen** button.
-- **Teleop** (`/teleop`): the arm in 3D on the left; on the right how to drive it (the Quest's Enter AR/VR, Desktop control and its keys) and what the page sends. Status (brain, control, arm) and **STOP** in the bar, always visible.
+- **Teleop** (`/teleop`): the arm in 3D on the left; on the right how to drive it (the Quest's Enter AR/VR, Desktop control and its keys) and what the page sends. Status (brain, control, arm) and **STOP** in the bar, always visible; while desktop control is on, "X = STOP" beside it (X on the keyboard stops in every mode).
 - **Monitor** (`/monitor`): for an onlooker screen: the arm in 3D, a gauge per joint, STOP. It watches; it never drives.
 - **AI Control** (`/ai`, the third button): what an AI tool (Claude Code + Fable, Codex, …) does with the arm, live: the arm seen from its side with its real geometry (from the arm's kinematics, in cm), where the last `move_to` aimed, every robot-tool call as it happens (ok / clipped / refused / stopped / error, with what came back), whether the tools are on and moves allowed, and STOP. Until the first call it says how to connect Claude Code. It never moves anything.
 - **The old pages** stay at `/classic/teleop` and `/classic/monitor` (same scripts, the old look), in case the new ones break somewhere (e.g. the Quest's browser).

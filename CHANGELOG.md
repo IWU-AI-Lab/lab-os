@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-17
+- **"X = STOP" where you look in desktop control** (quick job 19): while desktop control is on, the teleop page (and the classic one) shows "X = STOP" beside the STOP button, the key help starts with the X row (it was last, below the fold) and the button reads "(X = STOP, Esc to leave)". Hidden while desktop control is off, since X only stops then. Esc is unchanged.
+
 ## 2026-11-14
 - **Teleop page: the 3D view and the joint readout in their own boxes** (quick job 14): a jog command names only the joints that move, so rows used to appear and disappear and the 3D model kept resizing. Now the readout is a fixed column beside the view with one fixed-height row per joint (under the view, two a row, on narrow screens).
 - **The AI budget on the Settings page applies at once** (quick job 5): the brain re-reads `ai_budget_usd_month` each time it checks, so raising it un-pauses the chat without a restart (it used to be read only at start).

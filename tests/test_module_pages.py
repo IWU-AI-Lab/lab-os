@@ -272,3 +272,23 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
     assert css.index(
         "@media (max-width: 900px), (orientation: portrait) {\n  /* narrow: the readout"
     ) > css.index(".arm3d-body {")
+
+
+def test_x_stop_is_shown_where_you_look():
+    """Quick job 19: while desktop control is on, "X = STOP" sits beside the STOP button, the X row
+    is the key help's first row and the on-button says it. Hidden while X doesn't stop (it only
+    works in desktop control), so the page never claims what isn't true. Esc is unchanged."""
+    web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
+    js = (web / "desktop-input.js").read_text()
+    assert "stopKey(true)" in js.split("function startControl", 1)[1].split("function stopControl")[0]
+    assert "stopKey(false)" in js.split("function stopControl", 1)[1].split("function tick")[0]
+    assert "(X = STOP, Esc to leave)" in js
+    assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
+    for page in ("index.html", "classic/index.html"):
+        html = (web / page).read_text()
+        key = html.index('id="stop-key"')
+        assert 'id="stop-key" class="stop-key" hidden' in html, page
+        assert abs(key - html.index('id="stop"')) < 400, page  # right beside STOP
+        table = html.split('<table class="keys">', 1)[1]
+        assert table.index("<kbd>X</kbd>") < table.index('id="desk-keys"'), page  # first row
+        assert "<kbd>Esc</kbd>" in table, page
