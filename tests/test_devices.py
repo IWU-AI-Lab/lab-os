@@ -50,8 +50,8 @@ def test_the_training_cameras_by_socket_and_the_model_block_is_gone():
     cams = {d.name: d.socket for d in reg.devices.values() if d.kind == "camera"}
     # HACK: the white-cam names are a temporary alias of the same two sockets (devices.yaml)
     assert cams == {
-        "so101-green-cam-a": "usb-0:7",
-        "so101-green-cam-b": "usb-0:8",
+        "so101-green-cam-wrist": "usb-0:7",
+        "so101-green-cam-stand": "usb-0:8",
         "so101-white-cam-stand": "usb-0:7",
         "so101-white-cam-wrist": "usb-0:8",
     }
@@ -165,27 +165,27 @@ def by_path(tmp_path):
 
 def test_cameras_are_found_by_socket(tmp_path):
     folder = by_path(tmp_path)
-    paths = camera_paths("so101-green-cam-a", by_path=str(folder))
+    paths = camera_paths("so101-green-cam-wrist", by_path=str(folder))
     assert [os.path.basename(p) for p in paths] == [
         "pci-0000:00:14.0-usb-0:7:1.0-video-index0",  # the picture first
         "pci-0000:00:14.0-usb-0:7:1.0-video-index1",
     ]
     proc = fake_proc(tmp_path, {})
-    got = camera_device("so101-green-cam-b", by_path=str(folder), proc=proc)
+    got = camera_device("so101-green-cam-stand", by_path=str(folder), proc=proc)
     assert got.endswith("usb-0:8:1.0-video-index0")
 
 
 def test_a_camera_in_use_is_refused(tmp_path):
     folder = by_path(tmp_path)
     proc = fake_proc(tmp_path, {"lelab": str(tmp_path / "video0")})  # LeLab records socket 7
-    with pytest.raises(InUse, match="so101-green-cam-a is in use by lelab"):
-        camera_device("so101-green-cam-a", by_path=str(folder), proc=proc)
-    camera_device("so101-green-cam-b", by_path=str(folder), proc=proc)  # the other one is free
+    with pytest.raises(InUse, match="so101-green-cam-wrist is in use by lelab"):
+        camera_device("so101-green-cam-wrist", by_path=str(folder), proc=proc)
+    camera_device("so101-green-cam-stand", by_path=str(folder), proc=proc)  # the other one is free
 
 
 def test_a_missing_camera_says_where_it_looked(tmp_path):
     with pytest.raises(LookupError, match="no camera in socket usb-0:7"):
-        camera_paths("so101-green-cam-a", by_path=str(tmp_path))
+        camera_paths("so101-green-cam-wrist", by_path=str(tmp_path))
     with pytest.raises(LookupError, match="needs kind: camera"):
         camera_paths("so101-white", by_path=str(tmp_path))
 
