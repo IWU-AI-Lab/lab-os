@@ -237,7 +237,8 @@ export function initDesktop(link, ui) {
     document.activeElement?.blur(); // a key on a focused button would click it again
     ui.setActive("desktop");
     $("desk-help").open = true;
-    button.textContent = `Desktop control on: ${select.options[select.selectedIndex].text} (Esc to leave)`;
+    button.textContent = `Desktop control on: ${select.options[select.selectedIndex].text} (X = STOP, Esc to leave)`;
+    stopKey(true);
     last = performance.now();
     // A timer, not requestAnimationFrame: input must not stall when rendering is slow. Browsers
     // throttle timers in background tabs, so leaving the tab still freezes the arm (dead-man).
@@ -254,6 +255,13 @@ export function initDesktop(link, ui) {
     link.send({ type: "session_end" }); // dead-man: the arm freezes, control is handed over
     ui.setActive(null);
     button.textContent = "Desktop control";
+    stopKey(false);
+  }
+
+  // "X = STOP" beside the STOP button, only while X works (quick job 19: say it where you look)
+  function stopKey(on) {
+    const el = $("stop-key");
+    if (el) el.hidden = !on;
   }
 
   function tick() {
