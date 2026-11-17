@@ -17,7 +17,7 @@ No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long
 ## 0. Update (5 min)
 ```bash
 cd ~/lab-os
-git switch main && git pull
+git switch main && git pull && git switch green-training-calibration && git merge main
 uv sync --extra so101
 uv run pytest -q
 ```
@@ -35,8 +35,9 @@ uv run lab-os serve --host 0.0.0.0
 
 ## 8b. Green arms (20 min)
 Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.
-- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
-- **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
+- **8.15** Make LeLab use a copy of the training calibration (it backs everything up first, deletes nothing): `bash scripts/green-lelab-from-training.sh`. → did it end with "Done."? (yes / no; if not, copy the last line)
+- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → did it start? (yes / no; if not, copy the message) Copy the six joint numbers.
+- **8.17** Ctrl+C. Start LeLab with the icon, pick **SO-101_Green** (now the only entry), press teleop. → does the follower follow the leader? (yes / no) Stop, close LeLab, run the `--watch` command again. → did it start? (yes / no)
 - **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no; it should refuse) Copy the line that mentions the green arm. Press Enter to close that window.
 - **8.19** Open http://localhost:8080/teleop → **Full screen** → **Desktop control**, jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
 - **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".

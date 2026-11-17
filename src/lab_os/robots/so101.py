@@ -1,11 +1,11 @@
 """SO-101 follower over LeRobot's Feetech bus. Same interface as FakeArm / XArm (see base.py).
 
-Needs the optional extra (`uv sync --extra so101`) and a calibration: lab-os's own from
-`python -m lab_os.robots.so101_setup calibrate` (calibration/<name>/<name>.json), or, for an arm
-with `calibration: lerobot` in devices.yaml (the borrowed green arms), LeRobot's cache
-(~/.cache/huggingface/lerobot/calibration/…), READ ONLY: the driver reads what the motors hold and
-uses the file there that equals it (LeLab writes one of two setups into the arms, quick job 18).
-The file is copied into a temporary folder and LeRobot only ever sees the copy.
+Needs the optional extra (`uv sync --extra so101`) and a calibration in
+calibration/<name>/<name>.json: lab-os's own from `python -m lab_os.robots.so101_setup calibrate`,
+or, for a borrowed arm with `training_calibration:` in devices.yaml (the greens), lab-os's COPY
+of the training project's file.
+The training file in LeRobot's cache (~/.cache/huggingface/lerobot/calibration/…) is the source of
+truth: it's only read, and the driver refuses if the copy no longer equals it (2026-11-17).
 
 READ-ONLY by default: until `allow_motion=True`, nothing is written to the motors (no torque, no
 goal, not even the calibration). Turn motion on only after the builder's OK (SAFETY.md).
@@ -20,9 +20,7 @@ import json
 import logging
 import math
 import os
-import shutil
 import sys
-import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -72,47 +70,29 @@ def lerobot_calibration_root() -> Path:
     return Path(hf_home) / "lerobot" / "calibration"
 
 
-def lerobot_calibration_files(device: Device, root: Path | None = None) -> list[Path]:
-    """Every calibration file LeLab/LeRobot saved that could be this arm's: <role>/<type>/*.json
-    (robots/ for a follower, teleoperators/ for a leader) first, then the other role's folder
-    (LeLab has filed a file under the other role before). Only lists; reads nothing."""
-    root = root or lerobot_calibration_root()
-    roles = (
-        ("teleoperators", "robots")
-        if device.kind == "so101-leader"
-        else ("robots", "teleoperators")
-    )
-    return [f for folder in roles for f in sorted((root / folder).glob("*/*.json"))]
-
-
-def _same(held: dict, saved: dict) -> bool:
-    """LeRobot's own test (FeetechMotorsBus.is_calibrated): the same motors, and per motor the
-    same homing offset and range. `held` is what the motors hold (objects), `saved` a file."""
-    if set(held) != set(saved):
-        return False
-    try:
-        return all(
-            (cal.homing_offset, cal.range_min, cal.range_max)
-            == (saved[m]["homing_offset"], saved[m]["range_min"], saved[m]["range_max"])
-            for m, cal in held.items()
+def check_training_copy(device: Device, copy: Path, root: Path | None = None) -> Path:
+    """A borrowed arm: its copy in calibration/ must exist and equal the training file in
+    LeRobot's cache (the source of truth; only read). Returns the training file's path. If the
+    training file isn't on this computer, the copy is used as is (logged)."""
+    source = (root or lerobot_calibration_root()) / device.training_calibration
+    refresh = f"cp {source} {copy}"
+    if not copy.is_file():
+        raise RuntimeError(
+            f"{device.name} has no copy of its training calibration ({copy}). Copy it: {refresh}"
         )
-    except (KeyError, TypeError):
-        return False
-
-
-def matching_calibration(held: dict, files: list[Path]) -> list[Path]:
-    """The files whose values equal what the motors hold (quick job 18). LeLab writes one of its
-    setups' files into the arms at every teleop start, so the right file is whichever matches
-    now. Reads the files; writes nothing."""
-    out = []
-    for f in files:
-        try:
-            saved = json.loads(f.read_text())
-        except (OSError, ValueError):
-            continue
-        if isinstance(saved, dict) and _same(held, saved):
-            out.append(f)
-    return out
+    if not source.is_file():
+        log.warning("%s: %s isn't here; using lab-os's copy", device.name, source)
+        return source
+    try:
+        same = json.loads(source.read_text()) == json.loads(copy.read_text())
+    except ValueError:
+        same = False
+    if not same:
+        raise RuntimeError(
+            f"{device.name}'s training calibration ({source.name}) differs from lab-os's copy "
+            f"({copy}): it changed, or the copy did. Check why, then copy it again: {refresh}"
+        )
+    return source
 
 
 def lerobot_follower(name: str, port: str, calibration_dir: Path):
@@ -153,7 +133,7 @@ class SO101Arm:
     num_read_retries: int = 2
     stopped: bool = False
     make_robot: Callable[[str, str, Path], object] = lerobot_follower  # replaceable for tests
-    calibration_source: Path | None = None  # a borrowed arm: the file its motors hold
+    calibration_source: Path | None = None  # a borrowed arm: the training file it copies
     _robot: object = field(default=None, repr=False)
     _last: dict[str, float] = field(default_factory=dict, repr=False)  # last reading
     _last_read_t: float = field(default=-math.inf, repr=False)
@@ -163,19 +143,26 @@ class SO101Arm:
     def connect(self) -> None:
         # by-id name, board serial, plugged in, and no other program has the port (LeLab, a run)
         device, port = guarded_port(self.name)
-        if device is not None and device.calibration == "lerobot":
-            robot = self._connect_borrowed(device, port)
-        else:
-            folder = CALIBRATION_DIR / self.name
-            robot = self.make_robot(self.name, port, folder)  # LeRobot loads the file now
-            if not robot.calibration:
-                raise RuntimeError(
-                    f"{self.name} has no calibration in {folder}: run "
-                    "uv run --extra so101 python -m lab_os.robots.so101_setup calibrate"
-                )
-            robot.bus.connect()  # checks all six motors answer
+        folder = CALIBRATION_DIR / self.name
+        borrowed = device is not None and bool(device.training_calibration)
+        if borrowed:
+            self.calibration_source = check_training_copy(device, folder / f"{self.name}.json")
+        robot = self.make_robot(self.name, port, folder)  # LeRobot loads the file now
+        if not robot.calibration:
+            raise RuntimeError(
+                f"{self.name} has no calibration in {folder}: run "
+                "uv run --extra so101 python -m lab_os.robots.so101_setup calibrate"
+            )
+        robot.bus.connect()  # checks all six motors answer
         try:
             if not robot.bus.is_calibrated:
+                if borrowed:
+                    raise RuntimeError(
+                        f"{self.name}'s motors don't hold its training calibration "
+                        f"({self.calibration_source.name}). lab-os never writes a borrowed arm's "
+                        "calibration: start teleop once in LeLab, or LeRobot's command line and "
+                        "press ENTER at its calibration question (never 'c'), then try again."
+                    )
                 raise RuntimeError(
                     f"{self.name}'s motors hold a different calibration than its file. Run "
                     "so101_setup calibrate and press Enter to write the file to the motors (or "
@@ -195,46 +182,6 @@ class SO101Arm:
             robot.bus.disconnect(disable_torque=False)
             self._robot = None
             raise
-
-    def _connect_borrowed(self, device: Device, port: str):
-        """A borrowed arm (the greens): read what its motors hold, then load the file in
-        LeRobot's cache that equals it (quick job 18). READ ONLY: nothing is written to the
-        motors or the cache; LeRobot only ever sees a temporary copy of the file."""
-        files = lerobot_calibration_files(device)
-        with tempfile.TemporaryDirectory(prefix=f"lab-os-{self.name}-") as tmp:
-            robot = self.make_robot(self.name, port, Path(tmp))  # empty folder: loads nothing
-            robot.bus.connect()  # checks all six motors answer
-            try:
-                held = robot.bus.read_calibration()  # reads the motors' registers only
-                found = matching_calibration(held, files)
-                if not found:
-                    names = ", ".join(f.name for f in files) or "none"
-                    raise RuntimeError(
-                        f"{self.name}'s motors hold a calibration that matches none of the files "
-                        f"in LeRobot's folder ({names}). lab-os never writes a borrowed arm's "
-                        "calibration: start teleop once in LeLab (it writes one of its setups "
-                        "into the arm), then try again."
-                    )
-                copy = Path(tmp) / f"{self.name}.json"
-                shutil.copyfile(found[0], copy)
-                saved = json.loads(copy.read_text())
-                robot.calibration = {  # LeRobot's MotorCalibration objects, the file's values
-                    m: type(cal)(**{k: saved[m].get(k, v) for k, v in vars(cal).items()})
-                    for m, cal in held.items()
-                }
-                robot.bus.calibration = robot.calibration
-            except Exception:
-                robot.bus.disconnect(disable_torque=False)
-                raise
-        same = [f.name for f in found[1:]]
-        log.info(
-            "%s: the motors hold %s; using it (read only)%s",
-            self.name,
-            found[0].relative_to(found[0].parents[2]),
-            f"; also the same: {', '.join(same)}" if same else "",
-        )
-        self.calibration_source = found[0]
-        return robot
 
     def read_measured(self) -> dict[str, float]:
         """Positions straight from the motors (degrees, shared names)."""
@@ -370,7 +317,10 @@ def main() -> None:
     except RuntimeError as e:
         raise SystemExit(str(e)) from None
     if arm.calibration_source:
-        print(f"calibration: {arm.calibration_source} (it matches what the motors hold)")
+        print(
+            f"calibration: lab-os's copy of {arm.calibration_source} (the training one; "
+            "the motors hold it)"
+        )
     if "--watch" in sys.argv:
         try:
             watch(arm)

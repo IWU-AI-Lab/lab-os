@@ -112,7 +112,7 @@ def test_the_lab_borrowed_devices_stay_borrowed_at_every_place(home):
     )
     reg = load_registry()
     green = reg.devices["so101-green"]
-    assert green.borrowed and green.calibration == "lerobot"  # the home entry can't drop the rules
+    assert green.borrowed and green.training_calibration  # the home entry can't drop the rules
     assert green.ports[0].endswith("5B41533501-if00")
     assert reg.devices["so101-green-cam-wrist"].borrowed
     assert "so101-white" not in reg.devices  # the lab's other devices don't come along

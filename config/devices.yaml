@@ -5,16 +5,17 @@
 # off_limits: true -> lab_os.devices refuses to hand out the port.
 # borrowed: true   -> another project's device (CLAUDE.md, "Hard rules"): lab-os may drive or use
 #                     it, but never sets it up (no motor IDs, baud rate, firmware, calibration),
-#                     reads its calibration only from LeRobot's cache, and never opens it while
+#                     drives it with a copy of its training calibration, and never opens it while
 #                     another program has it open. Never remove this for the green ones.
 
 devices:
   so101-green:
     kind: so101
     borrowed: true
-    # LeRobot's calibration folder, read only: lab-os uses the file there that equals what the
-    # motors hold (LeLab writes one of its two setups into the arm at each teleop start; quick job 18)
-    calibration: lerobot
+    # The calibration the training used (LeRobot's command line, --robot.id=sheep): the source of
+    # truth, read only. lab-os drives with its copy, calibration/so101-green/so101-green.json, and
+    # refuses if the copy differs from it or the motors don't hold it (2026-11-17).
+    training_calibration: robots/so_follower/sheep.json
     notes: >-
       Follower of the SO-101 training set (the builder's training project, LeLab). Drivable by
       lab-os since 2026-11-12 with four rules: no motor setup, calibration read only, the lerobot
@@ -27,7 +28,7 @@ devices:
   so101-green-leader:
     kind: so101-leader
     borrowed: true
-    calibration: lerobot   # the file that matches its motors, as for the follower
+    training_calibration: teleoperators/so_leader/shepherd.json   # as for the follower
     notes: Leader of the SO-101 training set (same rules as so101-green).
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00

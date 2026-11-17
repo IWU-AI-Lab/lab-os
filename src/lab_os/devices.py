@@ -11,8 +11,9 @@ can never make them openable or take their rules away.
 
 **Borrowed** devices (`borrowed: true`: the green arms and their cameras, another project's) may be
 driven and used, with CLAUDE.md's rules: no motor setup or calibration (lab_os.robots.so101_setup
-refuses them), their calibration read only from LeRobot's cache, and never a port or camera that
-another program has open (`check_not_in_use`, used for every device we open, borrowed or not).
+refuses them), their training calibration read only from LeRobot's cache, and never a port or
+camera that another program has open (`check_not_in_use`, used for every device we open,
+borrowed or not).
 """
 
 import logging
@@ -69,7 +70,9 @@ class Device:
     usb: tuple[UsbId, ...] = ()
     notes: str = ""
     borrowed: bool = False  # another project's: drive/use it, never set it up (CLAUDE.md)
-    calibration: str = ""  # "lerobot" = LeRobot's cache, read only; "" = lab-os's calibration/
+    # borrowed arms: the training calibration in LeRobot's cache (read only, the source of truth),
+    # e.g. "robots/so_follower/sheep.json"; lab-os drives with its copy in calibration/<name>/
+    training_calibration: str = ""
     socket: str = ""  # cameras: the USB socket in /dev/v4l/by-path/ names, e.g. "usb-0:7"
 
 
@@ -119,7 +122,7 @@ def _read_devices(path: Path) -> dict[str, Device]:
             usb=tuple(UsbId(**u) for u in (spec.get("usb") or ())),
             notes=spec.get("notes", ""),
             borrowed=bool(spec.get("borrowed", False)),
-            calibration=spec.get("calibration", ""),
+            training_calibration=spec.get("training_calibration", ""),
             socket=spec.get("socket", ""),
         )
         for name, spec in (raw.get("devices") or {}).items()
