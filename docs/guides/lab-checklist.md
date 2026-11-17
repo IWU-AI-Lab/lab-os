@@ -2,7 +2,7 @@
 
 Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-**Done 2026-11-16: parts 0, 6, 1, 5, 8** (results: `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md` 17–25). **Next lab day (Tuesday 2026-11-17), in this order: 9, 3, 3b, 8b, 7, 11, 10, 2.**
+**Done 2026-11-16: parts 0, 6, 1, 5, 8** (results: `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md` 17–25). **Tuesday 2026-11-17 (2–3 hours), in this order:** 0; 6.3, 6.4 and 1.3 again (changed); 8b (green arms plugged in); then swap to `so101-white` for 3 (with 3.9), 3b, 7 and 10; 9 whenever the room is quiet. **Thursday 2026-11-19:** 11 and 2, and whatever is left.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
