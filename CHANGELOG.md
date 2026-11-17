@@ -2,6 +2,12 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-17
+- **Startup: a lighter arrival of the core** (quick job 23; measured, `docs/dev/GOTCHAS.md` 2026-11-17): not reproduced at full speed on a fast Mac; with the CPU slowed 4×, the core's arrival missed a frame every start and a garbage collection from the jump fell on it now and then. The arrival sound's white noise is now made once when the page loads (each whoosh used to make its own, 2.6 s of it right as the core arrived), and the jump keeps its line batches from frame to frame instead of throwing away megabytes a frame. Same look, same sound.
+- **Ask line: the icons in the middle of their cells** (quick job 22, designed hub and the concept): the mic and history buttons were narrower than the space between their vertical lines (the bar's gap after the mic, its right padding after the last button), so the icons sat 4–5 px left of the middle. Each button now fills its cell; an empty question count takes no room.
+- **The AI budget and the safety limits in the hub's ⚙** (quick job 21): the settings page laid its sections out in CSS columns inside a box of fixed height, so everything after "This device" (the assistant with the AI budget, this place, robots, the safety limits) spilled into columns off to the right where nothing could reach them, on `/settings` at 1600×900 as well as in the hub. Now the sections sit in a grid that scrolls down.
+- **"X = STOP" where you look in desktop control** (quick job 19): while desktop control is on, the teleop page (and the classic one) shows "X = STOP" beside the STOP button, the key help starts with the X row (it was last, below the fold) and the button reads "(X = STOP, Esc to leave)". Hidden while desktop control is off, since X only stops then. Esc is unchanged.
+
 ## 2026-11-14
 - **Teleop page: the 3D view and the joint readout in their own boxes** (quick job 14): a jog command names only the joints that move, so rows used to appear and disappear and the 3D model kept resizing. Now the readout is a fixed column beside the view with one fixed-height row per joint (under the view, two a row, on narrow screens).
 - **The AI budget on the Settings page applies at once** (quick job 5): the brain re-reads `ai_budget_usd_month` each time it checks, so raising it un-pauses the chat without a restart (it used to be read only at start).

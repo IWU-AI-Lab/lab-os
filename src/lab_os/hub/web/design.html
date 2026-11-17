@@ -189,6 +189,14 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 .ask .mic { border-left: 0; }
 #reply .q.heard { color: var(--text); }
 #open-chat:hover, #open-chat:focus-visible { color: var(--hot); outline: none; }
+/* the buttons are cells between vertical lines (quick job 22): each fills its cell, from its own line to the
+   next line (no flex gap between them) or to the bar's right edge (no padding after the last), so the icon
+   sits in the middle of what you see; an empty count takes no room */
+#ask-btn .in > button { align-self: stretch; }
+#ask-btn .in > button:not([hidden]) ~ button { margin-left: -0.55rem; }
+#ask-btn .in { padding-right: 0; }
+#open-chat { min-width: 2.6rem; }
+#open-chat b:empty { display: none; }
 /* the latest answer, under the core: typed out, then fades after a while; tap it to see the whole conversation */
 #reply { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(34rem, 80vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
 #reply.on { opacity: 1; pointer-events: auto; cursor: pointer; }
@@ -936,12 +944,17 @@ const portrait = () => innerHeight > innerWidth;
 body.classList.add("q-" + S.quality, "pre-frame");
 
 /* ---------- sound (generated, WebAudio) ---------- */
-let ac = null, master = null;
+let ac = null, master = null, noise = null;
+// white noise for every whoosh, made once while the start screen waits (quick job 23): each whoosh used to make
+// its own, up to 2.7 s of it (130,000 random numbers) in the moment, the arrival's right as the core appears
+const NOISE = new Float32Array(2 * 48000);
+for (let i = 0; i < NOISE.length; i++) NOISE[i] = Math.random() * 2 - 1;
 function audio() {
   if (!ac) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ac = new AC(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination);
+    noise = ac.createBuffer(1, NOISE.length, ac.sampleRate); noise.copyToChannel(NOISE, 0);
   }
   if (ac.state === "suspended") ac.resume();
   return ac;
@@ -958,15 +971,14 @@ function tone({ f = 440, f2 = 0, type = "sine", dur = 0.15, vol = 0.1, attack = 
 }
 function whoosh({ dur = 1.5, vol = 0.12, from = 150, to = 1400, attack = 0.7, delay = 0 }) {
   if (!S.sound || !ac) return;
-  const t = ac.currentTime + delay, len = Math.floor(ac.sampleRate * dur);
-  const buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-  const src = ac.createBufferSource(); src.buffer = buf;
+  const t = ac.currentTime + delay;
+  // the shared noise, looped from a random place (a 2 s loop under a moving filter sounds like any other noise)
+  const src = ac.createBufferSource(); src.buffer = noise; src.loop = true;
   const fl = ac.createBiquadFilter(); fl.type = "lowpass";
   fl.frequency.setValueAtTime(from, t); fl.frequency.exponentialRampToValueAtTime(to, t + dur * 0.85);
   const g = ac.createGain();
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  src.connect(fl); fl.connect(g); g.connect(master); src.start(t);
+  src.connect(fl); fl.connect(g); g.connect(master); src.start(t, Math.random() * noise.duration); src.stop(t + dur + 0.05);
 }
 const SFX = {
   ignition() { tone({ f: 40, f2: 90, dur: 1.9, vol: 0.45, attack: 0.5 }); whoosh({}); tone({ f: 2400, f2: 800, dur: 0.25, vol: 0.03 }); },
@@ -1243,7 +1255,15 @@ function seedStars(shown) { stars = Array.from({ length: starCount() }, () => Ob
 // 0 at the start, 1 at full speed: a low power, so it builds steadily rather than all at once
 const hyperK = (ms) => Math.pow(clamp(ms / HYPER.ramp, 0, 1), 1.5);
 const LV = 24, SEG = 12;  // brightness steps and pieces per line: a gradient drawn in batches, so thousands stay cheap
-let lastLines = [];       // the last jump frame's lines, for the impact frame
+// the line and dot batches, kept from frame to frame (quick job 23): fresh arrays every frame threw away megabytes
+// a frame during the jump, and the garbage collections that followed fell on random frames, now and then right
+// as the core arrives. Each batch is a typed array that only grows; n = how many numbers this frame put in it
+const batch = () => ({ a: new Float32Array(4096), n: 0 });
+function room(b, k) { if (b.n + k > b.a.length) { const a = new Float32Array(2 * (b.n + k)); a.set(b.a.subarray(0, b.n)); b.a = a; } return b.a; }
+function put2(b, p, q) { const a = room(b, 2); a[b.n++] = p; a[b.n++] = q; }
+function put4(b, p, q, r, t) { const a = room(b, 4); a[b.n++] = p; a[b.n++] = q; a[b.n++] = r; a[b.n++] = t; }
+const lineB = Array.from({ length: 2 * LV }, batch), pointB = Array.from({ length: 2 * LV }, batch);
+const lastB = batch();    // the last jump frame's lines (x1, y1, x2, y2, wide), for the impact frame
 function drawStars(dt, now, mode, fade = 1) {
   if (!stars.length) seedStars(mode === "wait");
   const jump = mode === "jump", ms = jump ? now - S.hyper.t0 : 0, k = jump ? hyperK(ms) : 0, F = starF();
@@ -1272,8 +1292,9 @@ function drawStars(dt, now, mode, fade = 1) {
     cx.fillStyle = g; cx.fillRect(0, 0, W, H);
   }
   const bright = (0.7 + 0.5 * Math.pow(p, 1.2)) * fade, width = 0.8 + 1.3 * k, M = 40;
-  const lines = Array.from({ length: 2 * LV }, () => []), points = Array.from({ length: 2 * LV }, () => []);
-  if (jump) lastLines = [];
+  for (const b of lineB) b.n = 0;
+  for (const b of pointB) b.n = 0;
+  if (jump) lastB.n = 0;
   for (const s of stars) {
     s.z -= speed * dt; s.age = Math.min(1, s.age + dt / 0.6);
     const zt = Math.min(Z_FAR, s.z + trail), x1 = ox + (s.x / zt) * F, y1 = oy + (s.y / zt) * F;
@@ -1287,31 +1308,31 @@ function drawStars(dt, now, mode, fade = 1) {
       const n = Math.min(SEG, 1 + Math.floor(len / 18));
       for (let i = 0; i < n; i++) {
         const t0 = i / n, t1 = (i + 1) / n, f = Math.pow(t1, 1.8), lv = Math.min(LV - 1, Math.round(a * f * (LV - 1)));
-        if (lv) lines[wide * LV + lv].push(x1 + dx * t0, y1 + dy * t0, x1 + dx * t1, y1 + dy * t1);
+        if (lv) put4(lineB[wide * LV + lv], x1 + dx * t0, y1 + dy * t0, x1 + dx * t1, y1 + dy * t1);
       }
-      if (jump) lastLines.push(x1, y1, x2, y2, wide);
+      if (jump) { put4(lastB, x1, y1, x2, y2); put2(lastB, wide, 0); }
     }
     // the star itself: a dot while its line is short
     const lv = Math.min(LV - 1, Math.round(a * clamp(1 - len / 40, 0, 1) * (LV - 1)));
-    if (lv) points[wide * LV + lv].push(x2, y2);
+    if (lv) put2(pointB[wide * LV + lv], x2, y2);
   }
   // brighter pieces are also whiter (more so at speed), so color and brightness change together along a line
   const white = 0.3 + 0.7 * k;
-  lines.forEach((pts, i) => {
-    if (!pts.length) return;
+  lineB.forEach(({ a: pts, n }, i) => {
+    if (!n) return;
     const lv = i % LV, wide = Math.floor(i / LV), t = lv / (LV - 1), m = t * t * white;
     cx.strokeStyle = rgba(mainRGB.map((c, j) => Math.round(c + ([225, 248, 255][j] - c) * m)), t.toFixed(3));
     cx.lineWidth = (wide ? 1.8 : 1) * width;
     cx.beginPath();
-    for (let j = 0; j < pts.length; j += 4) { cx.moveTo(pts[j], pts[j + 1]); cx.lineTo(pts[j + 2], pts[j + 3]); }
+    for (let j = 0; j < n; j += 4) { cx.moveTo(pts[j], pts[j + 1]); cx.lineTo(pts[j + 2], pts[j + 3]); }
     cx.stroke();
   });
-  points.forEach((pts, i) => {
-    if (!pts.length) return;
+  pointB.forEach(({ a: pts, n }, i) => {
+    if (!n) return;
     const lv = i % LV, wide = Math.floor(i / LV), r = (wide ? 1.9 : 1.2) * width;
     cx.fillStyle = `rgba(225,248,255,${(lv / (LV - 1)).toFixed(3)})`;
     cx.beginPath();
-    for (let j = 0; j < pts.length; j += 2) cx.rect(pts[j] - r / 2, pts[j + 1] - r / 2, r, r);
+    for (let j = 0; j < n; j += 2) cx.rect(pts[j] - r / 2, pts[j + 1] - r / 2, r, r);
     cx.fill();
   });
   cx.lineWidth = 1;
@@ -1328,7 +1349,8 @@ function drawFx(now) {
     fxx.strokeStyle = "rgba(5,8,11,0.85)"; fxx.lineCap = "round";
     for (const wide of [0, 1]) {
       fxx.lineWidth = wide ? 3.6 : 2; fxx.beginPath();
-      for (let j = 0; j < lastLines.length; j += 5) if (lastLines[j + 4] === wide) { fxx.moveTo(lastLines[j], lastLines[j + 1]); fxx.lineTo(lastLines[j + 2], lastLines[j + 3]); }
+      const l = lastB.a;
+      for (let j = 0; j < lastB.n; j += 6) if (l[j + 4] === wide) { fxx.moveTo(l[j], l[j + 1]); fxx.lineTo(l[j + 2], l[j + 3]); }
       fxx.stroke();
     }
     return;
