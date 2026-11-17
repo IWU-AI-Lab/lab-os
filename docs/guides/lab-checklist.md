@@ -44,7 +44,7 @@ uv run lab-os serve --host 0.0.0.0
 Open http://localhost:8080/design. Press start.
 - **1.1** Open and close Teleop, Monitor and AI Control. → did all three open and close? (yes / no; name the one that didn't)
 - **1.2** Press Esc. Press the ⛶ button in the strip. → did full screen come back? (yes / no)
-- **1.3** Look at the whole startup and hub. → anything that stuttered or looked wrong (one line each, or "nothing").
+- **1.3** Look at the whole startup and hub (the mic and history icons on the ask line should sit in the middle between their lines since 2026-11-17). → anything that stuttered or looked wrong (one line each, or "nothing").
 
 ## 5. Training launcher (10 min)
 Setup: `so101-white` unplugged, both green arms plugged in.
