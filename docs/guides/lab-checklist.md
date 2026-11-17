@@ -31,7 +31,7 @@ uv run lab-os serve
 ```
 - **6.1** Open http://localhost:8080/teleop → Desktop control. Hold two jog keys at once, then one, then two others. → did the 3D model change size? (yes / no)
 - **6.2** Same page. → do all six joint rows stay in place? (yes / no)
-- **6.3** Open http://localhost:8080/settings → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
+- **6.3** Open the designed hub → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
 - **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
 - **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
 - **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.
@@ -44,7 +44,7 @@ uv run lab-os serve --host 0.0.0.0
 Open http://localhost:8080/design. Press start.
 - **1.1** Open and close Teleop, Monitor and AI Control. → did all three open and close? (yes / no; name the one that didn't)
 - **1.2** Press Esc. Press the ⛶ button in the strip. → did full screen come back? (yes / no)
-- **1.3** Look at the whole startup and hub. → anything that stuttered or looked wrong (one line each, or "nothing").
+- **1.3** Look at the whole startup and hub (the mic and history icons on the ask line should sit in the middle between their lines since 2026-11-17). Start it five times (⏻, then start again): did the core stutter as it arrived in any of them? (how many of 5) → anything that stuttered or looked wrong (one line each, or "nothing").
 
 ## 5. Training launcher (10 min)
 Setup: `so101-white` unplugged, both green arms plugged in.
