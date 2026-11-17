@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-17 — Startup: the core's arrival did two big jobs at once, and the jump made megabytes of garbage a frame
+**What:** quick job 23 (the core stutters as it loads in, about one start in three or four, lab check 1.3). On the builder's Mac, at full speed, 6 starts at 1920×1080 in headless Chrome: every frame 16.7 ms, nothing over 50 ms, **no stutter reproduced**. With Chrome's CPU slowdown at 4× (a stand-in for a slower computer) and full traces of 3 starts: as the core arrives, the code after the jump's pause runs as one task of 15–18 ms right before a 15–22 ms frame, so at least one frame is missed every start. About half of that task was the arrival sound making 2.6 s of fresh white noise (130,000 random numbers; ~1 ms at full speed, 10 ms the first time). Separately, every jump frame built 48 new arrays of line pieces (~144,000 numbers) plus 15,000 for the impact frame and threw them away: the heap swung between 2 and 20–30 MB and ~57 garbage collections ran between the jump and a second after the arrival, a major one (7–12 ms) at a different moment each start, sometimes right on the arrival (55 ms after it in one trace). That randomness fits "one start in three or four". Other long frames found, left alone: the start press itself (~85 ms at 4×, before anything moves), removing the start screen 2.05 s in (mid-jump, ~40 ms at 4×), the end of the title decode (~33 ms at 4×).
+**Fix:** the noise is made once when the page loads and every whoosh plays a random place in it (looped); the jump keeps its line batches (typed arrays) from frame to frame. After, at 4× (4 clean traces): the arrival task 8–13 ms, ~25 small collections, the heap 2–5 MB; full speed unchanged. Not checked on the lab desktop yet (lab check 1.3). Headless Chrome's own frame times are useless for this: requestAnimationFrame ticks at 16.7 ms whatever happens, so measure with CPU slowdown and a trace.
+
+### 2026-11-17 — Settings: CSS columns in a box of fixed height spill sideways, out of reach
+**What:** quick job 21 ("the AI budget isn't in the hub's ⚙"). The settings page laid its cards out with `columns:` inside a box of fixed height. A tall "This device" card filled the visible columns and every later section went into extra columns off to the right, which nothing scrolls to: 4612 px of page in a 1526 px box at 1600×900, on `/settings` too. Seen only when "This device" grew (voice, wake word, monitors, the icon rows).
+**Fix:** a grid that scrolls down. With the kit's `.card { min-height: 0 }` the grid's rows shrank and cards overlapped: `grid-auto-rows: max-content`.
+
+### 2026-11-17 — Two Claude Code sessions in one checkout: the other one switched the branch
+**What:** this session created a branch in `~/Code/lab-os`; another session working in the same folder switched it back to `main` before the commit, so the commit landed on local `main` (and `git push` of the branch said "up to date").
+**Fix:** moved the commit to its branch and reset local `main` (nothing pushed). Two sessions at once each work in their own `git worktree`.
+
 ### 2026-11-16 — Green arms: LeLab writes a calibration into the motors at every teleop start, and it has two setups
 **What:** lab check part 8. `--watch` on `so101-green` worked with `calibration_file` set to `sheep.json`, then later refused: "motors hold a different calibration than its file". Cause, read from LeLab's code and saved setups (nothing written): LeLab's teleop writes the chosen setup's two calibration files into both arms' motors every time it starts. LeLab has **two saved setups for the same green pair**, and their names are crossed:
 

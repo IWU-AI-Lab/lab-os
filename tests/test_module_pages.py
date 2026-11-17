@@ -272,3 +272,36 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
     assert css.index(
         "@media (max-width: 900px), (orientation: portrait) {\n  /* narrow: the readout"
     ) > css.index(".arm3d-body {")
+
+
+def test_x_stop_is_shown_where_you_look():
+    """Quick job 19: while desktop control is on, "X = STOP" sits beside the STOP button, the X row
+    is the key help's first row and the on-button says it. Hidden while X doesn't stop (it only
+    works in desktop control), so the page never claims what isn't true. Esc is unchanged."""
+    web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
+    js = (web / "desktop-input.js").read_text()
+    start = js.split("function startControl", 1)[1].split("function stopControl")[0]
+    stop = js.split("function stopControl", 1)[1].split("function tick")[0]
+    assert "stopKey(true)" in start and "stopKey(false)" in stop
+    assert "(X = STOP, Esc to leave)" in js
+    assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
+    for page in ("index.html", "classic/index.html"):
+        html = (web / page).read_text()
+        key = html.index('id="stop-key"')
+        assert 'id="stop-key" class="stop-key" hidden' in html, page
+        assert abs(key - html.index('id="stop"')) < 400, page  # right beside STOP
+        table = html.split('<table class="keys">', 1)[1]
+        assert table.index("<kbd>X</kbd>") < table.index('id="desk-keys"'), page  # first row
+        assert "<kbd>Esc</kbd>" in table, page
+
+
+def test_settings_scroll_down_not_off_to_the_side():
+    """Quick job 21: the settings page (also what the designed hub's ⚙ opens) used CSS columns in a
+    box of fixed height, so every section after "This device" (the AI budget, the safety limits)
+    spilled into columns off to the right, out of reach: 4612 px of page in a 1526 px box at
+    1600×900 (headless Chrome, 2026-11-17). Now a grid that scrolls down."""
+    html = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/settings.html").read_text()
+    rule = html.split(".sections {", 1)[1].split("}", 1)[0]
+    assert " columns:" not in rule and not rule.lstrip().startswith("columns:")
+    assert "display: grid" in rule and "overflow-y: auto" in rule and "overflow-x: hidden" in rule
+    assert "grid-auto-rows: max-content" in rule  # .card's min-height: 0 would let rows overlap
