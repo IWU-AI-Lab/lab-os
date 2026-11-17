@@ -9,8 +9,8 @@ It starts LeLab (`lelab`, Hugging Face's web page for LeRobot, its own uv tool) 
   are handed out in plug-in order, so another arm can take a green arm's number;
 - LeLab's saved leader and follower ports are exactly the two green arms, one each;
 - they're the same way round as at the last good start (otherwise the leader and follower swapped);
-- no other program has a green port open (lab-os driving so101-green, say), unless LeLab is
-  already running: then it's LeLab's.
+- no program other than LeLab has a green port open (lab-os driving so101-green, say), whether or
+  not LeLab is already running (quick job 17). LeLab is told apart by its command line.
 LeLab opens the ports when you press teleop or record in its page. `lab-os green` in a terminal,
 the desktop icon (docs/guides/green-launcher.md) and the hub's Training page all run this.
 """
@@ -171,16 +171,47 @@ def check(
         c.add(True, "first start: this leader/follower pairing is remembered from now on")
     c.add(_lelab() is not None, "LeLab installed" if _lelab() else "LeLab (`lelab`) not found")
     c.running = _answers(LELAB_PORT)
-    if not c.running:  # LeLab not there: nobody else may have a green port (one program per port)
-        for port in mine:
-            users = users_of(str(by_id / port), proc) or []
-            if users:
-                c.add(
-                    False,
-                    f"green arm …{_serial(port)[-4:]} is open in {', '.join(users)}: stop it "
-                    "first (one program per port)",
-                )
+    # One program per port: only LeLab may already have a green port, running or not. (Before
+    # quick job 17 this was skipped whenever LeLab answered, and LeLab started while the brain
+    # drove so101-green: lab check 8.12.)
+    for port in mine:
+        users = users_of(str(by_id / port), proc)
+        if users is None:
+            c.add(
+                False,
+                f"can't tell on this computer whether another program has green arm "
+                f"…{_serial(port)[-4:]} open",
+            )
+            continue
+        others = [u for u in users if not _is_lelab(u, proc)]
+        if others:
+            c.add(
+                False,
+                f"green arm …{_serial(port)[-4:]} is open in {', '.join(others)}: stop it "
+                "first (one program per port; the brain: Ctrl+C in its terminal)",
+            )
     return c
+
+
+def _argv(pid: str, proc: Path) -> list[str]:
+    """A process's command line: /proc/<pid>/cmdline on Linux, else `ps` (reads only)."""
+    try:
+        raw = (proc / pid / "cmdline").read_bytes()
+        return [a.decode(errors="replace") for a in raw.split(b"\0") if a]
+    except OSError:
+        pass
+    out = subprocess.run(["ps", "-o", "command=", "-p", pid], capture_output=True, text=True)
+    return out.stdout.split()
+
+
+def _is_lelab(user: str, proc: Path = Path("/proc")) -> bool:
+    """Is "name (pid N)" (from users_of) LeLab? Yes if a part of its command line is a path
+    through `lelab`: its script (~/.local/bin/lelab) or its uv tool's Python
+    (~/.local/share/uv/tools/lelab/…). The brain (`lab-os serve`) is not."""
+    pid = user.rsplit("(pid ", 1)[-1].rstrip(")")
+    if not pid.isdigit():
+        return False
+    return any("lelab" in Path(a).parts for a in _argv(pid, proc))
 
 
 def remember(c: Check, last_good: Path = LAST_GOOD) -> None:
