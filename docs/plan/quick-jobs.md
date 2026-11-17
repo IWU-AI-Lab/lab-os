@@ -13,7 +13,6 @@ Order: 17 and 18 first (the green arms), then the rest from the top.
 
 17. **The training launcher refuses while anything else has a green port.** Today it skips that check when LeLab's page already answers, and it started LeLab while the brain drove `so101-green` (lab check 8.12, `docs/dev/GOTCHAS.md`). Refuse whenever a program that isn't LeLab has a green port open. First, because it's one of the four green rules.
 18. **Green arms: use the calibration file that matches the motors** (decided 2026-11-16). LeLab writes one of two files into the follower at each teleop start (`docs/dev/GOTCHAS.md`). For a borrowed arm, lab-os reads what the motors hold and uses the file in LeLab's folder for that arm that equals it, logs its name, and refuses with a sentence only if none matches. `calibration_file` in `devices.yaml` goes away. Never writes. Same for the leader.
-19. **Show "X = STOP" in desktop control.** X already stops in every mode and leaves full screen alone; the page doesn't say so where you look. Put it next to STOP and in the key help. Esc stays as it is (it can't keep full screen in Brave).
 20. **Home is the folded pose** (decided 2026-11-16): `home` for the SO-101 becomes the compact rest position the builder always returns the arm to, with the gripper slightly open. Today's `home` (reaching forward, 5 cm up) is renamed `ready` and stays teleop's and the fake arm's start. The joint numbers come from the real arm: lab check 8.16.
 21. **AI budget and safety limits in the hub's own ⚙.** They're on `/settings` but not in the settings that open from the gear on the designed hub (lab check 6.3). Same controls, same place.
 22. **Ask bar: icons centred in their cells** (designed hub; they sit off-centre between the vertical lines, lab check 1.3).
@@ -22,6 +21,7 @@ Order: 17 and 18 first (the green arms), then the rest from the top.
 25. **Green camera names.** Unplugging the wrist camera removed `usb-0:7` (lab check 8.15): `so101-green-cam-a` → `so101-green-cam-wrist`, `-cam-b` (socket 8) → `so101-green-cam-stand`. The white arm's names say the opposite (stand in 7, wrist in 8): leave them until lab check 3.9 says which is right.
 
 ## Done
+- 19. **Show "X = STOP" in desktop control** (done 2026-11-17, PR #101). While desktop control is on, "X = STOP" beside the STOP button (teleop and classic teleop), the X row first in the key help, "(X = STOP, Esc to leave)" on the button; hidden while it's off, since X only stops then. Esc unchanged. Lab: lab-checklist 8.19.
 - 1. **Arm moves without asking** (done 2026-11-14, PR #73). Every brain tool on the allow list; a test checks it. Lab: the no-prompt check in lab-checklist part 0.
 - 2. **Limits that can be turned off** (done 2026-11-14, PR #75). `limits:` in the venue file and Settings → Safety limits; `limits_locked: true` on visit-day. Lab: lab-checklist part 6.
 - 3. **The floor at −0.5 cm** (done 2026-11-14, PR #76). `min_z_cm: -0.5` in both venues, teleop the same number. Lab: the stepped ruler check in lab-checklist part 3.
