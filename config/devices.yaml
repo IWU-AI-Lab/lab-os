@@ -35,19 +35,20 @@ devices:
       - {vendor_id: 0x1a86, product_id: 0x55d3, serial: "5B41531599"}
 
   # The training set's two cameras (Innomaker U20CAM-1080p, 0c45:6366, both serial SN0001):
-  # sockets from `ls -l /dev/v4l/by-path/` on 2026-11-11. Which one is the wrist camera and which
-  # sees from above isn't written down yet: check at the lab, then rename (docs/guides/lab-checklist.md).
-  so101-green-cam-a:
+  # sockets from `ls -l /dev/v4l/by-path/` on 2026-11-11. Unplugging the wrist camera removed
+  # usb-0:7 (lab check 8.15, 2026-11-16), so 7 is the wrist and 8 the stand camera (renamed from
+  # -cam-a / -cam-b 2026-11-17, quick job 25).
+  so101-green-cam-wrist:
     kind: camera
     borrowed: true
     socket: usb-0:7
-    notes: Training camera in the lab desktop's USB socket 7 (what it sees is still to check).
+    notes: The green follower's wrist camera, looking along the jaws (lab desktop's USB socket 7).
 
-  so101-green-cam-b:
+  so101-green-cam-stand:
     kind: camera
     borrowed: true
     socket: usb-0:8
-    notes: Training camera in the lab desktop's USB socket 8 (what it sees is still to check).
+    notes: The green set's stand camera, looking at the table from above (lab desktop's USB socket 8).
 
   # HACK (2026-11-12, temporary, for today's camera test with the AI): the two cameras plugged in
   # now are the WHITE arm's, but they sit in sockets 7 and 8, which are registered above as the

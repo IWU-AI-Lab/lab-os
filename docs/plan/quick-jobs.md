@@ -5,14 +5,13 @@ Small jobs that are **already decided** and can be built in one Claude Code sess
 Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a focus step (`docs/plan/current-focus.md`).
 
 ## To do
-Order: from the top (25 next: the green arms).
+Order: from the top.
 
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue.
 10. **VR hub: a cluster of linked dots far away.** In `/xr` after the jump, a tight clump of connected dots sits off in the distance (seen in the headset, 2026-11-13). Find why (`hub/web/xr/network.js`) and spread them like the rest.
 12. **A diagram of the system**, and a way to see it on the hub: one clear drawing (the brain, the hub pages, the devices and how each connects: USB, network, MCP), as SVG made by hand (no CDN, `docs/` and the hub), opened from the Devices panel ("How it connects"). Matches the design.
 
 24. **Teleop readout: "outside model limit" shown wrongly.** On `so101-green`, `elbow_flex` read "97.4 clamped by driver → 96.8; outside model limit" while inside the limit (lab check 8.9). The flag should compare with the limit actually in force.
-25. **Green camera names.** Unplugging the wrist camera removed `usb-0:7` (lab check 8.15): `so101-green-cam-a` → `so101-green-cam-wrist`, `-cam-b` (socket 8) → `so101-green-cam-stand`. The white arm's names say the opposite (stand in 7, wrist in 8): leave them until lab check 3.9 says which is right.
 
 ## Done
 - 23. **Startup: find the stutter** (done 2026-11-17, PR #109). Not reproduced at full speed on a fast Mac; with the CPU slowed 4×, the core's arrival made 2.6 s of fresh noise for its sound right before a heavy frame, and the jump's throwaway arrays caused garbage collections at random moments, sometimes on the arrival (`docs/dev/GOTCHAS.md` 2026-11-17). Noise made at load, batches kept between frames. Lab: lab-checklist 1.3 (five starts).
@@ -35,3 +34,4 @@ Order: from the top (25 next: the green arms).
 - 17. **The training launcher refuses while anything else has a green port** (done 2026-11-17, PR #102). Checked whether or not LeLab runs; only LeLab (told apart by its command line) may already hold a green port; a computer that can't tell refuses. Lab: lab-checklist 8.18.
 - 18. **Green arms: the calibration file that matches the motors** (done 2026-11-17, PR #104). The driver reads what the motors hold and uses the equal file in LeRobot's folder (role folder first), says which, refuses if none; `calibration_file` gone. Same for the leader. Lab: lab-checklist 8.16, 8.17.
 - 20. **Home is the folded pose** (done 2026-11-17, PR #106). Today's `home` is `ready` (teleop's and the fake arm's start); the new `home` is the old `rest` numbers with the gripper at 10, computed only; `rest` removed. Lab: lab-checklist 8.16 gives the real numbers.
+- 25. **Green camera names** (done 2026-11-17, PR #107). `so101-green-cam-wrist` (socket 7) and `so101-green-cam-stand` (socket 8), from lab check 8.15. The white arm's names wait for lab check 3.9.
