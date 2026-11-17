@@ -171,6 +171,14 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #open-chat { display: flex; align-items: center; gap: 0.25rem; min-width: 2.2rem; min-height: 2rem; justify-content: center; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
 #open-chat b { font: 0.7rem/1 var(--f-digits); color: var(--c); }
 #open-chat:hover, #open-chat:focus-visible { color: var(--hot); outline: none; }
+/* the buttons are cells between vertical lines (quick job 22): each fills its cell, from its own line to the
+   next line (no flex gap between them) or to the bar's right edge (no padding after the last), so the icon
+   sits in the middle of what you see; an empty count takes no room */
+#ask-btn .in > button { align-self: stretch; }
+#ask-btn .in > button:not([hidden]) ~ button { margin-left: -0.55rem; }
+#ask-btn .in { padding-right: 0; }
+#open-chat { min-width: 2.6rem; }
+#open-chat b:empty { display: none; }
 /* the latest answer, under the core: typed out, then fades after a while; tap it to see the whole conversation */
 #reply { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(34rem, 80vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
 #reply.on { opacity: 1; pointer-events: auto; cursor: pointer; }

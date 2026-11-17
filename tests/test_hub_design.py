@@ -87,3 +87,19 @@ def test_the_fonts_are_bundled_with_their_license():
     for name in ("Orbitron", "ChakraPetch-500", "Inter", "JetBrainsMono-400", "DSEG7"):
         assert f"{name}" in css and any(fonts.glob(f"{name}*.woff2")), name
     assert "SIL OPEN FONT LICENSE" in (fonts / "OFL.txt").read_text().upper()
+
+
+def test_ask_bar_icons_sit_in_the_middle_of_their_cells():
+    """Quick job 22: the mic and history buttons were narrower than the space between their lines
+    (the bar's flex gap after the mic, its right padding after the last button), so the icons sat
+    3.7 and 4.9 px left of the middle at 1600×900 (headless Chrome, 2026-11-17; now 0.5 px). The
+    concept had the same history button and gets the same fix."""
+    concept = Path(__file__).resolve().parents[1] / "docs" / "design" / "hub-concept.html"
+    for page in (DESIGN, concept):
+        css = page.read_text()
+        assert "#ask-btn .in > button { align-self: stretch; }" in css, page
+        assert "#ask-btn .in > button:not([hidden]) ~ button { margin-left: -0.55rem; }" in css
+        assert "#ask-btn .in { padding-right: 0; }" in css
+        assert "#open-chat b:empty { display: none; }" in css
+        # the gap the negative margin undoes is the bar's own
+        assert "#ask-btn .in { display: flex; align-items: center; gap: 0.55rem;" in css
