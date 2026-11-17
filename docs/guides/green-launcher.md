@@ -11,6 +11,9 @@ driven from **LeLab**, Hugging Face's web page for LeRobot) after checking that 
 
 LeLab then opens **http://127.0.0.1:8000** in the browser. Teleop, recording and training happen there, as before.
 
+## LeLab's calibration (since 2026-11-17)
+LeLab has one entry, **SO-101_Green** (both arms). Its calibration files are `lelab_green.json`, copies of the training ones (`sheep.json` follower, `shepherd.json` leader, from LeRobot's command line), which stay the source of truth. The old two entries and their files are in `~/green-calibration-backup/old-lelab/` (`scripts/green-lelab-from-training.sh` made the change; a backup of everything before it is in `~/green-calibration-backup/before-2026-11-17/`). To keep the training files safe: on LeLab's calibration page never use the names `sheep` or `shepherd`, and on the command line press ENTER at "Press ENTER to use provided calibration file … or type 'c'", never `c`.
+
 ## The check (nothing starts unless every line is fine)
 1. **Both green arms are plugged in** (`…1599` and `…3501` in `/dev/serial/by-id/`).
 2. **Nothing else is on a serial port**, the white arm above all. LeLab saves its ports as raw `/dev/ttyACM0` / `ttyACM1`, and Linux hands those numbers out in plug-in order: with the white arm plugged in, LeLab's "leader" can be the white arm (on 2026-11-10 it was: white = `ttyACM0` = LeLab's leader).

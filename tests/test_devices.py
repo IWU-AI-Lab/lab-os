@@ -31,7 +31,8 @@ def test_the_green_arms_are_borrowed_devices():
     assert follower.ports == (GREEN_FOLLOWER,) and leader.ports == (GREEN_LEADER,)
     for d in (follower, leader):
         assert d.borrowed and not d.off_limits
-        assert d.calibration == "lerobot"  # read only from LeRobot's cache
+    assert follower.training_calibration == "robots/so_follower/sheep.json"  # the source of truth
+    assert leader.training_calibration == "teleoperators/so_leader/shepherd.json"
     assert reg.borrowed_serials() == {"5B41533501", "5B41531599"}
     assert reg.off_limits_serials() == set()
 

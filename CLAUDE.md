@@ -13,7 +13,7 @@ Docs are in folders by who reads them: `docs/plan/` (focus, quick jobs, ideas, l
 ## Hard rules: so101-green and the shared LeRobot setup
 `so101-green` is the builder's SO-101 training set (leader `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00`, follower `…5B41533501-if00`, two training cameras). **Since 2026-11-12 (the builder) lab-os may drive the green arms and use their cameras**, like `so101-white` (focus step 11). Four rules stay:
 - **Never change the greens' motor IDs, baud rates or firmware.** No motor setup on them.
-- **Their calibration is read-only.** lab-os may read `~/.cache/huggingface/lerobot/calibration/` to drive them; it never writes there and never recalibrates the greens.
+- **Their calibration is read-only.** The training files (`sheep.json` follower, `shepherd.json` leader, in `~/.cache/huggingface/lerobot/calibration/`) are the source of truth. lab-os drives with its own copy (`calibration/so101-green*/`) and checks it still equals them; LeLab uses its own copy (`lelab_green.json`, since 2026-11-17). lab-os never writes there and never recalibrates the greens.
 - **Never modify the `lerobot` conda env** (`~/miniforge3/envs/lerobot`) or the `~/lerobot` checkout. Don't install into it, don't activate it for lab-os work.
 - **One program per port:** never open a green port while LeLab or a training or recording run is using it; check first, and refuse with a sentence if it's busy.
 
