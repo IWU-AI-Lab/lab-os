@@ -15,7 +15,6 @@ Order: from the top.
 21. **AI budget and safety limits in the hub's own ⚙.** They're on `/settings` but not in the settings that open from the gear on the designed hub (lab check 6.3). Same controls, same place.
 22. **Ask bar: icons centred in their cells** (designed hub; they sit off-centre between the vertical lines, lab check 1.3).
 23. **Startup: find the stutter.** About one start in three or four, the core stutters as it loads in (lab check 1.3, lab desktop); opening and closing modules also felt a bit laggy (1.1). Find what hitches (something built or loaded at that moment) and move it earlier. Playing a recorded video instead is an idea, not this job (`docs/plan/ideas.md`).
-24. **Teleop readout: "outside model limit" shown wrongly.** On `so101-green`, `elbow_flex` read "97.4 clamped by driver → 96.8; outside model limit" while inside the limit (lab check 8.9). The flag should compare with the limit actually in force.
 
 ## Done
 - 1. **Arm moves without asking** (done 2026-11-14, PR #73). Every brain tool on the allow list; a test checks it. Lab: the no-prompt check in lab-checklist part 0.
@@ -35,3 +34,4 @@ Order: from the top.
 - 18. **Green arms: the calibration file that matches the motors** (done 2026-11-17, PR #104). The driver reads what the motors hold and uses the equal file in LeRobot's folder (role folder first), says which, refuses if none; `calibration_file` gone. Same for the leader. Lab: lab-checklist 8.16, 8.17.
 - 20. **Home is the folded pose** (done 2026-11-17, PR #106). Today's `home` is `ready` (teleop's and the fake arm's start); the new `home` is the old `rest` numbers with the gripper at 10, computed only; `rest` removed. Lab: lab-checklist 8.16 gives the real numbers.
 - 25. **Green camera names** (done 2026-11-17, PR #107). `so101-green-cam-wrist` (socket 7) and `so101-green-cam-stand` (socket 8), from lab check 8.15. The white arm's names wait for lab check 3.9.
+- 24. **Teleop readout: "outside" judged against the limit in force** (done 2026-11-17, PR #108). The note compares the angle the driver holds with the driver's own limits (`status.limits`), not the command with the 3D model's; tested with node. Lab: lab-checklist 8.20.
