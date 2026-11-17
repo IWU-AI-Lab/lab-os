@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-17 — Hiwonder glove: all five LEDs must be lit to drive the xArm
+**What:** with the glove paired to `xarm1`, only the base followed the hand; the other five servos bent to one end and clacked. Both gloves had been switched to a robot-hand mode (each finger drives its own servo, tilt drives servo 6 = the xArm's base). The arm and lab-os were fine.
+**Fix:** press **K3** on the glove until **all five LEDs (D1–D5)** are lit ("robotic arm, bus servo" mode; one LED is the right-hand robot-hand mode). After every glove restart: right hand, palm down, fist; switch on; when the LEDs go off, open the hand. To re-pair, press **DEL** with the arm on. Manuals: `docs/device_manuals/Hiwonder_Wireless_Glove_*.pdf`.
+
 ### 2026-11-17 — so101-white's two cameras answer to each other's names
 **What:** during an AI pick, `camera_snapshot so101-white-cam-wrist` showed the table from above (the arm, the Quest, a box), and `so101-white-cam-stand` showed the view along the jaws (the cube between them). The names in `config/devices.yaml` point at the wrong video ports.
 **Fix:** not yet. Lab check 3.9 (unplug the wrist camera, see which `/dev/v4l/by-path/` entry disappears) gives the right port; then swap them in `config/devices.yaml`.
