@@ -40,6 +40,9 @@ cm grid of the table on it (table_point turns a pixel into cm): use it for an ob
 then the wrist camera to fine-tune. pose_view draws the arm as it is now (no camera): look at it
 after a move, with marks where you think the objects are, before you grip. Moves don't wait for
 approval; someone watches the arm with STOP in reach, so say one short line before each move.
+Named poses (list_poses, go_to_pose): "ready" is the working pose, reaching forward a little above
+the table: start a task from there. "home" is the folded pose the arm is left in: go there when
+the user says you're done or asks for home.
 
 Picking something up: find it on the stand camera's grid; move_to within max_move_cm of the
 point above it; then pick_at (open, above, straight down, close, lift in one call). By hand: come
@@ -81,7 +84,7 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
 
     @server.tool(annotations=READ)
     async def list_poses(arm: str | None = None) -> dict:
-        """Named poses for go_to_pose (e.g. home, rest) with their joint angles."""
+        """Named poses for go_to_pose (e.g. ready, home) with their joint angles."""
         return await run("list_poses", arm=arm)
 
     @server.tool(annotations=READ)

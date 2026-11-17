@@ -3,21 +3,24 @@
 # Every pose must sit inside the arm's limits with the gripper above the table (tests/test_robot_tools.py).
 
 so101:
-  home:   # the teleop working pose (same as the fake arm's start): gripper ~26 cm out, ~5 cm up, tilted down
+  ready:  # the working pose, teleop's and the fake arm's start: gripper ~26 cm out, ~5 cm up, tilted down
+          # (called `home` until 2026-11-17, quick job 20)
     shoulder_pan: 0
     shoulder_lift: -20
     elbow_flex: 40
     wrist_flex: 40
     wrist_roll: 0
     gripper: 30
-  rest:   # folded: upper arm back, forearm down, gripper ~21 cm out and ~6 cm up, closed.
-          # HACK: from forward kinematics only, not yet checked on the real so101-white (docs/plan/current-focus.md → Hacks)
+  home:   # folded, where the arm is left: upper arm back, forearm down, gripper ~21 cm out, ~6 cm up,
+          # slightly open (quick job 20; was `rest`, closed).
+          # HACK: from forward kinematics only, NOT YET CHECKED on the real arm: lab check 8.16 gives
+          # the real numbers (docs/plan/current-focus.md → Hacks)
     shoulder_pan: 0
     shoulder_lift: -95
     elbow_flex: 92
     wrist_flex: 35
     wrist_roll: 0
-    gripper: 0
+    gripper: 10
 
 xarm1s:
   home:   # the software xArm's start pose (lab-os-teleop --arm fake-xarm1)

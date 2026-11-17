@@ -57,3 +57,13 @@ def test_unknown_joint_rejected(arm):
 def test_must_connect_first():
     with pytest.raises(RuntimeError):
         FakeArm().read_joints()
+
+
+def test_the_fake_arm_starts_at_the_ready_pose():
+    """Teleop and the fake arm start at `ready`; `home` is the folded pose (quick job 20)."""
+    from lab_os.robots.fake import SO101_READY
+    from lab_os.tools.robot import load_poses
+
+    poses = load_poses()["so101"]
+    assert poses["ready"] == SO101_READY
+    assert poses["home"]["shoulder_lift"] < -80 and poses["home"]["gripper"] == 10

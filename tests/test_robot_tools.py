@@ -57,7 +57,7 @@ async def test_arm_status(rig):
 
 async def test_list_poses(rig):
     poses = (await rig.list_poses())["poses"]
-    assert {"home", "rest"} <= set(poses)
+    assert {"ready", "home"} <= set(poses)
 
 
 # ---------- moving ----------
@@ -89,7 +89,7 @@ async def test_gripper_open_and_close(rig):
 
 
 async def test_go_to_pose(rig):
-    r = await rig.call("go_to_pose", name="home")
+    r = await rig.call("go_to_pose", name="ready")  # where the fake arm starts
     assert r["result"] == "arrived"
 
 
@@ -213,11 +213,12 @@ async def test_move_to_goes_at_most_10_cm_per_call(rig):
 
 
 async def test_go_to_pose_far_away_goes_part_of_the_way(rig):
-    r = await rig.call("go_to_pose", name="rest")  # shoulder_lift -20 → -95
+    r = await rig.call("go_to_pose", name="home")  # ready → folded: shoulder_lift -20 → -95
     assert "of the way" in r["clipped"][0]
     for _ in range(4):
-        r = await rig.call("go_to_pose", name="rest")
+        r = await rig.call("go_to_pose", name="home")
     assert r["clipped"] == [] and r["joints_deg"]["shoulder_lift"] == -95
+    assert r["joints_deg"]["gripper"] == 10  # slightly open
 
 
 # ---------- refusals: nothing moves, the message says why ----------
@@ -236,7 +237,7 @@ async def test_refused_while_teleop_has_control(rig):
     await refused(rig, "move_joints", "teleop has control", joints={"shoulder_pan": 5})
     await refused(rig, "move_to", "teleop has control", x_cm=25, y_cm=0, z_cm=5)
     await refused(rig, "gripper", "teleop has control", open_pct=50)
-    await refused(rig, "go_to_pose", "teleop has control", name="home")
+    await refused(rig, "go_to_pose", "teleop has control", name="ready")
     assert (await rig.arm_status())["control"] == "teleop"
 
 

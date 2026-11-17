@@ -80,7 +80,7 @@ ls -l /dev/serial/by-id/
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 ```
 In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reconnect. Give the prompts one at a time.
-- **3.1** Prompt: `Use the lab-os tools. Read the arm's status, then go to the home pose.` → did Claude Code ask permission before moving? (yes / no)
+- **3.1** Prompt: `Use the lab-os tools. Read the arm's status, then go to the ready pose.` → did Claude Code ask permission before moving? (yes / no)
 - **3.2** Prompt: `Move to x 20, y 0, z 2, pointing straight down.` Stand the cube next to the jaw tips. → are the tips above, level with, or below the cube's top?
 - **3.3** Prompt: `Move to z 0.5.` Try to slide your phone, lying flat, under the jaw tips. → does the phone fit under? (yes / no) Do the tips touch the table? (yes / no)
 - **3.4** Only if the tips did **not** touch the table in 3.3. Prompt: `Move to z -0.5.` → do the tips touch the table? (yes / no; or "skipped")
@@ -113,7 +113,7 @@ Setup: green follower, green leader and both training cameras plugged in as for 
 - **8.8** Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. Move each joint of the follower by hand. Then Ctrl+C. → did the numbers follow every joint? (yes / no; name the joints that didn't; copy any error)
 - **8.9** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Open http://localhost:8080/teleop → Desktop control. → does the 3D arm match the real arm's pose? (yes / no)
 - **8.10** Jog one joint a little. Press STOP. → did the real arm move and then stop? (yes / no)
-- **8.11** In Claude Code (`/mcp` → `lab-os` → reconnect), prompt: `Use the lab-os tools. Read so101-green's status, then go to the home pose.` → did it reach the home pose without hitting anything? (yes / no)
+- **8.11** In Claude Code (`/mcp` → `lab-os` → reconnect), prompt: `Use the lab-os tools. Read so101-green's status, then go to the home pose.` → did it reach the home pose without hitting anything? (yes / no) (Done 2026-11-16, when `home` was the working pose; that pose is called `ready` since quick job 20.)
 - **8.12** With the brain still running, double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm. Then press Enter to close that window.
 - **8.13** Hold the arm. Ctrl+C in the brain's terminal. Run `sha256sum -c /tmp/green-cal-before.txt`. → does every line say `OK`? (yes / no)
 - **8.14** Start LeLab with the icon, press teleop, move the leader. Close LeLab. → did the follower follow? (yes / no)
@@ -121,7 +121,7 @@ Setup: green follower, green leader and both training cameras plugged in as for 
 
 ## 8b. Green arms again, after quick jobs 17, 18 and 20 (15 min)
 Setup: as part 8. LeLab closed. Run `git pull` first.
-- **8.16** Put the follower in the folded position you always return it to, gripper slightly open. Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
+- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose; today's `home` is computed only). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → copy the line that names the calibration file, and the six joint numbers.
 - **8.17** Ctrl+C. Start LeLab with the icon, pick the **other** setup than last time, press teleop, stop, close LeLab. Run the `--watch` command again. → did it start, and which file did it name?
 - **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no) Copy the line that mentions the green arm.
 - **8.19** In desktop control (http://localhost:8080/teleop), jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)

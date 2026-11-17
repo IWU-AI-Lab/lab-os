@@ -7,7 +7,7 @@ import math
 import pytest
 
 from lab_os.kinematics import so101_kinematics
-from lab_os.robots.fake import SO101_HOME, FakeArm, so101_limits
+from lab_os.robots.fake import SO101_READY, FakeArm, so101_limits
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import ClutchMapper, MappingConfig
 from lab_os.teleop.messages import ControllerState, parse_frame
@@ -58,7 +58,7 @@ def add(a, b):
 
 
 def test_the_gripper_goes_where_the_hand_goes_at_scale_1():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     m = mapper()
     joints = follow(m, [t0], start, ticks_per_point=1)  # grab right at the gripper
@@ -68,7 +68,7 @@ def test_the_gripper_goes_where_the_hand_goes_at_scale_1():
 
 
 def test_it_engages_only_with_the_hand_at_the_gripper_and_never_jumps():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     m = mapper()
     far = add(t0, (0.0, 0.0, 0.20))
@@ -85,7 +85,7 @@ def test_it_engages_only_with_the_hand_at_the_gripper_and_never_jumps():
 
 def test_no_drift_out_of_reach_and_back():
     """Relative mode slips at the reach limit, so hand and arm end up apart; 1:1 doesn't."""
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     path = [add(t0, (0.05 * i, 0.0, 0.0)) for i in range(1, 9)]  # 40 cm forward: out of reach
     path += list(reversed(path[:-1])) + [t0]  # and back to where it started
@@ -96,7 +96,7 @@ def test_no_drift_out_of_reach_and_back():
 
 
 def test_the_hand_under_the_table_keeps_the_gripper_above_it():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     m = mapper()
     joints = follow(m, [t0, (t0[0], t0[1], -0.10)], start, ticks_per_point=120)
@@ -105,7 +105,7 @@ def test_the_hand_under_the_table_keeps_the_gripper_above_it():
 
 
 def test_without_the_arms_position_it_falls_back_to_relative():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     m = mapper()
     far = add(t0, (0.0, 0.0, 0.30))  # far from the gripper: 1:1 wouldn't engage here
@@ -115,7 +115,7 @@ def test_without_the_arms_position_it_falls_back_to_relative():
 
 
 def test_letting_go_and_grabbing_again_keeps_hand_and_arm_together():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     m = mapper()
     joints, where = follow(m, [t0], start, ticks_per_point=1), t0  # grabbed at the gripper
@@ -201,7 +201,7 @@ def ticks_to_reach(m, goal, joints, cap, speed_scale=0.5, limit=400):
 
 
 def test_one_to_one_is_not_slowed_by_the_speed_setting():
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
     goal = add(t0, (0.0, 0.10, 0.0))  # 10 cm to the left, at once
     times = {}
@@ -217,7 +217,7 @@ def test_one_to_one_is_not_slowed_by_the_speed_setting():
 def test_a_wave_is_followed_at_the_hands_speed():
     """A quick wave, 1.5 Hz and 10 cm side to side (the base turns up to ~110°/s): with 180°/s
     the gripper keeps the whole swing; with the old ~45°/s it gets well under half of it."""
-    start = dict(SO101_HOME)
+    start = dict(SO101_READY)
     t0 = tip(start)
 
     def swing(cap):
@@ -322,7 +322,7 @@ def test_relative_keeps_up_with_a_quick_hand():
 
     def reach(relative_deg_per_s):
         m = ClutchMapper(MappingConfig(), kinematics=KIN)
-        joints = dict(SO101_HOME)
+        joints = dict(SO101_READY)
         t0 = tip(joints)
         path = [t0] + [add(t0, (0.08 * min(i / 10, 1), 0, 0)) for i in range(1, 21)]
         for p in path:

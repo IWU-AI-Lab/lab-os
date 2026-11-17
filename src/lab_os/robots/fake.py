@@ -25,11 +25,11 @@ SO101_LIMITS_RAD = {
 }
 
 
-# Where the fake arm starts: a working pose with room to move every way (the IK teleop drives
-# the gripper from here). URDF zero is an "L": upper arm up, forearm and gripper forward; this
-# leans the upper arm back a little, the forearm down and the gripper tilted toward the table,
-# fingertips ~26 cm out and 5 cm up.
-SO101_HOME = {
+# Where the fake arm (and so teleop) starts: the `ready` pose in config/poses.yaml, a working pose
+# with room to move every way (the IK teleop drives the gripper from here). URDF zero is an "L":
+# upper arm up, forearm and gripper forward; this leans the upper arm back a little, the forearm
+# down and the gripper tilted toward the table, fingertips ~26 cm out and 5 cm up.
+SO101_READY = {  # was SO101_HOME until quick job 20 (home is the folded pose now)
     "shoulder_pan": 0.0,
     "shoulder_lift": -20.0,
     "elbow_flex": 40.0,
@@ -54,7 +54,7 @@ class FakeArm:
     limits: dict[str, JointLimit] = field(default_factory=so101_limits)
     connected: bool = False
     stopped: bool = False
-    joints: dict[str, float] = field(default_factory=lambda: dict(SO101_HOME))
+    joints: dict[str, float] = field(default_factory=lambda: dict(SO101_READY))
     log: list[tuple[str, dict[str, float], float]] = field(default_factory=list)
 
     def connect(self) -> None:
