@@ -31,7 +31,7 @@ uv run lab-os serve
 ```
 - **6.1** Open http://localhost:8080/teleop → Desktop control. Hold two jog keys at once, then one, then two others. → did the 3D model change size? (yes / no)
 - **6.2** Same page. → do all six joint rows stay in place? (yes / no)
-- **6.3** Open http://localhost:8080/settings → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
+- **6.3** Open the designed hub → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
 - **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
 - **6.5** Settings → Safety limits in this venue → switch **Floor** off. Ctrl+C in the terminal. Run `uv run lab-os serve` again. → did the terminal print `LIMITS OFF in venue lab: floor`? (yes / no)
 - **6.6** Switch Floor back on. Ctrl+C. Run `git checkout config/venues/lab.yaml`. → nothing to report.

@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-17
+- **The AI budget and the safety limits in the hub's ⚙** (quick job 21): the settings page laid its sections out in CSS columns inside a box of fixed height, so everything after "This device" (the assistant with the AI budget, this place, robots, the safety limits) spilled into columns off to the right where nothing could reach them, on `/settings` at 1600×900 as well as in the hub. Now the sections sit in a grid that scrolls down.
 - **"X = STOP" where you look in desktop control** (quick job 19): while desktop control is on, the teleop page (and the classic one) shows "X = STOP" beside the STOP button, the key help starts with the X row (it was last, below the fold) and the button reads "(X = STOP, Esc to leave)". Hidden while desktop control is off, since X only stops then. Esc is unchanged.
 
 ## 2026-11-14
