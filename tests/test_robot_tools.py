@@ -11,7 +11,6 @@ import pytest
 from mcp import Client
 
 from lab_os.kinematics import kinematics_for
-from lab_os.robots.base import JointLimit
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, Motion, TeleopLoop
 from lab_os.tools.calllog import CallLog
@@ -214,12 +213,19 @@ async def test_move_to_goes_at_most_10_cm_per_call(rig):
 
 
 async def test_go_to_pose_far_away_goes_part_of_the_way(rig):
-    r = await rig.call("go_to_pose", name="home")  # ready → folded: shoulder_lift -20 → -95
-    assert "of the way" in r["clipped"][0]
-    for _ in range(4):
+    r = await rig.call("go_to_pose", name="home")  # ready → folded: shoulder_lift -20 → -97
+    assert "of the way" in r["clipped"][-1]
+    for _ in range(5):
         r = await rig.call("go_to_pose", name="home")
-    assert r["clipped"] == [] and r["joints_deg"]["shoulder_lift"] == -95
-    assert r["joints_deg"]["gripper"] == 10  # slightly open
+    # the real folded pose is past two soft limits: clipped there, and it says so (quick job 30)
+    assert r["clipped"] == [
+        "shoulder_lift: -103.3° → -97.0° (joint limit)",
+        "elbow_flex: 97.4° → 93.8° (joint limit)",
+    ]
+    assert r["result"] == "arrived"
+    j = r["joints_deg"]
+    assert (j["shoulder_lift"], j["elbow_flex"], j["wrist_flex"]) == (-97.0, 93.8, 55.0)
+    assert (j["shoulder_pan"], j["wrist_roll"], j["gripper"]) == (-2.2, 87.4, 16.5)
 
 
 # ---------- refusals: nothing moves, the message says why ----------
@@ -354,24 +360,36 @@ async def test_every_call_is_logged_to_a_file(rig, tmp_path):
 # ---------- config ----------
 
 
+# Poses with a joint past its soft limit, and by how much (degrees): the move clips them to the
+# limit (quick job 30: the real folded pose; the limits aren't widened without the builder).
+PAST_SOFT_LIMIT = {("so101", "home", "shoulder_lift"): 6.3, ("so101", "home", "elbow_flex"): 3.6}
+
+
 def test_every_named_pose_is_inside_the_limits_and_above_the_floor():
     from lab_os.robots.xarm import XArm
+    from lab_os.teleop.mapping import soft_bounds
+    from lab_os.venues import load_venue
 
     arms = {"so101": FakeArm(), "xarm1s": XArm()}
-    floor = AiLimits().min_z_cm
+    floor = load_venue("lab").floor_cm  # from the table; an arm standing on it is the strictest
     for model, poses in load_poses().items():
         arm = arms[model]
         kin = kinematics_for(model)
+        bounds = soft_bounds(arm.limits, {}, LIMIT_MARGIN_DEG)
         for name, pose in poses.items():
+            clipped = {}
             for j, v in pose.items():
-                lim: JointLimit = arm.limits[j]
-                assert lim.low + LIMIT_MARGIN_DEG <= v <= lim.high - LIMIT_MARGIN_DEG, (
-                    model,
-                    name,
-                    j,
-                )
-            joints = dict.fromkeys(arm.joint_names, 0.0) | pose
-            assert kin.fk(joints)[0][2] * 100 >= floor, (model, name)
+                lo, hi = bounds[j]
+                past = max(lo - v, v - hi, 0.0)
+                expected = PAST_SOFT_LIMIT.get((model, name, j), 0.0)
+                assert past == pytest.approx(expected, abs=0.05), (model, name, j, past)
+                clipped[j] = min(max(v, lo), hi)
+            joints = dict.fromkeys(arm.joint_names, 0.0) | clipped
+            frames = getattr(kin, "frames", None)
+            lowest = (
+                min(p[2] for p, _ in frames(joints).values()) if frames else kin.fk(joints)[0][2]
+            )
+            assert lowest * 100 >= floor, (model, name, lowest * 100)
 
 
 def test_unknown_ai_tools_settings_are_ignored_not_fatal(caplog):
@@ -455,3 +473,33 @@ async def test_unplugged_during_a_move(rig):
     rig.arm.plugged = False
     r = await task
     assert r["result"] == "disconnected" and "unplugged" in r["problem"]
+
+
+@pytest.mark.parametrize("table_z_cm", [0.0, -1.6])  # the green arm (on the table), the white one
+async def test_ready_to_home_stays_above_the_floor_all_the_way(table_z_cm):
+    """Quick job 30: the floor (1.1 cm above the table, both venues) never refuses going home,
+    and nothing on the way dips below it."""
+    from lab_os.venues import load_venue
+
+    arm = FakeArm()
+    arm.connect()
+    loop = TeleopLoop(arm=arm, inputs=InputState(), speed_scale=1.0)
+    lab = load_venue("lab")
+    v = Venue("test", ("fake-arm",), True, 1.0, ai_tools=FAST | {"min_z_cm": lab.floor_cm})
+    tools = RobotTools(loop, v, {"ws": None}, table_z_cm=table_z_cm)
+    seen = []
+    step = loop.step
+
+    def watch(now, dt):  # the lowest point of the arm on every tick of the move
+        step(now, dt)
+        seen.append(tools._lowest_z_cm(arm.read_joints()))
+
+    loop.step = watch
+    task = asyncio.create_task(loop.run())
+    try:
+        for _ in range(6):
+            r = await tools.call("go_to_pose", name="home")
+    finally:
+        task.cancel()
+    assert r["result"] == "arrived" and r["joints_deg"]["wrist_flex"] == 55.0
+    assert min(seen) >= lab.floor_cm

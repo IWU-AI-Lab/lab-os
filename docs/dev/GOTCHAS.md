@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-18 — The real folded pose is past two joint limits and, in the 3D model, below the table
+**What:** quick job 30. The green follower as the builder leaves it (lab check 8.16) reads shoulder_lift −103.3 and elbow_flex 97.4: 6.3° and 3.6° past the soft limits (−97.0 / 93.8), and past the URDF's own limits (−100 / 96.8) by 3.3° and 0.6°. The arm folds further than the model allows. With the other numbers (wrist_flex 75.9), the model puts the gripper point 1.3 cm below the table (0.9 cm once the two joints are clipped), so the floor refused `go_to_pose home`: the height reads 1–2 cm low near the table (2026-11-12) and the jaws really rest on it.
+**Fix:** the builder's choice: `home` hovers just above the rest. The real numbers, the two joints clipped at their soft limits (the move says so; the limits aren't widened), and wrist_flex 55 instead of 75.9: the lowest point ~1.8 cm above the table (~3.4 cm on so101-white's plate). Let go of the arm and it settles into the real rest. Lab check F.3.
+
 ### 2026-11-18 — A failing STOP inside the teleop loop's error handler would end the loop
 **What:** quick job 27. When a step failed (e.g. the arm stopped answering), the loop froze the arm, and that freeze wrote to the arm again (`stop()` holds where the motors are). With the USB gone that write fails too, inside the error handler, so the loop task would end: every page "connected", nothing moving, no message (as in the 2026-10-29 entry; a second way in). That may be part of what lab check 10.5 saw ("following" but nothing moved after replugging); the repeated "read failed" lines come from the status broadcast, which kept running. Not confirmed on the real arm.
 **Fix:** a freeze never lets a failing `stop()` out (it's logged), and a failed step checks the USB at once, so an unplug is reported as one line, not a traceback per tick.
