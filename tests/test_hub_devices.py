@@ -289,3 +289,14 @@ def test_the_wake_word_sensitivity_is_a_device_setting(tmp_path):
         with pytest.raises(DeviceError, match="wake_sensitivity can be 1, 2"):
             s.update("quest", {"wake_sensitivity": junk})
     assert s.update("quest", {"wake_sensitivity": ""}) == {}  # back to the default (5)
+
+
+def test_the_assistant_languages_are_device_settings(tmp_path):
+    s = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    assert s.update("desk", {"hear_in": "en", "answer_in": "en"}) == {
+        "hear_in": "en",
+        "answer_in": "en",
+    }
+    with pytest.raises(DeviceError, match="hear_in can be"):
+        s.update("desk", {"hear_in": "fr"})
+    assert s.update("desk", {"hear_in": "", "answer_in": ""}) == {}  # back to any

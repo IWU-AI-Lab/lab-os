@@ -160,14 +160,23 @@ async def stream_chat(
         reply.usage = estimate(messages, reply.text)
 
 
-async def check(session: aiohttp.ClientSession, setup: Setup) -> bool:
-    """Can we reach the service with this key? Lists the models (free; nothing is generated)."""
+async def reach(session: aiohttp.ClientSession, setup: Setup) -> str | None:
+    """Can we reach the service with this key? Lists the models (free; nothing is generated).
+    None = yes; else why not, in a few words for the log ("HTTP 503", "no answer in 10 s", the
+    connection error: a failed name lookup says so)."""
     try:
         async with session.get(
             f"{setup.base_url}/models",
             headers=_headers(setup),
             timeout=aiohttp.ClientTimeout(total=CONNECT_TIMEOUT_S),
         ) as resp:
-            return resp.status == 200
-    except (aiohttp.ClientError, TimeoutError):
-        return False
+            return None if resp.status == 200 else f"HTTP {resp.status}"
+    except TimeoutError:
+        return f"no answer in {CONNECT_TIMEOUT_S:.0f} s"
+    except aiohttp.ClientError as e:
+        return f"{type(e).__name__}: {e}"
+
+
+async def check(session: aiohttp.ClientSession, setup: Setup) -> bool:
+    """Can we reach the service with this key? (`reach`, as yes or no.)"""
+    return await reach(session, setup) is None
