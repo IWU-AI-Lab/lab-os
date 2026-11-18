@@ -264,5 +264,39 @@ async function load() {
     }
     $("#sections").append(card);
   }
+  $("#sections").append(await shutdownCard());
+}
+
+/* ---------- shut lab-os down (quick job 6): the brain's computer only, never on a public venue ---------- */
+async function shutdownCard() {
+  const r = await fetch("/api/shutdown", { cache: "no-store" }).then((x) => x.json()).catch(() => null);
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<div class="in"><h2><svg class="ico"><use href="/web/design/icons.svg#i-power"/></svg>Shut down</h2>
+    <div class="field"><label>Shut down lab-os</label>
+      <div class="help">Stops any move, lets go of the arm (as Ctrl+C in its terminal does), closes the cameras and microphones and stops the brain. Every screen then says lab-os is off; the "Start lab-os" icon starts it again</div>
+      <div class="ctl"><button class="btn small" type="button" data-ask ${r?.allowed ? "" : "disabled"}>Shut down…</button></div>
+      <div class="said bad" aria-live="polite"></div></div></div>`;
+  const said = card.querySelector(".said"), ctl = card.querySelector(".ctl");
+  if (!r?.allowed) { said.textContent = r?.why_not || "The brain didn't answer."; return card; }
+  card.querySelector("[data-ask]").addEventListener("click", async () => {
+    const now = await fetch("/api/shutdown", { cache: "no-store" }).then((x) => x.json()).catch(() => null);
+    said.textContent = `${now?.warning ? `${now.warning} ` : ""}Shut down lab-os now?`;
+    ctl.innerHTML = `<button class="btn small" type="button" data-cancel>Cancel</button><button class="btn small go" type="button" data-go>Shut down</button>`;
+    ctl.querySelector("[data-cancel]").addEventListener("click", async () => card.replaceWith(await shutdownCard()));
+    ctl.querySelector("[data-go]").addEventListener("click", async () => {
+      ctl.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      said.textContent = "Shutting down…";
+      try {
+        const res = await fetch("/api/shutdown", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: NAME }) });
+        if (!res.ok) throw new Error(await res.text());
+        (await import("/web/off.js")).showOff({ from: NAME, time_ms: Date.now() });
+      } catch (e) {
+        said.textContent = `Not shut down: ${e.message}`;
+        ctl.querySelectorAll("button").forEach((b) => (b.disabled = false));
+      }
+    });
+  });
+  return card;
 }
 load();

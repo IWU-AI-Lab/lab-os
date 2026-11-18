@@ -50,6 +50,9 @@ INPUTS = web.AppKey("inputs", set)
 OUTBOX = web.AppKey("outbox", asyncio.Queue)
 # The one input WebSocket that currently drives the arm, or None. A dict so handlers can mutate it.
 CONTROL = web.AppKey("control", dict)
+# Set to stop the server the way Ctrl+C does (the hub's "Shut down lab-os", quick job 6): `serve()`
+# returns, and the command's cleanup lets go of the arm.
+SHUTDOWN = web.AppKey("shutdown", asyncio.Event)
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
 DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
 LOOPBACK = ("127.0.0.1", "::1")
@@ -259,6 +262,7 @@ def create_app(
     app[INPUTS] = set()
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
+    app[SHUTDOWN] = asyncio.Event()
     app[LOCAL_CONTROL_ONLY] = local_control_only
     app[DRIVE_FROM] = frozenset(drive_from)
     if root_page:

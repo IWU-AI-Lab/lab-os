@@ -10,6 +10,9 @@ GET /training            the training launcher's page (so101-green + LeLab,
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
+GET /api/shutdown        may this page shut lab-os down, and what to warn about first
+POST /api/shutdown       {"from": device}: stop any move, tell every page, stop the brain as Ctrl+C
+                         does (lets go of the arm). Brain's computer only; never on a public venue
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
@@ -64,14 +67,14 @@ from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
-from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices
+from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
-from lab_os.teleop.server import CONTROL, LOOP, create_app, is_local
+from lab_os.teleop.server import CONTROL, LOOP, OUTBOX, SHUTDOWN, create_app, is_local
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
@@ -219,6 +222,57 @@ async def api_green_stop(request: web.Request) -> web.Response:
     log.info("green launcher: %s", said)
     c = await asyncio.to_thread(green.check)
     return web.json_response(c.as_dict() | {"here": True, "said": said})
+
+
+# ---------- shut down from the hub (quick job 6) ----------
+SHUTDOWN_DELAY_S = 0.5  # time for "lab-os is off" to reach every page before the sockets close
+
+
+def _shutdown_check(request: web.Request) -> str | None:
+    """Why this page may not shut lab-os down, or None."""
+    if request.app[BRAIN].venue.public:
+        return "Not on a public venue: shut lab-os down from its terminal (Ctrl+C)."
+    if not is_local(request):
+        return "lab-os can be shut down only from the brain's computer."
+    return None
+
+
+def _shutdown_warning(loop: TeleopLoop) -> str | None:
+    """What happens to the arm, when it matters: an SO-101 goes limp (its torque switches off)."""
+    if loop.arm_connected and getattr(loop.arm, "limp_on_close", False):
+        return (
+            f"{loop.arm.name} goes limp: if it's lifted, it drops. "
+            "Put it down (home) or hold it first."
+        )
+    return None
+
+
+async def api_shutdown_get(request: web.Request) -> web.Response:
+    why = _shutdown_check(request)
+    return web.json_response(
+        {"allowed": why is None, "why_not": why, "warning": _shutdown_warning(request.app[LOOP])}
+    )
+
+
+async def api_shutdown(request: web.Request) -> web.Response:
+    """Shut down: stop any move now, tell every page lab-os is off, then stop the server the way
+    Ctrl+C does; `lab-os serve`'s cleanup then lets go of the arm (lab_os.cli)."""
+    why = _shutdown_check(request)
+    if why:
+        raise web.HTTPForbidden(text=why)
+    try:
+        body = await request.json()
+        by = clean_name(str(body.get("from") or ""))
+    except (ValueError, AttributeError, DeviceError):
+        by = ""
+    app = request.app
+    log.warning("shutting down: asked from the hub (%s)", by or "a page with no device name")
+    app[LOOP].stop("lab-os is shutting down")
+    msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
+    app[OUTBOX].put_nowait(msg)  # teleop, monitor, AI Control
+    await app[HUB_DEVICES].tell_all(msg)  # the hub pages
+    asyncio.get_running_loop().call_later(SHUTDOWN_DELAY_S, app[SHUTDOWN].set)
+    return web.json_response({"ok": True, "message": "lab-os is shutting down."})
 
 
 async def api_ai_calls(request: web.Request) -> web.Response:
@@ -752,6 +806,8 @@ def create_brain_app(
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
     app.router.add_post("/api/green/stop", api_green_stop)
+    app.router.add_get("/api/shutdown", api_shutdown_get)
+    app.router.add_post("/api/shutdown", api_shutdown)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)

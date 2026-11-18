@@ -283,6 +283,12 @@ class SO101Arm:
             self._robot.bus.disconnect(disable_torque=self.allow_motion)
             self._robot = None
 
+    @property
+    def limp_on_close(self) -> bool:
+        """Closing switches the torque off (when it may move): a lifted arm drops. The hub's
+        "Shut down lab-os" warns about it (quick job 6)."""
+        return self._robot is not None and self.allow_motion
+
     def port_present(self) -> bool:
         """Is the arm's /dev/serial/by-id/ name still there? (gone within a moment of unplugging)"""
         return self._port is not None and os.path.exists(self._port)

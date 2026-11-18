@@ -212,9 +212,10 @@ class TeleopLoop:
             with self.health_log.open("a") as f:
                 f.write(json.dumps(entry) + "\n")
 
-    def stop(self) -> None:
-        """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
-        self._freeze()
+    def stop(self, why: str = "stopped") -> None:
+        """STOP button on any page: freeze now; the driver must release and re-grab the clutch.
+        `why`: what an AI move that was running is told."""
+        self._freeze(why)
 
     def check_link(self, now: float, force: bool = False) -> None:
         """Is the arm's USB still there; is it back? (drivers with `port_present`, see above)

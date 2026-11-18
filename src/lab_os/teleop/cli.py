@@ -21,7 +21,7 @@ from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import MODES, ClutchMapper, MappingConfig
 from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
-from lab_os.teleop.server import create_app
+from lab_os.teleop.server import SHUTDOWN, create_app
 from lab_os.venues import load_venue
 
 PRINT_HZ = 10
@@ -192,9 +192,10 @@ async def serve(
     banner: str = "",
     after_start=None,
 ) -> None:
-    """Run `app` until `extra` finishes (or forever). The default host is localhost only: a secure
-    context for WebXR, and nothing else on the network can connect. `after_start()` runs once it
-    listens (lab-os serve --open: the browser)."""
+    """Run `app` until `extra` finishes (or forever, or until the app's shutdown event is set:
+    the hub's "Shut down lab-os"). The default host is localhost only: a secure context for
+    WebXR, and nothing else on the network can connect. `after_start()` runs once it listens
+    (lab-os serve --open: the browser)."""
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     try:
@@ -214,7 +215,7 @@ async def serve(
         if extra:
             await extra
         else:
-            await asyncio.Event().wait()
+            await app.get(SHUTDOWN, asyncio.Event()).wait()
     finally:
         await runner.cleanup()
 

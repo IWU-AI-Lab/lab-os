@@ -17,6 +17,7 @@ from lab_os.hub.server import create_brain_app
 from lab_os.personas import current_persona, load_persona
 from lab_os.teleop.cli import add_arm_args, make_loop, serve, use_config
 from lab_os.teleop.recording import Recorder
+from lab_os.teleop.server import SHUTDOWN
 from lab_os.tools.mcp_server import DEFAULT_PORT as MCP_PORT
 from lab_os.venues import load_venue
 
@@ -258,10 +259,12 @@ def main(argv: list[str] | None = None) -> None:
             asyncio.run(
                 serve(app, args.port, host=args.host, banner=banner, after_start=after_start)
             )
-    finally:
+    finally:  # Ctrl+C, or "Shut down lab-os" in the hub: the same letting go
         loop.arm.stop()
         loop.arm.close()
     print()
+    if app[SHUTDOWN].is_set():
+        print(f"lab-os was shut down from the hub; {loop.arm.name} was let go.")
 
 
 def _icon(args) -> None:

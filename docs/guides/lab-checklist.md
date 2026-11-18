@@ -37,7 +37,7 @@ In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnec
 - **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
 - **F.7** (quick job 32) While doing the rest, leave the designed hub open on the desktop and glance at the brain's terminal now and then. → did the strip ever say "AI not connected"? (yes / no; copy any line starting `AI:` or `internet:`)
 - **F.8** (quick job 34) On the desktop's hub (`/design?device=desk`): press ⏻ and start 3 times, watching the core. Then ⚙ → This device → **Startup as a video** on → Back, and press ⏻ and start 3 times again. → which looked smoother: drawn / video / the same? Any jump when the video hands over? Then the same with ⚙ → This device → Level of detail → **maximal** (its own recording): drawn vs video. Then switch both back.
-- Hold the arm. Ctrl+C in the brain's terminal.
+- **F.9** (quick job 6) Hand on the arm. Prompt: `Go to the ready pose.` Then on the desktop's hub (`/design?device=desk`) press ⏻ → **Shut down lab-os**. → does the confirmation say so101-white goes limp? (yes / no) Press **Shut down**, holding the arm. → did it go limp in your hand, did the terminal say `lab-os was shut down from the hub; so101-white was let go.`, and did every open page (the Quest's too, if open) say "lab-os is off"? (yes / no each) Start it again with the "Start lab-os" icon. → did the pages come back by themselves? (yes / no)
 
 ## 9. Voice (20 min)
 Setup: USB microphone plugged in and picked in Ubuntu Settings → Sound → Input. Speakers on.
