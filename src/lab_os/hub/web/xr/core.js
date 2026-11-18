@@ -7,7 +7,7 @@
 // Sizes are the hub's SVG units (viewBox -132…132); `unit` metres per unit.
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
-import { C, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
+import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
 
 const Q = theme.quality?.default || "full";
 const MAXIMAL = Q === "maximal";
@@ -90,7 +90,7 @@ export class Core {
     this.ripplePts = new Float32Array(121 * 3);
     const rg = new THREE.BufferGeometry();
     rg.setAttribute("position", new THREE.BufferAttribute(this.ripplePts, 3).setUsage(THREE.DynamicDrawUsage));
-    this.ripple = new THREE.LineLoop(rg, new THREE.LineBasicMaterial({ color: this.color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+    this.ripple = new THREE.LineLoop(rg, new THREE.LineBasicMaterial({ color: this.color, transparent: true, ...GLOW, depthWrite: false, depthTest: false }));
     this.ripple.renderOrder = 21;
     this.ripple.position.z = z;
     this.inner.add(this.ripple);
@@ -111,7 +111,7 @@ export class Core {
     this.flareAt = -1e9;
     // rings of light as rings lock on (a few, reused)
     this.waves = Array.from({ length: 4 }, () => {
-      const m = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 128), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+      const m = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 128), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, opacity: 0, ...GLOW, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
       m.renderOrder = 24; m.visible = false; this.inner.add(m);
       return { m, t0: -1e9, r: 1 };
     });

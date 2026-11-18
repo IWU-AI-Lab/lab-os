@@ -37,6 +37,7 @@ In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnec
 - **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
 - **F.7** (quick job 32) While doing the rest, leave the designed hub open on the desktop and glance at the brain's terminal now and then. → did the strip ever say "AI not connected"? (yes / no; copy any line starting `AI:` or `internet:`)
 - **F.8** (quick job 34) On the desktop's hub (`/design?device=desk`): press ⏻ and start 3 times, watching the core. Then ⚙ → This device → **Startup as a video** on → Back, and press ⏻ and start 3 times again. → which looked smoother: drawn / video / the same? Any jump when the video hands over? Then the same with ⚙ → This device → Level of detail → **maximal** (its own recording): drawn vs video. Then switch both back.
+- **F.10** (quick job 10) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In its browser `http://localhost:8080/xr` → **Enter AR**. At the start screen, look straight ahead past the circle. → is there still a dark clump of lines? (yes / no) Start it. → do the stars and the network look like light over the room, with no dark specks or lines? (yes / no) Then ⏻ (back to the start) once and look again. → clump? (yes / no)
 - Hold the arm. Ctrl+C in the brain's terminal.
 
 ## 9. Voice (20 min)

@@ -4,7 +4,7 @@
 // point on the plane (0..1, v up). The trigger or a pinch ("select") presses what that ray is on.
 // On a screen (the preview) the mouse is the pointer.
 import * as THREE from "three";
-import { C } from "./draw.js";
+import { C, GLOW } from "./draw.js";
 
 const MAX = 6; // metres
 export class Pointer {
@@ -22,7 +22,7 @@ export class Pointer {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3));
     g.setAttribute("color", new THREE.Float32BufferAttribute([...new THREE.Color(C.primary).toArray(), 0, 0, 0], 3));
-    const beam = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false }));
+    const beam = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, ...GLOW, depthTest: false, depthWrite: false }));
     beam.renderOrder = 90; beam.frustumCulled = false;
     const reticle = new THREE.Group();
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.009, 0.012, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, depthTest: false, depthWrite: false }));
