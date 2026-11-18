@@ -10,7 +10,7 @@
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
-import { WAKE_QUIET_MS, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
+import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -534,7 +534,7 @@ async function ask(text) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, pages: pagesHere() }),
+      body: JSON.stringify({ text, pages: pagesHere(), lang: assistantLanguage() }),
     });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader();

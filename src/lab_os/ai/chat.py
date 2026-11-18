@@ -25,6 +25,7 @@ import aiohttp
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.client import AiError, Reply, Usage, check, estimate, reach, stream_chat
 from lab_os.ai.history import ChatStore
+from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.models import NoSetup, Setup, load_setups, pick
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
@@ -239,7 +240,9 @@ class Conversation:
 
     # ---------- a turn ----------
 
-    def system_prompt(self, pages: dict[str, str] | None = None) -> str:
+    def system_prompt(
+        self, pages: dict[str, str] | None = None, answer_in: str | None = None
+    ) -> str:
         self._refresh()
         now = datetime.now().strftime("%A %Y-%m-%d, %H:%M")
         rules = RULES.format(place=self.place_name or "this place", now=now)
@@ -250,6 +253,10 @@ class Conversation:
         if pages:
             listed = ", ".join(f"{title} ({pid})" for pid, title in pages.items())
             rules = f"{rules}\n\n{PAGE_RULES.format(pages=listed)}"
+        if clean_language(answer_in):
+            # the asking device's "Output language" (quick job 33)
+            name = LANGUAGES[clean_language(answer_in)]
+            rules = f"{rules}\n\nAlways answer in {name}, whatever language the question is in."
         return f"{self.personality}\n\n{rules}" if self.personality else rules
 
     def clear(self, opening: str | None = None) -> None:
@@ -280,7 +287,9 @@ class Conversation:
         self.store.save(self.messages)
         return True
 
-    async def ask(self, text: str, pages: dict | None = None) -> AsyncIterator[dict]:
+    async def ask(
+        self, text: str, pages: dict | None = None, answer_in: str | None = None
+    ) -> AsyncIterator[dict]:
         """One turn. Yields events for the page: state, text (pieces of the answer), open (show
         this page), done or error. Never raises for AI trouble: an error event carries the
         sentence to show. `pages`: what the asking page can show ({id: title}); none = no
@@ -299,7 +308,7 @@ class Conversation:
         setup = self.setup()
         self.busy = True
         self.messages.append({"role": "user", "content": text})
-        system = self.system_prompt(pages)
+        system = self.system_prompt(pages, answer_in)
         sent = [{"role": "system", "content": system}, *self.messages[-MAX_HISTORY:]]
         answer, usage = "", Usage()
         tools = await self.tools.openai_tools() if self.tools else []
