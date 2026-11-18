@@ -3,6 +3,10 @@
 # Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/dev/GOTCHAS.md).
 # Cameras are listed ONLY by USB socket (/dev/v4l/by-path/): identical cameras share a serial.
 # off_limits: true -> lab_os.devices refuses to hand out the port.
+# table_z_cm       -> arms: where the table is in the arm's own heights (cm; its z 0 is the bottom of
+#                     its base). 0 (the default) when it stands on the table; negative when it stands
+#                     on a plate. Every height the AI tools, pick_at, the floor and teleop use is then
+#                     measured from the table (quick job 28).
 # borrowed: true   -> another project's device (CLAUDE.md, "Hard rules"): lab-os may drive or use
 #                     it, but never sets it up (no motor IDs, baud rate, firmware, calibration),
 #                     drives it with a copy of its training calibration, and never opens it while
@@ -16,6 +20,7 @@ devices:
     # truth, read only. lab-os drives with its copy, calibration/so101-green/so101-green.json, and
     # refuses if the copy differs from it or the motors don't hold it (2026-11-17).
     training_calibration: robots/so_follower/sheep.json
+    table_z_cm: 0  # stands on the table
     notes: >-
       Follower of the SO-101 training set (the builder's training project, LeLab). Drivable by
       lab-os since 2026-11-12 with four rules: no motor setup, calibration read only, the lerobot
@@ -70,6 +75,9 @@ devices:
     notes: >-
       Follower. Polished teleop demo + second act. Controller board 1a86:55d3, same chip as
       green's: compare the LAST digits of the serial. Board swapped 2026-10-30 (was …2183).
+    # It stands on the stand camera's base plate: the table is ~1.6 cm below its z 0 (measured
+    # 2026-11-17, GOTCHAS; lab check 3.2 said ~1.5). Lab check F.2 measures it by touching the table.
+    table_z_cm: -1.6
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00
     usb:

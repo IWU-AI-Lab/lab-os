@@ -32,7 +32,8 @@ Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
   has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
   back moves the arm back immediately (no wind-up, no jump on the next grab).
 
-- IK only: the table. The gripper and the wrist stay `floor_m` above the base's bottom (z = 0); a
+- IK only: the table. The gripper and the wrist stay `floor_m` above the base's bottom (z = 0;
+  the venue's floor is from the table, so the cli adds the arm's `table_z_cm`); a
   target below that slips like a limit, and a step that would dip goes as far as it can (the arm
   used to stretch out into the table: docs/dev/GOTCHAS.md, 2026-11-10).
 
@@ -65,7 +66,9 @@ class MappingConfig:
     gripper_open: float = 60.0
     gripper_closed: float = 0.0
     limit_margin_deg: float = 3.0  # stay this far inside each joint limit
-    floor_m: float = 0.01  # IK: gripper and wrist at least this high above the base's bottom
+    # IK: gripper and wrist at least this high above the base's bottom (the arm's own z; the cli
+    # turns the venue's floor, measured from the table, into this with the arm's table_z_cm)
+    floor_m: float = 0.01
     # Direction of each joint for the hand motion that drives it (+1 / -1). Defaults are the SO-101
     # convention (checked with forward kinematics on models/so101): +pan swings the gripper to the
     # arm's right, +lift and +elbow lower/fold it, +wrist_flex tilts it down. The xArm model in

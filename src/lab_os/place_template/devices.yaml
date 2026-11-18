@@ -13,6 +13,7 @@ devices:
 
   # my-arm:                    # an SO-101 of your own (then: lab-os serve --arm my-arm)
   #   kind: so101
+  #   table_z_cm: 0            # where the table is in the arm's heights; e.g. -1.6 on a 1.6 cm plate
   #   ports:
   #     - /dev/serial/by-id/usb-1a86_USB_Single_Serial_XXXXXXXXXX-if00
   #   usb:

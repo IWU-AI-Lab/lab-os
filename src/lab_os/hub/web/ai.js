@@ -145,7 +145,7 @@ function draw() {
   // the arm: a glowing line through the joints, a hexagon on each, the jaws at the tip
   cx.strokeStyle = C; cx.lineWidth = 3; cx.shadowColor = C; cx.shadowBlur = 10;
   cx.beginPath(); shown.forEach((p, i) => cx[i ? "lineTo" : "moveTo"](...P(p.r, p.z))); cx.stroke();
-  const [bx, by] = P(0, 0);
+  const [bx, by] = P(0, shown[0].z); // the base's bottom: above the table on a plate
   cx.beginPath(); cx.moveTo(bx - 4 * s, by); cx.lineTo(bx + 4 * s, by); cx.stroke();
   cx.shadowBlur = 0;
   const tip = shown.at(-1), wr = shown.at(-2), ang = Math.atan2(-(tip.z - wr.z), tip.r - wr.r), open = ((arm.gripper_open_pct ?? 30) / 100) * 0.6 + 0.12;

@@ -9,7 +9,7 @@ one_to_one_max_deg_per_s: off   # teleop 1:1 (fast, follows the hand exactly) no
 ai_tools:              # what an AI tool may do per call (docs/guides/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call
-  min_z_cm: -0.5             # nothing goes lower than this (cm) from the arm's base plane; also teleop's floor. Below 0: the SO-101 stands on the stand camera's base, so the table is lower than its zero
+  min_z_cm: 1.1              # nothing goes lower than this (cm) above the table; also teleop's floor. From the table since quick job 28 (2026-11-18); 1.1 is where -0.5 from so101-white's base put it (it stands on a 1.6 cm plate: table_z_cm in devices.yaml)
 limits:                # safety limits that can be switched off (here or Settings → Safety limits); on by default.
   per_move: on               # the AI tools' per-call limit (max_joint_change_deg, max_move_cm)
   speed_cap: on              # max_speed_scale and one_to_one_max_deg_per_s (off: up to full speed)

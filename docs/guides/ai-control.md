@@ -37,7 +37,7 @@ or the step-2 goal:
 Watch **AI Control** (`/ai`, or the hub's AI Control button) while it moves: each call appears there as it happens, with what it did. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
 
 ## The tools
-Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
+Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. An arm standing on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `so101-white`: −1.6), so every height the tools take and give (`move_to`, `pick_at`, the floor, `arm_status`, `pose_view`) is from the table, not from the bottom of its base; `arm_status` says so in `frame` and `table_z_cm` (quick job 28). **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
 
 | Tool | Tier | What it does |
 |---|---|---|
@@ -69,7 +69,7 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 ## Safety rules (the brain clips and refuses; it never trusts the numbers it's given)
 - **Same path as teleop:** moves run through the teleop loop: the arm's soft limits (3° inside the real ones), the venue's `max_speed_scale`, and a capped speed (all joints arrive together).
 - **Small steps per call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° per joint** (`move_joints`, `go_to_pose`; the gripper is exempt) or **10 cm** (`move_to`). A bigger request goes part of the way and says so, and the AI calls again.
-- **Never into the table:** nothing may go below `min_z_cm` (−0.5 cm in both venues since 2026-11-14, 1 cm before: the arm stands on the stand camera's base, so the table is below its zero; teleop uses the same number), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
+- **Never into the table:** nothing may go below `min_z_cm`, cm above the table (1.1 cm in both venues since 2026-11-18; −0.5 cm from the arm's base 2026-11-14 to 11-18, the same place for `so101-white`; teleop uses the same number), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
 - **Refused, nothing moves:** the venue has `motion_allowed: false`; **teleop has control** (a teleop page or the Quest is driving); another AI move is still running; an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that isn't a number.
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control") and the pages show control "the AI tools". The hub doesn't reset to its start screen mid-move.
 - **Switching limits off** (lab only, on by default): the per-move limit, the speed cap and the floor can each be set to `off` under `limits:` in the venue file or on the hub's Settings page (→ Safety limits; restart the brain). `arm_status` then says `"off"` for that number. Never on a public venue or the visit-day venue (`limits_locked: true`). The soft joint limits, one controller at a time and STOP always stay. SAFETY.md → "Limits".
@@ -144,7 +144,7 @@ Where the x and y come from: the stand camera's grid (above). The height reading
 
 ## Seeing the pose (`pose_view`)
 Without a camera the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
-- **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;
+- **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height from the table; the table is the brown band (an arm on a plate stands on a grey block);
 - **right, top view**, as if standing behind the arm: forward (x) up the picture, the arm's left (+y) on the left;
 - a **red dot** at the gripper point (with a dotted line down to the table), a **magenta ×** at the last `move_to` target, and **blue marks** the AI passes in `marks`, e.g. `[{"x_cm": 15, "y_cm": 5, "z_cm": 1.5, "label": "cube", "size_cm": 3}]` (at most 10). A mark with `size_cm` is a square of that size.
 

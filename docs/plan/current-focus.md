@@ -8,7 +8,7 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 **Time (decision 2026-11-16):** the demo moved from 2026-11-19 to **Thursday 2026-12-03, 3–4:30 pm (the AI club's meeting)**; nothing is shown before then. Lab days for trying things on the real hardware: Monday and Tuesday 2026-11-16/17, Thursday 2026-11-19, Monday and Tuesday 2026-11-23/24. **Nothing new after Tuesday 2026-11-24:** from then on, sessions only fix what the lab days found, and whatever doesn't work on the hardware by then is left out of the demo. The builder's coursework (a research paper above all) comes first; Claude Code sessions do most of the coding.
 
 ## Until the demo, in order
-1. **The AI on the real arms** (steps 2, 3, 11): the cube was picked and set down on `so101-white` from a Claude Code prompt (2026-11-17); the green arm passed its lab checks (2026-11-16/17). Left: quick jobs 28 (the table height: the white arm stands on a plate), 29 (white camera names), 30 (the real home pose), then lab check part F (27, an arm unplugged and plugged back in, built 2026-11-18: F.4–F.5).
+1. **The AI on the real arms** (steps 2, 3, 11): the cube was picked and set down on `so101-white` from a Claude Code prompt (2026-11-17); the green arm passed its lab checks (2026-11-16/17). Left: quick jobs 29 (white camera names), 30 (the real home pose), then lab check part F (built 2026-11-18: 27, an arm unplugged and plugged back in, F.4–F.5; 28, the table height, F.2).
 2. **Devices** (step 8): built 2026-11-14; left: the lab check (`docs/guides/lab-checklist.md` part 11).
 3. **Voice and the assistant** (step 7): the snappier wake word with adjustable sensitivity and opening pages when asked are built (2026-11-14) and worked on the Quest (2026-11-17; misses just under the line: lab check F.6); left: the desktop's voice check (`docs/guides/lab-checklist.md` part 9), the language setting (quick job 33), the Newline's microphone.
 4. **VR and teleop fixes** (step 10): 1:1 and relative at scale 1 work on the real arm (2026-11-17: "way more intuitive", about 0.5 s behind, a little shaking, accepted). Left: quick job 10 (the dot cluster).
@@ -43,7 +43,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 2. **Robot tools for AI.** The brain's MCP tools drive an SO-101 through teleop's safety layer (`docs/guides/ai-control.md`). On the real `so101-white` with `pose_view` and both cameras (2026-11-12) the gripper came down beside the cube and closed just past it (`docs/dev/GOTCHAS.md`).
    - The cube picked and placed on `so101-white` (2026-11-17, `move_to` by hand rather than `pick_at`, `docs/dev/GOTCHAS.md`).
-   - **Left:** the table height (quick job 28; the elbow's ~3° sag is harmless at this size); the green arm doing the same (step 11).
+   - **Left:** the table height on the real arm (quick job 28, built 2026-11-18: lab check F.2; the elbow's ~3° sag is harmless at this size); the green arm doing the same (step 11).
    - **Done when:** the real arm does the cube task from a Claude Code prompt.
 
 3. **Cameras for the AI.** `pose_view` (2026-11-11) and `camera_snapshot` (2026-11-12) are built and were used in the cube pick.

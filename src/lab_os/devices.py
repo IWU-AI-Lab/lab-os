@@ -74,6 +74,9 @@ class Device:
     # e.g. "robots/so_follower/sheep.json"; lab-os drives with its copy in calibration/<name>/
     training_calibration: str = ""
     socket: str = ""  # cameras: the USB socket in /dev/v4l/by-path/ names, e.g. "usb-0:7"
+    # arms: the table's height in the arm's own numbers (cm; its z = 0 is the bottom of its base).
+    # An arm standing on a plate has a negative one (so101-white: -1.6, quick job 28).
+    table_z_cm: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,7 @@ def _read_devices(path: Path) -> dict[str, Device]:
             borrowed=bool(spec.get("borrowed", False)),
             training_calibration=spec.get("training_calibration", ""),
             socket=spec.get("socket", ""),
+            table_z_cm=float(spec.get("table_z_cm", 0.0)),
         )
         for name, spec in (raw.get("devices") or {}).items()
     }
@@ -149,6 +153,18 @@ def load_registry(path: Path | None = None) -> Registry:
             else:
                 devices[name] = device  # added, or replaces a weaker entry
     return Registry(devices)
+
+
+def table_z_cm(name: str, registry: Registry | None = None) -> float:
+    """The table's height in this arm's own numbers (cm, `table_z_cm` in devices.yaml); 0 for an
+    arm not listed (the software arms) or when the place has no devices.yaml."""
+    try:
+        registry = registry or load_registry()
+    except (OSError, ValueError, config.ConfigError) as e:
+        log.warning("devices.yaml: %s; heights measured from the arm's base", e)
+        return 0.0
+    device = registry.devices.get(name)
+    return device.table_z_cm if device else 0.0
 
 
 def default_device(kinds: tuple[str, ...], registry: Registry | None = None) -> str:
