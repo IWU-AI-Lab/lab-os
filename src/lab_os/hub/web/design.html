@@ -449,6 +449,12 @@ body.q-minimal #devgraph .beat { animation: none; }
   font: 500 0.82rem/1 var(--f-ui); letter-spacing: 0.04em; color: var(--c); background: color-mix(in srgb, var(--c) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%); }
 .devmore .ico { font-size: 1.1rem; transition: rotate 0.3s var(--arrive); }
+#devsys { padding: 0; width: 2.3rem; justify-content: center; }
+#devsys .ico { rotate: 0deg; }
+#devsys + #devtoggle { margin-left: 0.5rem; }
+/* the system diagram (quick job 12): drawn by hub/system-diagram.js, as big as the page allows */
+#mod-slot .sysbox { flex: 1; min-width: 0; display: grid; place-items: center; padding: 0.4rem 0 0; }
+#mod-slot .sysbox svg { width: 100%; height: 100%; max-height: 100%; }
 .devmore:hover, .devmore:focus-visible { color: var(--hot); background: color-mix(in srgb, var(--c) 16%, transparent); border-color: var(--c); outline: none; }
 /* the list scrolls inside a capped height; a fade at the bottom shows there's more */
 .devwrap { position: relative; }
@@ -867,7 +873,7 @@ body[data-mod="page"] #module .send { display: flex; }
     </div></div></div>
     <div class="panel devices" data-detail="devices" data-view="graph"><div class="cut"><div class="in">
       <div class="head"><span class="cap">Devices</span><button class="open" type="button" aria-label="Devices details"><svg class="ico"><use href="#i-open"/></svg></button></div>
-      <div class="row2"><span id="devcount"></span><button class="devmore" id="devtoggle" type="button" aria-expanded="false"><span id="devmore-t">List all</span><svg class="ico"><use href="#i-chev"/></svg></button></div>
+      <div class="row2"><span id="devcount"></span><button class="devmore" id="devsys" data-detail="system" type="button" title="System diagram: how the brain, screens, robots and AI connect" aria-label="System diagram"><svg class="ico"><use href="#i-net"/></svg></button><button class="devmore" id="devtoggle" type="button" aria-expanded="false"><span id="devmore-t">List all</span><svg class="ico"><use href="#i-chev"/></svg></button></div>
       <svg id="devgraph" preserveAspectRatio="xMidYMid meet" aria-label="Devices: tap one for details"></svg>
       <div class="devwrap"><div id="devlist"></div></div>
     </div></div></div>
@@ -1782,6 +1788,8 @@ const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], came
 let LAB = [];
 const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
 function setDevices(list) {
+  S.devRaw = list;
+  if (S.showing === "system") drawSystem();
   LAB = list.map((d) => ({
     name: d.name, kind: KIND_OF[d.kind] || "pc", brain: !!d.linked, on: d.linked ? true : undefined,
     lock: d.off_limits ? "another project's (never opened)" : "", use: d.notes || d.kind,
@@ -2479,7 +2487,9 @@ document.querySelectorAll(".side .panel[data-detail]").forEach((p) => {
   p.addEventListener("click", (e) => { if (!e.target.closest(".range, .devmore, #devlist, #devgraph .node")) go(); });
   p.querySelector(".open").addEventListener("click", (e) => { e.stopPropagation(); go(); });
 });
-const DETAILS = { project: ["Current Project", "i-next", "detail"], spend: ["AI Spend", "i-coin", "detail"], commits: ["Commits", "i-commit", "detail"], devices: ["Devices", "i-net", "detail"] };
+// the Devices panel's "Diagram": how everything connects (opens like a details page)
+$("#devsys").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#devsys")); });
+const DETAILS = { project: ["Current Project", "i-next", "detail"], spend: ["AI Spend", "i-coin", "detail"], commits: ["Commits", "i-commit", "detail"], devices: ["Devices", "i-net", "detail"], system: ["System diagram", "i-net", "detail"] };
 // every details page reads the same real facts as its callout
 function showDetail(id) {
   const slot = $("#mod-slot");
@@ -2531,8 +2541,22 @@ function showDetail(id) {
     html = `<div class="detail wide"><div><div class="d-line">${devs.filter((d) => d.brain).length} of ${devs.length} linked to the brain · from devices.yaml; power comes with the roll call</div>
       <table class="d-table"><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>${rows}</table></div></div>`;
   }
+  if (id === "system") html = `<div class="sysbox" aria-live="polite"></div>`;
   slot.insertAdjacentHTML("beforeend", html);
+  if (id === "system") drawSystem();
   slot.querySelectorAll(".detail tr[data-dev]").forEach((tr) => tr.addEventListener("click", (e) => { e.stopPropagation(); showDevice(deviceList().find((d) => d.name === tr.dataset.dev), tr); }));
+}
+// the system diagram: the same facts as the panels (devices.yaml, the devices with the hub open, the AI), redrawn
+// when they change while it's open
+let sysMod = null;
+async function drawSystem() {
+  const box = $("#mod-slot .sysbox");
+  if (!box) return;
+  sysMod ||= await import("/hub/system-diagram.js");
+  const calls = await getJSON("/api/ai-calls?after=" + Date.now() / 1000);
+  const f = sysMod.systemFacts({ devices: S.devRaw || [], hubDevices: D?.devices() || [], status: S.status, mcp: !!calls?.mcp, here: D?.name || "" });
+  const still = S.quality === "minimal" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if ($("#mod-slot .sysbox") === box) box.innerHTML = sysMod.systemSVG(f, { animate: !still });
 }
 function labelColumn(h, items, labelX, fontLines, fontDigits, narrow) {
   items.forEach(([p, ji], k) => {
@@ -3271,7 +3295,7 @@ import("/web/device.js").then((m) => {
     }),
     onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
     onClose: () => { if (S.moduleOpen === "page") closeModule(); },
-    onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); },
+    onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
   });
 }).catch((e) => console.warn(`hub: no devices (${e.message})`));

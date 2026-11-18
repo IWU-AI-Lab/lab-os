@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-18
+- **System diagram** (quick job 12): a new icon button in the designed hub's Devices panel opens a full-screen drawing of how the brain, the screens, the robots and the AI connect, in the hub's design. It's drawn from the real facts each time it opens, so another place or a new arm shows what it has, and only links that are really up pulse. A copy for the docs: `docs/dev/system-diagram.svg`. Before, there was no picture of the system.
+
 ## 2026-11-17
 - **Backtick (`) leaves desktop control**: the key above Tab now frees the pointer and ends desktop control (the arm freezes), the same as Esc, so leaving no longer needs a reach for Esc. No mode used that key. Esc still works (browsers always let it free the pointer). The button reads "(X = STOP, ` to leave)" and the key help says "` or Esc".
 - **Startup: a lighter arrival of the core** (quick job 23; measured, `docs/dev/GOTCHAS.md` 2026-11-17): not reproduced at full speed on a fast Mac; with the CPU slowed 4×, the core's arrival missed a frame every start and a garbage collection from the jump fell on it now and then. The arrival sound's white noise is now made once when the page loads (each whoosh used to make its own, 2.6 s of it right as the core arrived), and the jump keeps its line batches from frame to frame instead of throwing away megabytes a frame. Same look, same sound.
