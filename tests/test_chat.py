@@ -400,3 +400,55 @@ async def test_a_budget_changed_in_settings_applies_without_restart(aiohttp_clie
     assert settings.write("place:ai_budget_usd_month", 42) == 42
     assert settings.find("place:ai_budget_usd_month").applies == "next"
     assert (await (await client.get("/api/spend")).json())["budget_usd"] == 42 != before
+
+
+def flaky_models(answers):
+    """/v1/models answering each status in `answers` in turn (then 200): a service with hiccups."""
+    answers = list(answers)
+
+    async def models(request):
+        status = answers.pop(0) if answers else 200
+        return web.json_response({"data": []}, status=status)
+
+    app = web.Application()
+    app.router.add_get("/v1/models", models)
+    return app
+
+
+async def test_one_failed_check_is_asked_again_before_not_connected(
+    aiohttp_server, key, tmp_path, monkeypatch
+):
+    # quick job 32: a single hiccup while idle used to grey the hub for 20 s
+    import lab_os.ai.chat as chat
+
+    monkeypatch.setattr(chat, "CONFIRM_GAP_S", 0)
+    server = await aiohttp_server(flaky_models([200, 503]))
+    assistant = Assistant()
+    conv = conversation(setup_for(server), tmp_path, assistant=assistant)
+    assert await conv.check() is True
+    assert await conv.check() is True  # 503, then asked again: 200
+    assert assistant.state == "idle"
+    await conv.close()
+
+
+async def test_a_lasting_failure_is_not_connected_and_says_why(
+    aiohttp_server, key, tmp_path, monkeypatch, caplog
+):
+    import lab_os.ai.chat as chat
+    from lab_os.ai.client import reach
+
+    monkeypatch.setattr(chat, "CONFIRM_GAP_S", 0)
+    caplog.set_level("INFO", "lab_os.ai.chat")
+    server = await aiohttp_server(flaky_models([200, 503, 503, 503]))
+    assistant = Assistant()
+    conv = conversation(setup_for(server), tmp_path, assistant=assistant)
+    assert await conv.check() is True
+    assert await conv.check() is False
+    assert assistant.state == "offline"
+    assert "not reachable (HTTP 503)" in caplog.text
+    assert await conv.check() is True and "answers again" in caplog.text
+    import aiohttp
+
+    async with aiohttp.ClientSession() as s:
+        assert await reach(s, setup_for(server)) is None
+    await conv.close()

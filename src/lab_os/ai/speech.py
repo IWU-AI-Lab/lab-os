@@ -137,6 +137,9 @@ class Hearing:
         self.on_pause: Callable[[], None] | None = None  # the service heard a pause after words
         self.audio_bytes = 0  # for the spend log: how much was heard
         self.started_at: float | None = None  # when start() finished (connected)
+        # what to expect ("en"; None = any): OpenAI's transcription takes it. Gemini's live
+        # transcriber has no such setting (an instruction made no difference, 2026-11-18)
+        self.language: str | None = None
 
     @property
     def seconds(self) -> float:
@@ -328,6 +331,8 @@ class RecordedHearing(Hearing):
             return ""
         form = aiohttp.FormData()
         form.add_field("model", self.setup.hear)
+        if self.language:
+            form.add_field("language", self.language)
         form.add_field(
             "file", wav_bytes(bytes(self._pcm)), filename="speech.wav", content_type="audio/wav"
         )
@@ -347,9 +352,13 @@ class RecordedHearing(Hearing):
         return text
 
 
-def hearing_for(session: aiohttp.ClientSession, setup: VoiceSetup, on_words: Words) -> Hearing:
+def hearing_for(
+    session: aiohttp.ClientSession, setup: VoiceSetup, on_words: Words, language: str | None = None
+) -> Hearing:
     cls = GeminiHearing if setup.service == "gemini" else RecordedHearing
-    return cls(session, setup, on_words)
+    h = cls(session, setup, on_words)
+    h.language = language
+    return h
 
 
 def _json(msg) -> dict:

@@ -35,6 +35,7 @@ In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnec
 - **F.4** (quick job 27) Open http://localhost:8080/design → Teleop. Unplug the arm's USB cable. → within a few seconds, does the hub show the arm as disconnected? (yes / no)
 - **F.5** Plug it back in. Wait 10 seconds (the terminal should say `so101-white reconnected`). Desktop control → jog a joint (let go of the keys first, then press again). → did the arm move? (yes / no; copy any line the terminal keeps repeating)
 - **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
+- **F.7** (quick job 32) While doing the rest, leave the designed hub open on the desktop and glance at the brain's terminal now and then. → did the strip ever say "AI not connected"? (yes / no; copy any line starting `AI:` or `internet:`)
 - Hold the arm. Ctrl+C in the brain's terminal.
 
 ## 9. Voice (20 min)
@@ -55,11 +56,10 @@ Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visi
 - **9.10** Say "Hey Jarvis, show me the AI spend." → did the AI Spend page open? (yes / no)
 - **9.11** Say "Hey Jarvis, go back to the hub." → did everything close? (yes / no)
 - **9.12** Type in the ask line: `show me the commits`. → did the Commits page open? (yes / no)
+- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input: English, Output: English → Back. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
+- **9.14** Type in the ask line: `¿Cuál es el siguiente paso?` → answered in English? (yes / no). Then set Output back to Any.
 
 ---
-
----
-- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input language: English. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
 
 ## 3b. The stand camera's cm grid (15 min)
 Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").

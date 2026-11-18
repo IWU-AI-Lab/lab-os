@@ -58,6 +58,7 @@ from lab_os import REPO_ROOT, config, green, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
+from lab_os.ai.languages import clean_language
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
@@ -511,11 +512,12 @@ async def api_chat_post(request: web.Request) -> web.StreamResponse:
         body = await request.json()
         text = str(body.get("text", ""))[:MAX_QUESTION_CHARS]
         pages = body.get("pages")
+        answer_in = clean_language((body.get("lang") or {}).get("answer"))
     except (ValueError, AttributeError):
         raise web.HTTPBadRequest(text='send {"text": "..."}') from None
     resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
     await resp.prepare(request)
-    async for event in request.app[BRAIN].chat.ask(text, pages):
+    async for event in request.app[BRAIN].chat.ask(text, pages, answer_in):
         await resp.write((json.dumps(event) + "\n").encode())
     await resp.write_eof()
     return resp

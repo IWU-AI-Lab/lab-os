@@ -2055,7 +2055,7 @@ async function ask(q, fromCore) {
   if (!q || S.asking) return;
   const { onEvent, end } = beginTurn(q, fromCore);
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q, pages: pagesHere() }) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q, pages: pagesHere(), lang: { answer: screenPrefs().answer_in || "" } }) });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader(), decoder = new TextDecoder();
     let buf = "";
@@ -3007,8 +3007,12 @@ function onTop(msg) {
   t.classList.remove("nudge"); void t.offsetWidth; t.classList.add("nudge");
   return true;
 }
+// one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
+let statusMisses = 0;
 async function pollStatus() {
   const st = await getJSON("/api/status");
+  statusMisses = st ? 0 : statusMisses + 1;
+  if (!st && statusMisses < 2 && S.status) return S.status;
   S.status = st;
   if (!st) {
     setFact("#f-net", "brain not reachable", true); setFact("#f-ai", "AI not connected", true);
