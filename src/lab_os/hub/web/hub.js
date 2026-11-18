@@ -10,7 +10,7 @@
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
-import { WAKE_QUIET_MS, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
+import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -390,8 +390,12 @@ function onEsc(e, doc) {
 document.addEventListener("keydown", (e) => e.key === "Escape" && onEsc(e, document));
 
 /* ---------- status strip, the assistant's state, the clock ---------- */
+// one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
+let statusMisses = 0;
 async function pollStatus() {
   const st = await getJSON("/api/status");
+  statusMisses = st ? 0 : statusMisses + 1;
+  if (!st && statusMisses < 2 && S.status) return S.status;
   S.status = st;
   renderStatus(st);
   return st;
@@ -534,7 +538,7 @@ async function ask(text) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, pages: pagesHere() }),
+      body: JSON.stringify({ text, pages: pagesHere(), lang: assistantLanguage() }),
     });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader();

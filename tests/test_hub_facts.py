@@ -126,3 +126,20 @@ def test_commits_without_a_repo(tmp_path):
 async def test_internet_check_says_offline_when_nothing_answers():
     # port 9 on localhost: nothing listens there, so the connection is refused at once
     assert await check_once((("127.0.0.1", 9),)) is False
+
+
+async def test_one_miss_while_online_is_tried_again(monkeypatch):
+    # quick job 32: a single miss used to say "offline" for 30 s
+    import lab_os.hub.internet as internet
+
+    answers = [True, False, True, False, False]
+
+    async def fake_check(targets):
+        return answers.pop(0)
+
+    monkeypatch.setattr(internet, "check_once", fake_check)
+    monkeypatch.setattr(internet, "RETRY_S", 0)
+    check = internet.InternetCheck()
+    assert await check.step() is True
+    assert await check.step() is True  # missed, then answered
+    assert await check.step() is False and check.online is False  # missed twice

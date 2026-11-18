@@ -92,7 +92,10 @@ def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=
 
     async def transcriptions(request):
         form = await request.post()
-        seen.append({"transcribe": form["model"], "auth": request.headers.get("Authorization")})
+        lang = {"language": form["language"]} if "language" in form else {}
+        seen.append(
+            {"transcribe": form["model"], "auth": request.headers.get("Authorization")} | lang
+        )
         return web.json_response({"text": heard})
 
     async def openai_speech(request):
@@ -659,3 +662,45 @@ def test_the_way_in_is_a_screen_setting():
     for page in ("hub/web/design.html", "hub/web/hub.js"):
         text = (SRC / page).read_text()
         assert "dictateStart" in text and 'press("dictate")' in text, page
+
+
+# ---------- the assistant's languages per device (quick job 33) ----------
+
+
+async def test_openai_hearing_is_told_the_language(aiohttp_server, key):
+    seen = []
+    server = await aiohttp_server(fake_voice(seen=seen))
+    async with __import__("aiohttp").ClientSession() as session:
+        h = hearing_for(session, openai_setup(server), lambda t: None, "en")
+        await h.start()
+        h.feed(SECOND)
+        await h.finish()
+    assert {"transcribe": "test-transcribe", "auth": "Bearer test-key", "language": "en"} in seen
+
+
+async def test_the_device_languages_reach_the_turn(aiohttp_client, aiohttp_server, key, tmp_path):
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path)
+    asked, real = [], conv.ask
+
+    def ask(text, pages=None, answer_in=None):
+        asked.append(answer_in)
+        return real(text, pages, answer_in)
+
+    conv.ask = ask
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    lang = {"hear": "en", "answer": "en"}
+    await ws.send_json({"type": "listen", "mode": "ask", "lang": lang})
+    events = []
+    await until(ws, "listening", events)
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    await until(ws, "done", events)
+    await ws.close()
+    for answer in ("en", "xx", None):  # typed: only languages the brain knows
+        await (
+            await client.post("/api/chat", json={"text": "hi", "lang": {"answer": answer}})
+        ).read()
+    assert asked == ["en", "en", None, None]
+    assert "Always answer in English" in conv.system_prompt(None, "en")
+    assert "Always answer in" not in conv.system_prompt(None, None)

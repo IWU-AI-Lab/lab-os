@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-18 — The AI status blinks off while idle: one failed check showed as "not connected"
+**What:** lab check 6.4: now and then, with nobody using it, the strip said the AI was disconnected and the core greyed, then it came back; no pattern. **Cause, from the code:** three things could flip it, and none logged anything. (1) The brain's AI check (every 60 s, listing the service's models, 10 s timeout) counted any single failure as "not connected", then waited 20 s to try again: one slow name lookup for `api.openai.com` or one hiccup on the campus network greys the hub for ~20 s. It fits best: the internet check uses bare IP addresses, so it stays "online" while only the AI goes off, as seen. (2) The internet check (every 30 s, 3 s timeout) counted one miss as offline for 30 s, and the AI then counts as not connected without being asked. (3) Each hub page counted one failed status poll (every 3 s) as "brain not reachable, AI not connected". **Not reproduced here:** on the builder's Mac, 82 checks over 14 minutes all answered (slowest 1.0 s), a pooled connection reused after 4–14 s idle never failed, and a headless `/design` watched for 15 minutes never blinked. So it's the lab's network, not a timer in the code.
+**Fix:** quick job 32. A failed AI check while connected is asked again twice, 3 s apart, before the hub shows it; the internet check tries once more after a miss; the pages need two missed polls in a row. Every change is logged with its reason (`AI: main not reachable (HTTP 503): shown as not connected`, `AI: main answers again`, `internet: offline`), so if it still happens, the brain's terminal says why.
+
 ### 2026-11-18 — A failing STOP inside the teleop loop's error handler would end the loop
 **What:** quick job 27. When a step failed (e.g. the arm stopped answering), the loop froze the arm, and that freeze wrote to the arm again (`stop()` holds where the motors are). With the USB gone that write fails too, inside the error handler, so the loop task would end: every page "connected", nothing moving, no message (as in the 2026-10-29 entry; a second way in). That may be part of what lab check 10.5 saw ("following" but nothing moved after replugging); the repeated "read failed" lines come from the status broadcast, which kept running. Not confirmed on the real arm.
 **Fix:** a freeze never lets a failing `stop()` out (it's logged), and a failed step checks the USB at once, so an unplug is reported as one line, not a traceback per tick.
@@ -19,7 +23,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-17 — The voice assistant heard English as another language
 **What:** lab check 10.4: twice, a spoken English request was taken as another language and answered in it. Mandarin, said on purpose, worked (it opened and closed Monitor).
-**Fix:** quick job 33: an input and an output language per device, each "Any" or "English".
+**Fix:** quick job 33: an input and an output language per device, each "Any" or "English". Built 2026-11-18: Output English is an instruction to the AI and works with any voice; Input English only reaches OpenAI's transcription. Gemini's live transcriber (the lab's voice) has no language setting; a test with English said by macOS's French, Chinese and German voices was heard right with and without an instruction, so the misheard English wasn't reproduced (`docs/guides/voice.md`).
 
 ### 2026-11-17 — The VR hub's far-away dot cluster only shows in AR
 **What:** lab check 10.1: the cluster is visible only in AR (passthrough), straight ahead, behind the idle circle, not moving. In VR it's probably there too but black on black. When the hub's network bursts into place, its dots seem to fly out of that cluster.
