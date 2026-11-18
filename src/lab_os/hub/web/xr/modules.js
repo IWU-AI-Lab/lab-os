@@ -13,7 +13,7 @@ import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
 import { getLink } from "/static/link.js";
-import { C, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
+import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
 
 export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"] };
@@ -162,8 +162,8 @@ export class ArmHologram {
     // line-drawn: see-through cyan, its edges brighter
     this.arm.object.traverse((o) => {
       if (!o.isMesh) return;
-      o.material = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false });
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+      o.material = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.12, ...GLOW, depthWrite: false });
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.55, ...GLOW, depthWrite: false }));
       o.add(edges);
     });
     this.arm.object.scale.setScalar(SCALE);
@@ -274,7 +274,7 @@ function floorGrid() {
   }
   for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; pts.push(new THREE.Vector3(Math.cos(a) * 0.15, 0, Math.sin(a) * 0.15), new THREE.Vector3(Math.cos(a) * 0.6, 0, Math.sin(a) * 0.6)); }
   g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat));
-  const scan = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  const scan = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.3, ...GLOW, depthWrite: false, side: THREE.DoubleSide }));
   scan.rotation.x = -Math.PI / 2;
   g.add(scan);
   g.userData.step = (now) => { const k = (now / 3500) % 1; scan.scale.setScalar(0.05 + 0.6 * k); scan.material.opacity = 0.35 * (1 - k); };

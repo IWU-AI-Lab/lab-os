@@ -15,6 +15,15 @@ export const C = {
   offline: TC.offline || "#56636a", ok: TC.ok || "#3ee07f", frozen: TC.frozen || "#7a1d00",
 };
 /** A theme color as a three.js Color. */
+// Glow (quick job 10): adds light like additive blending, but leaves the picture's opacity alone. In AR the
+// headset shows the room wherever the picture is see-through; additive blending also wrote opacity, so a dim or
+// black glow (the network's links before the jump, faint stars) covered the room as a dark shape. In VR the
+// background is black and opaque, so it looks the same either way.
+export const GLOW = {
+  blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
+  blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneFactor,
+  blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
+};
 export const col = (name) => new THREE.Color(C[name] || name);
 /** "#rrggbb" + alpha → "rgba(…)". */
 export function rgba(hex, a) {
@@ -63,7 +72,7 @@ export class CanvasPlane {
     this.tex.anisotropy = 4;
     this.mat = new THREE.MeshBasicMaterial({
       map: this.tex, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      ...(additive ? { blending: THREE.AdditiveBlending } : {}),
+      ...(additive ? GLOW : {}),
     });
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), this.mat);
     this.key = null;

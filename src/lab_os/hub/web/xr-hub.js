@@ -353,7 +353,7 @@ function makeRenderer(ar) {
   return renderer;
 }
 async function start(mode) {
-  const ar = mode === "immersive-ar", show = new Show(ar);
+  const ar = mode === "immersive-ar" || params.has("passthrough"), show = new Show(ar); // ?preview&passthrough: the AR way, see-through (quick job 10)
   window.__xrShow = show; // for tests and the console
   window.__xrNow = clockNow;
   show.hub.ask.now = clockNow;

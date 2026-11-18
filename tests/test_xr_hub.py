@@ -6,7 +6,7 @@ The scene itself is tested in a browser with Meta's emulated Quest (iwer; docs/g
 
 import re
 
-from test_hub_server import make_app
+from test_hub_server import SRC, make_app
 
 IMPORT = re.compile(
     r"""(?:import|export)\s[^;]*?from\s+["']([^"']+)["']|import\(\s*["']([^"']+)["']\s*\)"""
@@ -124,3 +124,14 @@ async def test_asking_in_vr(aiohttp_client):
     before = hub.split("navigator.xr.requestSession(", 1)[0].rsplit("async function start(", 1)[1]
     assert "getUserMedia" not in before
     assert "Allow the microphone" in hub
+
+
+def test_glows_never_cover_the_room_in_ar():
+    """Quick job 10: additive blending also wrote opacity, so in AR a dim or black glow (the
+    network's links waiting before the jump, faint stars) covered the room as a dark clump. Every
+    glow uses GLOW (xr/draw.js), which adds light and leaves the opacity alone."""
+    xr = SRC / "hub/web/xr"
+    draw = (xr / "draw.js").read_text()
+    assert "blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor" in draw
+    for f in sorted(xr.glob("*.js")):
+        assert "AdditiveBlending" not in f.read_text(), f"{f.name}: use GLOW from draw.js"

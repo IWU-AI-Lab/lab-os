@@ -5,7 +5,7 @@
 // toward the core, while it speaks away from it (faster when it's louder), like the hub.
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
-import { C, clamp, dotTexture, rand } from "./draw.js";
+import { C, GLOW, clamp, dotTexture, rand } from "./draw.js";
 
 const N = theme.quality?.default === "maximal" ? 200 : 150;
 const LINK = 2.6; // metres: dots closer than this are linked
@@ -34,11 +34,11 @@ export class Network {
     const lg = new THREE.BufferGeometry();
     lg.setAttribute("position", new THREE.BufferAttribute(this.linkPos, 3).setUsage(THREE.DynamicDrawUsage));
     lg.setAttribute("color", new THREE.BufferAttribute(this.linkCol, 3).setUsage(THREE.DynamicDrawUsage));
-    this.links = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.links = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, ...GLOW, depthWrite: false }));
     this.dotPos = new Float32Array(N * 3);
     const dg = new THREE.BufferGeometry();
     dg.setAttribute("position", new THREE.BufferAttribute(this.dotPos, 3).setUsage(THREE.DynamicDrawUsage));
-    this.dotMat = new THREE.PointsMaterial({ size: 0.11, map: dotTexture(), color: new THREE.Color(C.primary), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.dotMat = new THREE.PointsMaterial({ size: 0.11, map: dotTexture(), color: new THREE.Color(C.primary), transparent: true, opacity: 0, ...GLOW, depthWrite: false });
     this.dots = new THREE.Points(dg, this.dotMat);
     // the arrival's streaks: a short line behind each dot while it flies in
     this.streakPos = new Float32Array(N * 6);
@@ -46,13 +46,13 @@ export class Network {
     const sg = new THREE.BufferGeometry();
     sg.setAttribute("position", new THREE.BufferAttribute(this.streakPos, 3).setUsage(THREE.DynamicDrawUsage));
     sg.setAttribute("color", new THREE.BufferAttribute(this.streakCol, 3).setUsage(THREE.DynamicDrawUsage));
-    this.streaks = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.streaks = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, ...GLOW, depthWrite: false }));
     this.group = new THREE.Group();
     this.group.add(this.links, this.dots, this.streaks);
     for (const o of [this.links, this.dots, this.streaks]) { o.frustumCulled = false; o.renderOrder = -1; } // the far layer: under everything
     this.from = this.home.map(() => new THREE.Vector3(rand(-1.5, 1.5), rand(-1, 1), -rand(30, 60))); // ahead, in the middle
     this.pulses = Array.from({ length: 12 }, () => {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: new THREE.Color(C.hot), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: new THREE.Color(C.hot), transparent: true, opacity: 0, ...GLOW, depthWrite: false }));
       s.scale.setScalar(0.28);
       s.renderOrder = -1;
       this.group.add(s);

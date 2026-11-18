@@ -12,7 +12,7 @@
 // device opens its card).
 // Units: metres in the stage's space (you at the origin, -z ahead).
 import * as THREE from "three";
-import { C, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
+import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
 import { Ask } from "./ask.js";
 import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
@@ -427,7 +427,7 @@ function buildFrame() {
   const toSegs = (pts) => pts.slice(1).flatMap((p, i) => [pts[i], p]);
   const base = [...toSegs(top), ...toSegs(bottom), ...toSegs(side(-1)), ...toSegs(side(1))];
   const lineMat = new THREE.LineBasicMaterial({ color: new THREE.Color(C.line), transparent: true, depthWrite: false });
-  const hiMat = new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const hiMat = new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, depthWrite: false, ...GLOW });
   const g = new THREE.Group();
   g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(base), lineMat));
   // bright brackets on the corners and the tabs
@@ -451,7 +451,7 @@ export class Traces {
     this.paths = []; // each: array of Vector3 (stage space)
     this.mat = new THREE.LineBasicMaterial({ color: new THREE.Color(C.line), transparent: true, depthWrite: false });
     this.dotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.line), transparent: true, depthWrite: false });
-    this.pulseMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.pulseMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, depthWrite: false, ...GLOW });
     this.pulses = [];
     this.next = 0;
     // up to the strip, down to the log: the hub's vertical line through the core
