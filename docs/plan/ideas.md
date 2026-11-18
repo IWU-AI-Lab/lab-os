@@ -44,11 +44,6 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
-## Recent ideas (2026-11-16)
-
-### The startup as a recorded video
-Play a recording of the startup (the text stays live) so it can't stutter. Against: one recording per screen shape, no use in VR, and it stops matching the hub when the design changes. First find the stutter (quick job 23).
-
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm

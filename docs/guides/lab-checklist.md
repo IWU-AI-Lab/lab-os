@@ -2,7 +2,7 @@
 
 Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-Only what's still to do; finished steps are removed (their results are in `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md`). **Today, Tuesday 2026-11-17 (2–3 hours), top to bottom:** 0, R1, 8b, then swap to `so101-white` for 3, 7 and 10; 9 whenever the room is quiet. **Thursday 2026-11-19:** everything under "Thursday" (3b needs the printed sheet).
+Only what's still to do; finished steps are removed (their results are in `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md`). **Thursday 2026-11-19, top to bottom:** 0, F (only the steps whose quick job is done: `docs/plan/quick-jobs.md` → Done), 9 if the room is quiet, 3b, 11, 2.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
@@ -23,69 +23,19 @@ uv run pytest -q
 ```
 - **0.1** Read the last line `pytest` printed. → copy the line.
 
-## R1. Re-checks on the fake arm (10 min)
-These steps changed since 2026-11-16.
+## F. This week's fixes on the real arm (25 min)
+Setup: `so101-white` and its two cameras plugged in, green arms unplugged.
 ```bash
-uv run lab-os serve --host 0.0.0.0
-```
-- **6.3** Open http://localhost:8080/design → start → ⚙ (top right) → scroll down → The assistant → Monthly AI budget → set 0. Ask the hub a question. → did it say the budget is used up? (yes / no)
-- **6.4** Set the budget back to 20. Ask again. → did it answer? (yes / no)
-- **1.3** Press ⏻, then start, five times. → in how many of the 5 did the core stutter as it appeared? Do the mic and history icons on the ask line sit in the middle between their lines? (yes / no) Anything else that looked wrong (one line each, or "nothing").
-- Ctrl+C in the terminal when done.
-
-## 8b. Green arms (20 min)
-Setup: green follower, green leader and both training cameras plugged in as for training. `so101-white` unplugged. LeLab closed.
-- **8.15** Make LeLab use a copy of the training calibration (it backs everything up first, deletes nothing): `bash scripts/green-lelab-from-training.sh`. → did it end with "Done."? (yes / no; if not, copy the last line)
-- **8.16** Put the follower in the folded position you always return it to, gripper slightly open (these numbers become the `home` pose). Run `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`. → did it start? (yes / no; if not, copy the message) Copy the six joint numbers.
-- **8.17** Ctrl+C. Start LeLab with the icon, pick **SO-101_Green** (now the only entry), press teleop. → does the follower follow the leader? (yes / no) Stop, close LeLab, run the `--watch` command again. → did it start? (yes / no)
-- **8.18** Run `uv run --extra so101 lab-os serve --arm so101-green --speed 0.3`. Double-click the "SO-101 Training (LeLab)" icon. → did LeLab start? (yes / no; it should refuse) Copy the line that mentions the green arm. Press Enter to close that window.
-- **8.19** Open http://localhost:8080/teleop → **Full screen** → **Desktop control**, jog a joint and press **X**. → did the arm stop? (yes / no) Still full screen? (yes / no) Did "X = STOP" show beside the STOP button while desktop control was on? (yes / no)
-- **8.20** Same page: jog `elbow_flex` until it stops at its limit. → what does its row's note say? (copy it) It should say "clamped by driver" only, not "outside".
-- **8.21** Same page, in desktop control and in full screen: press **`** (backtick, the key above Tab). → did the pointer come back and desktop control end (the button says "Desktop control" again)? (yes / no) Still full screen? (yes / no) Then the same inside the hub's teleop module: did \` leave only desktop control, not the module? (yes / no)
-- Hold the arm. Ctrl+C in the brain's terminal.
-
-## 3. AI drives so101-white (30 min)
-Setup: `so101-white` plugged in, green arms unplugged. The cube.
-```bash
-ls -l /dev/serial/by-id/
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 ```
-In a **new** Claude Code session in `~/lab-os`: type `/mcp`, pick `lab-os`, reconnect. Give the prompts one at a time.
-- **3.1** Prompt: `Use the lab-os tools. Read the arm's status, then go to the ready pose.` → did Claude Code ask permission before moving? (yes / no)
-- **3.2** Prompt: `Move to x 20, y 0, z 2, pointing straight down.` Stand the cube next to the jaw tips. → are the tips above, level with, or below the cube's top?
-- **3.3** Stand the cube (3 cm) right under the jaw tips, about 0.5 cm below them. Prompt: `There's a cube directly below the gripper, .5 cm away from it. The gripper is too narrow, so it would need to open; the cube is 3x3x3 cm. Use the cameras if needed. Go fast. Pick it up and then move it somewhere else (don't go too far to the right or left; there's stuff there), back on the table.` → was the cube picked up and set down on the table somewhere else? (yes / no)
-- **3.9** Run `ls -l /dev/v4l/by-path/`. Unplug the white arm's wrist camera. Run it again. Plug it back in. → which disappeared: `usb-0:7` or `usb-0:8`?
-
-## 7. Teleop 1:1 on the real arm (20 min)
-Setup: `so101-white` plugged in, green arms unplugged, the Quest on USB. Lay a sheet of letter paper on the table beside the arm, long edge pointing away from the arm.
-```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.2 --record recordings/quest-1to1-real-$(date +%F).jsonl
-adb reverse tcp:8080 tcp:8080
-```
-In the Quest's browser: `http://localhost:8080/teleop` → **Hand → arm → 1:1** → **Enter AR**.
-- **7.1** Hold the left Grip. Move the see-through arm onto the real arm. Let go. → does it sit on the real arm? (yes / no)
-- **7.2** Put the right controller in the ball at the gripper. Hold the right Grip. Move your hand forward by the paper's long edge (28 cm), from the near edge to the far edge. → did the real gripper travel the same edge, less, or more? (same / short by about ___ card-lengths / long by ___)
-- **7.3** Move your hand left by the paper's short edge (22 cm). → same, less or more? Did the gripper also drift forward or back? (no / forward / back)
-- **7.4** Wave your hand slowly side to side. → did the arm keep up? (yes / late by about ___ s)
-- **7.5** After about 5 minutes of 1:1, in a second terminal: `tail -n 1 logs/servo-health/*so101-white.jsonl`. → the highest `temp_c` in the line.
-- **7.6** Switch to relative on the page and drive for a minute. → which is easier to steer? (1:1 / relative / same)
-- **7.7** Still in relative, push the right thumbstick up until the speed stops rising. Grab, move your hand forward by the paper's long edge, at a normal pace. → did the gripper travel the same edge? (same / short / long) Did it keep up? (yes / late by about ___ s) Did it shake or jerk? (no / a little / a lot)
-
-## 10. The hub in VR (20 min)
-Setup: the Quest on USB. No arm.
-```bash
-uv run lab-os serve
-adb reverse tcp:8080 tcp:8080
-```
-In the Quest's browser: open `http://localhost:8080/design?device=quest-a` once (the name of the Quest in your hands: its serial in `config/devices.yaml`), then `http://localhost:8080/xr`. Allow the microphone. **Enter VR**.
-- **10.1** Pull the trigger to start; let the startup play (don't skip it). After the jump, look around. → is there a tight cluster of linked dots far away? (yes / no) If yes: where (straight ahead / left / right / behind / up / down), does it stay or slowly drift into place, about how many dots? Then ⏻ (top right), start again and **skip** the startup with a second pull. → cluster then? (yes / no)
-- **10.2** Point at a callout and pull the trigger. Press **B**. → did the page open and close? (yes / no)
-- **10.3** Point at "Ask anything", hold the trigger, ask three long questions in a row. → does the newest chat text stay visible? (yes / no)
-- **10.4** Say "Hey Jarvis" 10 times, with a pause between. → number of times nothing happened. For each miss, copy the newest line in the desktop's terminal.
-- **10.5** Point at Teleop (left of the core), pull the trigger. Grip and move. → did the fake arm follow? (yes / no)
-- **10.6** Press **B**. → are you back in the hub? (yes / no)
-- **10.7** Say "Hey Jarvis, open teleop." → did Teleop open? (yes / no)
-- **10.8** Say "Hey Jarvis, back to the hub." → did it go back? (yes / no)
+In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnect.
+- **F.1** (quick job 29) Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-wrist.` → does it show the view along the jaws? (yes / no)
+- **F.2** (quick job 28) Prompt: `Move to x 20, y 0, z 0, pointing straight down.` → do the jaw tips just touch the table? (yes / no; if no, how far above, in phone thicknesses)
+- **F.3** (quick job 30) Hand on STOP. Prompt: `Go to the home pose.` → did it fold into the position you always leave it in, without hitting anything? (yes / no)
+- **F.4** (quick job 27) Open http://localhost:8080/design → Teleop. Unplug the arm's USB cable. → within a few seconds, does the hub show the arm as disconnected? (yes / no)
+- **F.5** Plug it back in. Wait 10 seconds. Desktop control → jog a joint. → did the arm move? (yes / no; copy any line the terminal keeps repeating)
+- **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
+- Hold the arm. Ctrl+C in the brain's terminal.
 
 ## 9. Voice (20 min)
 Setup: USB microphone plugged in and picked in Ubuntu Settings → Sound → Input. Speakers on.
@@ -109,8 +59,7 @@ Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visi
 ---
 
 ---
-
-# Thursday 2026-11-19
+- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input language: English. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
 
 ## 3b. The stand camera's cm grid (15 min)
 Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").

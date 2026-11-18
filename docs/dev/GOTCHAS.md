@@ -4,17 +4,33 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-17 — Unplugging a real arm while the brain runs: the hub doesn't notice, and after replugging it's stuck
+**What:** lab check 10.5. With `so101-white` driven by the brain, its USB cable was unplugged: the hub still showed it connected. Plugged back in, teleop showed "following" but the arm didn't move, and the brain repeated `so101-white: read failed (Failed to sync read 'Present_Position' … [TxRxResult] Port is in use!); using the last reading`. Likely (not checked): the brain keeps the old port open after the cable goes, and never opens the new one.
+**Fix:** quick job 27 (notice the unplug, say so on every page, reconnect when it's back). Until then: after replugging an arm, stop the brain (Ctrl+C) and start it again.
+
+### 2026-11-17 — The Quest's wake word misses just under the line
+**What:** lab check 10.4: of 10 "Hey Jarvis" on the Quest, the misses printed `a screen heard something like "hey Jarvis" (0.40; it takes 0.50 at sensitivity 5)` and `(0.47; …)`. It heard the words; the score was just short.
+**Fix:** raise the Quest's sensitivity (⚙ → This device → Wake word sensitivity, 6 or 7). Lab check F.6.
+
+### 2026-11-17 — The voice assistant heard English as another language
+**What:** lab check 10.4: twice, a spoken English request was taken as another language and answered in it. Mandarin, said on purpose, worked (it opened and closed Monitor).
+**Fix:** quick job 33: an input and an output language per device, each "Any" or "English".
+
+### 2026-11-17 — The VR hub's far-away dot cluster only shows in AR
+**What:** lab check 10.1: the cluster is visible only in AR (passthrough), straight ahead, behind the idle circle, not moving. In VR it's probably there too but black on black. When the hub's network bursts into place, its dots seem to fly out of that cluster.
+**Fix:** quick job 10.
+
 ### 2026-11-17 — Hiwonder glove: all five LEDs must be lit to drive the xArm
 **What:** with the glove paired to `xarm1`, only the base followed the hand; the other five servos bent to one end and clacked. Both gloves had been switched to a robot-hand mode (each finger drives its own servo, tilt drives servo 6 = the xArm's base). The arm and lab-os were fine.
 **Fix:** press **K3** on the glove until **all five LEDs (D1–D5)** are lit ("robotic arm, bus servo" mode; one LED is the right-hand robot-hand mode). After every glove restart: right hand, palm down, fist; switch on; when the LEDs go off, open the hand. To re-pair, press **DEL** with the arm on. Manuals: `docs/device_manuals/Hiwonder_Wireless_Glove_*.pdf`.
 
 ### 2026-11-17 — so101-white's two cameras answer to each other's names
 **What:** during an AI pick, `camera_snapshot so101-white-cam-wrist` showed the table from above (the arm, the Quest, a box), and `so101-white-cam-stand` showed the view along the jaws (the cube between them). The names in `config/devices.yaml` point at the wrong video ports.
-**Fix:** not yet. Lab check 3.9 (unplug the wrist camera, see which `/dev/v4l/by-path/` entry disappears) gives the right port; then swap them in `config/devices.yaml`.
+**Fix:** lab check 3.9 (2026-11-17): unplugging the wrist camera removed `usb-0:7`, so the wrist camera is socket 7 and the stand camera socket 8, as on the green set. Swap them in `config/devices.yaml`: quick job 29.
 
 ### 2026-11-17 — so101-white stands on a ~1.6 cm plate, so its "z = 0" is above the table
 **What:** the arm sits on the stand camera's base plate. Its z = 0 is the bottom of the arm's own base, so the real table is about z −1.6 cm (the builder measured the jaw tips 3 cm off the table at a reading of 1.4 cm). `pick_at` goes down to half the object's height *in the arm's numbers*, so it would close near the top of a 3 cm cube; the 0.5 cm floor also stops the tips ~1 cm above the real table. Done by hand instead (open, `move_to` z 0 ≈ the cube's middle, close, lift): picked and placed fine. The elbow also sags ~3° on most moves (the gripper ends ~1 cm low/short): harmless at this size.
-**Fix:** not yet: lab-os needs a per-arm table height (offset) setting.
+**Fix:** quick job 28 (a table height per arm). Lab check 3.2 agrees: told z 2, the tips stopped about 0.5 cm above the top of the 3 cm cube, so about 1.5 cm higher than asked.
 
 ### 2026-11-17 — so101-white jumped far past a go_to_pose step (cause not found yet)
 **What:** before the move, `arm_status` put the gripper point at z = −3.9 cm (below the table, impossible unless it was pressing on it). `go_to_pose ready` was capped to 34 % of the way (shoulder_lift 45.3° → about 23°), but the arm **jumped** and read shoulder_lift −28.7°, elbow 24°: about 52° and 22° *past* the command, beyond the ready pose itself. The builder saw the upper arm about 60° from the table, which matches the −28.7° reading (0 = straight up), so the reading *after* the move was right. The software path looked right (the cap clipped the target; the motion starts from the read position and ramps). Suspect the reading *before* the move (gripper below the table): if the start was misread, the ramp starts from the wrong place and the arm lurches. Also: the result said "short of the command … by 51.9°" though the arm *overshot*; the message ignores direction.
@@ -70,7 +86,8 @@ After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and 
 
 ### 2026-11-16 — The closet router (Linksys WRK54G) is too old to be the lab router
 **What:** a 2.4 GHz 802.11g router from about 2005: measured 1.46 Mbps down, 13.5 Mbps up, 7 ms. Its Wi-Fi tops out near 20 Mbps real, wired ports 100 Mbps, and it gets no security updates.
-**Fix:** not for cameras, the Quest or the internet. It could carry small messages (a Raspbot reporting in) on its own, with nothing in its Internet port, as a stand-in until the real router. Plugging it into the wall is the same question to IT as any router.
+**Fix:** not for cameras, the Quest or the internet. It could carry small messages (a Raspbot reporting in) on its own, with nothing in its Internet port, as a stand-in until the real router.
+**2026-11-17:** with a new cable to the wall, from the other desktop: 8.14 Mbps down, 10.9 Mbps up, 7 ms. Better, but a speed test only measures the internet through campus. For the lab network the limit is the router's own Wi-Fi: about 20 Mbps in real use, shared by every device. Enough for hub pages, chat, teleop messages from the Quest, the Raspbots and an occasional camera picture; not enough for several live camera videos at once. If it's used: a WPA2 password (if it only offers WEP, don't use it), and it's still a router on the wall port, the same question to IT. Plugging it into the wall is the same question to IT as any router.
 
 ### 2026-11-16 — An exited process still shows in `ps` on Linux until its parent collects it
 **What:** Stop LeLab (quick job 7) checks that the LeLab it stops is gone by asking `ps` for its pid. In CI (Linux) the test's stand-in LeLab had exited but `ps` still listed it, `[lelab] <defunct>` with the same start time, because the test (its parent) hadn't collected it yet: a zombie. On the Mac the same test passed. Real LeLab's parent is its terminal, which collects it at once.
