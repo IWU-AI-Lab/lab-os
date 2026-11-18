@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-18 — The system diagram got smaller each time it was opened
+**What:** closing a page in the designed hub removes only `.detail` elements from the module slot; the system diagram's box (`.sysbox`) isn't one, so it stayed, and the next opening added another beside it. The two shared the width, and the redraw went to the old one: half size, on the left (a third on the third opening).
+**Fix:** closing removes `.sysbox` too. Anything new put in `#mod-slot` must be removed in `closeModule` as well.
+
 ### 2026-11-18 — Recording the startup: slowing Chrome's animations also slows its frame times, and the jump's streaks depend on the frame step
 **What:** quick job 34. To record the startup smoothly, the page runs 8× slower (its clock and timers patched, CSS animations slowed with the DevTools `Animation.setPlaybackRate`) while frames are captured. Two surprises: (1) `setPlaybackRate` also slows the timestamps `requestAnimationFrame` hands out, so slowing them again in the page made the drawing clock run 64× slow and the white flash never ended; (2) the jump's streaks are as long as a star moved since the last frame, so with 8× more frames each streak was 8× shorter and the jump came out black. Also checked: the concept and the real hub run the same startup code and the core follows the same curve (big at the flash, a long brake to 1.3×, a 1.6 s hold, then into place), with no frame over 40 ms on the Mac even with the CPU slowed 4×; the concept alone drops frames while loading its web fonts. So no hitch in the designed motion itself; the two-step shrink of the core is by design.
 **Fix:** the recorder (`scripts/record_startup.py`) gives the page one drawn frame per 8 of the browser's, stamped with the page's slowed clock, so each drawn frame is a normal 1/60 s step.
