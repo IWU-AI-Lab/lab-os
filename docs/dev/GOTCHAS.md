@@ -39,7 +39,11 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-17 — The VR hub's far-away dot cluster only shows in AR
 **What:** lab check 10.1: the cluster is visible only in AR (passthrough), straight ahead, behind the idle circle, not moving. In VR it's probably there too but black on black. When the hub's network bursts into place, its dots seem to fly out of that cluster.
-**Fix:** quick job 10.
+**Fix:** quick job 10 (2026-11-18): found, see the entry below.
+
+### 2026-11-18 — In AR, additive blending covers the room: a black glow is a dark shape
+**What:** the VR hub's cluster of dots (above) was the network's links, drawn black while the dots wait in a tight clump far ahead for the jump. Three's `AdditiveBlending` adds colour but also writes opacity, and in AR the headset shows the room only where the picture is see-through, so black lines with opacity covered it as a dark clump (in VR: black on black, invisible). The faint stars of the start screen were dark specks the same way. Seen without a headset: `/xr?preview&passthrough` draws the AR way (transparent), over a light page.
+**Fix:** every glow in the VR hub uses `GLOW` (`xr/draw.js`): it adds light like before but leaves the opacity alone (`blendSrcAlpha` zero, `blendDstAlpha` one), so a glow can only brighten the room. A test fails if `AdditiveBlending` comes back. On the Quest itself: lab-checklist F.10.
 
 ### 2026-11-17 — Hiwonder glove: all five LEDs must be lit to drive the xArm
 **What:** with the glove paired to `xarm1`, only the base followed the hand; the other five servos bent to one end and clacked. Both gloves had been switched to a robot-hand mode (each finger drives its own servo, tilt drives servo 6 = the xArm's base). The arm and lab-os were fine.

@@ -5,7 +5,7 @@
 // one by one, the ring turns and opens outward, the inner ring collapses, the core swells and bursts a
 // ring of light. Units: metres; `unit` metres per unit of the hub's ignition SVG (viewBox ±70).
 import * as THREE from "three";
-import { C, CanvasPlane, FONT, TAU, clamp, glowText, icon, spaced } from "./draw.js";
+import { C, GLOW, CanvasPlane, FONT, TAU, clamp, glowText, icon, spaced } from "./draw.js";
 
 export const UNLOCK_MS = 1350;
 const bez = (x1, y1, x2, y2) => (t) => { // CSS cubic-bezier, solved for x
@@ -42,14 +42,14 @@ export class Ignition {
     this.ring = ring; this.shut = shut; this.core = core;
     this.bolts = [];
     for (let i = 0; i < 8; i++) {
-      const b = new THREE.Mesh(new THREE.PlaneGeometry(12 * unit, 4.4 * unit), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const b = new THREE.Mesh(new THREE.PlaneGeometry(12 * unit, 4.4 * unit), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.8, ...GLOW, depthWrite: false }));
       const holder = new THREE.Group();
       holder.rotation.z = -((22.5 + i * 45) * Math.PI) / 180;
       holder.add(b);
       this.orb.add(holder);
       this.bolts.push(b);
     }
-    this.burst = new THREE.Mesh(new THREE.RingGeometry(13.2 * unit, 14.8 * unit, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    this.burst = new THREE.Mesh(new THREE.RingGeometry(13.2 * unit, 14.8 * unit, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.hot), transparent: true, opacity: 0, ...GLOW, depthWrite: false, side: THREE.DoubleSide }));
     for (const p of [ring, shut, core]) { p.mat.color.set(C.primary); this.orb.add(p.mesh); }
     this.orb.add(this.burst);
     // the words: how to start, the icons, "safe to start"; then the place and the clock at the foot

@@ -10,7 +10,7 @@
 // Sky: a sphere around you for the faint blue that grows with the speed, the flash (a burst from the
 // middle that clears from the edges first) and the impact frame (dark streaks on white).
 import * as THREE from "three";
-import { C, clamp, rand } from "./draw.js";
+import { C, GLOW, clamp, rand } from "./draw.js";
 
 export const FAR = 160; // stars start this far ahead...
 const BEHIND = 2; // ...and leave once their tail is this far behind you
@@ -104,7 +104,7 @@ export class Stars {
     };
     this.mat = new THREE.ShaderMaterial({
       vertexShader: VERT, fragmentShader: FRAG, uniforms: this.uniforms,
-      transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+      transparent: true, depthWrite: false, depthTest: false, ...GLOW,
     });
     this.mesh = new THREE.Mesh(g, this.mat);
     this.mesh.frustumCulled = false;
@@ -153,7 +153,7 @@ export class Stars {
   }
   set impact(on) {
     this.uniforms.uImpact.value = on ? 1 : 0;
-    this.mat.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
+    this.mat.blending = on ? THREE.NormalBlending : GLOW.blending; // the glow's own factors stay set
     this.mat.needsUpdate = true;
   }
   set visible(v) { this.group.visible = v; }
@@ -188,7 +188,7 @@ export class Sky {
     };
     this.mesh = new THREE.Mesh(
       new THREE.SphereGeometry(200, 32, 16),
-      new THREE.ShaderMaterial({ vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, uniforms: this.uniforms, side: THREE.BackSide, depthWrite: false, depthTest: false, transparent: true, blending: THREE.AdditiveBlending }),
+      new THREE.ShaderMaterial({ vertexShader: SKY_VERT, fragmentShader: SKY_FRAG, uniforms: this.uniforms, side: THREE.BackSide, depthWrite: false, depthTest: false, transparent: true, ...GLOW }),
     );
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = -3;
