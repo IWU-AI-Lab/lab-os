@@ -12,6 +12,7 @@ With a `store` (lab_os.ai.history) the conversation is kept for a short while: s
 answer, put aside by a reset, brought back with `restore()`.
 """
 
+import asyncio
 import contextlib
 import json
 import logging
@@ -22,7 +23,7 @@ from datetime import datetime
 import aiohttp
 
 from lab_os.ai.assistant import Assistant
-from lab_os.ai.client import AiError, Reply, Usage, check, estimate, stream_chat
+from lab_os.ai.client import AiError, Reply, Usage, check, estimate, reach, stream_chat
 from lab_os.ai.history import ChatStore
 from lab_os.ai.models import NoSetup, Setup, load_setups, pick
 from lab_os.ai.spend import SpendLog
@@ -33,6 +34,7 @@ log = logging.getLogger(__name__)
 
 MAX_HISTORY = 20  # messages sent along with a question (older ones are left out: cost)
 MAX_TOOL_ROUNDS = 4  # look-ups per question before the model must answer
+CONFIRM_TRIES, CONFIRM_GAP_S = 2, 3.0  # a failed check while connected: ask again this often first
 
 RULES = """\
 You are the assistant on the hub screen of {place}. It is {now}.
@@ -211,12 +213,27 @@ class Conversation:
             self.connected = False
             self._settle()
             return False
+        was = self.connected
         if internet is False and not setup.local:
-            self.connected = False
+            why = "no internet"
         else:
-            self.connected = await check(self._session_(), setup)
+            why = await reach(self._session_(), setup)
+            # one failed check isn't "not connected" yet: a single slow name lookup or a hiccup on
+            # the network used to grey the hub for 20 s while idle (quick job 32). Ask again first.
+            for _ in range(CONFIRM_TRIES if why and was else 0):
+                log.info("AI: %s didn't answer the check (%s); asking again", setup.name, why)
+                await asyncio.sleep(CONFIRM_GAP_S)
+                why = await reach(self._session_(), setup)
+                if not why:
+                    break
+        self.connected = why is None
+        if self.connected:
+            self.problem = None
+        if self.connected != was and was is not None:
             if self.connected:
-                self.problem = None
+                log.info("AI: %s answers again", setup.name)
+            else:
+                log.warning("AI: %s not reachable (%s): shown as not connected", setup.name, why)
         self._settle()
         return self.connected
 

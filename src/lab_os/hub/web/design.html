@@ -3007,8 +3007,12 @@ function onTop(msg) {
   t.classList.remove("nudge"); void t.offsetWidth; t.classList.add("nudge");
   return true;
 }
+// one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
+let statusMisses = 0;
 async function pollStatus() {
   const st = await getJSON("/api/status");
+  statusMisses = st ? 0 : statusMisses + 1;
+  if (!st && statusMisses < 2 && S.status) return S.status;
   S.status = st;
   if (!st) {
     setFact("#f-net", "brain not reachable", true); setFact("#f-ai", "AI not connected", true);
