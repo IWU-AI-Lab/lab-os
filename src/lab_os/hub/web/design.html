@@ -490,6 +490,8 @@ body.q-minimal #devgraph .beat { animation: none; }
 /* alert toast */
 #toast { position: absolute; top: 1%; left: 50%; transform: translate(-50%, -8px); width: min(92%, 24rem); opacity: 0; transition: opacity 0.4s, transform 0.5s var(--arrive); pointer-events: none; z-index: 3; }
 #toast.on { opacity: 1; transform: translate(-50%, 0); }
+#toast.on.nudge { animation: nudge 0.6s var(--arrive); }
+@keyframes nudge { 0% { transform: translate(-50%, -10px); filter: brightness(1.8); } 100% { transform: translate(-50%, 0); } }
 #toast .in { display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.8rem; align-items: center; padding: 0.55rem 0.9rem 0.55rem 0.7rem; }
 #toast .ico { width: 2.2rem; height: 2.2rem; color: var(--c); filter: drop-shadow(0 0 5px var(--c)); stroke-width: 1.8; }
 #toast .msg-t { font: 500 0.9rem/1.35 var(--f-ui); }
@@ -1969,6 +1971,7 @@ function errBox(title, msg) {
 }
 // a turn that went wrong: the brain's own full sentence, shown at the core for a while
 function showError(msg) {
+  if (onTop(msg)) return;
   errBox("No answer", msg);
   S.errorUntil = performance.now() + 9000;
   setState("error");
@@ -2230,6 +2233,7 @@ function onVoiceEvent(ev) {
     }
   } else if (ev.type === "error" || ev.type === "mic_error") {
     if (VS.voiced) endVoice();
+    if (onTop(ev.message)) return;
     errBox(ev.type === "mic_error" ? "Can't listen" : "No answer", ev.message);
     S.errorUntil = performance.now() + 9000; setState("error");
   } else if (ev.type === "voice_error") { voiceNote(ev.message); freeText(); }
@@ -2994,6 +2998,14 @@ function showNote(msg) {  // a calm sentence at the top of the core (e.g. why th
   noteShown = msg;
   if (msg) $("#toast-msg").textContent = msg;
   $("#toast").classList.toggle("on", !!msg);
+}
+// a question while the chat is paused: the note on top already says why, so it only nudges instead of a
+// second copy on the core (quick job 31)
+function onTop(msg) {
+  if (!msg || msg !== noteShown) return false;
+  const t = $("#toast");
+  t.classList.remove("nudge"); void t.offsetWidth; t.classList.add("nudge");
+  return true;
 }
 async function pollStatus() {
   const st = await getJSON("/api/status");
