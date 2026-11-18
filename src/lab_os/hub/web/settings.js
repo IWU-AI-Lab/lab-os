@@ -158,6 +158,27 @@ const SENSITIVITY = { key: "wake_sensitivity", label: "Wake word sensitivity", k
   value: () => Number(screenGet().wake_sensitivity) || 5,
   save: (v) => screenSet("wake_sensitivity", v === 5 ? "" : v) };
 
+/* ---------- the assistant's languages for this device (quick job 33): what it hears, what it answers in ---------- */
+const LANG_NAMES = { "": "Any", en: "English" };  // the brain's codes (lab_os/ai/languages.py) → words
+function languageRow() {
+  const row = document.createElement("div");
+  row.className = "field";
+  row.innerHTML = `<label>Assistant language</label><div class="help">this device only. Input: the language speech-to-text expects (with OpenAI's voice; Gemini's free voice has no such setting). Output: the language it answers in, typed or spoken, whatever it was asked in. Any = it decides. Applies from the next question</div><div class="ctl pair"></div><div class="said" aria-live="polite"></div>`;
+  const said = row.querySelector(".said"), pair = row.querySelector(".pair");
+  for (const [key, label] of [["hear_in", "Input"], ["answer_in", "Output"]]) {
+    const f = { key, label: `${label} language`, kind: "choice", choices: Object.values(LANG_NAMES) };
+    const line = pair.appendChild(document.createElement("div"));
+    line.innerHTML = `<span class="unit">${label}</span>`;
+    line.append(control(f, LANG_NAMES[screenGet()[key] || ""] || "Any", async (v) => {
+      const r = await screenSet(key, Object.keys(LANG_NAMES).find((k) => LANG_NAMES[k] === v) ?? "");
+      said.className = `said${r.ok ? "" : " bad"}`;
+      said.textContent = r.message;
+      return r.ok;
+    }, false));
+  }
+  return row;
+}
+
 /* ---------- the "Lab hub" icon for this device: one tap opens the hub under its name ---------- */
 function iconRow() {
   const row = document.createElement("div");
@@ -192,6 +213,7 @@ $("#this-device-help").textContent = NAME
 for (const f of LOCAL) local.append(fieldRow(f, f.value(), (v) => f.save(v), false));
 const voiceSlot = local.appendChild(document.createElement("div"));
 voiceRow().then((rows) => voiceSlot.replaceWith(...rows), () => voiceSlot.remove());
+local.append(languageRow());
 local.append(screensRow());
 local.append(iconRow());
 

@@ -47,6 +47,7 @@ from aiohttp import web
 
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
+from lab_os.ai.languages import clean_language
 from lab_os.ai.speech import Hearing, VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.ai.wake import (
@@ -353,16 +354,18 @@ class VoiceDesk:
         self._closing.add(task)
         task.add_done_callback(self._closing.discard)
 
-    def take_hearing(self, setup: VoiceSetup, on_words) -> tuple[Hearing, bool]:
+    def take_hearing(
+        self, setup: VoiceSetup, on_words, language: str | None = None
+    ) -> tuple[Hearing, bool]:
         """A hearing for this turn: the warm one if it's still good (True), else a new one."""
         sb, self._standby = self._standby, None
         if sb is not None and self._usable(sb, setup):
-            sb.on_words = on_words
+            sb.on_words, sb.language = on_words, language
             asyncio.get_running_loop().call_soon(self.warm)  # the next one
             return sb, True
         if sb is not None:
             self._let_go(sb)
-        return hearing_for(self.session(), setup, on_words), False
+        return hearing_for(self.session(), setup, on_words, language), False
 
     def prewarm_speech(self, setup: VoiceSetup) -> None:
         """The answer will be spoken soon: open the connection to the voice service now (listing
@@ -505,6 +508,8 @@ class VoiceLink:
         self._near_logged = 0.0
         self.timing: TurnTiming | None = None  # this turn's steps
         self.pages: dict | None = None  # what this page can show (the assistant opens them)
+        self.hear_in: str | None = None  # this device's assistant languages (None = any)
+        self.answer_in: str | None = None
         self.last_greet = 0.0
         self.started_at = 0.0
         self._out: asyncio.Queue = asyncio.Queue()
@@ -554,6 +559,9 @@ class VoiceLink:
         kind = msg.get("type")
         if isinstance(msg.get("pages"), dict):  # with listen and wake: what the page can show
             self.pages = msg["pages"]
+        if isinstance(msg.get("lang"), dict):  # with listen and wake: "This device" → languages
+            self.hear_in = clean_language(msg["lang"].get("hear"))
+            self.answer_in = clean_language(msg["lang"].get("answer"))
         if kind == "listen":
             await self.listen(str(msg.get("mode") or "ask"))
         elif kind == "end":
@@ -710,7 +718,7 @@ class VoiceLink:
                 last["text"] = text
                 self.send({"type": "heard", "text": text, "final": False})
 
-        hearing, warm = self.desk.take_hearing(setup, words)
+        hearing, warm = self.desk.take_hearing(setup, words, self.hear_in)
         self.hearing = hearing
         self.started_at = time.monotonic()
         if self.timing is None or "listening" in self.timing.marks:  # else: the wake word's
@@ -783,7 +791,7 @@ class VoiceLink:
     async def _turn(self, text: str, setup: VoiceSetup) -> None:
         speaker = Speaker(self, setup)
         try:
-            async for ev in self.desk.chat.ask(text, self.pages):
+            async for ev in self.desk.chat.ask(text, self.pages, self.answer_in):
                 self.send(ev)
                 if ev["type"] == "text":
                     if self.timing:

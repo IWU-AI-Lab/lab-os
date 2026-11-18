@@ -45,6 +45,13 @@ export function wakeSensitivity() {
   return Number.isInteger(v) && v >= 1 && v <= 9 ? v : WAKE_SENSITIVITY;
 }
 
+// The assistant's languages, per device (Settings → This device → "Assistant language", quick job 33):
+// what speech-to-text expects and what it answers in; "" = any. Sent with every question.
+export function assistantLanguage() {
+  const p = prefs();
+  return { hear: p.hear_in || "", answer: p.answer_in || "" };
+}
+
 // The question after the wake word ends after this much quiet (it was 1.5 s; the brain may end it sooner,
 // when the voice service hears the pause).
 export const WAKE_QUIET_MS = 1000;
@@ -212,7 +219,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.ws = ws;
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
-      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true, sensitivity: st.wakeSens, pages: pages() })); // again after a reconnect
+      if (st.wakeWanted) ws.send(JSON.stringify({ type: "wake", on: true, sensitivity: st.wakeSens, pages: pages(), lang: assistantLanguage() })); // again after a reconnect
       for (const m of st.pending.splice(0)) ws.send(m);
     };
     ws.onmessage = (e) => {
@@ -333,7 +340,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.held = [];
     stopSpeaking();
     st.awaitingEnd = false;
-    send({ type: "listen", mode, pages: pages() });
+    send({ type: "listen", mode, pages: pages(), lang: assistantLanguage() });
     try {
       await openMic();
     } catch (e) {
@@ -348,12 +355,12 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   }
   // the wake word: the microphone stays open while it's on (the browser shows its recording sign)
   async function wake(on) {
-    const sens = wakeSensitivity(), pk = JSON.stringify(pages());
+    const sens = wakeSensitivity(), pk = JSON.stringify([pages(), assistantLanguage()]);
     if (on === st.wakeWanted && (!on || (sens === st.wakeSens && pk === st.pagesKey))) return true;
     st.pagesKey = pk;
-    if (on && st.wakeWanted) { // only the sensitivity (Settings → This device) or the pages changed
+    if (on && st.wakeWanted) { // only the sensitivity or the languages (This device) or the pages changed
       st.wakeSens = sens;
-      send({ type: "wake", on: true, sensitivity: sens, pages: pages() });
+      send({ type: "wake", on: true, sensitivity: sens, pages: pages(), lang: assistantLanguage() });
       return true;
     }
     st.wakeWanted = on;
@@ -374,7 +381,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     }
     st.wakeSens = sens;
     st.lastPiece = performance.now();
-    send({ type: "wake", on: true, sensitivity: sens, pages: pages() });
+    send({ type: "wake", on: true, sensitivity: sens, pages: pages(), lang: assistantLanguage() });
     clearInterval(st.watchTimer);
     st.watchTimer = setInterval(watchMic, 1000);
     return true;

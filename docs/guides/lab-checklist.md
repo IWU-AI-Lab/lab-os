@@ -56,11 +56,10 @@ Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visi
 - **9.10** Say "Hey Jarvis, show me the AI spend." → did the AI Spend page open? (yes / no)
 - **9.11** Say "Hey Jarvis, go back to the hub." → did everything close? (yes / no)
 - **9.12** Type in the ask line: `show me the commits`. → did the Commits page open? (yes / no)
+- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input: English, Output: English → Back. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
+- **9.14** Type in the ask line: `¿Cuál es el siguiente paso?` → answered in English? (yes / no). Then set Output back to Any.
 
 ---
-
----
-- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input language: English. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
 
 ## 3b. The stand camera's cm grid (15 min)
 Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
