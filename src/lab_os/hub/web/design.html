@@ -2430,7 +2430,8 @@ function closeModule() {
     if (S.moduleOpen === "chat") $("#hub").insertBefore($(".chat"), $(".side.left"));
     REPLY_HOME.parent.insertBefore($("#reply"), REPLY_HOME.next); $("#orb-dock").classList.remove("talk");
     S.showing = null;
-    $("#mod-slot .detail")?.remove();
+    // every details page, the system diagram too (it isn't a .detail): left behind, a reopened one sat beside it
+    document.querySelectorAll("#mod-slot .detail, #mod-slot .sysbox").forEach((n) => n.remove());
     S.moduleOpen = null; S.closing = false;
     layoutTraces(); showTraces();
   }, 700);
