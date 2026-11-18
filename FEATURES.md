@@ -73,7 +73,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | `pose_view`: a picture of the arm's 3D model in its current pose, with the AI's marks for where it thinks things are | ✅ | Used in the cube pick on the real arm (2026-11-12); also at `/api/pose-view.png` |
 | `pick_at`: a whole pick in one call (open, above, straight down, close, lift), each step shown on AI Control before it moves; says holding or missed (2026-11-16) | 🧪 | Fake arm only (`docs/guides/lab-checklist.md` 3b.5) |
 | Table map: the stand camera's pictures get a cm grid of the table, from a printed sheet (`lab-os table-map`); `table_point` turns a pixel into cm (2026-11-16) | 🧪 | A drawn sheet in perspective only so far (`docs/guides/lab-checklist.md` part 3b) |
-| `camera_snapshot`: one real picture from a camera (the white arm's: `so101-white-cam-stand` and `-cam-wrist`) | ✅ | Used in the cube pick (2026-11-12). The stand camera's picture gives a direction, not a place (it doesn't know where the camera is) |
+| `camera_snapshot`: one real picture from a camera (the white arm's: `so101-white-cam-wrist` in socket 7 and `-cam-stand` in socket 8, the same sockets as the green set's; swapped 2026-11-18, quick job 29, from lab check 3.9) | ✅ | Used in the cube pick (2026-11-12). The stand camera's picture gives a direction, not a place (it doesn't know where the camera is) |
 | AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |
 | Project read tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, … | ✅ | `docs/design/` included since 2026-11-12 |
 
