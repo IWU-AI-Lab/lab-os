@@ -27,7 +27,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-17 — The voice assistant heard English as another language
 **What:** lab check 10.4: twice, a spoken English request was taken as another language and answered in it. Mandarin, said on purpose, worked (it opened and closed Monitor).
-**Fix:** quick job 33: an input and an output language per device, each "Any" or "English". Built 2026-11-18: Output English is an instruction to the AI and works with any voice; Input English only reaches OpenAI's transcription. Gemini's live transcriber (the lab's voice) has no language setting; a test with English said by macOS's French, Chinese and German voices was heard right with and without an instruction, so the misheard English wasn't reproduced (`docs/guides/voice.md`).
+**Fix:** quick job 33: an input and an output language per device, each "Any" or "English". Built 2026-11-18: Output English is an instruction to the AI and works with any voice; Input English only reaches OpenAI's transcription. Gemini's live transcriber (the lab's voice at the time; OpenAI's since its key went into `.env` the same day) has no language setting; a test with English said by macOS's French, Chinese and German voices was heard right with and without an instruction, so the misheard English wasn't reproduced (`docs/guides/voice.md`).
 
 ### 2026-11-17 — The VR hub's far-away dot cluster only shows in AR
 **What:** lab check 10.1: the cluster is visible only in AR (passthrough), straight ahead, behind the idle circle, not moving. In VR it's probably there too but black on black. When the hub's network bursts into place, its dots seem to fly out of that cluster.

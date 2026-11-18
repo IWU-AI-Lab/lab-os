@@ -58,7 +58,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 7. **Voice.** Push-to-talk, the spoken greeting, dictation and the wake word, built 2026-11-12 (`docs/guides/voice.md`); the greeting from a recording 2026-11-14; a snappier wake word with a sensitivity slider per device, its timing logged, and the Quest's paused microphone woken by itself 2026-11-14 (not yet in the lab). In the lab (2026-11-13) push-to-talk and the wake word work on the desktop with a USB microphone (sometimes only spoken louder) and on the Quest (the wake word sometimes misses there).
    - **Left:** the Newline's microphone (Chrome's flag, `docs/guides/voice.md` → "Secure pages"). The language per device (quick job 33, built 2026-11-18; lab check 9.13). The Quest's misses scored just under the line (2026-11-17): raise its sensitivity (lab check F.6). After the demo: a better room microphone.
-   - The free Gemini key speaks only ~15–20 answers a day (`docs/dev/GOTCHAS.md`): keep them for the demo.
+   - The professor's OpenAI key is in `.env` on the laptop and the lab desktop (2026-11-18): `main` (OpenAI) answers and speaks, with no daily limit; the free Gemini key is only the fallback.
 
 8. **Devices.** Built 2026-11-14 (`docs/guides/hub.md` → "Devices"), tried with headless browser pages as devices: each hub page connects under a name (`/?device=desk`), the brain lists the devices with the hub open (each monitor a window) and keeps "This device" settings under the name (`hub-devices.yaml`); "Open on…" next to Back in a module (the free monitor, or it asks), Back there or "Bring it back" closes it; pages reconnect by themselves after a restart; `lab-os icon` ("Start lab-os", `lab-os serve --open desk`) and a "Lab hub" icon from ⚙ → This device. Before: a page on another monitor of the brain's computer (now Open on… → "Another monitor of this computer"); other computers view-only while a real arm is connected (`--drive-from` lets one drive).
    - **Left:** the lab check (`docs/guides/lab-checklist.md` part 11). The brain's address is the desktop's IP address for now (it may change: then the icons again). The Quest's VR hub (`/xr`) isn't a device (its browser at `/design?device=quest` is).
@@ -79,7 +79,6 @@ The Current Project panel reads this list: each step's **bold title** is what th
     - **Next, if it's used:** HDMI at 1600×900 is the simplest route (first check the refresh rate Ubuntu picks at 1920×1080 and the Newline's picture mode). Its own Chrome needs a lighter startup on slow devices (fewer stars, `?res=`) and Chrome's flag for the microphone. No extra hardware so far.
 
 ## Waiting on others
-- **The professor's OpenAI key** in `.env`: then `main` answers and speaks (a config change; steps 5 and 7).
 - **The 7-port powered USB hub** (shopping list in the log): the white arm and its cameras without unplugging the green ones.
 - **The lab router** (the professor's OK): "Up next" below.
 

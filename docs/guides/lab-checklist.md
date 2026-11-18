@@ -8,7 +8,7 @@ Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
 - Ctrl+C in the brain's terminal makes the arm go limp. Hold the arm first if it is lifted.
 - Green arms: never change motor IDs or firmware, never recalibrate, never touch the `lerobot` conda env, never start lab-os on them while LeLab is running.
-- The free voice key speaks about 15–20 answers a day. Silent answers with "sending too much voice" = used up until midnight Pacific.
+- The voice is OpenAI's (the professor's key, in `.env` since 2026-11-18; restart the brain after any `.env` change). Only without it does the free Gemini key take over (about 15–20 spoken answers a day).
 
 No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm), a bank card (8.6 cm long, 5.4 cm wide), the cube (3 cm), your phone lying flat (about 1 cm thick).
 
