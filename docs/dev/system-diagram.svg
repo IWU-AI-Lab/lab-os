@@ -1,0 +1,233 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="sysdiag" style="background:#05080b" viewBox="0 0 1600 900" role="img" aria-label="System diagram: the brain in the middle, the screens on the left, the robots on the right">
+<style>
+.sysdiag { --sd-c: #29d4ff; --sd-line: #1f3d48; --sd-text: #d4eef5; --sd-dim: #6d8c96;
+  --sd-hot: #eafcff; --sd-off: #56636a; --sd-warm: #ff9a2e; --sd-bg: #05080b; --sd-surface: #0b161c; }
+.sysdiag .ico { color: var(--sd-c); fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
+.sysdiag .node:not(.live) .ico { color: var(--sd-off); }
+.sysdiag .hex { fill: var(--sd-surface); stroke: var(--sd-off); stroke-width: 1.2; }
+.sysdiag .node.live .hex { stroke: var(--sd-c); stroke-width: 1.8; filter: url(#sd-glow); }
+.sysdiag .node.here .hex { fill: color-mix(in srgb, var(--sd-c) 18%, var(--sd-surface)); }
+.sysdiag .reticle { fill: none; stroke: var(--sd-hot); stroke-width: 1.5; }
+.sysdiag .hatchfill { fill: url(#sd-hatch); stroke: none; }
+.sysdiag .name { font: 500 22px 'Chakra Petch', system-ui, sans-serif; fill: var(--sd-text); }
+.sysdiag .node:not(.live) .name { fill: var(--sd-dim); }
+.sysdiag .node.here .name { fill: var(--sd-hot); }
+.sysdiag .sub { font: 300 14px Inter, system-ui, sans-serif; fill: var(--sd-dim); }
+.sysdiag .count { font: 18px DSEG7, 'JetBrains Mono', ui-monospace, monospace; fill: var(--sd-hot); }
+.sysdiag .cap { font: 600 13px 'Chakra Petch', system-ui, sans-serif; letter-spacing: 0.22em; text-transform: uppercase; fill: var(--sd-c); }
+.sysdiag .capline { stroke: color-mix(in srgb, var(--sd-c) 55%, transparent); stroke-width: 1; }
+.sysdiag .brain { font: 700 20px Orbitron, 'Chakra Petch', system-ui, sans-serif; letter-spacing: 0.4em; fill: var(--sd-hot); }
+.sysdiag .end { fill: var(--sd-c); }
+.sysdiag .end.warm { fill: var(--sd-warm); }
+.sysdiag .ln { fill: none; stroke: var(--sd-off); stroke-width: 1.5; }
+.sysdiag .ln.live { stroke: var(--sd-c); stroke-width: 2; }
+.sysdiag .ln.net { stroke-dasharray: 9 6; }
+.sysdiag .ln.mcp { stroke-dasharray: 1 6; stroke-linecap: round; stroke-width: 2.4; stroke: var(--sd-c); }
+.sysdiag .ln.web { stroke-dasharray: 22 7; }
+.sysdiag .ln.usb { }
+.sysdiag .ln.turn { stroke: var(--sd-warm); stroke-dasharray: 4 5; }
+.sysdiag .key .ln { stroke: var(--sd-c); }
+.sysdiag .key .ln.turn { stroke: var(--sd-warm); }
+.sysdiag .pulse { fill: var(--sd-hot); filter: url(#sd-glow); }
+.sysdiag .frame { fill: none; stroke: var(--sd-c); stroke-width: 2; }
+.sysdiag .plus { stroke: var(--sd-line); stroke-width: 1; }
+.sysdiag .ruler path { stroke: var(--sd-line); stroke-width: 1; }
+.sysdiag .core .brk { fill: none; stroke: var(--sd-c); stroke-width: 1.5; }
+.sysdiag .core .ticks { stroke: var(--sd-line); stroke-width: 1.2; }
+.sysdiag .core .seg { fill: none; stroke: var(--sd-c); stroke-opacity: 0.8; stroke-width: 2; stroke-dasharray: 30 6 4 6; }
+.sysdiag .core .arcs { fill: none; stroke: var(--sd-c); stroke-width: 4; }
+.sysdiag .core .glow { filter: url(#sd-glow); }
+.sysdiag .core .thin { fill: none; stroke: var(--sd-c); stroke-opacity: 0.45; stroke-dasharray: 1 4; }
+.sysdiag .core .sat { fill: none; stroke: var(--sd-c); stroke-opacity: 0.35; stroke-width: 0.8; }
+.sysdiag .core .satdot { fill: var(--sd-c); }
+.sysdiag .core .halo { fill: url(#sd-core); }
+.sysdiag .core .ring { fill: none; stroke: var(--sd-c); stroke-opacity: 0.6; stroke-width: 1; }
+.sysdiag .core .breathe { transform-box: view-box; transform-origin: 800px 440px; animation: sd-breathe 5s ease-in-out infinite; }
+@keyframes sd-breathe { 50% { transform: scale(0.92); opacity: 0.85; } }
+.sysdiag .spin { transform-box: view-box; transform-origin: 800px 440px; }
+.sysdiag .spin.slow { animation: sd-spin 80s linear infinite; }
+.sysdiag .spin.rev { animation: sd-spin 50s linear infinite reverse; }
+.sysdiag .spin.fast { animation: sd-spin 24s linear infinite; }
+@keyframes sd-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sysdiag .spin, .sysdiag .breathe { animation: none; } .sysdiag .pulse { display: none; } }
+.sysdiag .part { fill: var(--sd-surface); stroke: var(--sd-line); }
+.sysdiag .part.safe { stroke: var(--sd-c); }
+.sysdiag .pname { font: 500 14px 'Chakra Petch', system-ui, sans-serif; fill: var(--sd-text); }
+.sysdiag .chev { fill: none; stroke: var(--sd-c); stroke-width: 1.5; }
+</style>
+<defs>
+  <pattern id="sd-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#ff9a2e" stroke-opacity="0.55" stroke-width="2"/></pattern>
+  <radialGradient id="sd-core"><stop offset="0" stop-color="#eafcff"/><stop offset="0.35" stop-color="#eafcff" stop-opacity="0.9"/><stop offset="0.6" stop-color="#29d4ff" stop-opacity="0.55"/><stop offset="1" stop-color="#29d4ff" stop-opacity="0"/></radialGradient>
+  <filter id="sd-glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12"></rect><path d="M9 20h6M12 16.5V20M6.5 13l3.5-3.5 3 3 4.5-4.5"></path></symbol><symbol id="i-headset" viewBox="0 0 24 24"><path d="M3 9.5c0-1.4 1.1-2.5 2.5-2.5h13c1.4 0 2.5 1.1 2.5 2.5v5c0 1.4-1.1 2.5-2.5 2.5h-3.2l-1.6-2.2a2 2 0 0 0-3.4 0L8.7 17H5.5A2.5 2.5 0 0 1 3 14.5z"></path></symbol><symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"></rect><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"></path><circle cx="12" cy="12" r="1.2"></circle></symbol><symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8h4l1.5-2.5h7L17 8h4v11H3z"></path><circle cx="12" cy="13.2" r="3.6"></circle></symbol><symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"></path><circle cx="8.5" cy="16.5" r="1.4"></circle><circle cx="12.5" cy="9" r="1.4"></circle><path d="M18.5 12l1.5-2.2M18.5 12l2.4.6"></path></symbol><symbol id="i-leader" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"></path><circle cx="8.5" cy="16.5" r="1.4"></circle><circle cx="12.5" cy="9" r="1.4"></circle><path d="M18.5 12v3.5M17 14h3"></path></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5M12 3.5C9.4 5.9 8.2 8.7 8.2 12s1.2 6.1 3.8 8.5"></path></symbol><symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z"></path><circle cx="12" cy="12" r="2"></circle></symbol>
+</defs>
+<path class="plus" d="M195 100h10M200 95v10"/>
+<path class="plus" d="M195 300h10M200 295v10"/>
+<path class="plus" d="M195 500h10M200 495v10"/>
+<path class="plus" d="M195 700h10M200 695v10"/>
+<path class="plus" d="M395 100h10M400 95v10"/>
+<path class="plus" d="M395 300h10M400 295v10"/>
+<path class="plus" d="M395 500h10M400 495v10"/>
+<path class="plus" d="M395 700h10M400 695v10"/>
+<path class="plus" d="M595 100h10M600 95v10"/>
+<path class="plus" d="M595 700h10M600 695v10"/>
+<path class="plus" d="M795 100h10M800 95v10"/>
+<path class="plus" d="M795 700h10M800 695v10"/>
+<path class="plus" d="M995 100h10M1000 95v10"/>
+<path class="plus" d="M995 700h10M1000 695v10"/>
+<path class="plus" d="M1195 100h10M1200 95v10"/>
+<path class="plus" d="M1195 300h10M1200 295v10"/>
+<path class="plus" d="M1195 500h10M1200 495v10"/>
+<path class="plus" d="M1195 700h10M1200 695v10"/>
+<path class="plus" d="M1395 100h10M1400 95v10"/>
+<path class="plus" d="M1395 300h10M1400 295v10"/>
+<path class="plus" d="M1395 500h10M1400 495v10"/>
+<path class="plus" d="M1395 700h10M1400 695v10"/>
+<g class="ruler"><path d="M600 870v-11"/><path d="M610 870v-5"/><path d="M620 870v-5"/><path d="M630 870v-5"/><path d="M640 870v-5"/><path d="M650 870v-5"/><path d="M660 870v-5"/><path d="M670 870v-5"/><path d="M680 870v-5"/><path d="M690 870v-5"/><path d="M700 870v-11"/><path d="M710 870v-5"/><path d="M720 870v-5"/><path d="M730 870v-5"/><path d="M740 870v-5"/><path d="M750 870v-5"/><path d="M760 870v-5"/><path d="M770 870v-5"/><path d="M780 870v-5"/><path d="M790 870v-5"/><path d="M800 870v-11"/><path d="M810 870v-5"/><path d="M820 870v-5"/><path d="M830 870v-5"/><path d="M840 870v-5"/><path d="M850 870v-5"/><path d="M860 870v-5"/><path d="M870 870v-5"/><path d="M880 870v-5"/><path d="M890 870v-5"/><path d="M900 870v-11"/><path d="M910 870v-5"/><path d="M920 870v-5"/><path d="M930 870v-5"/><path d="M940 870v-5"/><path d="M950 870v-5"/><path d="M960 870v-5"/><path d="M970 870v-5"/><path d="M980 870v-5"/><path d="M990 870v-5"/><path d="M1000 870v-11"/></g>
+<rect class="hatchfill" x="1468" y="40" width="80" height="10"/>
+<path class="capline" d="M170 195H460"/><circle class="end" cx="460" cy="195" r="2.5"/>
+<text class="cap" x="170" y="186" text-anchor="start">Screens</text>
+<path class="ln net live" d="M450 247H504.6L616.6 358.9H650.6"/>
+<circle class="end " cx="450" cy="247" r="3.5"/>
+<circle class="end " cx="650.5701622834315" cy="358.94" r="3.5"/>
+<g class="node live here">
+<path class="reticle" d="M380 221v-14h14M446 207h14v14M460 273v14h-14M394 287h-14v-14"/>
+<polygon class="hex" points="444.2,261.0 420.0,275.0 395.8,261.0 395.8,233.0 420.0,219.0 444.2,233.0"/>
+<svg class="ico" x="407" y="234" width="26" height="26" viewBox="0 0 24 24"><use href="#i-screen"/></svg>
+<text class="name" x="376" y="245" text-anchor="end">This screen</text>
+<text class="sub" x="376" y="265" text-anchor="end">This computer: drives</text>
+</g>
+<path class="ln net" d="M450 339H542.8L601.4 397.6H635.4"/>
+<circle class="end " cx="450" cy="339" r="3.5"/>
+<circle class="end " cx="635.3775726093191" cy="397.58" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="444.2,353.0 420.0,367.0 395.8,353.0 395.8,325.0 420.0,311.0 444.2,325.0"/>
+<svg class="ico" x="407" y="326" width="26" height="26" viewBox="0 0 24 24"><use href="#i-headset"/></svg>
+<text class="name" x="376" y="337" text-anchor="end">Quest A</text>
+<text class="sub" x="376" y="357" text-anchor="end">Hub not open</text>
+</g>
+<path class="ln net" d="M450 431H590.8L596.0 436.2H630.0"/>
+<circle class="end " cx="450" cy="431" r="3.5"/>
+<circle class="end " cx="630.0420299015077" cy="436.22" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="444.2,445.0 420.0,459.0 395.8,445.0 395.8,417.0 420.0,403.0 444.2,417.0"/>
+<svg class="ico" x="407" y="418" width="26" height="26" viewBox="0 0 24 24"><use href="#i-headset"/></svg>
+<text class="name" x="376" y="429" text-anchor="end">Quest B</text>
+<text class="sub" x="376" y="449" text-anchor="end">Hub not open</text>
+</g>
+<path class="ln net" d="M450 523H551.5L599.6 474.9H633.6"/>
+<circle class="end " cx="450" cy="523" r="3.5"/>
+<circle class="end " cx="633.6125593682023" cy="474.86" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="444.2,537.0 420.0,551.0 395.8,537.0 395.8,509.0 420.0,495.0 444.2,509.0"/>
+<svg class="ico" x="407" y="510" width="26" height="26" viewBox="0 0 24 24"><use href="#i-headset"/></svg>
+<text class="name" x="376" y="521" text-anchor="end">Quest C</text>
+<text class="sub" x="376" y="541" text-anchor="end">Hub not open</text>
+</g>
+<path class="ln mcp" d="M450 760L625.7 536.0H659.7"/>
+<circle class="end " cx="450" cy="760" r="3.5"/>
+<circle class="end " cx="659.7003207416353" cy="536" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="444.2,774.0 420.0,788.0 395.8,774.0 395.8,746.0 420.0,732.0 444.2,746.0"/>
+<svg class="ico" x="407" y="747" width="26" height="26" viewBox="0 0 24 24"><use href="#i-chip"/></svg>
+<text class="name" x="376" y="758" text-anchor="end">AI tools</text>
+<text class="sub" x="376" y="778" text-anchor="end">MCP :8081, this computer only</text>
+</g>
+<path class="capline" d="M1140 118H1430"/><circle class="end" cx="1140" cy="118" r="2.5"/>
+<text class="cap" x="1430" y="109" text-anchor="end">Robots</text>
+<path class="ln usb" d="M1150 170H1117.3L960.7 326.6H926.7"/>
+<circle class="end " cx="1150" cy="170" r="3.5"/>
+<circle class="end " cx="926.6508586627031" cy="326.6" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="1204.2,184.0 1180.0,198.0 1155.8,184.0 1155.8,156.0 1180.0,142.0 1204.2,156.0"/>
+<svg class="ico" x="1167" y="157" width="26" height="26" viewBox="0 0 24 24"><use href="#i-cam"/></svg>
+<text class="name" x="1224" y="168" text-anchor="start">Cameras<tspan class="count" dx="10">4</tspan></text>
+<text class="sub" x="1224" y="188" text-anchor="start">USB, by socket, 2 borrowed</text>
+</g>
+<path class="ln usb" d="M1150 256H1092.1L985.4 362.7H951.4"/>
+<circle class="end " cx="1150" cy="256" r="3.5"/>
+<circle class="end " cx="951.4192907129075" cy="362.72" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="1204.2,270.0 1180.0,284.0 1155.8,270.0 1155.8,242.0 1180.0,228.0 1204.2,242.0"/>
+<svg class="ico" x="1167" y="243" width="26" height="26" viewBox="0 0 24 24"><use href="#i-arm"/></svg>
+<text class="name" x="1224" y="254" text-anchor="start">SO-101 White</text>
+<text class="sub" x="1224" y="274" text-anchor="start">USB</text>
+</g>
+<path class="ln usb" d="M1150 342H1055.8L998.9 398.8H964.9"/>
+<circle class="end " cx="1150" cy="342" r="3.5"/>
+<circle class="end " cx="964.9419728268097" cy="398.84000000000003" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="1204.2,356.0 1180.0,370.0 1155.8,356.0 1155.8,328.0 1180.0,314.0 1204.2,328.0"/>
+<svg class="ico" x="1167" y="329" width="26" height="26" viewBox="0 0 24 24"><use href="#i-arm"/></svg>
+<text class="name" x="1224" y="340" text-anchor="start">xArm 1</text>
+<text class="sub" x="1224" y="360" text-anchor="start">USB</text>
+</g>
+<path class="ln usb" d="M1150 428H1010.9L1003.9 435.0H969.9"/>
+<circle class="end " cx="1150" cy="428" r="3.5"/>
+<circle class="end " cx="969.9252729878638" cy="434.96" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="1204.2,442.0 1180.0,456.0 1155.8,442.0 1155.8,414.0 1180.0,400.0 1204.2,414.0"/>
+<svg class="ico" x="1167" y="415" width="26" height="26" viewBox="0 0 24 24"><use href="#i-arm"/></svg>
+<text class="name" x="1224" y="426" text-anchor="start">xArm 2</text>
+<text class="sub" x="1224" y="446" text-anchor="start">USB</text>
+</g>
+<path class="ln usb live" d="M1150 514H1044.1L1001.1 471.1H967.1"/>
+<circle class="end " cx="1150" cy="514" r="3.5"/>
+<circle class="end " cx="967.1347767521769" cy="471.08" r="3.5"/>
+<g class="node live">
+<polygon class="hex" points="1204.2,528.0 1180.0,542.0 1155.8,528.0 1155.8,500.0 1180.0,486.0 1204.2,500.0"/>
+<svg class="ico" x="1167" y="501" width="26" height="26" viewBox="0 0 24 24"><use href="#i-arm"/></svg>
+<text class="name" x="1224" y="512" text-anchor="start">Fake Arm</text>
+<text class="sub" x="1224" y="532" text-anchor="start">Software, no cable</text>
+</g>
+<path class="ln usb" d="M1150 600H1083.0L990.2 507.2H956.2"/>
+<circle class="end " cx="1150" cy="600" r="3.5"/>
+<circle class="end " cx="956.1542826822242" cy="507.2" r="3.5"/>
+<g class="node    borrowed">
+<polygon class="hex" points="1204.2,614.0 1180.0,628.0 1155.8,614.0 1155.8,586.0 1180.0,572.0 1204.2,586.0"/>
+<polygon class="hatchfill" points="1199.1,611.0 1180.0,622.0 1160.9,611.0 1160.9,589.0 1180.0,578.0 1199.1,589.0"/>
+<svg class="ico" x="1167" y="587" width="26" height="26" viewBox="0 0 24 24"><use href="#i-arm"/></svg>
+<text class="name" x="1224" y="598" text-anchor="start">SO-101 Green</text>
+<text class="sub" x="1224" y="618" text-anchor="start">USB, borrowed</text>
+</g>
+<path class="ln turn" d="M1180 730V630"/>
+<circle class="end warm" cx="1180" cy="730" r="3.5"/>
+<circle class="end warm" cx="1180" cy="630" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="1204.2,774.0 1180.0,788.0 1155.8,774.0 1155.8,746.0 1180.0,732.0 1204.2,746.0"/>
+<svg class="ico" x="1167" y="747" width="26" height="26" viewBox="0 0 24 24"><use href="#i-leader"/></svg>
+<text class="name" x="1224" y="758" text-anchor="start">LeLab</text>
+<text class="sub" x="1224" y="778" text-anchor="start">Training: takes turns on SO-101 Green</text>
+</g>
+<path class="ln web" d="M800 140V270"/>
+<circle class="end " cx="800" cy="140" r="3.5"/>
+<circle class="end " cx="800" cy="270" r="3.5"/>
+<g class="node">
+<polygon class="hex" points="824.2,124.0 800.0,138.0 775.8,124.0 775.8,96.0 800.0,82.0 824.2,96.0"/>
+<svg class="ico" x="787" y="97" width="26" height="26" viewBox="0 0 24 24"><use href="#i-globe"/></svg>
+<text class="name" x="844" y="108" text-anchor="start">AI</text>
+<text class="sub" x="844" y="128" text-anchor="start">Not set up (.env)</text>
+</g>
+<g class="core">
+    <path class="ticks" d="M970.0 440.0L957.0 440.0M969.4 454.8L963.4 454.3M967.4 469.5L961.5 468.5M964.2 484.0L958.4 482.4M959.7 498.1L954.1 496.1M954.1 511.8L948.6 509.3M947.2 525.0L936.0 518.5M939.3 537.5L934.3 534.1M930.2 549.3L925.6 545.4M920.2 560.2L916.0 556.0M909.3 570.2L905.4 565.6M897.5 579.3L894.1 574.3M885.0 587.2L878.5 576.0M871.8 594.1L869.3 588.6M858.1 599.7L856.1 594.1M844.0 604.2L842.4 598.4M829.5 607.4L828.5 601.5M814.8 609.4L814.3 603.4M800.0 610.0L800.0 597.0M785.2 609.4L785.7 603.4M770.5 607.4L771.5 601.5M756.0 604.2L757.6 598.4M741.9 599.7L743.9 594.1M728.2 594.1L730.7 588.6M715.0 587.2L721.5 576.0M702.5 579.3L705.9 574.3M690.7 570.2L694.6 565.6M679.8 560.2L684.0 556.0M669.8 549.3L674.4 545.4M660.7 537.5L665.7 534.1M652.8 525.0L664.0 518.5M645.9 511.8L651.4 509.3M640.3 498.1L645.9 496.1M635.8 484.0L641.6 482.4M632.6 469.5L638.5 468.5M630.6 454.8L636.6 454.3M630.0 440.0L643.0 440.0M630.6 425.2L636.6 425.7M632.6 410.5L638.5 411.5M635.8 396.0L641.6 397.6M640.3 381.9L645.9 383.9M645.9 368.2L651.4 370.7M652.8 355.0L664.0 361.5M660.7 342.5L665.7 345.9M669.8 330.7L674.4 334.6M679.8 319.8L684.0 324.0M690.7 309.8L694.6 314.4M702.5 300.7L705.9 305.7M715.0 292.8L721.5 304.0M728.2 285.9L730.7 291.4M741.9 280.3L743.9 285.9M756.0 275.8L757.6 281.6M770.5 272.6L771.5 278.5M785.2 270.6L785.7 276.6M800.0 270.0L800.0 283.0M814.8 270.6L814.3 276.6M829.5 272.6L828.5 278.5M844.0 275.8L842.4 281.6M858.1 280.3L856.1 285.9M871.8 285.9L869.3 291.4M885.0 292.8L878.5 304.0M897.5 300.7L894.1 305.7M909.3 309.8L905.4 314.4M920.2 319.8L916.0 324.0M930.2 330.7L925.6 334.6M939.3 342.5L934.3 345.9M947.2 355.0L936.0 361.5M954.1 368.2L948.6 370.7M959.7 381.9L954.1 383.9M964.2 396.0L958.4 397.6M967.4 410.5L961.5 411.5M969.4 425.2L963.4 425.7"/>
+    <g class="spin slow"><circle class="seg" cx="800" cy="440" r="150"/></g>
+    <g class="spin rev glow"><path class="arcs" d="M822.2 313.9A128 128 0 0 1 926.1 417.8M898.1 522.3A128 128 0 0 1 756.2 560.3M679.7 483.8A128 128 0 0 1 717.7 341.9"/></g>
+    <circle class="thin" cx="800" cy="440" r="104"/>
+    <g class="spin fast"><circle class="sat" cx="800" cy="440" r="88"/><circle class="satdot" cx="888" cy="440" r="3"/></g>
+    <circle class="ring" cx="800" cy="440" r="66"/>
+    <circle class="halo breathe" cx="800" cy="440" r="58"/>
+  </g>
+<text class="brain" x="800" y="656" text-anchor="middle">BRAIN</text>
+<path class="part" d="M508 692H604V718L596 726H500V700Z"/><text class="pname" x="552" y="714" text-anchor="middle">Assistant</text>
+<path class="part" d="M632 692H728V718L720 726H624V700Z"/><text class="pname" x="676" y="714" text-anchor="middle">Hub :8080</text>
+<path class="chev" d="M609 703l5 6-5 6"/>
+<path class="part" d="M756 692H852V718L844 726H748V700Z"/><text class="pname" x="800" y="714" text-anchor="middle">Robot tools</text>
+<path class="chev" d="M733 703l5 6-5 6"/>
+<path class="part safe" d="M880 692H976V718L968 726H872V700Z"/><text class="pname" x="924" y="714" text-anchor="middle">Safety layer</text>
+<path class="chev" d="M857 703l5 6-5 6"/>
+<path class="part" d="M1004 692H1100V718L1092 726H996V700Z"/><text class="pname" x="1048" y="714" text-anchor="middle">Arm drivers</text>
+<path class="chev" d="M981 703l5 6-5 6"/>
+<text class="sub" x="800" y="750" text-anchor="middle">Every move, from a screen or an AI tool, goes through the safety layer</text>
+<g class="key"><path class="ln usb" d="M60 60h40"/><text class="sub" x="110" y="65">USB</text><path class="ln net" d="M210 60h40"/><text class="sub" x="260" y="65">Network</text><path class="ln mcp" d="M360 60h40"/><text class="sub" x="410" y="65">MCP</text><path class="ln web" d="M510 60h40"/><text class="sub" x="560" y="65">Internet</text><path class="ln turn" d="M660 60h40"/><text class="sub" x="710" y="65">Takes turns</text></g>
+
+</svg>
