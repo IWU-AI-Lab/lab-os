@@ -30,7 +30,7 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 ```
 In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnect.
 - **F.1** (quick job 29) Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-wrist.` → does it show the view along the jaws? (yes / no)
-- **F.2** (quick job 28) Prompt: `Move to x 20, y 0, z 0, pointing straight down.` → do the jaw tips just touch the table? (yes / no; if no, how far above, in phone thicknesses)
+- **F.2** (quick job 28) Open http://localhost:8080/teleop → Desktop control. Jog the gripper down, slowly, until the jaw tips just touch the table. Read the gripper's z on http://localhost:8080/ai. → z ___ cm (it should be about 0 once quick job 28 is in; if not, this number goes in `config/devices.yaml`).
 - **F.3** (quick job 30) Hand on STOP. Prompt: `Go to the home pose.` → did it fold into the position you always leave it in, without hitting anything? (yes / no)
 - **F.4** (quick job 27) Open http://localhost:8080/design → Teleop. Unplug the arm's USB cable. → within a few seconds, does the hub show the arm as disconnected? (yes / no)
 - **F.5** Plug it back in. Wait 10 seconds. Desktop control → jog a joint. → did the arm move? (yes / no; copy any line the terminal keeps repeating)
