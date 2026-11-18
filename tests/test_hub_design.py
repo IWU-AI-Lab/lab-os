@@ -126,23 +126,28 @@ def test_the_startup_builds_nothing_big_as_the_core_arrives():
 MEDIA = SRC / "hub" / "web" / "media"
 
 
-def test_the_startup_video_matches_the_theme():
-    # the design stays the source: a change to the startup's numbers or color needs a new recording
-    # (scripts/record_startup.py); the page would quietly draw it live otherwise
+def test_the_startup_videos_match_the_theme():
+    # the design stays the source: a change to the startup's numbers or color needs new recordings
+    # (scripts/record_startup.py --quality …); the page would quietly draw it live otherwise
     import json
 
     from lab_os.theme import load_theme
 
-    meta = json.loads((MEDIA / "startup.json").read_text())
     t = load_theme()
     hy = t["startup"]["hyperspace"]
-    assert (MEDIA / meta["file"]).stat().st_size > 100_000
-    assert t["startup"]["style"] == meta["startup"] == "hyperspace"
-    assert round(hy["ramp_s"] * 1000) == meta["ramp_ms"], "record the startup video again"
-    assert round(hy["hold_s"] * 1000) == meta["hold_ms"], "record the startup video again"
-    assert round(hy["brake_s"] * 1000) == meta["brake_ms"], "record the startup video again"
-    assert hy["impact_frame"] == meta["impact"], "record the startup video again"
-    assert t["colors"]["primary"].lower() == meta["primary"], "record the startup video again"
+    found = sorted(p.stem for p in MEDIA.glob("startup-*.json"))
+    assert found == ["startup-full", "startup-maximal"]
+    for name in found:
+        meta = json.loads((MEDIA / f"{name}.json").read_text())
+        again = f"record {name} again"
+        assert name == f"startup-{meta['quality']}"
+        assert (MEDIA / meta["file"]).stat().st_size > 100_000
+        assert t["startup"]["style"] == meta["startup"] == "hyperspace"
+        assert round(hy["ramp_s"] * 1000) == meta["ramp_ms"], again
+        assert round(hy["hold_s"] * 1000) == meta["hold_ms"], again
+        assert round(hy["brake_s"] * 1000) == meta["brake_ms"], again
+        assert hy["impact_frame"] == meta["impact"], again
+        assert t["colors"]["primary"].lower() == meta["primary"], again
     assert round(t["startup"]["unlock_s"] * 1000) == 1350  # the recorder's UNLOCK_MS
 
 
@@ -150,7 +155,7 @@ async def test_the_startup_video_is_served_and_off_by_default(aiohttp_client, tm
     from lab_os.hub.hub_devices import DeviceError, DeviceSettings
 
     client = await aiohttp_client(make_app())
-    resp = await client.get("/hub/media/startup.json")
+    resp = await client.get("/hub/media/startup-full.json")
     assert resp.status == 200 and (await resp.json())["handoff_ms"] > 5000
     s = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
     assert s.get("desk") == {}  # off unless a device turns it on

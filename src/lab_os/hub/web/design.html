@@ -2824,21 +2824,23 @@ function finishBoot() {
    ⚙ → This device → "Startup as a video" (off by default). The recording (scripts/record_startup.py, from this page)
    starts at the start press and covers the moving pictures until the core has arrived (`handoff_ms`); the words stay
    live above it; meanwhile nothing is drawn underneath, then the live hub, in the same state by then, fades in.
-   startup.json says what it was recorded with; anything different (the screen's shape, the theme) = drawn live. */
-const VID = { meta: undefined, timer: 0 };
+   One recording per level of detail (startup-full, startup-maximal): the device's level picks it. Its .json says
+   what it was recorded with; anything different (the screen's shape, the theme) = drawn live. */
+const VID = { metas: {}, meta: null, timer: 0 };
 const wantVideo = () => screenPrefs().startup_video === true;
 async function prepareVideo() {
   if (!wantVideo()) return;
-  if (VID.meta === undefined) VID.meta = await getJSON("/hub/media/startup.json");
-  const v = $("#startup-video");
-  if (VID.meta && !v.getAttribute("src")) { v.src = `/hub/media/${VID.meta.file}`; v.preload = "auto"; v.load(); }
+  const q = S.quality;
+  if (!(q in VID.metas)) VID.metas[q] = await getJSON(`/hub/media/startup-${q}.json`);
+  VID.meta = VID.metas[q];
+  const v = $("#startup-video"), src = VID.meta && `/hub/media/${VID.meta.file}`;
+  if (src && v.getAttribute("src") !== src) { v.src = src; v.preload = "auto"; v.load(); }
 }
 function videoWhyNot() {
   const m = VID.meta, v = $("#startup-video"), primary = getComputedStyle(body).getPropertyValue("--primary").trim().toLowerCase();
-  if (!m) return "no recording: scripts/record_startup.py";
+  if (!m || m.quality !== S.quality) return `no recording at ${S.quality} detail: scripts/record_startup.py --quality ${S.quality}`;
   if (!S.ready) return "the page was still loading";
   if (S.startup !== "hyperspace") return `the startup is ${S.startup}, the recording is hyperspace`;
-  if (S.quality !== m.quality) return `level of detail ${S.quality}, recorded at ${m.quality}`;
   if (Math.abs(innerWidth / innerHeight - m.width / m.height) > 0.12) return `a ${innerWidth}×${innerHeight} screen, recorded at ${m.width}×${m.height}`;
   if (m.ramp_ms !== HYPER.ramp || m.hold_ms !== HYPER.hold || m.brake_ms !== HYPER.brake || m.impact !== S.impact || m.primary !== primary)
     return "the theme's startup changed since the recording: record it again";

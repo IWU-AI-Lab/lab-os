@@ -7,8 +7,9 @@ video"). The design stays the source: record again whenever the startup changes.
 Needs Google Chrome and ffmpeg (with libvpx-vp9). The page runs in slow motion (its clock, timers,
 CSS animations and videos SLOW times slower) while Chrome's screencast captures its frames, so the
 recording is smooth whatever the computer; the frames are then put back at 60 a second. The words
-are hidden: the hub types them live. Writes src/lab_os/hub/web/media/startup.webm and startup.json
-(what it was recorded with: the page plays the video only while these still match the theme).
+are hidden: the hub types them live. Writes src/lab_os/hub/web/media/startup-<quality>.webm and
+.json (what it was recorded with: the page plays the video only while these still match the theme).
+--quality full (the default) or maximal: the hub plays the one matching the device's detail level.
 
     --compare OUT.mp4   instead: the startup drawn live (left) and as the video (right), words
                         included, side by side (needs a recording already)
@@ -142,7 +143,7 @@ def ffmpeg(*args: str) -> None:
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *args], check=True)
 
 
-async def record(url: str, size: tuple[int, int]) -> None:
+async def record(url: str, size: tuple[int, int], quality: str) -> None:
     nums = theme_numbers(url)
     handoff = (
         UNLOCK_MS
@@ -155,14 +156,14 @@ async def record(url: str, size: tuple[int, int]) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         print(f"recording {handoff + 500} ms of the startup at {size[0]}×{size[1]} …")
         await capture(
-            f"{url}/design?sound=0&quality=full&startup=hyperspace",
+            f"{url}/design?sound=0&quality={quality}&startup=hyperspace",
             size,
             handoff + 500,
             False,
             Path(tmp),
         )
         MEDIA.mkdir(exist_ok=True)
-        video = MEDIA / "startup.webm"
+        video = MEDIA / f"startup-{quality}.webm"
         ffmpeg(
             "-framerate", str(FPS), "-i", f"{tmp}/f%05d.jpg",
             "-c:v", "libvpx-vp9", "-crf", "48", "-b:v", "0", "-row-mt", "1", "-pix_fmt", "yuv420p",
@@ -172,24 +173,25 @@ async def record(url: str, size: tuple[int, int]) -> None:
         "file": video.name,
         "width": size[0],
         "height": size[1],
-        "quality": "full",
+        "quality": quality,
         "startup": "hyperspace",
         **nums,
         "handoff_ms": handoff,
         "recorded": date.today().isoformat(),
     }
-    (MEDIA / "startup.json").write_text(json.dumps(meta, indent=2) + "\n")
-    print(f"wrote {video} ({video.stat().st_size / 1e6:.1f} MB) and startup.json")
+    video.with_suffix(".json").write_text(json.dumps(meta, indent=2) + "\n")
+    print(f"wrote {video} ({video.stat().st_size / 1e6:.1f} MB) and its .json")
 
 
-async def compare(url: str, size: tuple[int, int], out: Path, ms: int = 11000) -> None:
+async def compare(url: str, size: tuple[int, int], out: Path, quality: str, ms=11000) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         for name, video in (("live", False), ("video", True)):
             print(f"recording the startup {name} …")
             set_device(url, f"rec-{name}", video)
             d = Path(tmp) / name
             d.mkdir()
-            await capture(f"{url}/design?sound=0&device=rec-{name}", size, ms, True, d)
+            page = f"{url}/design?sound=0&quality={quality}&device=rec-{name}"
+            await capture(page, size, ms, True, d)
         half = f"scale={size[0] // 2}:-2"
         ffmpeg(
             "-framerate", str(FPS), "-i", f"{tmp}/live/f%05d.jpg",
@@ -204,12 +206,15 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--url", default="http://localhost:8080", help="a running brain")
     ap.add_argument("--size", default="1920x1080", help="the screen it's for (the lab desktop's)")
+    ap.add_argument("--quality", default="full", choices=("full", "maximal"), help="detail level")
     ap.add_argument("--compare", type=Path, help="write a side-by-side comparison here instead")
     a = ap.parse_args()
     if not shutil.which("ffmpeg"):
         raise SystemExit("needs ffmpeg")
     size = tuple(int(n) for n in a.size.split("x"))
-    asyncio.run(compare(a.url, size, a.compare) if a.compare else record(a.url, size))
+    asyncio.run(
+        compare(a.url, size, a.compare, a.quality) if a.compare else record(a.url, size, a.quality)
+    )
 
 
 if __name__ == "__main__":
