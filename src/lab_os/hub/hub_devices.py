@@ -47,6 +47,7 @@ SETTINGS = {
     "res": ("", "auto", "1", "0.75", "0.5"),
     "sound": None,
     "full": None,
+    "startup_video": None,  # the designed hub's startup as a recording (quick job 34); off
     "voice": ("", "push-to-talk", "dictation", "wake word"),
     "wake_sensitivity": ("", *range(1, 10)),  # 1–9 (lab_os.ai.wake.SENSITIVITY); "" = 5
     "hear_in": ("", "en"),  # the assistant's languages (lab_os.ai.languages); "" = any

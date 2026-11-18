@@ -31,6 +31,7 @@ const LOCAL = [
     save: (v) => screenSet("res", v === "auto" ? "" : v) },
   { key: "sound", label: "Sound", help: "the startup and the interface sounds", kind: "bool", value: () => screenGet().sound !== false, save: (v) => screenSet("sound", v) },
   { key: "full", label: "Full screen on the start press", help: "off for a laptop you work on", kind: "bool", value: () => screenGet().full !== false, save: (v) => screenSet("full", v) },
+  { key: "startup_video", label: "Startup as a video", help: "a test for screens where the startup stutters: the designed hub plays a recording of the jump instead of drawing it (the words stay live, the hub after it too). Only for the hyperspace startup at the recorded level of detail and screen shape; otherwise drawn as usual", kind: "bool", value: () => screenGet().startup_video === true, save: (v) => screenSet("startup_video", v ? true : "") },
 ];
 
 /* ---------- the controls ---------- */
