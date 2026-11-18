@@ -32,7 +32,7 @@ The features that are built and working today, plus a few lab robot projects tha
 |---|---|---|
 | Typed chat under the circle ("Ask anything"), answers stream and type themselves out, History page | ✅ | Tried with the free Gemini key; OpenAI is set up but untested without its key |
 | Swap AI setups in `config/models.yaml` (OpenAI, Gemini, local Ollama); falls back to Gemini without an OpenAI key | ✅ | |
-| Spend log per answer and a monthly budget that pauses the chat; the budget can be changed on Settings and applies at once | ✅ | $20/month at the lab |
+| Spend log per answer and a monthly budget that pauses the chat (the designed hub says why once, at the top); the budget can be changed on Settings and applies at once | ✅ | $20/month at the lab |
 | The chat knows the project: reads the docs, git history and device list; drafts prompts for Claude Code / Codex (Copy button) | ✅ | Read-only: the chat can never move a robot |
 | **Push-to-talk:** hold the mic button (or Space), talk, let go; the words appear while you talk, the answer is spoken sentence by sentence and the core follows its loudness. Same conversation as typing (tools, history, budget) | ✅ | On the free Gemini key (~15–20 spoken answers a day). Works at the lab desktop with a USB microphone and on the Quest (2026-11-13). No mic button without a secure page (localhost/https), a microphone, or voice at the brain |
 | **Dictation:** tap the mic (or Space); the words go into the ask line as you talk, it stops after a short silence or a second tap; fix and send like typing | 🧪 | Chosen per device: ⚙ → This device → Talking to it (push-to-talk is the default) |
@@ -73,7 +73,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | `pose_view`: a picture of the arm's 3D model in its current pose, with the AI's marks for where it thinks things are | ✅ | Used in the cube pick on the real arm (2026-11-12); also at `/api/pose-view.png` |
 | `pick_at`: a whole pick in one call (open, above, straight down, close, lift), each step shown on AI Control before it moves; says holding or missed (2026-11-16) | 🧪 | Fake arm only (`docs/guides/lab-checklist.md` 3b.5) |
 | Table map: the stand camera's pictures get a cm grid of the table, from a printed sheet (`lab-os table-map`); `table_point` turns a pixel into cm (2026-11-16) | 🧪 | A drawn sheet in perspective only so far (`docs/guides/lab-checklist.md` part 3b) |
-| `camera_snapshot`: one real picture from a camera (the white arm's: `so101-white-cam-stand` and `-cam-wrist`) | ✅ | Used in the cube pick (2026-11-12). The stand camera's picture gives a direction, not a place (it doesn't know where the camera is) |
+| `camera_snapshot`: one real picture from a camera (the white arm's: `so101-white-cam-wrist` in socket 7 and `-cam-stand` in socket 8, the same sockets as the green set's; swapped 2026-11-18, quick job 29, from lab check 3.9) | ✅ | Used in the cube pick (2026-11-12). The stand camera's picture gives a direction, not a place (it doesn't know where the camera is) |
 | AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |
 | Project read tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, … | ✅ | `docs/design/` included since 2026-11-12 |
 
