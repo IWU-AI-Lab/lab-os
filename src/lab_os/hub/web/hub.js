@@ -415,6 +415,10 @@ function renderStatus(st) {
     st.internet === true ? "Internet: online" : st.internet === false ? "Internet: offline" : "Internet: checking…";
   net.classList.toggle("off", st.internet !== true);
   ai.textContent = aiText(st.ai);
+  // only when something's wrong: the arm's USB was unplugged (the brain reconnects by itself)
+  const arm = $("#f-arm");
+  arm.hidden = st.arm?.connected !== false;
+  arm.textContent = `Arm: ${st.arm?.name} disconnected`;
   ai.classList.toggle("off", st.ai.connected !== true || !!st.ai.paused);
   showPaused(st.ai.paused);
   voice.setStatus(st.voice);

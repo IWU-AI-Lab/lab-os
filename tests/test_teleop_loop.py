@@ -123,7 +123,12 @@ def test_command_messages_are_exactly_what_the_driver_got():
     kinds = [m["type"] for m in sent]
     assert kinds[-3:] == ["arm_stop", "arm_resume", "arm_command"]
     assert loop.status()["last_command"] == commands[-1]
-    assert loop.status()["arm"] == {"name": "fake-arm", "model": "so101"}
+    assert loop.status()["arm"] == {
+        "name": "fake-arm",
+        "model": "so101",
+        "connected": True,
+        "problem": None,
+    }
 
 
 def test_commands_stay_inside_soft_limits():
@@ -241,3 +246,93 @@ async def test_stop_ends_a_motion():
     before = loop.arm.read_joints()
     loop.step(0.0, 0.1)
     assert loop.arm.read_joints() == before
+
+
+# ---------- the arm's USB unplugged and plugged back in (quick job 27) ----------
+
+
+def test_unplugged_arm_freezes_and_shows_disconnected():
+    loop, arm = make_loop()
+    feed(loop, msg(grip=1.0), now=0.0)
+    for i in range(1, 20):
+        feed(loop, msg(x=0.05 * i / 20, grip=1.0), now=i * DT)
+    assert not loop.frozen and loop.status()["clutch"]
+    arm.plugged = False
+    loop.check_link(1.0)
+    assert not loop.arm_connected and loop.frozen
+    s = loop.status()
+    assert s["arm"]["connected"] is False and "unplugged" in s["arm"]["problem"]
+    assert not s["clutch"]  # teleop no longer "following"
+    assert s["joints"]  # the last reading, so the 3D view stays where it was
+    feed(loop, msg(x=0.3, grip=1.0), now=1.02)  # input while it's gone: ignored, no error
+    assert loop.frozen
+
+
+def test_replugged_arm_reconnects_and_needs_a_fresh_grab():
+    loop, arm = make_loop()
+    feed(loop, msg(grip=1.0), now=0.0)
+    arm.plugged = False
+    loop.check_link(1.0)
+    loop.check_link(1.5)  # still gone: nothing
+    assert not loop.arm_connected
+    arm.plugged = True
+    loop.check_link(1.6)  # sooner than reconnect_s: not yet
+    assert not loop.arm_connected
+    loop.check_link(2.0)
+    assert loop.arm_connected and arm.connected and loop.arm_problem is None
+    assert loop.frozen  # held where it is
+    pan = arm.read_joints()["shoulder_pan"]
+    feed(loop, msg(x=0.2, grip=1.0), now=2.02)  # the grip still held from before: no move
+    assert loop.frozen and arm.read_joints()["shoulder_pan"] == pan
+    feed(loop, msg(x=0.2, grip=0.0), now=2.04)
+    for i in range(1, 20):
+        feed(loop, msg(x=0.2 + 0.1 * i / 20, grip=1.0), now=2.04 + i * DT)
+    assert not loop.frozen and arm.read_joints()["shoulder_pan"] != pan
+
+
+def test_a_port_taken_meanwhile_is_not_reopened():
+    from lab_os.devices import InUse
+
+    loop, arm = make_loop()
+    arm.plugged = False
+    loop.check_link(1.0)
+    arm.plugged = True
+    taken = [True]
+
+    def connect():
+        if taken[0]:
+            raise InUse("so101-green is in use by lelab (pid 42): one program per port.")
+        arm.connected = True
+
+    arm.connect = connect
+    loop.check_link(2.0)
+    assert not loop.arm_connected and "lelab" in loop.arm_problem
+    taken[0] = False  # LeLab let go: the next try reopens it
+    loop.check_link(3.0)
+    assert loop.arm_connected
+
+
+def test_an_ai_move_ends_disconnected():
+    from lab_os.teleop.loop import Motion
+
+    loop, arm = make_loop()
+    motion = Motion(path=[{"shoulder_pan": 40.0}], deg_per_s=10.0)
+    loop.start_motion(motion)
+    loop.step(0.0, DT)
+    arm.plugged = False
+    loop.check_link(1.0)
+    assert motion.result == "disconnected" and not loop.motion_active
+    try:
+        loop.start_motion(Motion(path=[{"shoulder_pan": 0.0}]))
+    except RuntimeError as e:
+        assert "disconnected" in str(e)
+    else:
+        raise AssertionError("a move started on a disconnected arm")
+
+
+def test_arms_that_cant_tell_are_left_alone():
+    loop, arm = make_loop()
+    del_attr = type("NoUsb", (), {})  # an arm without port_present (the xArm today)
+    loop.arm = del_attr()
+    loop.check_link(1.0, force=True)
+    assert loop.arm_connected

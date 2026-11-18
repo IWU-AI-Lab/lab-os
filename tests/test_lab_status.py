@@ -16,6 +16,7 @@ def test_the_report_has_only_real_facts():
     r = lab_status(app)
     assert r["arm"] == {
         "name": "fake-arm",
+        "connected": True,
         "driven_by": "free",
         "held_still": r["arm"]["held_still"],
         "motion_allowed": True,
@@ -54,3 +55,20 @@ async def test_the_hub_chat_and_ai_tools_get_it(aiohttp_client):
     async with Client(chat_tools.server) as c:
         names = {t.name for t in (await c.list_tools()).tools}
     assert "lab_status" in names
+
+
+async def test_an_unplugged_arm_is_a_warning_and_the_api_says_disconnected(aiohttp_client):
+    from lab_os.teleop.server import LOOP
+
+    app = make_app()
+    client = await aiohttp_client(app)
+    loop = app[LOOP]
+    loop.arm.plugged = False
+    loop.check_link(100.0, force=True)
+    r = lab_status(app)
+    assert r["arm"]["connected"] is False
+    assert any("disconnected" in w for w in r["warnings"])
+    st = await (await client.get("/api/status")).json()
+    assert st["arm"]["connected"] is False
+    arm = await (await client.get("/api/arm")).json()
+    assert arm["connected"] is False and "unplugged" in arm["problem"]

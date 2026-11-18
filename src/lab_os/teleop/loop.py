@@ -7,6 +7,13 @@ between the two resets both, so nothing carries over.
 A third source: a `Motion` from the AI tools (lab_os.tools.robot): joint waypoints followed at a
 capped speed. While one runs, the AI tools have control and teleop input is refused (the server
 checks `motion_active`); STOP, like every freeze, ends it.
+
+The arm's USB (quick job 27): for drivers that can tell (`port_present()`), the loop checks every
+`link_check_s` that the port is still there. When it goes: freeze, end any move, let go of the
+port without writing (`drop()`), and say so in `status`; teleop input is ignored. When it comes
+back under the same /dev/serial/by-id/ name: `connect()` again, the same checks and the same
+"goals = where the motors are, then torque" as at startup (a borrowed arm that LeLab took in the
+meantime is refused, and tried again later). The clutch must be released and grabbed again.
 """
 
 import asyncio
@@ -96,6 +103,14 @@ class TeleopLoop:
     health_every_s: float = 5.0
     health_log: Path | None = None
     _health_t: float = 0.0
+    # The arm's USB link (quick job 27): checked every link_check_s, reconnect tried every
+    # reconnect_s while it's gone.
+    arm_connected: bool = True
+    arm_problem: str | None = None  # why it's disconnected, or why reconnecting was refused
+    link_check_s: float = 0.5
+    reconnect_s: float = 1.0
+    _link_t: float = 0.0
+    _last_joints: dict[str, float] = field(default_factory=dict)
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -111,17 +126,23 @@ class TeleopLoop:
 
     def start_motion(self, motion: Motion) -> None:
         """Run an AI move (the caller checked that nobody else has control)."""
+        if not self.arm_connected:
+            raise RuntimeError(f"{self.arm.name} is disconnected")
         if self.motion is not None:
             raise RuntimeError("another move is running")
         motion._commanded = self.arm.read_joints()
         self.motion = motion
 
-    def _freeze(self) -> None:
+    def _freeze(self, why: str = "stopped") -> None:
         if self.motion is not None:
-            self.motion.finish("stopped")
+            self.motion.finish(why)
             self.motion = None
         if not self.frozen:
-            self.arm.stop()
+            if self.arm_connected:
+                try:
+                    self.arm.stop()
+                except Exception as e:  # e.g. the USB just went: the freeze itself must not fail
+                    log.warning("%s: stop failed: %s", self.arm.name, e)
             self.frozen = True
             self._emit({"type": "arm_stop"})
         self.mapper.reset(require_release=True)
@@ -171,7 +192,7 @@ class TeleopLoop:
     def check_health(self, now: float) -> None:
         """Every health_every_s: read the servos (if the driver can) and log it."""
         read = getattr(self.arm, "read_health", None)
-        if read is None or now - self._health_t < self.health_every_s:
+        if read is None or not self.arm_connected or now - self._health_t < self.health_every_s:
             return
         self._health_t = now
         try:
@@ -194,6 +215,49 @@ class TeleopLoop:
     def stop(self) -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch."""
         self._freeze()
+
+    def check_link(self, now: float, force: bool = False) -> None:
+        """Is the arm's USB still there; is it back? (drivers with `port_present`, see above)
+        `force`: check now (a step just failed), not only every link_check_s."""
+        present = getattr(self.arm, "port_present", None)
+        if present is None:
+            return
+        wait = self.link_check_s if self.arm_connected else self.reconnect_s
+        if not force and now - self._link_t < wait:
+            return
+        self._link_t = now
+        if self.arm_connected:
+            if not present():
+                self._lose_arm("its USB was unplugged")
+        elif present():
+            self._reconnect_arm()
+
+    def _lose_arm(self, why: str) -> None:
+        self.arm_connected = False  # first: nothing is written to a port that's gone
+        self.arm_problem = why
+        self._freeze("disconnected")
+        try:
+            getattr(self.arm, "drop", self.arm.close)()  # the port without writing: it's gone
+        except Exception as e:
+            log.warning("%s: letting go of the port: %s", self.arm.name, e)
+        log.warning("%s disconnected (%s); reconnecting when it's back", self.arm.name, why)
+
+    def _reconnect_arm(self) -> None:
+        try:
+            self.arm.connect()  # the startup's checks: by-id name, board, nobody else has it
+        except Exception as e:
+            problem = f"plugged back in, but not reopened: {e}"
+            if problem != self.arm_problem:  # once per reason, not every second
+                log.warning("%s: %s", self.arm.name, problem)
+            self.arm_problem = problem
+            return
+        self.arm_connected = True
+        self.arm_problem = None
+        self.frozen = True  # held where it is; input starts it again (after a release)
+        self.mapper.reset(require_release=True)
+        self.jog.reset(require_release=True)
+        self.health = None
+        log.info("%s reconnected", self.arm.name)
 
     def _step_motion(self, dt: float) -> None:
         m = self.motion
@@ -236,6 +300,8 @@ class TeleopLoop:
             self.motion = None  # the next tick has no input: freeze = hold here
 
     def step(self, now: float, dt: float) -> None:
+        if not self.arm_connected:
+            return  # nothing to drive; check_link reconnects
         if self.motion is not None:
             self._step_motion(dt)
             return
@@ -297,7 +363,9 @@ class TeleopLoop:
 
     def status(self) -> dict:
         """What the overlay / monitor shows (sent as a `status` message)."""
-        joints = self.arm.read_joints()
+        if self.arm_connected:
+            self._last_joints = self.arm.read_joints()
+        joints = self._last_joints  # disconnected: the last reading (the 3D view stays put)
         return {
             "type": "status",
             "connected": self.inputs.connected,
@@ -327,7 +395,12 @@ class TeleopLoop:
             if self.mapper.hand_gap_m is None
             else round(self.mapper.hand_gap_m * 100, 1),
             "capture_cm": round(self.mapper.config.capture_m * 100, 1),
-            "arm": {"name": self.arm.name, "model": getattr(self.arm, "model", "unknown")},
+            "arm": {
+                "name": self.arm.name,
+                "model": getattr(self.arm, "model", "unknown"),
+                "connected": self.arm_connected,
+                "problem": self.arm_problem,
+            },
             "joints": joints,
             "last_command": self.last_command,
             "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
@@ -340,11 +413,17 @@ class TeleopLoop:
             await asyncio.sleep(period)
             now = time.monotonic()
             try:
+                self.check_link(now)
+            except Exception:  # never let the USB check stop the arm loop
+                log.exception("arm link check failed")
+            try:
                 self.step(now, now - last)
             except Exception:
                 # E.g. the arm stopped answering. Freeze and keep running: a dead loop task would
                 # leave every page "connected" but unable to move anything, with no message.
-                log.exception("teleop step failed; arm frozen")
+                self.check_link(now, force=True)  # unplugged? then say that, once
+                if self.arm_connected:
+                    log.exception("teleop step failed; arm frozen")
                 self._freeze()
             last = now
             try:

@@ -53,12 +53,23 @@ class FakeArm:
     joint_names: tuple[str, ...] = SO101_JOINTS
     limits: dict[str, JointLimit] = field(default_factory=so101_limits)
     connected: bool = False
+    plugged: bool = True  # tests: False = its USB is unplugged (port_present, connect)
     stopped: bool = False
     joints: dict[str, float] = field(default_factory=lambda: dict(SO101_READY))
     log: list[tuple[str, dict[str, float], float]] = field(default_factory=list)
 
     def connect(self) -> None:
+        if not self.plugged:
+            raise LookupError(f"{self.name} isn't plugged in")
         self.connected = True
+
+    def port_present(self) -> bool:
+        """Like a real arm's USB check (the teleop loop asks every half second)."""
+        return self.plugged
+
+    def drop(self) -> None:
+        """Let go after the USB went (nothing is written)."""
+        self.connected = False
 
     def read_joints(self) -> dict[str, float]:
         self._require_connected()

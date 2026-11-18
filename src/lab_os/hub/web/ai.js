@@ -83,7 +83,7 @@ async function pollArm() {
   }
   if (!arm) return setPill("#c-arm", "brain not reachable", "bad");
   $("#arm-name").textContent = arm.name;
-  setPill("#c-arm", arm.connected ? "answering" : "not answering", arm.connected ? "on" : "bad");
+  setPill("#c-arm", arm.connected ? "answering" : "disconnected", arm.connected ? "on" : "bad");
   const p = arm.gripper_point_cm;
   $("#gx").textContent = p ? p.x.toFixed(1) : "—";
   $("#gy").textContent = p ? p.y.toFixed(1) : "—";

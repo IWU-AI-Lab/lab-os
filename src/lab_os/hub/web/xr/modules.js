@@ -228,7 +228,7 @@ export class ArmHologram {
     });
     // the state under the arm: who has control, held / following / frozen
     const who = { free: "free", ai: "the AI tools" }[s?.control] || (s ? "an input page" : "");
-    const state = !s ? "connecting to the brain" : s.frozen ? (s.needs_release ? "frozen: release grip" : "frozen") : s.clutch ? "following" : "holding";
+    const state = !s ? "connecting to the brain" : s.arm?.connected === false ? "disconnected" : s.frozen ? (s.needs_release ? "frozen: release grip" : "frozen") : s.clutch ? "following" : "holding";
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
       g.fillStyle = s?.frozen ? C.accent : C.dim;

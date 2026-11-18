@@ -5,6 +5,7 @@ import asyncio
 import json
 import math
 import socket
+from dataclasses import replace
 
 import pytest
 from mcp import Client
@@ -429,3 +430,28 @@ async def test_mcp_over_http_on_localhost(rig):
     finally:
         http.shutdown()
         await asyncio.wait_for(task, 5)
+
+
+# ---------- the arm's USB unplugged (quick job 27) ----------
+
+
+async def test_an_unplugged_arm_refuses_moves_and_says_so(rig):
+    rig.arm.plugged = False
+    rig.loop.check_link(0.0, force=True)
+    s = await rig.arm_status()
+    assert s["connected"] is False and "disconnected" in s["problem"]
+    with pytest.raises(Refused, match="disconnected"):
+        await rig.move_joints({"shoulder_pan": 5.0})
+    assert (await rig.stop())["result"] == "stopped"  # STOP is always allowed
+    rig.arm.plugged = True
+    rig.loop.check_link(10.0, force=True)
+    assert (await rig.arm_status())["connected"] is True
+
+
+async def test_unplugged_during_a_move(rig):
+    rig.limits = replace(rig.limits, deg_per_s=20.0)
+    task = asyncio.create_task(rig.move_joints({"shoulder_pan": 20.0}))
+    await asyncio.sleep(0.1)
+    rig.arm.plugged = False
+    r = await task
+    assert r["result"] == "disconnected" and "unplugged" in r["problem"]

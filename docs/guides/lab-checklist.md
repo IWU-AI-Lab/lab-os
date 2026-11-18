@@ -33,7 +33,7 @@ In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnec
 - **F.2** (quick job 28) Open http://localhost:8080/teleop → Desktop control. Jog the gripper down, slowly, until the jaw tips just touch the table. Read the gripper's z on http://localhost:8080/ai. → z ___ cm (it should be about 0 once quick job 28 is in; if not, this number goes in `config/devices.yaml`).
 - **F.3** (quick job 30) Hand on STOP. Prompt: `Go to the home pose.` → did it fold into the position you always leave it in, without hitting anything? (yes / no)
 - **F.4** (quick job 27) Open http://localhost:8080/design → Teleop. Unplug the arm's USB cable. → within a few seconds, does the hub show the arm as disconnected? (yes / no)
-- **F.5** Plug it back in. Wait 10 seconds. Desktop control → jog a joint. → did the arm move? (yes / no; copy any line the terminal keeps repeating)
+- **F.5** Plug it back in. Wait 10 seconds (the terminal should say `so101-white reconnected`). Desktop control → jog a joint (let go of the keys first, then press again). → did the arm move? (yes / no; copy any line the terminal keeps repeating)
 - **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
 - Hold the arm. Ctrl+C in the brain's terminal.
 
