@@ -9,7 +9,7 @@ The assistant under the hub's circle answers typed questions (focus step 5). It 
 2. `uv run lab-os serve`, open http://localhost:8080/, start the hub.
 3. Type anywhere (it lands in "Ask anything"), press Enter. Or hold the mic (or Space) and talk: `docs/guides/voice.md`. The answer streams in under the circle; **History** (or a tap on the answer) opens the whole conversation; Back or Esc closes it.
 
-The status strip says which setup answers (`AI: main (OpenAI)`), or `AI not connected` / `AI: paused`. The brain checks the service every minute by listing its models (costs nothing). Without internet the assistant shows `offline`, and everything else keeps working.
+The status strip says which setup answers (`AI: main (OpenAI)`), or `AI not connected` / `AI: paused`. The brain checks the service every minute by listing its models (costs nothing). One failed check while connected is asked again twice, 3 s apart, before the hub says `AI not connected`, and every change is logged with its reason (`AI: main not reachable (HTTP 503)…`, `AI: main answers again`); the internet check likewise tries once more after a miss (since 2026-11-18, quick job 32: before, a single hiccup greyed the hub for 20 s while idle). Without internet the assistant shows `offline`, and everything else keeps working.
 
 ## AI setups (`config/models.yaml`)
 Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`), so they differ only by **address, model name and key name**:

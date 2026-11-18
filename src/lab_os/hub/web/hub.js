@@ -390,8 +390,12 @@ function onEsc(e, doc) {
 document.addEventListener("keydown", (e) => e.key === "Escape" && onEsc(e, document));
 
 /* ---------- status strip, the assistant's state, the clock ---------- */
+// one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
+let statusMisses = 0;
 async function pollStatus() {
   const st = await getJSON("/api/status");
+  statusMisses = st ? 0 : statusMisses + 1;
+  if (!st && statusMisses < 2 && S.status) return S.status;
   S.status = st;
   renderStatus(st);
   return st;
