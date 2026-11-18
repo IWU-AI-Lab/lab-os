@@ -259,6 +259,14 @@ body[data-mod]:not([data-mod="chat"]) #dock-say { display: block; }
 /* the hyperspace flash and impact frame are drawn on their own canvas: a full-screen CSS layer fading over
    the busy network glitched (parts of it didn't draw). Impact frame: dark lines on white, never red. */
 #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9; pointer-events: none; }
+/* the startup as a video (quick job 34, ⚙ → This device): a recording plays over the drawn layers, which aren't
+   drawn meanwhile; the words (start screen, title, checks, greeting) stay live above it, then the live hub takes over */
+#startup-video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 9; pointer-events: none; display: none; opacity: 0; background: var(--bg); }
+body.vid #startup-video { display: block; opacity: 1; transition: opacity 0.15s; }
+body.vid-out #startup-video { display: block; opacity: 0; transition: opacity 0.45s; }
+body.vid #net, body.vid #frame, body.vid #orb, body.vid #ign-orb, body.vid #flash, body.vid #fx, body.vid #shock { visibility: hidden; }
+body.vid #boot-title-wrap, body.vid #boot-greet, body.vid #bootlines,
+body.vid-out #boot-title-wrap, body.vid-out #boot-greet, body.vid-out #bootlines { z-index: 10; }
 #shock { position: fixed; z-index: 1; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid var(--c); opacity: 0; pointer-events: none; }
 #shock.go { animation: shock 1.6s var(--arrive) 1; }
 
@@ -899,6 +907,7 @@ body[data-mod="page"] #module .send { display: flex; }
 
 <div id="flash" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
+<video id="startup-video" muted playsinline preload="none" aria-hidden="true"></video>
 <div id="devcard" role="dialog" aria-label="Device details" hidden><div class="cut"><div class="in"></div></div></div>
 
 <div id="ignite" role="button" tabindex="0" aria-label="Start the hub">
@@ -2774,6 +2783,7 @@ function flyToPlace(instant) {
 function finishBoot() {
   if (S.booted) return;
   skip = true;
+  endVideo();
   const instant = !$("#boot-title").classList.contains("on");
   S.booting = false; S.booted = true;
   if (!S.igniteAt) S.igniteAt = performance.now();
@@ -2810,6 +2820,52 @@ function finishBoot() {
   D?.update();
 }
 
+/* ---------- the startup as a video (quick job 34): a test for screens where the drawn startup stutters ----------
+   ⚙ → This device → "Startup as a video" (off by default). The recording (scripts/record_startup.py, from this page)
+   starts at the start press and covers the moving pictures until the core has arrived (`handoff_ms`); the words stay
+   live above it; meanwhile nothing is drawn underneath, then the live hub, in the same state by then, fades in.
+   One recording per level of detail (startup-full, startup-maximal): the device's level picks it. Its .json says
+   what it was recorded with; anything different (the screen's shape, the theme) = drawn live. */
+const VID = { metas: {}, meta: null, timer: 0 };
+const wantVideo = () => screenPrefs().startup_video === true;
+async function prepareVideo() {
+  if (!wantVideo()) return;
+  const q = S.quality;
+  if (!(q in VID.metas)) VID.metas[q] = await getJSON(`/hub/media/startup-${q}.json`);
+  VID.meta = VID.metas[q];
+  const v = $("#startup-video"), src = VID.meta && `/hub/media/${VID.meta.file}`;
+  if (src && v.getAttribute("src") !== src) { v.src = src; v.preload = "auto"; v.load(); }
+}
+function videoWhyNot() {
+  const m = VID.meta, v = $("#startup-video"), primary = getComputedStyle(body).getPropertyValue("--primary").trim().toLowerCase();
+  if (!m || m.quality !== S.quality) return `no recording at ${S.quality} detail: scripts/record_startup.py --quality ${S.quality}`;
+  if (!S.ready) return "the page was still loading";
+  if (S.startup !== "hyperspace") return `the startup is ${S.startup}, the recording is hyperspace`;
+  if (Math.abs(innerWidth / innerHeight - m.width / m.height) > 0.12) return `a ${innerWidth}×${innerHeight} screen, recorded at ${m.width}×${m.height}`;
+  if (m.ramp_ms !== HYPER.ramp || m.hold_ms !== HYPER.hold || m.brake_ms !== HYPER.brake || m.impact !== S.impact || m.primary !== primary)
+    return "the theme's startup changed since the recording: record it again";
+  if (v.readyState < 3) return "the video isn't loaded yet";
+  return null;
+}
+function startVideo() {
+  if (!wantVideo()) return false;
+  const why = videoWhyNot();
+  if (why) { console.info(`hub: the startup is drawn live, not the video (${why})`); return false; }
+  const v = $("#startup-video");
+  v.currentTime = 0;
+  S.vid = true; body.classList.remove("vid-out"); body.classList.add("vid");
+  v.play().catch((e) => { console.warn(`hub: the startup video didn't play (${e.message})`); endVideo(); });
+  VID.timer = setTimeout(endVideo, VID.meta.handoff_ms);
+  console.info("hub: the startup plays as a video");
+  return true;
+}
+function endVideo() {
+  if (!S.vid) return;
+  S.vid = false; clearTimeout(VID.timer);
+  body.classList.remove("vid"); body.classList.add("vid-out");
+  setTimeout(() => { if (!S.vid) { body.classList.remove("vid-out"); $("#startup-video").pause(); } }, 500);
+}
+
 /* ---------- ignition: safe to start, any input ---------- */
 const hasTouch = navigator.maxTouchPoints > 0, hasMouse = matchMedia("(any-pointer: fine)").matches;
 let hasPad = false;
@@ -2832,6 +2888,7 @@ function ignite() {
   if (!ig || ig.classList.contains("unlock") || performance.now() < S.startGuardUntil) return;
   goFull();
   audio(); SFX.unlock(); V?.unlock();
+  startVideo();
   S.greetP = startChat();
   S.greetP.then(spokenGreeting);
   ig.classList.add("unlock");
@@ -2987,6 +3044,7 @@ async function reapply() {
   renderMic();  // the way in may have changed
   syncWake();
   pollStatus();
+  prepareVideo();
 }
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
 addEventListener("storage", (e) => (e.key === "lab-os.screen" || e.key?.startsWith("lab-os.device.")) && reapply());
@@ -3260,9 +3318,11 @@ function frame(now) {
   }
   pollPads();
   stepArm(now, dt);
-  drawFx(now);
-  if (S.quality !== "minimal") { stepNetwork(dt, now); stepOrb(dt, now); stepTraces(dt); if (S.quality === "maximal") stepFrame(now); }
-  else stepOrbStill();
+  if (!S.vid) {  // the startup video covers these (nothing drawn under it)
+    drawFx(now);
+    if (S.quality !== "minimal") { stepNetwork(dt, now); stepOrb(dt, now); stepTraces(dt); if (S.quality === "maximal") stepFrame(now); }
+    else stepOrbStill();
+  }
   if (S.booted) {
     if (now - lastLog > 4200) { lastLog = now; typeLogLine(); }
     if (now - lastVerse > 11000) { lastVerse = now; typeVerse(); }
@@ -3279,7 +3339,7 @@ setMoney();
 document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); if (S.booted) { layoutTraces(); showTraces(); } });
 // start: the theme and the brain's facts load while the start screen waits
 if ($("#ignite")) body.classList.add("waiting");
-S.readyP = init();
+S.readyP = init().then(() => { S.ready = true; prepareVideo(); });
 setInterval(pollStatus, 3000);
 setInterval(() => { if (S.booted && !S.sleeping) pollArm(); }, 250);
 setInterval(() => { if (S.booted) refreshFacts(); }, 60_000);

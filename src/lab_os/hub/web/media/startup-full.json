@@ -1,0 +1,14 @@
+{
+  "file": "startup-full.webm",
+  "width": 1920,
+  "height": 1080,
+  "quality": "full",
+  "startup": "hyperspace",
+  "ramp_ms": 2000,
+  "hold_ms": 700,
+  "brake_ms": 2600,
+  "impact": true,
+  "primary": "#29d4ff",
+  "handoff_ms": 6930,
+  "recorded": "2026-11-18"
+}
