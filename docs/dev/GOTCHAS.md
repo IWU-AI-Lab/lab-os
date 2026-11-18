@@ -31,6 +31,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 ### 2026-11-17 — so101-white's two cameras answer to each other's names
 **What:** during an AI pick, `camera_snapshot so101-white-cam-wrist` showed the table from above (the arm, the Quest, a box), and `so101-white-cam-stand` showed the view along the jaws (the cube between them). The names in `config/devices.yaml` point at the wrong video ports.
 **Fix:** lab check 3.9 (2026-11-17): unplugging the wrist camera removed `usb-0:7`, so the wrist camera is socket 7 and the stand camera socket 8, as on the green set. Swap them in `config/devices.yaml`: quick job 29.
+**2026-11-18:** swapped (quick job 29): `so101-white-cam-wrist` is `usb-0:7`, `so101-white-cam-stand` `usb-0:8`. Lab check F.1.
 
 ### 2026-11-17 — so101-white stands on a ~1.6 cm plate, so its "z = 0" is above the table
 **What:** the arm sits on the stand camera's base plate. Its z = 0 is the bottom of the arm's own base, so the real table is about z −1.6 cm (the builder measured the jaw tips 3 cm off the table at a reading of 1.4 cm). `pick_at` goes down to half the object's height *in the arm's numbers*, so it would close near the top of a 3 cm cube; the 0.5 cm floor also stops the tips ~1 cm above the real table. Done by hand instead (open, `move_to` z 0 ≈ the cube's middle, close, lift): picked and placed fine. The elbow also sags ~3° on most moves (the gripper ends ~1 cm low/short): harmless at this size.
