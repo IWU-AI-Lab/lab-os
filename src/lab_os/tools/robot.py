@@ -20,8 +20,10 @@ refuses; it never trusts the numbers it's given:
   `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
 
 Positions: cm from the arm's base (origin on the table under the base's turning axis), x forward
-(where the arm faces at shoulder_pan 0), y to the arm's left, z up. Tool angle: the gripper's tilt
-in degrees, 0 = pointing up, 90 = forward, 180 = straight down.
+(where the arm faces at shoulder_pan 0), y to the arm's left, z up from the table: an arm standing
+on a plate has `table_z_cm` in devices.yaml (so101-white: -1.6), and every height here (move_to,
+pick_at, the floor, arm_status, pose_view) is measured from the table (quick job 28). Tool angle:
+the gripper's tilt in degrees, 0 = pointing up, 90 = forward, 180 = straight down.
 """
 
 import asyncio
@@ -34,7 +36,7 @@ from pathlib import Path
 import yaml
 
 from lab_os import config
-from lab_os.kinematics import IK_JOINTS, kinematics_for, solve_ik
+from lab_os.kinematics import IK_JOINTS, kinematics_for, on_table, solve_ik
 from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
@@ -155,13 +157,19 @@ class RobotTools:
         control: dict,
         poses: dict | None = None,
         calls: CallLog | None = None,
+        table_z_cm: float | None = None,
     ):
         self.loop = loop
         self.arm = loop.arm
         self.venue = venue
         self.limits = AiLimits.from_venue(venue)
         self.control = control
-        self.kin = kinematics_for(self.arm.model)
+        if table_z_cm is None:  # the arm's setting in devices.yaml (0 for the software arms)
+            from lab_os.devices import table_z_cm as setting
+
+            table_z_cm = setting(self.arm.name)
+        self.table_z_cm = table_z_cm
+        self.kin = on_table(kinematics_for(self.arm.model), table_z_cm)
         self.poses = (load_poses() if poses is None else poses).get(self.arm.model, {})
         self.calls = calls or CallLog()
         self.last_target: tuple[tuple[float, float, float], float] | None = None  # move_to's
@@ -255,10 +263,17 @@ class RobotTools:
                 "motion_allowed": self.venue.motion_allowed,
                 "speed_scale": self.loop.speed_scale,
                 "per_call": self.limits.per_call(),
-                "frame": "cm from the arm's base: x forward, y left, z up (0 = table); "
+                "frame": "cm from the arm's base: x forward, y left, z up from the table "
+                "(0 = the table" + self._plate() + "); "
                 "tool angle 0 = up, 90 = forward, 180 = straight down",
+                "table_z_cm": self.table_z_cm,
             }
         )
+
+    def _plate(self) -> str:
+        if not self.table_z_cm:
+            return ""
+        return f"; this arm's base stands {-self.table_z_cm:g} cm above it"
 
     async def list_poses(self, arm: str | None = None) -> dict:
         self._check_arm(arm)
@@ -282,6 +297,7 @@ class RobotTools:
             where["tool_angle_deg"],
             self.last_target,
             marks,
+            self.table_z_cm,
         )
         out = {"arm": self.arm.name} | where
         if self.last_target:

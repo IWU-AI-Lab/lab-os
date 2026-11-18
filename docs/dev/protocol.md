@@ -137,7 +137,7 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 ```
 
 ## MCP tools (AI tools → the brain)
-Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTTP, this computer only; `--mcp-port`). Setup, rules and examples: `docs/guides/ai-control.md`. Positions in cm from the arm's base (x forward, y left, z up), angles in degrees.
+Served by `lab-os serve` on `http://127.0.0.1:8081/mcp` (MCP over streamable HTTP, this computer only; `--mcp-port`). Setup, rules and examples: `docs/guides/ai-control.md`. Positions in cm from the arm's base (x forward, y left, z up from the table: the arm's `table_z_cm`, quick job 28), angles in degrees.
 
 | Tool | Arguments | Tier |
 |---|---|---|
@@ -223,7 +223,7 @@ The arm the brain drives, for the designed hub's readouts (polled 4 times a seco
  "joints": {"shoulder_pan": 0.0, "shoulder_lift": -20.0, "elbow_flex": 40.0, "wrist_flex": 40.0, "wrist_roll": 0.0, "gripper": 30.0},
  "held": true, "control": "free"}
 ```
-`joints`: degrees, shared joint names. `held`: held still (dead-man; true whenever nothing drives it). `control`: `free`, `teleop` or `ai`. Where the arm has kinematics also `gripper_point_cm` (`{x, y, z}` from the base), `gripper_open_pct`, and (SO-101) `side_cm`: every joint seen from the arm's side, `[{"name": "base", "r": 0, "z": 0}, …, {"name": "tip", "r": 25.8, "z": 4.9}]` (`r` = cm forward along the way the arm faces, `z` = cm up), for AI Control's drawing. When the arm stops answering: `{"name": …, "model": …, "connected": false, "problem": "<why>"}`.
+`joints`: degrees, shared joint names. `held`: held still (dead-man; true whenever nothing drives it). `control`: `free`, `teleop` or `ai`. Where the arm has kinematics also `gripper_point_cm` (`{x, y, z}` from the base), `gripper_open_pct`, and (SO-101) `side_cm`: every joint seen from the arm's side, `[{"name": "base", "r": 0, "z": 0}, …, {"name": "tip", "r": 25.8, "z": 4.9}]` (`r` = cm forward along the way the arm faces, `z` = cm up from the table: the base's bottom is at `-table_z_cm`, 1.6 for `so101-white` on its plate), for AI Control's drawing. `gripper_point_cm.z` is from the table too. When the arm stops answering: `{"name": …, "model": …, "connected": false, "problem": "<why>"}`.
 
 ### `/api/ai-calls?after=T`
 The robot tools' calls this brain run (the last 50 after `T`, epoch seconds), for AI Control, polled once a second:

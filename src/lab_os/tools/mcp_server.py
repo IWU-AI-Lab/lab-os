@@ -28,21 +28,21 @@ DEFAULT_PORT = 8081
 INSTRUCTIONS = """\
 Tools for the lab's robot arm, through the lab-os brain. Call arm_status first: it gives the joint
 angles, the gripper's position (cm from the arm's base: x forward, y to the arm's left, z up, 0 =
-the table), the tool angle (0 = gripper pointing up, 90 = forward, 180 = straight down), who has
-control and the per-call limits. Moves are small on purpose: a call moves at most
-max_joint_change_deg per joint or max_move_cm (move_to) and says when it went only part of the way;
-call again to continue. Every move returns where the arm really ended up: check it before the next
-move. "result": "stopped_short" means the arm didn't get there (off_by_cm, joints_short_deg and a
-message say how far): don't grip or carry on as if it had. Refusals say why; don't retry a
-refusal unchanged. If a move result says it was stopped, don't move again until the user says so.
-camera_snapshot takes a real picture from a camera; on a camera with a table map it has a
-cm grid of the table on it (table_point turns a pixel into cm): use it for an object's x and y,
-then the wrist camera to fine-tune. pose_view draws the arm as it is now (no camera): look at it
+the table, also for an arm standing on a plate), the tool angle (0 = gripper pointing up, 90 =
+forward, 180 = straight down), who has control and the per-call limits. Moves are small on purpose:
+a call moves at most max_joint_change_deg per joint or max_move_cm (move_to) and says when it went
+only part of the way; call again to continue. Every move returns where the arm really ended up:
+check it before the next move. "result": "stopped_short" means the arm didn't get there (off_by_cm,
+joints_short_deg and a message say how far): don't grip or carry on as if it had. Refusals say why;
+don't retry a refusal unchanged. If a move result says it was stopped, don't move again until the
+user says so. camera_snapshot takes a real picture from a camera; on a camera with a table map it
+has a cm grid of the table on it (table_point turns a pixel into cm): use it for an object's x and
+y, then the wrist camera to fine-tune. pose_view draws the arm as it is now (no camera): look at it
 after a move, with marks where you think the objects are, before you grip. Moves don't wait for
-approval; someone watches the arm with STOP in reach, so say one short line before each move.
-Named poses (list_poses, go_to_pose): "ready" is the working pose, reaching forward a little above
-the table: start a task from there. "home" is the folded pose the arm is left in: go there when
-the user says you're done or asks for home.
+approval; someone watches the arm with STOP in reach, so say one short line before each move. Named
+poses (list_poses, go_to_pose): "ready" is the working pose, reaching forward a little above the
+table: start a task from there. "home" is the folded pose the arm is left in: go there when the user
+says you're done or asks for home.
 
 Picking something up: find it on the stand camera's grid; move_to within max_move_cm of the
 point above it; then pick_at (open, above, straight down, close, lift in one call). By hand: come

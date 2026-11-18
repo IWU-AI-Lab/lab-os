@@ -379,7 +379,8 @@ def side_view_cm(kin, joints: dict[str, float]) -> list[dict] | None:
     # measured along the way the arm faces, from its pan axis (which isn't at the base's origin), so
     # the drawing stays the same shape when the arm turns; +pan turns toward -y (as in fk)
     ax, ay, _ = all_frames.get("shoulder_pan", ((0.0, 0.0, 0.0), None))[0]
-    points = [{"name": "base", "r": 0.0, "z": 0.0}]
+    # the bottom of the base: above the table when the arm stands on a plate (quick job 28)
+    points = [{"name": "base", "r": 0.0, "z": round(-getattr(kin, "table_z_m", 0.0) * 100, 1)}]
     for name, (p, _rot) in all_frames.items():
         if name == "gripper_frame_joint":
             continue  # the same point as "tip"

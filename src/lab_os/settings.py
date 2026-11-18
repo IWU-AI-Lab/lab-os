@@ -301,7 +301,7 @@ SECTIONS: list[Section] = [
                 "Floor (stay above the table)",
                 "bool",
                 "off = teleop and the AI tools may take the gripper below the table line "
-                "(ai_tools.min_z_cm)",
+                "(ai_tools.min_z_cm, cm above the table)",
                 applies="restart",
                 safety=True,
             ),
