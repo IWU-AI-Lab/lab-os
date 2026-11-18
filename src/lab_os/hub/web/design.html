@@ -1718,7 +1718,7 @@ let armWord = "";
 function renderArm() {
   const a = S.arm;
   $(".arm .name").textContent = a?.name || "arm";
-  const [ico, w] = !a ? ["i-warn", "brain not reachable"] : !a.connected ? ["i-warn", "not answering"]
+  const [ico, w] = !a ? ["i-warn", "brain not reachable"] : !a.connected ? ["i-warn", "disconnected"]
     : a.control === "ai" ? ["i-chip", "AI moving"] : a.control === "teleop" ? (a.held ? ["i-pause", "held"] : [null, "following"])
     : [null, "free"];
   const html = (ico ? `<svg class="ico"><use href="#${ico}"/></svg>` : "") + w;
@@ -2718,7 +2718,7 @@ async function boot() {
     ["Internet", st?.internet === true ? "online" : st?.internet === false ? "offline" : "checking", st?.internet === true],
     ["AI", !ai ? "brain not reachable" : ai.paused ? "paused" : ai.connected ? ai.setup : "not connected", !!ai?.connected && !ai.paused],
     ["Assistant", st?.persona?.display_name || "unknown", !!st],
-    ["Arm", S.arm?.connected ? S.arm.name : "not answering", !!S.arm?.connected],
+    ["Arm", S.arm?.connected ? S.arm.name : "disconnected", !!S.arm?.connected],
   ];
   // the checks type out while the title decodes above them
   const typeChecks = (async () => {

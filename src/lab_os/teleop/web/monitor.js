@@ -26,7 +26,8 @@ function show(s) {
   setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
   const who = { free: "free", ai: "the AI tools" }[s.control] || "an input page";
   setPill($("control"), who, s.control === "free" ? "off" : "on");
-  if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
+  if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
+  else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
   else setPill($("state"), "holding", "off");
   for (const [name, v] of Object.entries(s.joints)) {

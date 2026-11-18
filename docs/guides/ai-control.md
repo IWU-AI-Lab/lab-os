@@ -74,6 +74,7 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control") and the pages show control "the AI tools". The hub doesn't reset to its start screen mid-move.
 - **Switching limits off** (lab only, on by default): the per-move limit, the speed cap and the floor can each be set to `off` under `limits:` in the venue file or on the hub's Settings page (→ Safety limits; restart the brain). `arm_status` then says `"off"` for that number. Never on a public venue or the visit-day venue (`limits_locked: true`). The soft joint limits, one controller at a time and STOP always stay. SAFETY.md → "Limits".
 - **Stopping:** `stop`, STOP on any page, or the tool call being cancelled mid-move all freeze the arm.
+- **Unplugged:** if an SO-101's USB goes, the move ends with `"result": "disconnected"`, `arm_status` says `"connected": false` with why, and every move is refused until it's back; the brain reconnects by itself when the cable is plugged in again (quick job 27).
 
 ## 5. On the real arm (`so101-white`, in the lab)
 Only with the builder at the arm, hand near STOP. Ask before the first real move (CLAUDE.md). The green follower works the same way (below: "The green arm").

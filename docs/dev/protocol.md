@@ -99,7 +99,7 @@ Broadcast to all clients at 10 Hz.
   "max_speed_scale": 0.5,
   "mode": "one_to_one", "modes": ["relative", "one_to_one"], "one_to_one": false,
   "hand_gap_cm": 14.2, "capture_cm": 8.0,
-  "arm": {"name": "fake-arm", "model": "so101"},
+  "arm": {"name": "fake-arm", "model": "so101", "connected": true, "problem": null},
   "joints": {"shoulder_pan": -12.0, "...": 0.0},
   "limits": {"shoulder_pan": [-110.0, 110.0], "...": [0, 0]},
   "last_command": { "...": "the latest arm_command, or null" }
@@ -110,6 +110,7 @@ Broadcast to all clients at 10 Hz.
 - `speed_scale` / `max_speed_scale`: the speed now (`set_speed` changes it) and the venue's cap, the slider's end.
 - `mode` / `modes`: `"relative"` or `"one_to_one"` (`set_mode`), and which ones this arm and venue have (no kinematics, or the venue's 1:1 off: relative only). `one_to_one_deg_per_s`: 1:1's top joint speed (the venue's `one_to_one_max_deg_per_s`; null = no software cap). `servos` (real servos only, else null): `{"max_temp_c", "hot" (≥ 60 °C: 1:1 slowed), "joints": {name: {"temp_c", "load_pct", "volts"}}}`, read every 5 s. `one_to_one`: true while a 1:1 grab is following the hand. `hand_gap_cm`: in 1:1 while not holding, how far the hand is from the gripper point (null otherwise); `capture_cm`: how close it must be to grab.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
+- `arm.connected`: `false` while the arm's USB is unplugged (quick job 27; drivers that can tell: the SO-101s, the fake arm); `arm.problem` says why in a sentence (unplugged, or plugged back in but not reopened, e.g. LeLab has the port). Meanwhile the arm is frozen, input is ignored and `joints` is the last reading. The brain reconnects by itself when the same `/dev/serial/by-id/` name is back; then it's still frozen until the grip is released and pressed again.
 - `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
@@ -165,7 +166,7 @@ Unknown docs or sections are tool errors starting with `Not found:` that list wh
 
 `pose_view` returns two content blocks: a PNG (`image/png`, 1000×470: side view in the arm's plane on the left, top view on the right, grid in cm) and the text of `{"arm", "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg", "last_target_cm"?, "views"}` (`views`: one sentence saying what's where in the picture). The call log keeps the picture's size only. The same picture without marks: `GET /api/pose-view.png`. `camera_snapshot` returns a JPEG (`image/jpeg`) and `{"camera", "width_px"}`; a camera another program has open is refused.
 
-Moves return `{"result": "arrived" | "stopped_short" | "stopped", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`, read from the motors after the move (`read_measured` where the driver has it). `"stopped_short"`: the arm ended more than 0.5 cm from the target (move_to), a joint more than 2° from its target, or the gripper more than 5 % from the opening asked for; then also `"joints_short_deg"` (target − measured, only the joints that fell short) and `"message"` (one sentence: how far, which joints). `move_to` always adds `"target_cm"`, `"target_tool_angle_deg"` and `"off_by_cm"` (the target of this call, after the per-call clipping). Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
+Moves return `{"result": "arrived" | "stopped_short" | "stopped" | "disconnected", "clipped": [notes], "joints_deg", "gripper_open_pct", "gripper_point_cm", "tool_angle_deg"}`, read from the motors after the move (`read_measured` where the driver has it). `"stopped_short"`: the arm ended more than 0.5 cm from the target (move_to), a joint more than 2° from its target, or the gripper more than 5 % from the opening asked for; then also `"joints_short_deg"` (target − measured, only the joints that fell short) and `"message"` (one sentence: how far, which joints). `move_to` always adds `"target_cm"`, `"target_tool_angle_deg"` and `"off_by_cm"` (the target of this call, after the per-call clipping). `"disconnected"`: the arm's USB went during the move (then `"problem"` and no position); while it's gone every move is refused and `arm_status` returns `{"connected": false, "problem"}`. Refusals are tool errors whose text starts with `Refused:` and says why. While an AI move runs, `status.control` on the WebSocket is `"ai"`, teleop input gets the `error` "the AI tools have control", and `/api/status` lists `"ai"` in `in_use`.
 
 ## HTTP endpoints (the hub)
 Served by `lab-os serve` (`src/lab_os/hub/server.py`). Plain JSON over `GET` (the chat also uses `POST`), never cached. The hub page reads only these and `/theme.json`, so the designed hub (`/design`, focus step 10) reads the same ones (plus `/api/arm` and `/api/devices`).
@@ -184,7 +185,7 @@ Polled every 3 s by the hub.
   "voice": {"available": true, "why": null, "setup": "backup", "where": "Gemini, free key",
             "service": "gemini", "wake": {"available": true, "why": null, "phrase": "hey Jarvis"}},
   "assistant": {"state": "idle", "loudness": 0.0},
-  "arm": {"name": "fake-arm", "control": "free"},
+  "arm": {"name": "fake-arm", "connected": true, "control": "free"},
   "in_use": [],
   "time_ms": 1794264745533
 }
@@ -194,6 +195,7 @@ Polled every 3 s by the hub.
 - `ai`: the chat's AI setup (`docs/dev/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
 - `voice`: whether this brain can hear and speak now (`docs/guides/voice.md`): `available`, else `why` (a full sentence: the persona has no voice, no key, no internet, the chat is paused), the voice setup in use, and `wake`: `{"available", "why", "phrase"}` for the wake word (the persona's `wake_word:`, the venue's `wake_word:`, the models). The hub shows the mic button only when it's `available` (and the page is secure and has a microphone).
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking (a spoken answer: the loudness the page reports). `offline` while no AI is connected; `error` after a failed answer until the service answers again.
+- `arm.connected`: `false` while the arm's USB is unplugged (as in `status.arm.connected`).
 - `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
 - `in_use`: what's in use right now (`"teleop"`, `"ai"`, `"chat"` while an answer streams, `"voice"` from a mic press until the answer's last spoken word); the hub never goes back to the start screen while it isn't empty.
 - `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.

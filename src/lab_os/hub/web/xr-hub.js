@@ -157,7 +157,7 @@ class Show {
       ["Internet", st?.internet === true ? "online" : st?.internet === false ? "offline" : "checking", st?.internet === true],
       ["AI", !ai ? "brain not reachable" : ai.paused ? "paused" : ai.connected ? ai.setup : "not connected", !!ai?.connected && !ai.paused],
       ["Assistant", st?.persona?.display_name || "unknown", !!st],
-      ["Arm", arm?.connected ? arm.name : "not answering", !!arm?.connected],
+      ["Arm", arm?.connected ? arm.name : "disconnected", !!arm?.connected],
     ];
     const typing = (async () => {
       for (const [k, v, ok] of checks) {
