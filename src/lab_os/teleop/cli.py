@@ -13,7 +13,7 @@ from pathlib import Path
 from aiohttp import web
 
 from lab_os import REPO_ROOT, config
-from lab_os.devices import PortNotAllowed, load_registry
+from lab_os.devices import PortNotAllowed, load_registry, table_z_cm
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
@@ -134,6 +134,12 @@ def use_config(args) -> None:
         print(f"config: {folder}")
 
 
+def teleop_floor_m(venue, arm_name: str) -> float:
+    """The venue's floor (cm above the table) in the arm's own heights (m), which the mapper uses:
+    an arm on a plate (table_z_cm < 0) gets a lower one (quick job 28)."""
+    return (venue.floor_cm + table_z_cm(arm_name)) / 100
+
+
 def make_loop(args) -> TeleopLoop:
     """The teleop loop for the arm, venue and speed in `args` (see `add_arm_args`)."""
     try:
@@ -158,10 +164,15 @@ def make_loop(args) -> TeleopLoop:
         print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety limits)")
     kin = kinematics_for(arm.model)
     print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
+    table = table_z_cm(arm.name)
+    if table:
+        print(f"{arm.name} stands {-table:g} cm above the table: heights measured from the table")
     return TeleopLoop(
         arm=arm,
         inputs=InputState(),
-        mapper=ClutchMapper(config=MappingConfig(floor_m=venue.floor_cm / 100), kinematics=kin),
+        mapper=ClutchMapper(
+            config=MappingConfig(floor_m=teleop_floor_m(venue, arm.name)), kinematics=kin
+        ),
         speed_scale=speed,
         max_speed_scale=venue.speed_cap_scale,
         one_to_one_deg_per_s=venue.one_to_one_cap,

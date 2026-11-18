@@ -37,7 +37,7 @@ or the step-2 goal:
 Watch **AI Control** (`/ai`, or the hub's AI Control button) while it moves: each call appears there as it happens, with what it did. **STOP** on any page (teleop, monitor) stops an AI move at once. The AI is then told not to move again until you say so.
 
 ## The tools
-Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
+Positions are **cm from the arm's base**: x forward (where the arm faces with `shoulder_pan` at 0), y to the arm's left, z up, with 0 = the table under the base. An arm standing on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `so101-white`: −1.6), so every height the tools take and give (`move_to`, `pick_at`, the floor, `arm_status`, `pose_view`) is from the table, not from the bottom of its base; `arm_status` says so in `frame` and `table_z_cm` (quick job 28). **Tool angle:** the gripper's tilt, 0 = pointing up, 90 = forward, 180 = straight down. Joints use the shared names, in degrees.
 
 | Tool | Tier | What it does |
 |---|---|---|
@@ -69,11 +69,12 @@ Every move returns where the arm **really** ended up (joints, gripper %, positio
 ## Safety rules (the brain clips and refuses; it never trusts the numbers it's given)
 - **Same path as teleop:** moves run through the teleop loop: the arm's soft limits (3° inside the real ones), the venue's `max_speed_scale`, and a capped speed (all joints arrive together).
 - **Small steps per call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° per joint** (`move_joints`, `go_to_pose`; the gripper is exempt) or **10 cm** (`move_to`). A bigger request goes part of the way and says so, and the AI calls again.
-- **Never into the table:** nothing may go below `min_z_cm` (−0.5 cm in both venues since 2026-11-14, 1 cm before: the arm stands on the stand camera's base, so the table is below its zero; teleop uses the same number), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
+- **Never into the table:** nothing may go below `min_z_cm`, cm above the table (1.1 cm in both venues since 2026-11-18; −0.5 cm from the arm's base 2026-11-14 to 11-18, the same place for `so101-white`; teleop uses the same number), checked along the whole path. An arm already lower than that (moved by hand) may move up, never further down.
 - **Refused, nothing moves:** the venue has `motion_allowed: false`; **teleop has control** (a teleop page or the Quest is driving); another AI move is still running; an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that isn't a number.
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control") and the pages show control "the AI tools". The hub doesn't reset to its start screen mid-move.
 - **Switching limits off** (lab only, on by default): the per-move limit, the speed cap and the floor can each be set to `off` under `limits:` in the venue file or on the hub's Settings page (→ Safety limits; restart the brain). `arm_status` then says `"off"` for that number. Never on a public venue or the visit-day venue (`limits_locked: true`). The soft joint limits, one controller at a time and STOP always stay. SAFETY.md → "Limits".
 - **Stopping:** `stop`, STOP on any page, or the tool call being cancelled mid-move all freeze the arm.
+- **Unplugged:** if an SO-101's USB goes, the move ends with `"result": "disconnected"`, `arm_status` says `"connected": false` with why, and every move is refused until it's back; the brain reconnects by itself when the cable is plugged in again (quick job 27).
 
 ## 5. On the real arm (`so101-white`, in the lab)
 Only with the builder at the arm, hand near STOP. Ask before the first real move (CLAUDE.md). The green follower works the same way (below: "The green arm").
@@ -115,7 +116,7 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 - It's active in the `lab` venue only (`config/venues/lab.yaml`), not on visit days.
 - Connecting with motion on writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, like LeLab does when it connects. Never IDs, baud rate, firmware or calibration.
 
-**Poses (since 2026-11-17, quick job 20):** `ready` is the working pose (reaching forward, ~5 cm up; teleop's and the fake arm's start; called `home` before). `home` is the folded pose the builder leaves the arm in, gripper slightly open (it was called `rest`, closed). `home`'s numbers are computed only, not yet checked on the real arm: lab check 8.16 gives the real ones (`docs/plan/current-focus.md` → "Hacks to clean up"). Until then, go there slowly with someone at STOP.
+**Poses (since 2026-11-17, quick job 20):** `ready` is the working pose (reaching forward, ~5 cm up; teleop's and the fake arm's start; called `home` before). `home` is the folded pose the builder leaves the arm in, gripper slightly open (it was called `rest`, closed). Since 2026-11-18 (quick job 30) `home` is the green follower as the builder leaves it (lab check 8.16), hovering just above where it rests: `shoulder_lift` and `elbow_flex` are past their soft limits by 6.3° and 3.6°, so the move stops at the limits and says so (`clipped`); `wrist_flex` is 55 instead of the real 75.9, because with 75.9 the 3D model puts the gripper ~1 cm below the table and the floor refuses the move. When the brain lets go of the arm, it settles into the real rest. Not yet tried on the real arm: lab check F.3.
 
 ## Looking through a camera (`camera_snapshot`)
 `camera_snapshot(camera, width_px=640)` (read tier) takes one real picture from a camera in `devices.yaml` and returns it as a JPEG. The hub's chat doesn't get it (text only). A camera another program has open is refused. These cameras start black and then flash white, so it waits (up to ~6 s) until the brightness settles. The white arm's: `so101-white-cam-stand` (the stand camera, about 2 ft up behind the arm, looking forward and down) and `so101-white-cam-wrist` (the wrist camera, along the jaws); called `-cam-a`/`-cam-b` until 2026-11-16. The green arm's: `so101-green-cam-stand` and `so101-green-cam-wrist` (`-cam-b` and `-cam-a` until 2026-11-17). The white arm's names share USB sockets with the green set's cameras for now, and say the opposite (the white stand camera in socket 7, the green wrist camera in socket 7): lab check 3.9 says which is right (`docs/plan/current-focus.md` → "Hacks to clean up").
@@ -143,7 +144,7 @@ Where the x and y come from: the stand camera's grid (above). The height reading
 
 ## Seeing the pose (`pose_view`)
 Without a camera the AI can't see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose its motors report, as a picture the AI looks at:
-- **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height; the table is the brown band;
+- **left, side view in the arm's own plane** (it turns with `shoulder_pan`, so the arm is never seen end-on): across = reach from the base's turning axis, up = height from the table; the table is the brown band (an arm on a plate stands on a grey block);
 - **right, top view**, as if standing behind the arm: forward (x) up the picture, the arm's left (+y) on the left;
 - a **red dot** at the gripper point (with a dotted line down to the table), a **magenta ×** at the last `move_to` target, and **blue marks** the AI passes in `marks`, e.g. `[{"x_cm": 15, "y_cm": 5, "z_cm": 1.5, "label": "cube", "size_cm": 3}]` (at most 10). A mark with `size_cm` is a square of that size.
 

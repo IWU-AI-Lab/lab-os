@@ -5,9 +5,10 @@ through the teleop loop (`Motion`), so it takes the same path to the arm as tele
 limits, the venue's speed scale, a capped speed per tick. On top of that the brain clips and
 refuses; it never trusts the numbers it's given:
 
-- **refused** (nothing moves, the message says why): the venue doesn't allow motion; teleop has
-  control; another move is running; an unknown arm, joint or pose; a target below the floor
-  (`min_z_cm`) or out of reach; a path that needs a sudden big joint swing.
+- **refused** (nothing moves, the message says why): the venue doesn't allow motion; the arm is
+  disconnected (its USB was unplugged; the brain reconnects when it's back); teleop has control;
+  another move is running; an unknown arm, joint or pose; a target below the floor (`min_z_cm`)
+  or out of reach; a path that needs a sudden big joint swing.
 - **clipped** (it moves, and says so): targets past the soft limits (3° inside the real ones, like
   teleop); more than `max_joint_change_deg` per call (all joints go the same fraction of the way;
   the gripper is exempt); more than `max_move_cm` per call for move_to.
@@ -19,8 +20,10 @@ refuses; it never trusts the numbers it's given:
   `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
 
 Positions: cm from the arm's base (origin on the table under the base's turning axis), x forward
-(where the arm faces at shoulder_pan 0), y to the arm's left, z up. Tool angle: the gripper's tilt
-in degrees, 0 = pointing up, 90 = forward, 180 = straight down.
+(where the arm faces at shoulder_pan 0), y to the arm's left, z up from the table: an arm standing
+on a plate has `table_z_cm` in devices.yaml (so101-white: -1.6), and every height here (move_to,
+pick_at, the floor, arm_status, pose_view) is measured from the table (quick job 28). Tool angle:
+the gripper's tilt in degrees, 0 = pointing up, 90 = forward, 180 = straight down.
 """
 
 import asyncio
@@ -33,7 +36,7 @@ from pathlib import Path
 import yaml
 
 from lab_os import config
-from lab_os.kinematics import IK_JOINTS, kinematics_for, solve_ik
+from lab_os.kinematics import IK_JOINTS, kinematics_for, on_table, solve_ik
 from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
@@ -154,13 +157,19 @@ class RobotTools:
         control: dict,
         poses: dict | None = None,
         calls: CallLog | None = None,
+        table_z_cm: float | None = None,
     ):
         self.loop = loop
         self.arm = loop.arm
         self.venue = venue
         self.limits = AiLimits.from_venue(venue)
         self.control = control
-        self.kin = kinematics_for(self.arm.model)
+        if table_z_cm is None:  # the arm's setting in devices.yaml (0 for the software arms)
+            from lab_os.devices import table_z_cm as setting
+
+            table_z_cm = setting(self.arm.name)
+        self.table_z_cm = table_z_cm
+        self.kin = on_table(kinematics_for(self.arm.model), table_z_cm)
         self.poses = (load_poses() if poses is None else poses).get(self.arm.model, {})
         self.calls = calls or CallLog()
         self.last_target: tuple[tuple[float, float, float], float] | None = None  # move_to's
@@ -215,6 +224,8 @@ class RobotTools:
 
     def position(self) -> dict:
         """Joints, gripper opening and gripper point (cm) right now, for the hub's pages."""
+        if self._disconnected():
+            raise RuntimeError(self._disconnected())
         return self._where()
 
     def _check_arm(self, arm: str | None) -> None:
@@ -223,9 +234,18 @@ class RobotTools:
                 f"no arm called {arm!r} is connected; the connected arm is {self.arm.name!r}"
             )
 
+    def _disconnected(self) -> str | None:
+        """Why the arm can't be reached (its USB was unplugged), or None."""
+        if self.loop.arm_connected:
+            return None
+        why = self.loop.arm_problem or "its USB was unplugged"
+        return f"{self.arm.name} is disconnected ({why}); the brain reconnects when it's back"
+
     async def arm_status(self, arm: str | None = None) -> dict:
         self._check_arm(arm)
         status = {"arm": self.arm.name, "model": self.arm.model}
+        if self._disconnected():
+            return status | {"connected": False, "problem": self._disconnected()}
         try:
             where = self._where()
         except Exception as e:  # e.g. the arm stopped answering
@@ -243,10 +263,17 @@ class RobotTools:
                 "motion_allowed": self.venue.motion_allowed,
                 "speed_scale": self.loop.speed_scale,
                 "per_call": self.limits.per_call(),
-                "frame": "cm from the arm's base: x forward, y left, z up (0 = table); "
+                "frame": "cm from the arm's base: x forward, y left, z up from the table "
+                "(0 = the table" + self._plate() + "); "
                 "tool angle 0 = up, 90 = forward, 180 = straight down",
+                "table_z_cm": self.table_z_cm,
             }
         )
+
+    def _plate(self) -> str:
+        if not self.table_z_cm:
+            return ""
+        return f"; this arm's base stands {-self.table_z_cm:g} cm above it"
 
     async def list_poses(self, arm: str | None = None) -> dict:
         self._check_arm(arm)
@@ -270,6 +297,7 @@ class RobotTools:
             where["tool_angle_deg"],
             self.last_target,
             marks,
+            self.table_z_cm,
         )
         out = {"arm": self.arm.name} | where
         if self.last_target:
@@ -330,6 +358,8 @@ class RobotTools:
             raise Refused(
                 f"the venue {self.venue.name!r} doesn't allow motion (motion_allowed: false)"
             )
+        if self._disconnected():
+            raise Refused(self._disconnected())
         who = self.who_has_control()
         if who == "teleop":
             raise Refused(
@@ -401,6 +431,12 @@ class RobotTools:
         except asyncio.CancelledError:
             self.loop.stop()  # the AI tool went away mid-move: freeze (dead-man)
             raise
+        if motion.result == "disconnected":
+            notes.append(
+                "the arm was disconnected during the move (its USB was unplugged). Don't move "
+                "again until the user says so."
+            )
+            return {"result": "disconnected", "clipped": notes, "problem": self._disconnected()}
         if motion.result != "arrived":
             notes.append(
                 "stopped before arriving (STOP was pressed, or the arm was frozen). Don't move "
@@ -654,16 +690,18 @@ class RobotTools:
             return r
 
         def ended(why: str, r: dict) -> dict:
-            return {"result": r.get("result"), "steps": steps, "message": why} | self._where()
+            out = {"result": r.get("result"), "steps": steps, "message": why}
+            return out | (r if self._disconnected() else self._where())
 
         r = await step(1, "open the gripper", "gripper", open_pct=open_pct)
-        if r["result"] == "stopped":
-            return ended("stopped at step 1. Don't move again until the user says so.", r)
+        if r["result"] in ("stopped", "disconnected"):
+            return ended(f"{r['result']} at step 1. Don't move again until the user says so.", r)
         moves = [(2, "go above it, pointing down", above), (3, "go straight down", grip)]
         for n, say, (x, y, z) in moves:
             r = await step(n, say, "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
-            if r["result"] == "stopped":
-                return ended(f"stopped at step {n}. Don't move again until the user says so.", r)
+            if r["result"] in ("stopped", "disconnected"):
+                why = f"{r['result']} at step {n}. Don't move again until the user says so."
+                return ended(why, r)
             if r.get("off_by_cm", 0.0) > PICK_OFF_CM:
                 return ended(
                     f"step {n} ended {r['off_by_cm']} cm off, so the pick stopped there with the "
@@ -671,12 +709,12 @@ class RobotTools:
                     r,
                 )
         r = await step(4, "close the gripper", "gripper", open_pct=0)
-        if r["result"] == "stopped":
-            return ended("stopped at step 4. Don't move again until the user says so.", r)
+        if r["result"] in ("stopped", "disconnected"):
+            return ended(f"{r['result']} at step 4. Don't move again until the user says so.", r)
         x, y, z = above
         r = await step(5, "lift", "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
-        if r["result"] == "stopped":
-            return ended("stopped at step 5. Don't move again until the user says so.", r)
+        if r["result"] in ("stopped", "disconnected"):
+            return ended(f"{r['result']} at step 5. Don't move again until the user says so.", r)
         held = r.get("gripper_open_pct", 0.0) > PICK_HELD_PCT
         out = ended(
             f"holding something: the gripper stopped at {r['gripper_open_pct']:.0f} % open. "
@@ -692,6 +730,8 @@ class RobotTools:
     async def stop(self, arm: str | None = None) -> dict:
         """Always allowed: freeze now, whoever has control."""
         self.loop.stop()
+        if self._disconnected():
+            return {"result": "stopped", "problem": self._disconnected()}
         return {"result": "stopped"} | self._where()
 
     # ---------- every call, logged ----------

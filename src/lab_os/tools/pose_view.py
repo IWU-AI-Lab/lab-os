@@ -251,8 +251,11 @@ def render(
     tool_angle_deg: float,
     target: tuple[Vec3, float] | None = None,
     marks: list[dict] | None = None,
+    table_z_cm: float = 0.0,
 ) -> bytes:
-    """The two views as a PNG. `marks`: [{"x_cm", "y_cm", "z_cm", "label"?, "size_cm"?}]."""
+    """The two views as a PNG. `marks`: [{"x_cm", "y_cm", "z_cm", "label"?, "size_cm"?}].
+    Heights are from the table: the arm is drawn `-table_z_cm` higher (it stands on a plate)."""
+    lift = -table_z_cm
     parts, urdf_joints, base = load_model(URDFS[model])
     frames = link_frames(urdf_joints, base, joints)
     pan = math.radians(joints.get("shoulder_pan", 0.0))
@@ -303,6 +306,9 @@ def render(
     tl, tr = side.px2(side.a0, 0), side.px2(side.a0 + (PANEL_W - 20) / scale, 0)
     d.rectangle([tl[0], tl[1], tr[0], PANEL_H - 10], fill=(232, 222, 208))
     d.line([tl, tr], fill=TABLE, width=2)
+    if lift > 0:  # the plate the arm stands on (so101-white: the stand camera's base)
+        a, b = side.px2(-7, lift), side.px2(7, 0)
+        d.rectangle([a[0], a[1], b[0], b[1]], fill=(170, 170, 165), outline=TABLE)
 
     # the arm: every triangle into world cm, then drawn far to near in each view
     tris = []
@@ -310,7 +316,10 @@ def render(
         if part.link not in frames:
             continue
         pos, rot = frames[part.link]
-        world = [tuple((pos[i] + r) * 100 for i, r in enumerate(_mv(rot, v))) for v in part.verts]
+        world = [
+            tuple((pos[i] + r) * 100 + (lift if i == 2 else 0.0) for i, r in enumerate(_mv(rot, v)))
+            for v in part.verts
+        ]
         for i0, i1, i2 in part.tris:
             tris.append((world[i0], world[i1], world[i2], part.color))
     for v in (side, top):
@@ -330,7 +339,8 @@ def render(
             d.polygon(poly, fill=color)
         # the base's turning axis
         d.ellipse(
-            [*(c - 3 for c in v.px((0, 0, 0))), *(c + 3 for c in v.px((0, 0, 0)))], outline=TEXT
+            [*(c - 3 for c in v.px((0, 0, lift))), *(c + 3 for c in v.px((0, 0, lift)))],
+            outline=TEXT,
         )
 
     # marks, target, gripper point (on top of the arm)

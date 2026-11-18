@@ -33,7 +33,8 @@ const CONTROL = {
 link.on("status", (s) => {
   const [text, cls] = CONTROL[s.control] || ["—", "off"];
   setPill($("control"), text, cls);
-  if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
+  if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
+  else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
   else setPill($("state"), "holding", "off");
   const g = s.joints.gripper;

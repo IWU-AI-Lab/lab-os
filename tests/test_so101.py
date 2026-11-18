@@ -363,3 +363,27 @@ def test_watch_only_reads(no_port_check, monkeypatch, capsys):
     so101.watch(arm)
     assert robot.bus.writes == []
     assert "+40.0" in capsys.readouterr().out  # elbow_flex
+
+
+def test_unplugged_then_back_reconnects_from_where_the_motors_are(monkeypatch, tmp_path, clock):
+    port = tmp_path / "usb-1a86_USB_Single_Serial_5B41532410-if00"
+    port.touch()
+    monkeypatch.setattr(so101, "guarded_port", lambda name: (None, str(port)))
+    first, second = FakeRobot(START), FakeRobot(START | {"shoulder_pan": 30.0})
+    robots = [first, second]
+    arm = SO101Arm(make_robot=lambda name, p, d: robots.pop(0), allow_motion=True)
+    arm.connect()
+    assert arm.port_present()
+    clock[0] += 0.05
+    arm.move_joints({"shoulder_pan": 10.0}, 1.0)
+    port.unlink()  # unplugged: the by-id name goes
+    assert not arm.port_present()
+    n = len(first.bus.writes)
+    arm.drop()
+    assert len(first.bus.writes) == n and not first.bus.connected  # closed, nothing written
+    port.touch()  # plugged back in (moved by hand meanwhile: pan 30)
+    arm.connect()
+    register, values, torque = second.bus.writes[0]
+    assert register == "Goal_Position" and values["shoulder_pan"] == 30.0 and not torque
+    assert second.bus.torque
+    assert arm.commanded_joints()["shoulder_pan"] == 30.0  # not the old goal of 10

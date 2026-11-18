@@ -242,6 +242,7 @@ class StatusPanel {
     const s = feed?.status;
     const state = this.noController ? [this.source === "hands" ? "NO RIGHT HAND" : "NO CONTROLLER", "#e0662e"]
       : !s ? ["CONNECTING…", "#8a8a84"]
+      : s.arm?.connected === false ? ["ARM DISCONNECTED", "#e0662e"]
       : feed.frozen ? [s.needs_release ? `FROZEN · release ${this.source === "hands" ? "the pinch" : "grip"}` : "FROZEN", "#e0662e"]
       : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 · SERVOS WARM, SLOWED", "#e0a52e"]
       : s.clutch ? [s.one_to_one ? "FOLLOWING 1:1" : "FOLLOWING", "#2fbf71"]

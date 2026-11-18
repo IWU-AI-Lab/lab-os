@@ -14,6 +14,8 @@ goal, not even the calibration). Turn motion on only after the builder's OK (SAF
   (models/so101/so101_new_calib.urdf) and so the shared conventions and the IK.
 - Limits: the URDF's, narrowed to the ranges measured during calibration.
 - `close()` switches torque off (LeRobot's default), so the arm sags: park it first.
+- Unplugged and back (quick job 27): `port_present()` says whether the by-id name is still
+  there; `drop()` lets go of a port that's gone without writing; `connect()` again reconnects.
 """
 
 import json
@@ -135,6 +137,7 @@ class SO101Arm:
     make_robot: Callable[[str, str, Path], object] = lerobot_follower  # replaceable for tests
     calibration_source: Path | None = None  # a borrowed arm: the training file it copies
     _robot: object = field(default=None, repr=False)
+    _port: str | None = field(default=None, repr=False)  # the by-id name it was opened by
     _last: dict[str, float] = field(default_factory=dict, repr=False)  # last reading
     _last_read_t: float = field(default=-math.inf, repr=False)
     _commanded: dict[str, float] = field(default_factory=dict, repr=False)
@@ -143,6 +146,7 @@ class SO101Arm:
     def connect(self) -> None:
         # by-id name, board serial, plugged in, and no other program has the port (LeLab, a run)
         device, port = guarded_port(self.name)
+        self._port = port
         folder = CALIBRATION_DIR / self.name
         borrowed = device is not None and bool(device.training_calibration)
         if borrowed:
@@ -169,6 +173,7 @@ class SO101Arm:
                     "'c' to calibrate anew)."
                 )
             self._robot = robot
+            self._commanded = {}  # a reconnect starts from a fresh reading, not the old goal
             self.limits = calibrated_limits(robot.calibration, self.limits)
             now = self.read_measured()
             if self.allow_motion:
@@ -277,6 +282,22 @@ class SO101Arm:
         if self._robot is not None:
             self._robot.bus.disconnect(disable_torque=self.allow_motion)
             self._robot = None
+
+    def port_present(self) -> bool:
+        """Is the arm's /dev/serial/by-id/ name still there? (gone within a moment of unplugging)"""
+        return self._port is not None and os.path.exists(self._port)
+
+    def drop(self) -> None:
+        """The USB went: close the port without writing to the motors (they can't be reached).
+        `connect()` opens it again once it's back."""
+        robot, self._robot = self._robot, None
+        self._commanded = {}
+        if robot is None:
+            return
+        try:
+            robot.bus.disconnect(disable_torque=False)  # only closes the port
+        except Exception as e:
+            log.warning("%s: closing the port: %s", self.name, e)
 
     def _lerobot_values(self, joints: dict[str, float]) -> dict[str, float]:
         return {j: _to_lerobot(j, v) for j, v in joints.items()}

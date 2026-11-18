@@ -179,6 +179,39 @@ def so101_kinematics() -> UrdfKinematics:
 KINEMATICS = {"xarm1s": XArmKinematics, "so101": so101_kinematics}
 
 
+class OnTable:
+    """An arm's kinematics with heights measured from the table, not from the bottom of its base
+    (quick job 28). `table_z_m`: the table's z in the arm's own frame, negative for an arm on a
+    plate. fk and frames report z − table_z_m, so IK (solve_ik) aims in table heights too; the
+    rest (roll_sign, the xArm's lack of frames) is the wrapped kinematics'."""
+
+    def __init__(self, kin: Kinematics, table_z_m: float):
+        self.kin = kin
+        self.table_z_m = table_z_m
+
+    def fk(self, joints: dict[str, float]) -> tuple[Vec3, float]:
+        (x, y, z), angle = self.kin.fk(joints)
+        return (x, y, z - self.table_z_m), angle
+
+    def __getattr__(self, name: str):
+        attr = getattr(self.kin, name)  # AttributeError passes through: no frames on the xArm
+        if name != "frames":
+            return attr
+
+        def frames(joints: dict[str, float]) -> dict[str, tuple[Vec3, Mat3]]:
+            dz = self.table_z_m
+            return {k: ((p[0], p[1], p[2] - dz), r) for k, (p, r) in attr(joints).items()}
+
+        return frames
+
+
+def on_table(kin: Kinematics | None, table_z_cm: float) -> Kinematics | None:
+    """`kin` with heights from the table (OnTable), or `kin` itself when the table is at z 0."""
+    if kin is None or not table_z_cm:
+        return kin
+    return OnTable(kin, table_z_cm / 100)
+
+
 def kinematics_for(model: str) -> Kinematics | None:
     """The kinematics for an `Arm.model`, or None (teleop then falls back to joint space)."""
     make = KINEMATICS.get(model)

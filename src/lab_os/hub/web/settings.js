@@ -164,7 +164,7 @@ const LANG_NAMES = { "": "Any", en: "English" };  // the brain's codes (lab_os/a
 function languageRow() {
   const row = document.createElement("div");
   row.className = "field";
-  row.innerHTML = `<label>Assistant language</label><div class="help">this device only. Input: the language speech-to-text expects (with OpenAI's voice; Gemini's free voice has no such setting). Output: the language it answers in, typed or spoken, whatever it was asked in. Any = it decides. Applies from the next question</div><div class="ctl pair"></div><div class="said" aria-live="polite"></div>`;
+  row.innerHTML = `<label>Assistant language</label><div class="help">this device only. Input: the language speech-to-text expects (OpenAI's voice; the Gemini fallback has no such setting). Output: the language it answers in, typed or spoken, whatever it was asked in. Any = it decides. Applies from the next question</div><div class="ctl pair"></div><div class="said" aria-live="polite"></div>`;
   const said = row.querySelector(".said"), pair = row.querySelector(".pair");
   for (const [key, label] of [["hear_in", "Input"], ["answer_in", "Output"]]) {
     const f = { key, label: `${label} language`, kind: "choice", choices: Object.values(LANG_NAMES) };

@@ -8,7 +8,7 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 **Time (decision 2026-11-16):** the demo moved from 2026-11-19 to **Thursday 2026-12-03, 3–4:30 pm (the AI club's meeting)**; nothing is shown before then. Lab days for trying things on the real hardware: Monday and Tuesday 2026-11-16/17, Thursday 2026-11-19, Monday and Tuesday 2026-11-23/24. **Nothing new after Tuesday 2026-11-24:** from then on, sessions only fix what the lab days found, and whatever doesn't work on the hardware by then is left out of the demo. The builder's coursework (a research paper above all) comes first; Claude Code sessions do most of the coding.
 
 ## Until the demo, in order
-1. **The AI on the real arms** (steps 2, 3, 11): the cube was picked and set down on `so101-white` from a Claude Code prompt (2026-11-17); the green arm passed its lab checks (2026-11-16/17). Left: quick jobs 27 (an arm unplugged and plugged back in), 28 (the table height: the white arm stands on a plate), 30 (the real home pose), then lab check part F (29, the white camera names, done 2026-11-18: F.1).
+1. **The AI on the real arms** (steps 2, 3, 11): the cube was picked and set down on `so101-white` from a Claude Code prompt (2026-11-17); the green arm passed its lab checks (2026-11-16/17). Left: lab check part F (built 2026-11-18: 27, an arm unplugged and plugged back in, F.4–F.5; 28, the table height, F.2; 29, the white camera names, F.1; 30, the real home pose, F.3).
 2. **Devices** (step 8): built 2026-11-14; left: the lab check (`docs/guides/lab-checklist.md` part 11).
 3. **Voice and the assistant** (step 7): the snappier wake word with adjustable sensitivity and opening pages when asked are built (2026-11-14) and worked on the Quest (2026-11-17; misses just under the line: lab check F.6); left: the desktop's voice check (`docs/guides/lab-checklist.md` part 9, with the language setting, quick job 33, built 2026-11-18), the Newline's microphone.
 4. **VR and teleop fixes** (step 10): 1:1 and relative at scale 1 work on the real arm (2026-11-17: "way more intuitive", about 0.5 s behind, a little shaking, accepted). Left: quick job 10 (the dot cluster).
@@ -43,7 +43,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 2. **Robot tools for AI.** The brain's MCP tools drive an SO-101 through teleop's safety layer (`docs/guides/ai-control.md`). On the real `so101-white` with `pose_view` and both cameras (2026-11-12) the gripper came down beside the cube and closed just past it (`docs/dev/GOTCHAS.md`).
    - The cube picked and placed on `so101-white` (2026-11-17, `move_to` by hand rather than `pick_at`, `docs/dev/GOTCHAS.md`).
-   - **Left:** the table height (quick job 28; the elbow's ~3° sag is harmless at this size); the green arm doing the same (step 11).
+   - **Left:** the table height on the real arm (quick job 28, built 2026-11-18: lab check F.2; the elbow's ~3° sag is harmless at this size); the green arm doing the same (step 11).
    - **Done when:** the real arm does the cube task from a Claude Code prompt.
 
 3. **Cameras for the AI.** `pose_view` (2026-11-11) and `camera_snapshot` (2026-11-12) are built and were used in the cube pick.
@@ -58,7 +58,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 7. **Voice.** Push-to-talk, the spoken greeting, dictation and the wake word, built 2026-11-12 (`docs/guides/voice.md`); the greeting from a recording 2026-11-14; a snappier wake word with a sensitivity slider per device, its timing logged, and the Quest's paused microphone woken by itself 2026-11-14 (not yet in the lab). In the lab (2026-11-13) push-to-talk and the wake word work on the desktop with a USB microphone (sometimes only spoken louder) and on the Quest (the wake word sometimes misses there).
    - **Left:** the Newline's microphone (Chrome's flag, `docs/guides/voice.md` → "Secure pages"). The language per device (quick job 33, built 2026-11-18; lab check 9.13). The Quest's misses scored just under the line (2026-11-17): raise its sensitivity (lab check F.6). After the demo: a better room microphone.
-   - The free Gemini key speaks only ~15–20 answers a day (`docs/dev/GOTCHAS.md`): keep them for the demo.
+   - The professor's OpenAI key is in `.env` on the laptop and the lab desktop (2026-11-18): `main` (OpenAI) answers and speaks, with no daily limit; the free Gemini key is only the fallback.
 
 8. **Devices.** Built 2026-11-14 (`docs/guides/hub.md` → "Devices"), tried with headless browser pages as devices: each hub page connects under a name (`/?device=desk`), the brain lists the devices with the hub open (each monitor a window) and keeps "This device" settings under the name (`hub-devices.yaml`); "Open on…" next to Back in a module (the free monitor, or it asks), Back there or "Bring it back" closes it; pages reconnect by themselves after a restart; `lab-os icon` ("Start lab-os", `lab-os serve --open desk`) and a "Lab hub" icon from ⚙ → This device. Before: a page on another monitor of the brain's computer (now Open on… → "Another monitor of this computer"); other computers view-only while a real arm is connected (`--drive-from` lets one drive).
    - **Left:** the lab check (`docs/guides/lab-checklist.md` part 11). The brain's address is the desktop's IP address for now (it may change: then the icons again). The Quest's VR hub (`/xr`) isn't a device (its browser at `/design?device=quest` is).
@@ -73,19 +73,17 @@ The Current Project panel reads this list: each step's **bold title** is what th
 11. **Green arms.** Built 2026-11-12, tested without hardware (`docs/guides/ai-control.md` → "The green arm").
     In the lab 2026-11-16 (checklist part 8): the refusals, `--watch`, jogging, the AI's move to home and LeLab afterwards all worked, and the calibration files were unchanged.
     In the lab 2026-11-17 (part 8b): all passed; the launcher refuses while the brain has the arm. The training calibration (`sheep` / `shepherd`) is the source of truth since 2026-11-17 (`docs/plan/lab-jarvis-log.md`).
-    - **Left:** the real home pose (quick job 30), then the AI on the green arm. Done 2026-11-17: quick jobs 17 (the launcher refuses while anything but LeLab has a green port), 18 (the calibration file that matches the motors) 20 (home is the folded pose, the working pose is `ready`) and 25 (the green cameras are `-cam-wrist` and `-cam-stand`).
+    - **Left:** the real home pose on the arm (quick job 30, built 2026-11-18: lab check F.3), then the AI on the green arm. Done 2026-11-17: quick jobs 17 (the launcher refuses while anything but LeLab has a green port), 18 (the calibration file that matches the motors) 20 (home is the folded pose, the working pose is `ready`) and 25 (the green cameras are `-cam-wrist` and `-cam-stand`).
 
 12. **Newline.** Not blocking: the demo is on the desktop's own screen. Measured 2026-11-13 (`docs/dev/GOTCHAS.md`): by HDMI from the desktop, choppy at 1920×1080 though the desktop draws 60 fps, smooth at 1600×900; in its own Chrome `/perf` gives 44–59 fps but the startup lags and there's no mic button.
     - **Next, if it's used:** HDMI at 1600×900 is the simplest route (first check the refresh rate Ubuntu picks at 1920×1080 and the Newline's picture mode). Its own Chrome needs a lighter startup on slow devices (fewer stars, `?res=`) and Chrome's flag for the microphone. No extra hardware so far.
 
 ## Waiting on others
-- **The professor's OpenAI key** in `.env`: then `main` answers and speaks (a config change; steps 5 and 7).
 - **The 7-port powered USB hub** (shopping list in the log): the white arm and its cameras without unplugging the green ones.
 - **The lab router** (the professor's OK): "Up next" below.
 
 ## Hacks to clean up
 - `config/devices.yaml`: `so101-white-cam-stand` / `-cam-wrist` (2026-11-12; `-cam-a` / `-b` until quick job 15, 2026-11-16) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today (7 = wrist, 8 = stand on both sets; the white names were the wrong way round until quick job 29, 2026-11-18). Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
-- `config/poses.yaml`: the SO-101 `home` pose (the folded one since quick job 20, 2026-11-17; `rest` before) comes from forward kinematics only, gripper 10; lab check 8.16 gives the real numbers from `so101-green` (slowly, builder present).
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 
 ## Up next (after this focus)
