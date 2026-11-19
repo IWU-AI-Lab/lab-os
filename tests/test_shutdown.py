@@ -1,11 +1,11 @@
-"""Shut down from the hub (quick job 6): the brain's computer only, never on a public venue; any
+"""Shut down from the hub (quick job 6): the brain's computer only (any venue); any
 move stops, every page is told, then the server stops the way Ctrl+C does (no hardware)."""
 
 import asyncio
 from dataclasses import replace
 
 from aiohttp import web
-from test_hub_devices import next_of, page, settle  # same folder (pytest puts it on the path)
+from test_hub_devices import next_of, page  # same folder (pytest puts it on the path)
 from test_hub_server import SRC, VENUE, make_app
 
 from lab_os.hub import server as hub_server
@@ -34,17 +34,12 @@ async def test_warns_that_an_arm_that_goes_limp_drops(aiohttp_client):
     assert "so101-white goes limp" in r["warning"] and "drops" in r["warning"]
 
 
-async def test_never_on_a_public_venue(aiohttp_client):
+async def test_also_on_a_public_venue(aiohttp_client):
+    # a person is always at the brain's computer (the builder, 2026-11-19): no public-venue rule
     app = make_app(venue=replace(VENUE, public=True))
     client = await aiohttp_client(app)
-    motion = Motion(path=[{"shoulder_pan": 45.0}], deg_per_s=1.0)
-    app[LOOP].start_motion(motion)
     r = await (await client.get("/api/shutdown")).json()
-    assert not r["allowed"] and "public venue" in r["why_not"]
-    resp = await client.post("/api/shutdown", json={"from": "desk"})
-    assert resp.status == 403
-    await settle(client)
-    assert not app[SHUTDOWN].is_set() and motion.result is None  # the move goes on
+    assert r["allowed"] and r["why_not"] is None
 
 
 async def test_only_from_the_brains_computer(aiohttp_client, monkeypatch):

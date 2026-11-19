@@ -269,7 +269,7 @@ async function load() {
   $("#sections").append(await shutdownCard());
 }
 
-/* ---------- shut lab-os down (quick job 6): the brain's computer only, never on a public venue ---------- */
+/* ---------- shut lab-os down (quick job 6): the brain's computer only (any venue) ---------- */
 async function shutdownCard() {
   const r = await fetch("/api/shutdown", { cache: "no-store" }).then((x) => x.json()).catch(() => null);
   const card = document.createElement("section");

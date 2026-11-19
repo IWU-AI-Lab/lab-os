@@ -12,7 +12,7 @@ POST /api/green/start    check again, then start LeLab in a terminal (the brain'
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
 GET /api/shutdown        may this page shut lab-os down, and what to warn about first
 POST /api/shutdown       {"from": device}: stop any move, tell every page, stop the brain as Ctrl+C
-                         does (lets go of the arm). Brain's computer only; never on a public venue
+                         does (lets go of the arm). Brain's computer only
 GET /api/quest-view      what the Quest sees (scrcpy, quick job 36): installed, running, headsets
 POST /api/quest-view/start  {"headset"?}: open its view in a window here (the brain's computer)
 POST /api/quest-view/stop   close that window
@@ -242,8 +242,6 @@ SHUTDOWN_DELAY_S = 0.5  # time for "lab-os is off" to reach every page before th
 
 def _shutdown_check(request: web.Request) -> str | None:
     """Why this page may not shut lab-os down, or None."""
-    if request.app[BRAIN].venue.public:
-        return "Not on a public venue: shut lab-os down from its terminal (Ctrl+C)."
     if not is_local(request):
         return "lab-os can be shut down only from the brain's computer."
     return None
@@ -413,12 +411,10 @@ def _facts(app: web.Application, venue: Venue) -> dict:
     except (config.ConfigError, OSError) as e:
         log.warning("visitor mode: no device list (%s)", e)
         robots = []
-    return {
-        "place": place.name,
-        "about": place.about,
-        "robots_here": robots,
-        "cards_on_screen": [c["say"] for c in venue.cards],
-    }
+    facts = {"place": place.name, "about": place.about}
+    if robots:  # none plugged in: left out, so the welcome doesn't dwell on what's missing
+        facts["robots_here"] = robots
+    return facts | {"cards_on_screen": [c["say"] for c in venue.cards]}
 
 
 WAVE_REFUSED = {

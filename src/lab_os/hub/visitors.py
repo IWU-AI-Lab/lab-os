@@ -34,7 +34,8 @@ TOOLS = {
     START: "Switch this hub to visitor mode. Use it when someone says visitors or guests are here, "
     "it's demo time, a tour or a demo is starting, or asks you to say hello to the visitors. It "
     "returns facts for your welcome: then welcome them in two or three short sentences (the place, "
-    "what it is, the robots that are here: only those) and point them to the cards on the screen.",
+    "what it is, the robots that are here if it lists any: only those) and point them to the cards "
+    "on the screen, saying what they are.",
     EXIT: "Leave visitor mode: back to the lab's normal mode. Use it when someone asks to exit or "
     "stop visitor mode, says the visitors have left or the demo is over.",
     WAVE: "Wave hello with the robot arm: a fixed, gentle wave (the arm goes to its ready pose "
