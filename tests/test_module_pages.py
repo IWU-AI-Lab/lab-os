@@ -34,7 +34,7 @@ async def test_the_pages(aiohttp_client):
         "/classic/teleop": ['id="enter"', "/static/classic/style.css"],
         "/classic/monitor": ['id="joints"', "/static/classic/style.css"],
         "/ai": ["/hub/ai.js", 'id="calls"'],
-        "/settings": ["/hub/settings.js", 'id="this-screen"'],
+        "/settings": ["/hub/settings.js", 'id="list"'],
     }
     for path, parts in pages.items():
         text = await (await client.get(path)).text()
@@ -319,9 +319,8 @@ def test_settings_scroll_down_not_off_to_the_side():
     """Quick job 21: the settings page (also what the designed hub's ⚙ opens) used CSS columns in a
     box of fixed height, so every section after "This device" (the AI budget, the safety limits)
     spilled into columns off to the right, out of reach: 4612 px of page in a 1526 px box at
-    1600×900 (headless Chrome, 2026-11-17). Now a grid that scrolls down."""
+    1600×900 (headless Chrome, 2026-11-17). Then a grid that scrolls down; since quick job 38 one
+    list of groups beside a sidebar, scrolling down."""
     html = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/settings.html").read_text()
-    rule = html.split(".sections {", 1)[1].split("}", 1)[0]
-    assert " columns:" not in rule and not rule.lstrip().startswith("columns:")
-    assert "display: grid" in rule and "overflow-y: auto" in rule and "overflow-x: hidden" in rule
-    assert "grid-auto-rows: max-content" in rule  # .card's min-height: 0 would let rows overlap
+    rule = html.split("#list {", 1)[1].split("}", 1)[0]
+    assert "columns:" not in rule and "overflow-y: auto" in rule

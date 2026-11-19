@@ -194,7 +194,7 @@ def test_settings_refuse_on_a_locked_venue(home):
 def test_the_page_marks_a_limit_thats_off():
     js = (REPO_ROOT / "src" / "lab_os" / "hub" / "web" / "settings.js").read_text()
     html = (REPO_ROOT / "src" / "lab_os" / "hub" / "web" / "settings.html").read_text()
-    assert "limit-off" in js and 'id="limits-off"' in html and ".field.limit-off" in html
+    assert "limit-off" in js and 'id="limits-off"' in html and ".row.limit-off" in html
 
 
 def test_the_floor_is_the_same_for_the_ai_tools_and_teleop(monkeypatch):

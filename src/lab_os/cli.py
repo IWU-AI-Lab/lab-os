@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import os
 import socket
 import sys
 from pathlib import Path
@@ -13,7 +14,7 @@ from lab_os import config
 from lab_os.hub import launch
 from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
-from lab_os.hub.server import create_brain_app
+from lab_os.hub.server import RESTART, create_brain_app
 from lab_os.personas import current_persona, load_persona
 from lab_os.teleop.cli import add_arm_args, make_loop, serve, use_config
 from lab_os.teleop.recording import Recorder
@@ -279,8 +280,24 @@ def main(argv: list[str] | None = None) -> None:
         loop.arm.stop()
         loop.arm.close()
     print()
+    if app[RESTART]["asked"]:  # Settings' "Restart Now": the same options, without --open
+        print(f"lab-os is restarting ({loop.arm.name} was let go); it starts again now.")
+        os.execv(sys.executable, [sys.executable, "-m", "lab_os.cli", *_without_open(sys.argv[1:])])
     if app[SHUTDOWN].is_set():
         print(f"lab-os was shut down from the hub; {loop.arm.name} was let go.")
+
+
+def _without_open(argv: list[str]) -> list[str]:
+    """The command line again for a restart, minus --open (the pages reload by themselves)."""
+    out, skip = [], False
+    for a in argv:
+        if skip:
+            skip = False
+        elif a == "--open":
+            skip = True
+        elif not a.startswith("--open="):
+            out.append(a)
+    return out
 
 
 def _icon(args) -> None:
