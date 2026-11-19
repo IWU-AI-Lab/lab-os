@@ -111,4 +111,6 @@ Troubleshooting:
 - "WebXR not available" → the URL must be exactly `http://localhost:8080`, not the desktop's IP address (that's not a secure context).
 - Arm shows "frozen: release grip" → release the grip fully, then press again.
 
+**Showing what the headset sees** on the desktop's screen, for the room: `docs/guides/quest-view.md`.
+
 Later (not needed for the demo): Wi-Fi instead of USB needs HTTPS with a certificate the Quest trusts, or `adb` over Wi-Fi. USB is simpler and portable (see docs/archive/focus-2026-10-teleop-demo.md, "Fewest moving parts").

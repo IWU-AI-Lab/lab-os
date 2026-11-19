@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-18
+- **What the Quest sees, on another screen** (quick job 36): a new button in the hub's strip, on the brain's own computer, opens a window mirroring the headset over its USB cable, so the room can watch. It uses scrcpy (open source, not installed system-wide): `uv run lab-os quest-view --install` downloads it into `downloads/scrcpy/` in the lab-os folder, `--remove` deletes it. Before, only the person in the headset could see it. `docs/guides/quest-view.md`.
 - **VR hub in AR: no dark clump of dots** (quick job 10): in AR, a dark clump of linked dots sat far ahead behind the start circle. It was the network's links, drawn black while the dots wait for the jump, and the way glows were blended let black cover the room. Every glow in the VR hub now only adds light; the start screen's stars lost their dark specks too. VR looks the same. `/xr?preview&passthrough` previews the AR way.
 - **System diagram** (quick job 12): a new icon button in the designed hub's Devices panel opens a full-screen drawing of how the brain, the screens, the robots and the AI connect, in the hub's design. It's drawn from the real facts each time it opens, so another place or a new arm shows what it has, and only links that are really up pulse. A copy for the docs: `docs/dev/system-diagram.svg`. Before, there was no picture of the system.
 

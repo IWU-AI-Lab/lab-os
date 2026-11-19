@@ -1,0 +1,246 @@
+"""What the Quest sees, on the brain's computer (quick job 36): scrcpy mirrors the headset over the
+same USB adb link teleop uses (docs/guides/quest-view.md).
+
+scrcpy (github.com/Genymobile/scrcpy, Apache 2.0) isn't installed system-wide: `lab-os quest-view
+--install` downloads one pinned release into the repo's `downloads/scrcpy/` (no sudo, checked
+against its SHA-256), and `--remove` deletes that folder again. A scrcpy on the PATH works too.
+
+The release brings its own adb. Two different adb versions stop each other's server, which would
+drop teleop's `adb reverse`, so scrcpy is told to use the system's adb when there is one (`ADB`).
+"""
+
+import hashlib
+import logging
+import os
+import platform
+import shutil
+import subprocess
+import tarfile
+import urllib.request
+import zipfile
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+
+from lab_os import REPO_ROOT
+from lab_os.devices import Registry, load_registry
+
+log = logging.getLogger(__name__)
+
+VERSION = "v5.0.1"  # 2026-10-08; v4.0 fixed mirroring a Meta Quest (scrcpy issue #5913)
+URL = "https://github.com/Genymobile/scrcpy/releases/download/{v}/{name}"
+# the release's SHA256SUMS.txt
+ASSETS = {
+    ("Linux", "x86_64"): (
+        "scrcpy-linux-x86_64-v5.0.1.tar.gz",
+        "9f969d30cc574816077edecda65719c1c70b0aee1df1ba5fa00779ac07b8fd6e",
+    ),
+    ("Darwin", "arm64"): (
+        "scrcpy-macos-aarch64-v5.0.1.tar.gz",
+        "33611e51977a8289e2e124b220f727895181ef2eb9060e0987a4dc2db9cf0d6b",
+    ),
+    ("Darwin", "x86_64"): (
+        "scrcpy-macos-x86_64-v5.0.1.tar.gz",
+        "31a5467a9e907f162b093267cbbab1276b15c6e709c2ea8159566a8d165beb50",
+    ),
+    ("Windows", "AMD64"): (
+        "scrcpy-win64-v5.0.1.zip",
+        "b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5",
+    ),
+}
+FOLDER = REPO_ROOT / "downloads" / "scrcpy"  # gitignored
+# watch only (a click in the window never reaches the headset), no sound taken off the headset,
+# 30 frames/s to leave the Quest's GPU for VR
+BASE_ARGS = ["--no-control", "--no-audio", "--max-fps=30", "--video-bit-rate=8M"]
+
+
+class QuestViewError(Exception):
+    """Why the view can't start (a full sentence for the page)."""
+
+
+def asset() -> tuple[str, str]:
+    key = (platform.system(), platform.machine())
+    if key not in ASSETS:
+        raise QuestViewError(
+            f"There's no scrcpy download for {key[0]} {key[1]} here: install scrcpy yourself "
+            "(github.com/Genymobile/scrcpy) so it's on the PATH."
+        )
+    return ASSETS[key]
+
+
+def install(folder: Path = FOLDER) -> Path:
+    """Download the pinned scrcpy into `folder`, check it, unpack it. Returns the scrcpy program."""
+    name, sha = asset()
+    folder.mkdir(parents=True, exist_ok=True)
+    archive = folder / name
+    with urllib.request.urlopen(URL.format(v=VERSION, name=name), timeout=60) as r:
+        data = r.read()
+    if hashlib.sha256(data).hexdigest() != sha:
+        raise QuestViewError(f"The download of {name} doesn't match its checksum: not unpacked.")
+    archive.write_bytes(data)
+    if name.endswith(".zip"):
+        with zipfile.ZipFile(archive) as z:
+            z.extractall(folder)
+    else:
+        with tarfile.open(archive) as t:
+            t.extractall(folder, filter="data")
+    archive.unlink()
+    program = downloaded(folder)
+    if program is None:
+        raise QuestViewError(f"Unpacked {name}, but there's no scrcpy program in it.")
+    return program
+
+
+def remove(folder: Path = FOLDER) -> bool:
+    """Delete the downloaded copy (the whole `downloads/scrcpy/` folder)."""
+    if not folder.exists():
+        return False
+    shutil.rmtree(folder)
+    return True
+
+
+def downloaded(folder: Path = FOLDER) -> Path | None:
+    """The downloaded scrcpy program, if there is one."""
+    exe = "scrcpy.exe" if platform.system() == "Windows" else "scrcpy"
+    found = sorted(folder.glob(f"scrcpy-*{VERSION}/{exe}")) if folder.exists() else []
+    return found[-1] if found else None
+
+
+def find_scrcpy(folder: Path = FOLDER) -> Path | None:
+    """The downloaded copy first, else a scrcpy on the PATH."""
+    own = downloaded(folder)
+    if own:
+        return own
+    on_path = shutil.which("scrcpy")
+    return Path(on_path) if on_path else None
+
+
+def find_adb(scrcpy: Path | None) -> str | None:
+    """The system's adb (the one teleop's `adb reverse` uses), else the one beside scrcpy."""
+    system = shutil.which("adb")
+    if system:
+        return system
+    beside = (
+        scrcpy.parent / ("adb.exe" if platform.system() == "Windows" else "adb") if scrcpy else None
+    )
+    return str(beside) if beside and beside.exists() else None
+
+
+def adb_devices(adb: str) -> list[str]:
+    """Serial numbers of the devices adb sees ready ("device", not "unauthorized")."""
+    try:
+        out = subprocess.run([adb, "devices"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    lines = [line.split() for line in out.splitlines()[1:]]
+    return [p[0] for p in lines if len(p) >= 2 and p[1] == "device"]
+
+
+@dataclass
+class QuestView:
+    """One scrcpy window at a time, started and stopped from the hub."""
+
+    folder: Path = FOLDER
+    registry: Callable[[], Registry] = load_registry
+    proc: subprocess.Popen | None = None
+    headset: str = ""
+    devices: Callable[[str], list[str]] = adb_devices  # (adb) → serials (tests replace it)
+    popen: Callable = subprocess.Popen
+
+    def running(self) -> bool:
+        if self.proc is not None and self.proc.poll() is not None:
+            log.info("quest view: scrcpy ended (exit %s)", self.proc.returncode)
+            self.proc, self.headset = None, ""
+        return self.proc is not None
+
+    def _headsets(self, reg: Registry, adb: str | None) -> list[dict]:
+        """The place's headsets with a serial, and whether adb sees each one now."""
+        seen = set(self.devices(adb)) if adb else set()
+        return [
+            {"name": d.name, "connected": d.serial in seen}
+            for d in reg.devices.values()
+            if d.kind == "quest" and d.serial
+        ]
+
+    def status(self) -> dict:
+        scrcpy = find_scrcpy(self.folder)
+        adb = find_adb(scrcpy)
+        headsets = self._headsets(self.registry(), adb)
+        why = None
+        if scrcpy is None:
+            why = "scrcpy isn't installed: run `uv run lab-os quest-view --install` once."
+        elif adb is None:
+            why = "There's no adb on this computer (docs/guides/quest-setup.md)."
+        elif not any(h["connected"] for h in headsets):
+            why = "No headset is connected by USB with USB debugging allowed (adb devices)."
+        return {
+            "installed": scrcpy is not None,
+            "running": self.running(),
+            "headset": self.headset,
+            "headsets": headsets,
+            "why_not": why,
+        }
+
+    def start(self, name: str | None = None) -> str:
+        """Open the window for headset `name` (default: the first one connected). Returns which."""
+        if self.running():
+            return self.headset
+        scrcpy = find_scrcpy(self.folder)
+        if scrcpy is None:
+            raise QuestViewError(
+                "scrcpy isn't installed: run `uv run lab-os quest-view --install` once."
+            )
+        adb = find_adb(scrcpy)
+        reg = self.registry()
+        connected = [h["name"] for h in self._headsets(reg, adb) if h["connected"]]
+        if name and name not in connected:
+            raise QuestViewError(f"{name} isn't connected by USB with USB debugging allowed.")
+        if not connected:
+            raise QuestViewError(
+                "No headset is connected by USB with USB debugging allowed (adb devices)."
+            )
+        name = name or connected[0]
+        d = reg.devices[name]
+        cmd = [
+            str(scrcpy),
+            f"--serial={d.serial}",
+            *BASE_ARGS,
+            f"--window-title=Quest view ({name})",
+        ]
+        cmd += list(d.mirror)
+        env = dict(os.environ, ADB=adb) if adb else None
+        log.info("quest view: %s", " ".join(cmd))
+        self.proc = self.popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.headset = name
+        return name
+
+    def stop(self) -> bool:
+        if not self.running():
+            return False
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+        self.proc, self.headset = None, ""
+        return True
+
+
+def main(install_it: bool, remove_it: bool) -> str:
+    """`lab-os quest-view --install / --remove`, or where things stand."""
+    if install_it:
+        program = install()
+        remove_cmd = "uv run lab-os quest-view --remove"
+        return f"Installed scrcpy {VERSION}: {program}\nRemove it with: {remove_cmd}"
+    if remove_it:
+        if remove():
+            return f"Removed {FOLDER}."
+        return f"Nothing to remove ({FOLDER} isn't there)."
+    s = QuestView().status()
+    lines = [f"scrcpy: {find_scrcpy() or 'not installed'}"]
+    lines += [
+        f"{h['name']}: {'connected' if h['connected'] else 'not connected'}" for h in s["headsets"]
+    ]
+    if s["why_not"]:
+        lines.append(s["why_not"])
+    return "\n".join(lines)
