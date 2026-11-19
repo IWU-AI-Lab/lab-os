@@ -32,6 +32,12 @@
 .jrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1.35rem 1.05rem; column-gap: 0.6rem;
   padding: 0.2rem 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .jrow:first-child { border-top: 0; }
+/* two arms at once: a heading before each arm's rows ("Right arm so101-white") */
+.jhead { grid-column: 1 / -1; padding: 0.55rem 0 0.15rem; font: 600 0.78rem/1.2 var(--f-ui); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--primary); }
+.jhead:first-child { padding-top: 0; }
+.jhead small { font: var(--w-lines) 0.75rem var(--f-lines); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
+.jhead + .jrow { border-top: 0; }
 .jn { font: var(--w-lines) 0.8rem/1.35rem var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jv { font: 0.9rem/1.35rem var(--f-digits); color: var(--hot); text-align: right; white-space: nowrap; min-width: 5.5em; }
 .jf { grid-column: 1 / -1; font: 0.72rem/1.05rem var(--f-ui); color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

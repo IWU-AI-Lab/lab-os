@@ -24,13 +24,15 @@ STATUS = {
 }
 
 
-def panel(status=STATUS, frozen=False, gripper=42, no_controller=False, source="controllers"):
+def panel(
+    status=STATUS, frozen=False, gripper=42, no_controller=False, source="controllers", moving=False
+):
     feed = (
         None
         if status is None
         else {"status": status, "frozen": frozen, "joints": {"gripper": gripper}}
     )
-    args = json.dumps([feed, no_controller, source])
+    args = json.dumps([feed, no_controller, source, moving])
     script = (
         f"import({json.dumps(MODULE.as_uri())}).then(m => "
         f"console.log(JSON.stringify(m.panelText(...{args}))))"
@@ -93,3 +95,53 @@ def test_the_hint_fits_the_way_in():
     assert panel(source="hands")["hint"] == ["Hold left pinch = move", "right pinch = gripper"]
     assert panel(no_controller=True)["hint"][0] == "Pick up the controllers"
     assert panel(status=STATUS | {"mode": "one_to_one"})["hint"][0] == "1:1: hand in the ball"
+
+
+TWO = STATUS | {
+    "left_arm": {"connected": True, "frozen": False, "clutch": False, "needs_release": False}
+}
+
+
+@pytest.mark.parametrize(
+    "left, state, level",
+    [
+        ({}, "Left holding", "normal"),
+        ({"clutch": True}, "Left following", "following"),
+        ({"frozen": True}, "Left frozen", "held"),
+        ({"frozen": True, "needs_release": True}, "Left frozen: let go", "held"),
+        ({"connected": False}, "Left disconnected", "offline"),
+    ],
+)
+def test_two_arms_each_has_its_state(left, state, level):
+    """Two arms at once (preview 3): the left arm's chip, and the right one says "Right …"."""
+    s = TWO | {"left_arm": TWO["left_arm"] | left, "clutch": True}
+    p = panel(status=s)
+    assert p["left"] == {"state": state, "level": level}
+    assert (p["state"], p["level"]) == ("Right following", "following")
+
+
+def test_two_arms_hint_and_short_frozen_words():
+    p = panel(status=TWO)
+    assert p["hint"] == ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm",
+                         "A/X = stop both"]  # fmt: skip
+    frozen = panel(frozen=True, status=TWO | {"needs_release": True})
+    assert frozen["state"] == "Right frozen: let go"
+    assert panel(status=TWO, source="hands")["hint"][0] == "Two arms: controllers only"
+    assert panel(status=TWO, no_controller=True)["left"] is None  # one message: pick them up
+    assert panel()["left"] is None  # one arm: as before
+
+
+def test_two_arms_y_held_says_the_grips_move_the_3d_arms():
+    p = panel(status=TWO, moving=True)
+    assert p["hint"][0] == "Y held: a grip moves its 3D arm" and "tap Y = put back" in p["hint"]
+
+
+def test_two_arms_in_1_to_1_each_arm_says_where_its_hand_is():
+    left = TWO["left_arm"] | {"mode": "one_to_one", "hand_gap_cm": 14.4, "capture_cm": 8.0}
+    s = TWO | {"mode": "one_to_one", "hand_gap_cm": 20.2, "left_arm": left}
+    p = panel(status=s)
+    assert p["state"] == "Right: reach the gripper 20 cm"
+    assert p["left"] == {"state": "Left: reach the gripper 14 cm", "level": "normal"}
+    assert p["hint"][0] == "1:1: each hand in its ball"
+    held = left | {"clutch": True, "one_to_one": True}
+    assert panel(status=s | {"left_arm": held})["left"]["state"] == "Left following 1:1"

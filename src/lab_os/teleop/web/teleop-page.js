@@ -48,6 +48,19 @@ link.on("status", (s) => {
   sp.max = Math.round((s.max_speed_scale ?? 1) * 100);
   if (document.activeElement !== sp) sp.value = Math.round(s.speed_scale * 100);
 });
+// Two arms at once (preview 3): the left controller's arm, next to the right one's state.
+link.on("status", (s) => {
+  const l = s.left_arm;
+  if (!$("left-chip")) return; // the classic page (/classic/teleop) has no left-arm chip
+  $("left-chip").hidden = !l;
+  $("two-arms-hint").hidden = !l;
+  $("arm-label").textContent = l ? "Right arm" : "Arm";
+  if (!l) return;
+  if (l.connected === false) setPill($("left-state"), "disconnected (USB)", "warn");
+  else if (l.frozen) setPill($("left-state"), l.needs_release ? "frozen: release grip" : "frozen", "warn");
+  else if (l.clutch) setPill($("left-state"), "following (clutch)", "on");
+  else setPill($("left-state"), "holding", "off");
+});
 // hand → arm: relative or 1:1 (the brain keeps it; 1:1 only for arms with kinematics)
 link.on("status", (s) => {
   const sel = $("mode-set");
@@ -58,9 +71,10 @@ link.on("status", (s) => {
   const off = !(s.modes || []).includes("one_to_one");
   const top = s.one_to_one_deg_per_s == null ? "the servos' own top speed" : `${s.one_to_one_deg_per_s}°/s`;
   const warm = s.servos?.hot ? ` Servos warm (${Math.round(s.servos.max_temp_c)} °C): slowed to relative speed.` : "";
+  const both = s.left_arm ? " Both arms use it." : "";
   $("mode-speed").textContent = off
     ? "1:1 is off in this venue (⚙ Settings → Robots → Teleop 1:1 Top Joint Speed)."
-    : `1:1 follows as fast as ${top}; the Speed slider applies to relative only.${warm}`;
+    : `1:1 follows as fast as ${top}; the Speed slider applies to relative only.${both}${warm}`;
   $("mode-hint").hidden = s.mode !== "one_to_one";
 });
 if ($("mode-set")) $("mode-set").onchange = (e) => link.send({ type: "set_mode", mode: e.target.value });

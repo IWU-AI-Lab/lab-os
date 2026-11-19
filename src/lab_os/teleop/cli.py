@@ -139,28 +139,22 @@ def teleop_floor_m(venue, arm_name: str) -> float:
     return (venue.floor_cm + table_z_cm(arm_name)) / 100
 
 
-def make_loop(args) -> TeleopLoop:
-    """The teleop loop for the arm, venue and speed in `args` (see `add_arm_args`)."""
-    try:
-        venue = load_venue(args.venue)
-    except config.ConfigError as e:
-        raise SystemExit(str(e)) from None
-    # the venue's top speed is where it starts; with the speed cap off, --speed may go higher
-    speed = min(args.speed, venue.speed_cap_scale) if args.speed else venue.max_speed_scale
-    arm = _make_arm(args.arm, venue)
+LEFT_FAKE = "fake-left"  # `--left-arm fake`: a second software SO-101, by its own name
+
+
+def _open_arm(option: str, name: str, venue) -> Arm:
+    """Make and connect the arm `name` (from --arm or --left-arm), or stop with a sentence."""
+    arm = FakeArm(name=LEFT_FAKE) if option == "--left-arm" and name == "fake" else None
+    arm = arm or _make_arm(name, venue)
     try:
         arm.connect()
     except (PortNotAllowed, LookupError) as e:  # in use by LeLab, unplugged, no calibration file
-        raise SystemExit(f"--arm {args.arm}: not opened. {e}") from None
-    print(
-        f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
-        f"(joints: {', '.join(arm.joint_names)})"
-    )
-    if not args.arm.startswith("fake"):
-        print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
-    if venue.limits_off:
-        off = ", ".join(venue.limits_off)
-        print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety Limits and Shut Down)")
+        raise SystemExit(f"{option} {name}: not opened. {e}") from None
+    return arm
+
+
+def _arm_loop(arm: Arm, venue, speed: float, inputs: InputState, hand: str) -> TeleopLoop:
+    """One arm's teleop loop under the venue's caps, following the `hand` controller."""
     kin = kinematics_for(arm.model)
     print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
     table = table_z_cm(arm.name)
@@ -168,9 +162,10 @@ def make_loop(args) -> TeleopLoop:
         print(f"{arm.name} stands {-table:g} cm above the table: heights measured from the table")
     return TeleopLoop(
         arm=arm,
-        inputs=InputState(),
+        inputs=inputs,
         mapper=ClutchMapper(
-            config=MappingConfig(floor_m=teleop_floor_m(venue, arm.name)), kinematics=kin
+            config=MappingConfig(hand=hand, floor_m=teleop_floor_m(venue, arm.name)),
+            kinematics=kin,
         ),
         speed_scale=speed,
         max_speed_scale=venue.speed_cap_scale,
@@ -179,8 +174,64 @@ def make_loop(args) -> TeleopLoop:
         health_log=HEALTH_DIR / f"{datetime.now():%Y-%m-%d_%H%M%S}_{arm.name}.jsonl"
         if hasattr(arm, "read_health")
         else None,
-        on_tick=None if args.quiet else _make_printer(),
     )
+
+
+def make_loop(args) -> TeleopLoop:
+    """The teleop loop for the arm, venue and speed in `args` (see `add_arm_args`). With
+    --left-arm: two arms at once, the right controller drives --arm and the left one the other
+    (`TeleopLoop.left`)."""
+    try:
+        venue = load_venue(args.venue)
+    except config.ConfigError as e:
+        raise SystemExit(str(e)) from None
+    left_name = getattr(args, "left_arm", None)
+    if left_name and left_name == args.arm and not args.arm.startswith("fake"):
+        raise SystemExit(f"--left-arm {left_name}: that's --arm too. Choose another arm.")
+    # the venue's top speed is where it starts; with the speed cap off, --speed may go higher
+    speed = min(args.speed, venue.speed_cap_scale) if args.speed else venue.max_speed_scale
+    arm = _open_arm("--arm", args.arm, venue)
+    try:
+        left = _open_arm("--left-arm", left_name, venue) if left_name else None
+    except SystemExit:
+        arm.close()  # the first arm is open already: let go of it before stopping
+        raise
+    print(
+        f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
+        f"(joints: {', '.join(arm.joint_names)})"
+    )
+    if left:
+        print(f"two arms: the right controller drives {arm.name}, the left one {left.name}")
+    if any_real_arm(args):
+        print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
+    if venue.limits_off:
+        off = ", ".join(venue.limits_off)
+        print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety Limits and Shut Down)")
+    inputs = InputState()  # shared: one input page, one dead-man rule for both arms
+    loop = _arm_loop(arm, venue, speed, inputs, hand="right")
+    loop.on_tick = None if args.quiet else _make_printer()
+    if left:
+        loop.left = _arm_loop(left, venue, speed, inputs, hand="left")
+        loop.left.is_left = True
+    return loop
+
+
+def close_arms(loop: TeleopLoop) -> None:
+    """Let go of the arm: stop, then close; then the left arm the same way, even if the first
+    one failed."""
+    try:
+        loop.arm.stop()
+        loop.arm.close()
+    finally:
+        if loop.left:
+            loop.left.arm.stop()
+            loop.left.arm.close()
+
+
+def any_real_arm(args) -> bool:
+    """--arm or --left-arm is a real arm (not a software one)."""
+    names = [args.arm, getattr(args, "left_arm", None)]
+    return any(n and not n.startswith("fake") for n in names)
 
 
 async def serve(
@@ -254,6 +305,11 @@ def add_arm_args(parser: argparse.ArgumentParser) -> None:
         "arm's name from devices.yaml (an SO-101 needs `uv sync --extra so101` and a calibration)",
     )
     parser.add_argument(
+        "--left-arm",
+        help="two arms at once (preview): the left controller drives this arm and the right one "
+        "--arm. fake = a second software SO-101 (docs/guides/quest-setup.md → Two arms at once)",
+    )
+    parser.add_argument(
         "--speed", type=float, help="speed scale, capped at the venue's max_speed_scale"
     )
 
@@ -297,8 +353,7 @@ def main(argv: list[str] | None = None) -> None:
         with contextlib.suppress(KeyboardInterrupt):
             asyncio.run(coro)
     finally:
-        loop.arm.stop()
-        loop.arm.close()
+        close_arms(loop)
     print()
 
 

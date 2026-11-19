@@ -1,10 +1,13 @@
-// Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel at a time.
+// Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel for each arm:
+// the "right" one (the brain's first arm) where it always was, and with two arms at once the "left"
+// one LEFT_OFFSET_M to its left (a fixed spot: the desktop doesn't know where the real arms stand).
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { drawRes } from "/web/screen.js";
 import { color } from "/web/theme.js";
 
 const DEG = Math.PI / 180;
+export const LEFT_OFFSET_M = 0.4;
 
 export function createArmView(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -42,7 +45,7 @@ export function createArmView(container) {
   new ResizeObserver(resize).observe(container);
   resize();
 
-  let current = null;
+  const models = {}; // slot ("right" / "left") → ArmModel
   renderer.setAnimationLoop(() => {
     controls.update(); // fires "change" while damping settles
     if (!dirty) return;
@@ -50,12 +53,15 @@ export function createArmView(container) {
     renderer.render(scene, camera);
   });
 
-  /** Keep the viewing direction, but frame the model's reach (a sphere around its base). */
-  function frame(model) {
-    const box = new THREE.Box3().setFromObject(model.object);
+  /** Keep the viewing direction, but frame the models' reach (a sphere around their bases). */
+  function frame() {
+    const box = new THREE.Box3();
+    for (const m of Object.values(models)) box.expandByObject(m.object);
+    if (box.isEmpty()) return;
     const size = box.getSize(new THREE.Vector3());
     const reach = Math.max(size.x, size.y, size.z, 0.25);
-    const target = new THREE.Vector3(0.08, Math.min(size.y, reach) * 0.4, 0);
+    const middle = box.getCenter(new THREE.Vector3());
+    const target = new THREE.Vector3(0.08, Math.min(size.y, reach) * 0.4, models.left ? middle.z : 0);
     const dir = camera.position.clone().sub(controls.target).normalize();
     const dist = (reach * 0.75) / Math.sin((camera.fov * DEG) / 2);
     controls.target.copy(target);
@@ -65,14 +71,18 @@ export function createArmView(container) {
 
   return {
     scene,
-    setModel(model) {
-      const first = !current || current.kind !== model?.kind;
-      if (current) scene.remove(current.object);
-      current = model;
+    /** Show `model` for the arm in `slot` ("right", or "left" with two arms); null removes it. */
+    setModel(model, slot = "right") {
+      const old = models[slot];
+      // frame again only when an arm type changes or an arm comes or goes, so user orbiting is kept
+      const reframe = !old !== !model || (old && model && old.kind !== model.kind);
+      if (old) scene.remove(old.object);
       if (model) {
+        models[slot] = model;
+        model.object.position.z = slot === "left" ? -LEFT_OFFSET_M : 0; // the robot's left is −z here
         scene.add(model.object);
-        if (first) frame(model); // only when the arm type changes, so user orbiting is kept
-      }
+      } else delete models[slot];
+      if (reframe) frame();
       dirty = true;
     },
     /** Call after changing the model (joints, tint, opacity). */

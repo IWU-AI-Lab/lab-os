@@ -24,7 +24,8 @@
     <div class="chips" aria-label="Status">
       <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
       <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
-      <span class="chip"><b>Arm</b><span id="state" class="pill off">—</span></span>
+      <span class="chip"><b id="arm-label">Arm</b><span id="state" class="pill off">—</span></span>
+      <span class="chip" id="left-chip" hidden><b>Left arm</b><span id="left-state" class="pill off">—</span></span>
     </div>
     <span class="grow"></span>
     <span class="clock"></span>
@@ -55,8 +56,9 @@
           </select>
         </label>
         <p class="hint" id="mode-speed"></p>
-        <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
+        <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>; with two arms, <b>Y</b> and that hand's <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
         <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down = <b>hands</b>: hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper. Let go and the arm holds still.</p>
+        <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
       </div></section>
 
       <details id="desk-help" class="card"><summary>Desktop control: mode and keys</summary><div class="in">

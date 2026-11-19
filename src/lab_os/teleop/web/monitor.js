@@ -1,4 +1,5 @@
-// Live view of the arm: one bar per joint, driven by the server's `status` messages.
+// Live view of the arm: one bar per joint, driven by the server's `status` messages. Two arms at once
+// (status.left_arm): the left arm's bars in their own card, and its state next to the right arm's.
 "use strict";
 
 const $ = (id) => document.getElementById(id);
@@ -10,32 +11,50 @@ function setPill(el, text, cls) {
   el.className = `pill ${cls}`;
 }
 
-function row(name, lo, hi) {
-  if (rows[name]) return rows[name];
+function row(name, lo, hi, box = "joints") {
+  const key = `${box}/${name}`;
+  if (rows[key]) return rows[key];
   const el = document.createElement("div");
   el.className = "joint";
   el.innerHTML = `<span class="label">${name}</span>
     <div class="track"><div class="zero"></div><div class="knob"></div></div>
     <span class="value"></span>`;
-  $("joints").appendChild(el);
-  rows[name] = { el, lo, hi, knob: el.querySelector(".knob"), value: el.querySelector(".value") };
-  return rows[name];
+  $(box).appendChild(el);
+  rows[key] = { el, lo, hi, knob: el.querySelector(".knob"), value: el.querySelector(".value") };
+  return rows[key];
+}
+
+function armState(el, a) {
+  if (a.connected === false) setPill(el, "arm disconnected (USB)", "warn");
+  else if (a.frozen) setPill(el, a.needs_release ? "frozen: release grip" : "frozen", "warn");
+  else if (a.clutch) setPill(el, "following (clutch)", "on");
+  else setPill(el, "holding", "off");
+}
+
+function bars(joints, limits, box) {
+  for (const [name, v] of Object.entries(joints)) {
+    const [lo, hi] = limits[name] || [-180, 180];
+    const r = row(name, lo, hi, box);
+    r.knob.style.left = `${((v - lo) / (hi - lo)) * 100}%`;
+    r.value.textContent = `${v >= 0 ? "+" : ""}${v.toFixed(1)}°`;
+  }
 }
 
 function show(s) {
   setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
   const who = { free: "free", ai: "the AI tools" }[s.control] || "an input page";
   setPill($("control"), who, s.control === "free" ? "off" : "on");
-  if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
-  else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
-  else if (s.clutch) setPill($("state"), "following (clutch)", "on");
-  else setPill($("state"), "holding", "off");
-  for (const [name, v] of Object.entries(s.joints)) {
-    const [lo, hi] = s.limits[name] || [-180, 180];
-    const r = row(name, lo, hi);
-    r.knob.style.left = `${((v - lo) / (hi - lo)) * 100}%`;
-    r.value.textContent = `${v >= 0 ? "+" : ""}${v.toFixed(1)}°`;
-  }
+  armState($("state"), { ...s, connected: s.arm?.connected });
+  bars(s.joints, s.limits, "joints");
+  const l = s.left_arm;
+  if (!$("left-card")) return; // the classic page (/classic/monitor) has no left-arm chip or card
+  $("left-chip").hidden = $("left-card").hidden = !l;
+  $("arm-label").textContent = l ? "Right arm" : "Arm";
+  $("joints-title").textContent = l ? "Right arm" : "Joints";
+  if (!l) return;
+  armState($("left-state"), l);
+  $("left-name").textContent = l.name;
+  bars(l.joints, l.limits, "joints-left");
 }
 
 let socket = null;

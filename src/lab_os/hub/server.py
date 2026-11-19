@@ -81,7 +81,7 @@ from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
 from lab_os.quest_view import QuestView, QuestViewError
-from lab_os.teleop.cli import teleop_floor_m
+from lab_os.teleop.cli import LEFT_FAKE, teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import CONTROL, LOOP, OUTBOX, SHUTDOWN, create_app, is_local
@@ -253,13 +253,22 @@ def _shutdown_check(request: web.Request) -> str | None:
 
 
 def _shutdown_warning(loop: TeleopLoop) -> str | None:
-    """What happens to the arm, when it matters: an SO-101 goes limp (its torque switches off)."""
-    if loop.arm_connected and getattr(loop.arm, "limp_on_close", False):
+    """What happens to the arms, when it matters: an SO-101 goes limp (its torque switches off)."""
+    limp = [
+        each.arm.name
+        for each in (loop, loop.left)
+        if each and each.arm_connected and getattr(each.arm, "limp_on_close", False)
+    ]
+    if not limp:
+        return None
+    if len(limp) == 1:
         return (
-            f"{loop.arm.name} goes limp: if it's lifted, it drops. "
-            "Put it down (home) or hold it first."
+            f"{limp[0]} goes limp: if it's lifted, it drops. Put it down (home) or hold it first."
         )
-    return None
+    return (
+        f"{' and '.join(limp)} go limp: if one is lifted, it drops. "
+        "Put them down (home) or hold them first."
+    )
 
 
 async def api_shutdown_get(request: web.Request) -> web.Response:
@@ -406,16 +415,20 @@ def switch_venue(app: web.Application, name: str | None) -> Venue:
         venue = load_venue(name or brain.started_in)
     except config.ConfigError as e:
         raise ValueError(str(e)) from None
-    if loop.arm.name not in venue.active_devices:
-        raise ValueError(
-            f"{loop.arm.name} isn't one of the {venue.name} venue's robots (active_devices in "
-            f"venues/{venue.name}.yaml), so I stayed in {brain.venue.name}."
-        )
+    for each in (loop, loop.left):  # the second software arm (--left-arm fake) is in no venue
+        name = each.arm.name if each else None
+        if name and name != LEFT_FAKE and name not in venue.active_devices:
+            raise ValueError(
+                f"{name} isn't one of the {venue.name} venue's robots (active_devices in "
+                f"venues/{venue.name}.yaml), so I stayed in {brain.venue.name}."
+            )
     brain.venue = venue
     app[TOOLS].use_venue(venue)
     app[TOOLS_PROJECT].venue = venue
     loop.use_caps(venue.speed_cap_scale, venue.max_speed_scale, venue.one_to_one_cap)
     loop.mapper.config.floor_m = teleop_floor_m(venue, loop.arm.name)
+    if loop.left:  # two arms at once: the caps came with use_caps, the floor is per arm
+        loop.left.mapper.config.floor_m = teleop_floor_m(venue, loop.left.arm.name)
     log.info("venue: now %s (visitor mode %s)", venue.name, "on" if venue.visitors else "off")
     return venue
 
@@ -560,6 +573,10 @@ async def api_status(request: web.Request) -> web.Response:
                 if app[CONTROL].get("ws") is not None
                 else "free",
             },
+            # two arms at once (teleop only): the left controller's arm, or None
+            "left_arm": None
+            if loop.left is None
+            else {"name": loop.left.arm.name, "connected": loop.left.arm_connected},
             "in_use": in_use(app),
             "time_ms": int(time.time() * 1000),
         }
@@ -587,6 +604,16 @@ def lab_status(app: web.Application) -> dict:
             f"{loop.arm.name} is disconnected ({loop.arm_problem}); the brain reconnects when "
             "it's back"
         )
+    if loop.left:  # two arms at once: the left controller's arm, teleop only
+        left = loop.left
+        out_left = {"name": left.arm.name, "connected": left.arm_connected}
+        out_left["held_still"] = left.frozen
+        arm["left_arm"] = out_left
+        if not left.arm_connected:
+            warnings.append(
+                f"{left.arm.name} is disconnected ({left.arm_problem}); the brain reconnects "
+                "when it's back"
+            )
     if loop.health:
         hottest = max(h["temp_c"] for h in loop.health.values())
         arm["hottest_servo_c"] = hottest

@@ -4,6 +4,19 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — The pages' 3D arm takes every `arm_command`, whatever its `device`
+**What:** two arms at once (preview 3). Every `arm_command`, `arm_stop` and `arm_resume` has a `device` field, but `ArmFeed` (`teleop/web/arm/arm-feed.js`) never reads it. A second arm's commands on `/ws` would make the 3D arm jump between the two arms, and its `arm_stop` would show the right arm as frozen.
+**Fix:** the second loop sends no `arm_*` messages. Its state goes in `status.left_arm`. A 3D view of two arms must first make `ArmFeed` filter by `device`.
+**Replaced the same day:** `ArmFeed` now follows one arm (right or left) and takes only messages whose `device` is that arm, so both arms send `arm_*` messages again.
+
+### 2026-11-19 — Two 3D arms loaded at the same time: the second one never moved
+**What:** with two arms, the teleop page loaded both SO-101 models at once. The second model stood still in its rest pose, without the frozen colour, although it got every joint angle. Most likely, three.js shares a file request that is already running, so the second loader's manager said "done" before its meshes were in, and the model was made without them.
+**Fix:** `loadArmModel` loads one model at a time (a queue). The headset scene benefits too.
+
+### 2026-11-19 — The Claude Code hook refuses a command that only names LeRobot's calibration folder
+**What:** a Bash command that wrote a lab checklist step (in a heredoc) was refused, because the step's text had the path of the green arm's training calibration in it. The hook (`.claude/hooks/guard.sh`) reads the command's text, not what it does.
+**Fix:** write such doc text with the editor tool instead of a shell command. Leave the hook as it is: it guards the green arms' rules.
+
 ### 2026-11-19 — colorlog treats an empty `NO_COLOR` as set, and checks a pipe only when it gets the stream
 **What:** quick job 40. no-color.org says that `NO_COLOR` counts only when it is not empty, but `colorlog` checks only that the name exists. `colorlog` also colours a pipe unless you give it `stream=`.
 **Fix:** `lab_os.term.use_colour` decides once (`FORCE_COLOR`, then a non-empty `NO_COLOR`, then `isatty()`) and gives `colorlog` the answer as `force_color` / `no_color`.

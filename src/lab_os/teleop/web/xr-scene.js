@@ -4,6 +4,8 @@
 //   - a floating status panel (connected / following / frozen, gripper, speed, hint)
 //   - 1:1 mode: a see-through ball around the 3D gripper, where the hand grabs it to start
 //   - VR only: a dim room with a floor grid and a table, so there's something to stand in
+//   - two arms at once (a left feed with a status): the left arm too, in its own place, with its own
+//     clutch line from the left hand; each 3D arm can be moved (setPlacement(place, "left"); xr.js)
 // The arm stands on the table in front of you, facing away (you operate it from behind), until it's
 // moved (setPlacement: e.g. onto the real arm, with the left grip; xr.js).
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
@@ -21,11 +23,13 @@ const IDLE_COLOR = color("arm3d.idle_marker");
 
 export class XRScene {
   /**
-   * @param {import("./arm/arm-feed.js").ArmFeed} feed
+   * @param {import("./arm/arm-feed.js").ArmFeed} feed  the brain's first arm (the right hand's)
    * @param {{ar: boolean, style?: string}} opts  style: "stick" for a light model (default: mesh/boxes)
+   * @param {import("./arm/arm-feed.js").ArmFeed} [leftFeed]  the left hand's arm (two arms at once)
    */
-  constructor(feed, { ar, style }) {
+  constructor(feed, { ar, style }, leftFeed = null) {
     this.feed = feed;
+    this.leftFeed = leftFeed;
     this.ar = ar;
     this.style = style;
     this.scene = new THREE.Scene();
@@ -42,6 +46,10 @@ export class XRScene {
     for (const h of Object.values(this.hands)) this.root.add(h);
     this.clutchLine = this._clutchLine();
     this.root.add(this.clutchLine);
+    this.leftLine = this._clutchLine(); // two arms: from where the left hand grabbed
+    this.root.add(this.leftLine);
+    this._leftWas = false;
+    this._leftAnchor = null;
     this.panel = new StatusPanel();
     this.panel.mesh.position.set(0.48, 1.12, -0.62);
     this.panel.mesh.rotation.y = -0.35; // turned toward the user
@@ -50,23 +58,28 @@ export class XRScene {
     this.arm = null;
     this._clutchWas = false;
     this._anchor = null;
+    this.armLeft = null;
     feed.onChange(() => this._applyFeed());
+    leftFeed?.onChange(() => this._applyLeft());
     this._loadArm(feed.modelKind || "so101");
   }
 
-  /** Move the 3D arm from its usual spot by {x, y, z} metres and turn it by `yaw` radians. */
-  setPlacement({ x, y, z, yaw }) {
-    this.armHolder.position.set(ARM_BASE.x + x, ARM_BASE.y + y, ARM_BASE.z + z);
-    this.armHolder.rotation.y = Math.PI / 2 + yaw;
+  /** Move a 3D arm ("right": the first arm; "left": two arms' left one) from its usual spot by
+   * {x, y, z} metres and turn it by `yaw` radians. */
+  setPlacement({ x, y, z, yaw }, slot = "right") {
+    const holder = slot === "left" ? this.leftHolder : this.armHolder;
+    holder.position.set(ARM_BASE.x + x, ARM_BASE.y + y, ARM_BASE.z + z);
+    holder.rotation.y = Math.PI / 2 + yaw;
   }
 
   /** Where the 3D arm's base is, in the same space as the hands' positions (WebXR space; the
    * hands are drawn under `root` as they come), for hand positions relative to it. Not the world
    * position: with a "local" space `root` is shifted down 1.4 m, and the hand would look 1.4 m
    * from the gripper to the brain (found 2026-11-16, quick job 13). */
-  armBase() {
-    this.armHolder.updateWorldMatrix(true, false);
-    return this.root.worldToLocal(this.armHolder.getWorldPosition(new THREE.Vector3()));
+  armBase(slot = "right") {
+    const holder = slot === "left" ? this.leftHolder : this.armHolder;
+    holder.updateWorldMatrix(true, false);
+    return this.root.worldToLocal(holder.getWorldPosition(new THREE.Vector3()));
   }
 
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
@@ -86,6 +99,30 @@ export class XRScene {
     this._applyFeed();
   }
 
+  /** Two arms at once: the left arm's model, shown only while the brain drives a left arm. */
+  async _loadLeft(kind) {
+    this.leftKind = kind;
+    const style = this.style === "stick" ? "stick" : kind === "so101" ? "mesh" : "boxes";
+    const arm = await loadArmModel(kind, { style });
+    if (this.leftKind !== kind) return;
+    if (this.armLeft) this.leftHolder.remove(this.armLeft.object);
+    this.armLeft = arm;
+    if (this.ar) arm.setOpacity(0.55);
+    this.leftHolder.add(arm.object);
+    this._applyLeft();
+  }
+
+  _applyLeft() {
+    const f = this.leftFeed;
+    this.leftHolder.visible = !!f?.status;
+    if (!f?.status) return;
+    if (f.modelKind && f.modelKind !== this.leftKind) this._loadLeft(f.modelKind);
+    if (this.armLeft) {
+      this.armLeft.setJoints(f.joints);
+      this.armLeft.setTint(f.frozen ? FROZEN_TINT : null);
+    }
+  }
+
   _applyFeed() {
     const f = this.feed;
     if (f.modelKind && f.modelKind !== this.armKind) this._loadArm(f.modelKind);
@@ -98,28 +135,35 @@ export class XRScene {
 
   /** Called every XR frame with the controller states (in room space), their source
    * ("controllers" / "hands" / null) and, for hands, each one's pinch (0..1). */
-  /** 1:1 mode, not holding: a ball around the 3D gripper point, green once the hand is in it. */
-  _updateGrabZone(clutch) {
-    const s = this.feed.status;
-    const tip = this.arm?.object.getObjectByName("gripper_frame_link");
+  /** 1:1 mode, not holding: a ball around the 3D gripper point, green once the hand is in it.
+   * Two arms: the left 3D arm has its own ball (`left`). */
+  _updateGrabZone(clutch, left = false) {
+    const s = left ? this.leftFeed?.status : this.feed.status;
+    const zone = left ? this.leftZone : this.grabZone;
+    const tip = (left ? this.armLeft : this.arm)?.object.getObjectByName("gripper_frame_link");
     const show = !!(s && s.mode === "one_to_one" && s.hand_gap_cm != null && !clutch && tip);
-    this.grabZone.visible = show;
+    zone.visible = show;
     if (!show) return;
-    this.grabZone.position.copy(this.root.worldToLocal(tip.getWorldPosition(new THREE.Vector3())));
-    this.grabZone.scale.setScalar((s.capture_cm || 8) / 100);
-    this.grabZone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
+    zone.position.copy(this.root.worldToLocal(tip.getWorldPosition(new THREE.Vector3())));
+    zone.scale.setScalar((s.capture_cm || 8) / 100);
+    zone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
   }
 
-  updateHands(hands, source = "controllers", pinches = null) {
+  /** `moving`: two arms, Y held (the grips move the 3D arms; the panel says so). */
+  updateHands(hands, source = "controllers", pinches = null, moving = false) {
     // No right controller or hand: say so, and how to leave, instead of looking broken
     // (2026-10-29: the builder got stuck in the page).
     const missing = !hands.right?.pos;
-    if (missing !== this.panel.noController || source !== this.panel.source) {
+    if (missing !== this.panel.noController || source !== this.panel.source || moving !== this.panel.moving) {
       this.panel.noController = missing;
       this.panel.source = source;
+      this.panel.moving = moving;
       this.panel.update(this.feed);
     }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
+    const lf = this.leftFeed?.status ? this.leftFeed : null; // two arms at once
+    const leftClutch = !!lf?.status.clutch && !lf.frozen;
+    this._updateGrabZone(leftClutch, true);
     this._updateGrabZone(clutch);
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
@@ -131,7 +175,7 @@ export class XRScene {
       // clutch (the server engages above 0.6), the right one while the arm follows
       const p = pinches ? pinches[side] : 0;
       marker.userData.ball.scale.setScalar(1 + 1.5 * p);
-      const on = side === "right" ? clutch : !!pinches && p > 0.6;
+      const on = side === "right" ? clutch : lf && !pinches ? leftClutch : !!pinches && p > 0.6;
       marker.userData.ball.material.color.setHex(on ? CLUTCH_COLOR : IDLE_COLOR);
     }
     const right = hands.right;
@@ -147,6 +191,19 @@ export class XRScene {
       this._anchor = null;
     }
     this._clutchWas = clutch;
+    const left = hands.left;
+    if (leftClutch && left?.pos) {
+      if (!this._leftWas || !this._leftAnchor) this._leftAnchor = new THREE.Vector3().fromArray(left.pos);
+      const pts = this.leftLine.geometry.attributes.position;
+      pts.setXYZ(0, this._leftAnchor.x, this._leftAnchor.y, this._leftAnchor.z);
+      pts.setXYZ(1, left.pos[0], left.pos[1], left.pos[2]);
+      pts.needsUpdate = true;
+      this.leftLine.visible = true;
+    } else {
+      this.leftLine.visible = false;
+      this._leftAnchor = null;
+    }
+    this._leftWas = leftClutch;
   }
 
   // ---- building blocks -------------------------------------------------------------------
@@ -176,6 +233,11 @@ export class XRScene {
     this.armHolder.position.copy(ARM_BASE);
     this.armHolder.rotation.y = Math.PI / 2; // robot +x (its forward) → away from the user (-z)
     this.root.add(this.armHolder);
+    this.leftHolder = new THREE.Group(); // two arms at once: placed by xr.js, hidden until then
+    this.leftHolder.position.copy(ARM_BASE);
+    this.leftHolder.rotation.y = Math.PI / 2;
+    this.leftHolder.visible = false;
+    this.root.add(this.leftHolder);
     // 1:1 mode: the grab zone around the gripper point (the brain's capture distance)
     this.grabZone = new THREE.Mesh(
       new THREE.SphereGeometry(1, 24, 16),
@@ -183,6 +245,9 @@ export class XRScene {
     );
     this.grabZone.visible = false;
     this.root.add(this.grabZone);
+    this.leftZone = new THREE.Mesh(this.grabZone.geometry, this.grabZone.material.clone()); // two arms
+    this.leftZone.visible = false;
+    this.root.add(this.leftZone);
     if (this.ar) {
       // a faint footprint, so the floating ghost arm reads as "standing" somewhere
       const ring = new THREE.Mesh(
@@ -191,6 +256,7 @@ export class XRScene {
       );
       ring.rotation.x = -Math.PI / 2;
       this.armHolder.add(ring);
+      this.leftHolder.add(ring.clone());
     }
   }
 
@@ -272,12 +338,12 @@ export class StatusPanel {
 
   update(feed) {
     this.last = feed;
-    const t = panelText(feed, this.noController, this.source);
+    const t = panelText(feed, this.noController, this.source, this.moving);
     const key = JSON.stringify(t);
     if (key === this.key) return;
     this.key = key;
     const g = this.canvas.getContext("2d");
-    const [col, chipText, ico] = LEVEL[t.level];
+    const [col] = LEVEL[t.level];
     g.clearRect(0, 0, W, H);
     // the box: cut corners top left and bottom right, a nearly opaque fill, a hairline frame
     cutPath(g, 3, 3, W - 6, H - 6, 34);
@@ -289,23 +355,14 @@ export class StatusPanel {
     g.strokeStyle = col; g.lineWidth = 4; g.beginPath();
     g.moveTo(3, 3 + 34 + 70); g.lineTo(3, 3 + 34); g.lineTo(3 + 34, 3); g.lineTo(3 + 34 + 220, 3); g.stroke();
     g.restore();
-    // the state, as a chip
-    g.textBaseline = "middle";
-    g.font = `600 52px ${PF.ui}`; spaced(g, PF.spacing);
-    const word = t.state.toUpperCase(), chipH = 92, x0 = 44, y0 = 40;
-    const iconW = ico ? 56 : 0;
-    let tw = g.measureText(word).width;
-    const maxW = W - 2 * x0 - 48 - iconW;
-    if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
-    cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
-    g.fillStyle = t.level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
-    g.lineWidth = 2; g.strokeStyle = rgba(col, t.level === "held" ? 1 : 0.7); g.stroke();
-    if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
-    g.fillStyle = chipText; g.textAlign = "left";
-    g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);
-    spaced(g, 0);
+    // the state, as a chip; two arms at once: the left arm's chip on the left, the right arm's after it
+    if (t.left) {
+      const half = (W - 88 - 24) / 2;
+      chip(g, 44, half, t.left.state, t.left.level);
+      chip(g, 44 + half + 24, half, t.state, t.level);
+    } else chip(g, 44, W - 88, t.state, t.level);
     // gripper and speed: a small CAPS label over a number in the digit font, its unit after it
-    fact(g, 44, 176, "Gripper", t.gripper, t.gripper == null ? "" : "% open");
+    fact(g, 44, 176, t.left ? "Right gripper" : "Gripper", t.gripper, t.gripper == null ? "" : "% open");
     if (t.speed) fact(g, 500, 176, t.speed.label, t.speed.value, t.speed.unit);
     else fact(g, 500, 176, "Speed", null, "");
     // a hairline, then the hint in the light font, its parts apart (no dot separators)
@@ -314,6 +371,27 @@ export class StatusPanel {
     hintLine(g, t.hint, 44, 398, W - 88);
     this.texture.needsUpdate = true;
   }
+}
+
+/** The state as a chip at x (at most `width` wide): its level's colour and icon, the words in CAPS,
+ * shrunk to fit. */
+function chip(g, x0, width, state, level) {
+  const [col, chipText, ico] = LEVEL[level];
+  const chipH = 92, y0 = 40;
+  g.textBaseline = "middle";
+  g.font = `600 52px ${PF.ui}`; spaced(g, PF.spacing);
+  const word = state.toUpperCase();
+  const iconW = ico ? 56 : 0;
+  let tw = g.measureText(word).width;
+  const maxW = width - 48 - iconW;
+  if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
+  cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
+  g.fillStyle = level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
+  g.lineWidth = 2; g.strokeStyle = rgba(col, level === "held" ? 1 : 0.7); g.stroke();
+  if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
+  g.fillStyle = chipText; g.textAlign = "left";
+  g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);
+  spaced(g, 0);
 }
 
 /** One fact: label (small CAPS, dim), then the value (digits, padded to 3 places) and its unit. */

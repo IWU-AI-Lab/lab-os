@@ -3,8 +3,40 @@
 //   level: normal (cyan) | following (green) | warning (amber) | held (rust, pause icon) | offline (gray)
 // Plain words, no dot separators (docs/design/DESIGN.md → "Don't").
 
-/** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts]}. */
-export function panelText(feed, noController, source) {
+// Two arms at once (status.left_arm, preview 3): `left` is the left arm's {state, level}, and `state`
+// says "Right …"; the panel draws the left one on the left. Bare hands drive only the right arm.
+
+/** The left arm's state (two arms at once), from status.left_arm. */
+function leftText(l) {
+  return l.connected === false ? ["Left disconnected", "offline"]
+    : l.frozen ? [l.needs_release ? "Left frozen: let go" : "Left frozen", "held"]
+    : l.clutch ? [l.one_to_one ? "Left following 1:1" : "Left following", "following"]
+    : l.mode === "one_to_one" && l.hand_gap_cm != null && l.hand_gap_cm > l.capture_cm
+      ? [`Left: reach the gripper ${Math.round(l.hand_gap_cm)} cm`, "normal"]
+      : ["Left holding", "normal"];
+}
+
+/** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts],
+ * left: {state, level} or null}. `moving`: two arms, Y held (the grips move the 3D arms). */
+export function panelText(feed, noController, source, moving = false) {
+  const one = oneArmText(feed, noController, source);
+  const l = feed?.status?.left_arm;
+  if (!l || noController) return { ...one, left: null };
+  const [state, level] = leftText(l);
+  const hands = source === "hands";
+  const oneToOne = feed.status.mode === "one_to_one";
+  const hint = hands ? ["Two arms: controllers only", "now: right arm", "left pinch = move"]
+    : moving ? ["Y held: a grip moves its 3D arm", "the arms hold", "tap Y = put back"]
+      : oneToOne ? ["1:1: each hand in its ball", "hold grip = move", "Y + grip = move 3D arm", "A/X = stop both"]
+        : ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm", "A/X = stop both"];
+  const right = one.state.replace(/^Frozen: let go of the (grip|pinch)$/, "Frozen: let go");
+  const words = right.startsWith("Reach the gripper: ")
+    ? `Right: reach the gripper ${right.slice("Reach the gripper: ".length)}`
+    : `Right ${right.charAt(0).toLowerCase()}${right.slice(1)}`;
+  return { ...one, state: words, hint, left: { state, level } };
+}
+
+function oneArmText(feed, noController, source) {
   const s = feed?.status, hands = source === "hands";
   const [state, level] = noController ? [hands ? "No right hand" : "No controller", "warning"]
     : !s ? ["Connecting…", "offline"]

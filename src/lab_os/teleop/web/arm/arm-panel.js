@@ -9,6 +9,10 @@
 // row per joint of the arm, always all of them, in the arm's order, each a fixed height. A command
 // that names only some joints (a jog moves one or two) updates those rows; nothing appears,
 // disappears or wraps, so the 3D view never resizes.
+//
+// Two arms at once (status.left_arm): both models in the one view, the left arm to the left
+// (arm-view.js), and the readout in two parts, "Right arm" then "Left arm". Each arm has its own
+// ArmFeed, so each model moves with exactly its own driver's commands.
 import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
@@ -35,48 +39,56 @@ $("arm-panel").innerHTML = `
 
 const view = createArmView($("arm-view"));
 const select = $("arm-model");
-const feed = getArmFeed(getLink($("arm-panel").dataset.role || "monitor"));
-let model = null;
-let loading = null;
-let userPicked = false;
-// the readout's rows: every joint seen for this arm, in the arm's order, with its latest value
-let shown = new Map();
+const link = getLink($("arm-panel").dataset.role || "monitor");
+// each arm: its feed, its model, and its readout's rows (every joint seen, in the arm's order)
+const arms = ["right", "left"].map((side) => ({ side, feed: getArmFeed(link, side), model: null, loading: null, shown: new Map() }));
+let picked = null; // the model the user chose in the list (both arms), or null: each arm's own
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const twoArms = () => !!arms[1].feed.status;
 
 for (const [i, c] of MODEL_CHOICES.entries()) select.add(new Option(c.label, String(i)));
 select.onchange = () => {
-  userPicked = true;
-  useModel(MODEL_CHOICES[Number(select.value)]);
+  picked = MODEL_CHOICES[Number(select.value)];
+  for (const arm of arms) if (arm.feed.status) useModel(arm, picked);
 };
 
-async function useModel(choice) {
+/** The model for an arm: the user's choice, else the first one of the arm's own kind. */
+function choiceFor(arm) {
+  return picked || MODEL_CHOICES.find((c) => c.kind === arm.feed.modelKind);
+}
+
+async function useModel(arm, choice) {
   const key = `${choice.kind}/${choice.style}`;
-  if (loading === key || (model && `${model.kind}/${model.style}` === key)) return;
-  loading = key;
-  select.value = String(MODEL_CHOICES.indexOf(choice));
+  if (arm.loading === key || (arm.model && `${arm.model.kind}/${arm.model.style}` === key)) return;
+  arm.loading = key;
+  if (arm.side === "right") select.value = String(MODEL_CHOICES.indexOf(choice));
   try {
     const next = await loadArmModel(choice.kind, { style: choice.style });
-    if (loading !== key) return; // another choice won meanwhile
-    model = next;
-    view.setModel(model);
+    if (arm.loading !== key) return; // another choice won meanwhile
+    arm.model = next;
+    view.setModel(next, arm.side);
     $("arm-error").textContent = "";
     render();
   } catch (e) {
     $("arm-error").textContent = `3D model "${choice.label}" failed to load: ${e.message}`;
   } finally {
-    if (loading === key) loading = null;
+    if (arm.loading === key) arm.loading = null;
   }
 }
 
-function render() {
-  const { joints, lastCommand, frozen } = feed;
-  $("arm-source").textContent = lastCommand
+function sourceText({ feed: { lastCommand, frozen } }) {
+  return lastCommand
     ? `Showing driver command #${lastCommand.seq} → ${lastCommand.device} (speed ${Math.round(lastCommand.speed_scale * 100)}%)${frozen ? " · FROZEN (stop sent)" : ""}`
     : `No commands yet: showing the driver's reported joints${frozen ? " · FROZEN" : ""}`;
-  if (!model) return;
+}
+
+/** One arm's model and readout rows (HTML). */
+function renderArm(arm) {
+  const { feed, model, shown } = arm;
+  const { joints, lastCommand, frozen } = feed;
+  if (!model) return "";
   model.setTint(frozen ? FROZEN_TINT : null);
   const { unknown, outOfRange } = model.setJoints(joints);
-  view.requestRender();
   // Clamping is judged from the driver state reported with the same command (never a later one).
   const after = lastCommand?.driver_joints || {};
   // every joint the driver reports gets its row (with the reported angle until a command names it)
@@ -91,7 +103,7 @@ function render() {
     });
     shown.set(name, { cmd, flags });
   }
-  $("arm-joints").innerHTML = [...shown].map(([name, { cmd, flags }]) => {
+  return [...shown].map(([name, { cmd, flags }]) => {
     const value = cmd == null ? "—" : `${cmd >= 0 ? "+" : ""}${cmd.toFixed(1)}°`;
     const note = flags.join("; ");
     return `<div class="jrow${note ? " flag" : ""}"><span class="jn">${esc(name)}</span><span class="jv">${value}</span>` +
@@ -99,14 +111,33 @@ function render() {
   }).join("");
 }
 
-feed.onChange((f, why) => {
-  if (why === "arm") {
-    userPicked = false; // another arm: show its own model again
-    shown = new Map(); // and its own joints
-  }
-  if ((why === "status" || why === "arm") && !userPicked && !loading) {
-    const choice = MODEL_CHOICES.find((c) => c.kind === f.modelKind);
-    if (choice && (!model || model.kind !== choice.kind)) useModel(choice);
-  }
-  render();
-});
+function render() {
+  const [right, left] = arms;
+  const two = twoArms();
+  $("arm-source").textContent = two
+    ? `Right arm: ${sourceText(right)}. Left arm: ${sourceText(left)}.`
+    : sourceText(right);
+  const rows = renderArm(right);
+  const leftRows = two ? renderArm(left) : "";
+  const head = (word, arm) => `<div class="jhead">${word} <small>${esc(arm.feed.status?.arm?.name || "")}</small></div>`;
+  $("arm-joints").innerHTML = two ? head("Right arm", right) + rows + head("Left arm", left) + leftRows : rows;
+  view.requestRender();
+}
+
+for (const arm of arms) {
+  arm.feed.onChange((f, why) => {
+    if (why === "arm") {
+      arm.shown = new Map(); // another arm (or none): its own joints
+      if (!f.status) { // the brain drives one arm now: the left model goes
+        arm.model = null;
+        arm.loading = null;
+        view.setModel(null, arm.side);
+      }
+    }
+    if ((why === "status" || why === "arm") && f.status && !arm.loading) {
+      const choice = choiceFor(arm);
+      if (choice && (!arm.model || arm.model.kind !== choice.kind)) useModel(arm, choice);
+    }
+    render();
+  });
+}
