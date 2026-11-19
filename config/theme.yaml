@@ -123,7 +123,7 @@ startup:                 # (planned; the designed hub reads some)
     brake_s: 2.6         # after the flash: a long ease-out; the network starts white-hot and dims as it settles
 
 quality:                 # what each level keeps. minimal = the lightweight mode. (planned; the designed hub reads some)
-  default: full
+  default: maximal      # the builder's choice, 2026-11-18 (was full); a device can pick its own (⚙ → This device)
   maximal: { idle: true, glow: true, blur: true, particles: true, network: dense, extra_rings: true, frame_details: true, background_text: true }
   full: { idle: true, glow: true, blur: true, particles: true, network: interactive }
   reduced: { idle: true, glow: true, blur: false, particles: false, network: small }
