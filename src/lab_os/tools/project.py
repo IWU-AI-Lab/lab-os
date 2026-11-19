@@ -3,7 +3,7 @@
 Plain logic with no MCP in it; lab_os.tools.mcp_server offers these as MCP tools (read tier), and
 the hub's chat uses the same ones. Nothing here writes, runs a fetch or opens a device.
 
-The docs are `docs/**/*.md` plus README, CHANGELOG, SAFETY and CLAUDE at the top, `docs/design/`
+The docs are `docs/**/*.md` plus README, CHANGELOG, SAFETY and AGENTS at the top, `docs/design/`
 included (the design stopped being a surprise on 2026-11-12). A doc's name is its path under docs/
 without `.md` ("plan/current-focus"); its last part alone ("current-focus") works too when only one
 doc has it.
@@ -18,7 +18,7 @@ from lab_os.devices import Registry, load_registry
 from lab_os.hub.project import project_summary
 from lab_os.venues import Venue
 
-TOP_DOCS = ("README.md", "CHANGELOG.md", "SAFETY.md", "CLAUDE.md")
+TOP_DOCS = ("README.md", "CHANGELOG.md", "SAFETY.md", "AGENTS.md")
 MAX_CHARS = 12_000  # one doc or section per call (the AI pays per token)
 MAX_HITS = 30
 GIT_TIMEOUT_S = 10
@@ -203,7 +203,7 @@ class ProjectTools:
 
     def list_devices(self) -> dict:
         """The place's device list: name, kind, off limits, borrowed (another project's, drivable
-        with CLAUDE.md's rules), active in this venue, notes. Whether a device is switched on isn't
+        with AGENTS.md's rules), active in this venue, notes. Whether a device is switched on isn't
         known yet (the roll call comes with the lab router)."""
         active = set(self.venue.active_devices) if self.venue else set()
         devices = [

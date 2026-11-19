@@ -1,6 +1,6 @@
 # Teleop with the Quest: at home (no headset) and on the real Quest (USB)
 
-The teleop program shows a WebXR page and gets the controller data over a WebSocket. It drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). In a coding session, ask the builder before a real arm moves (`CLAUDE.md`).
+The teleop program shows a WebXR page and gets the controller data over a WebSocket. It drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
 
 ```bash
 uv run lab-os-teleop serve                         # the headset page and the fake arm

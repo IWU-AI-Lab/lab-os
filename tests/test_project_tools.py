@@ -139,7 +139,7 @@ def test_the_real_docs():
     tools = ProjectTools(REPO)
     names = {d["name"] for d in tools.list_docs()["docs"]}
     assert {"plan/current-focus", "plan/ideas", "dev/GOTCHAS", "plan/lab-jarvis-log"} <= names
-    assert {"guides/hub", "design/DESIGN", "CLAUDE"} <= names
+    assert {"guides/hub", "design/DESIGN", "AGENTS"} <= names
     assert tools.read_doc("current-focus")["name"] == "plan/current-focus"  # the short name works
     assert "On hold" in tools.read_doc("ideas", section="On hold")["text"]
 

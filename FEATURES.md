@@ -89,7 +89,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Robot | Status | Notes |
 |---|---|---|
 | `so101-white` (SO-101 arm, LeRobot) | ✅ | The driver, a guarded motor setup and calibration, a read-only `--watch` mode. `uv sync --extra so101`. |
-| `so101-green` (the training set's follower, borrowed) | ✅ | `--arm so101-green`. It drives with lab-os's copy of the training calibration and refuses if the copy or the motors are different; motor setup refused; refused while LeLab has the port (`CLAUDE.md` → "Hard rules"). Lab checks parts 8 and 8b passed (2026-11-16, 11-17). |
+| `so101-green` (the training set's follower, borrowed) | ✅ | `--arm so101-green`. It drives with lab-os's copy of the training calibration and refuses if the copy or the motors are different; motor setup refused; refused while LeLab has the port (`AGENTS.md` → "Hard rules"). Lab checks parts 8 and 8b passed (2026-11-16, 11-17). |
 | The green set's cameras (`so101-green-cam-wrist`, socket 7; `so101-green-cam-stand`, socket 8) | 🧪 | Listed by USB socket. A camera that another program uses is refused. |
 | `xarm1` (Hiwonder xArm 1S, USB) | ✅ | The driver, joint movement, inverse kinematics, hand calibration of the limits. `--arm xarm1`. |
 | **An SO-101 unplugged and plugged in again** (2026-11-18): in about half a second the brain freezes it, ends any AI move, and every page says that the arm is disconnected. When the same USB name comes back, the brain connects again by itself. Grab again to drive. | 🧪 | Software arm and a test port only. Lab checks F.4 and F.5. The xArm does not notice yet. |

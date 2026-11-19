@@ -9,7 +9,7 @@ This list has only what is still to do. When a step is done, it is removed (its 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
 - Ctrl+C in the brain's terminal makes an SO-101 go limp. If the arm is lifted, hold it first.
-- The green arms have their own rules (`CLAUDE.md` → "Hard rules"). Never start lab-os on them while LeLab runs.
+- The green arms have their own rules (`AGENTS.md` → "Hard rules"). Never start lab-os on them while LeLab runs.
 - The voice is OpenAI's (the professor's key, in `.env`). After you change `.env`, restart the brain. Without that key, the free Gemini key speaks (about 15 to 20 answers a day).
 
 You need no ruler. Measure with these:

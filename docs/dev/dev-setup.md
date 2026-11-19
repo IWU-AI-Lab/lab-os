@@ -54,7 +54,7 @@ Host *
 In the project's `.claude/settings.json` (permission rules):
 - **Allow without asking:** `ssh` to known robots for read-only checks, `rsync` deploys, `git` commands, running tests.
 - **Always ask first:** `sudo`, deleting files, rebooting devices, and (in a coding session) **running anything that makes a real robot move**. The brain's move tools themselves are allowed without asking since 2026-11-14 (`docs/guides/ai-control.md` → "Permissions").
-- `CLAUDE.md` in the repo tells Claude the rules and points to **docs/plan/current-focus.md** and **docs/plan/lab-jarvis-log.md**.
+- `AGENTS.md` in the repo tells every AI coding agent the rules (`CLAUDE.md` points to it, for Claude Code) and points to **docs/plan/current-focus.md** and **docs/plan/lab-jarvis-log.md**.
 - **Git is the undo button:** commit often.
 
 ---

@@ -29,7 +29,7 @@ Then start a Claude Code session in this folder (the VS Code extension or `claud
 ## 3. Permissions
 The repository's `.claude/settings.json` **allows every brain tool without asking**, for everyone who opens the project (decision 2026-11-13). That includes the read tools, `stop`, and the move tools (`move_joints`, `gripper`, `move_to`, `go_to_pose`, `pick_at`). Nothing waits for a click. The brain itself keeps it safe: STOP, the limits (below), and one controller at a time. A person stays at a real arm with STOP near.
 
-A coding session (a session that works on lab-os's code) still asks you before it runs anything that moves a real arm (`CLAUDE.md`). A session that you started to drive the arm uses the tools freely.
+A coding session (a session that works on lab-os's code) still asks you before it runs anything that moves a real arm (`AGENTS.md`). A session that you started to drive the arm uses the tools freely.
 
 To be asked before each move in your own Claude Code only: add the move tools as `"ask"` rules in `.claude/settings.local.json`. In Claude Code, "ask" wins over "allow".
 
@@ -91,7 +91,7 @@ The brain limits and refuses. It never trusts the numbers that it gets. This sec
 - **Unplugged:** if an SO-101's USB cable is removed, the move ends with `"result": "disconnected"`. `arm_status` says `"connected": false`, with the reason. Every move is refused until the arm is back. The brain connects again by itself when the cable is back (quick job 27).
 
 ## 5. On the real arm (`so101-white`, in the lab)
-Do this only with the builder at the arm, with a hand near STOP. In a coding session, ask before the first real move (`CLAUDE.md`). The green follower works the same way ("The green arm" below).
+Do this only with the builder at the arm, with a hand near STOP. In a coding session, ask before the first real move (`AGENTS.md`). The green follower works the same way ("The green arm" below).
 
 **One time, on the lab desktop:** the `so101` extra is LeRobot (about 5 GB). Plain `uv sync` removes it again.
 ```bash
@@ -120,7 +120,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
 6. After: `logs/ai-tools/` has every call of this run. Write in `docs/plan/current-focus.md` (step 2) what worked and what did not.
 
 ### The green arm (`so101-green`)
-The training set's follower, borrowed from the training project. Its rules are in `CLAUDE.md` → "Hard rules". It has the same tools and limits as the white arm.
+The training set's follower, borrowed from the training project. Its rules are in `AGENTS.md` → "Hard rules". It has the same tools and limits as the white arm.
 ```bash
 uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 ```

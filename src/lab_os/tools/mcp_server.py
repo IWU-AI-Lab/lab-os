@@ -229,7 +229,7 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
         (current-focus: what's being worked on; quick-jobs; ideas: the backlog, incl. "On hold";
         lab-jarvis-log: plan, decisions, devices), guides/ (hub, voice, ai-control, lab-checklist,
         …), dev/ (GOTCHAS: surprises and fixes; protocol, places, chat, personas, …), design/DESIGN
-        (the hub's design), archive/ (history); plus README, CHANGELOG, SAFETY, CLAUDE."""
+        (the hub's design), archive/ (history); plus README, CHANGELOG, SAFETY, AGENTS."""
         return run("list_docs")
 
     @server.tool(annotations=READ)

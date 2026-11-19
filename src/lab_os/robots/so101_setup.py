@@ -14,7 +14,7 @@ with the arm).
 
 Borrowed arms (`borrowed: true` in devices.yaml: the green training set) are refused by all three
 commands, by name and by board serial: lab-os never changes their motor IDs, baud rate, firmware
-or calibration (CLAUDE.md).
+or calibration (AGENTS.md).
 """
 
 import argparse
@@ -111,7 +111,7 @@ def refuse_borrowed(
     if device.borrowed or serials & registry.borrowed_serials():
         raise Borrowed(
             f"{device.name} is borrowed from another project (the SO-101 training set): lab-os "
-            "never changes its motor IDs, baud rate, firmware or calibration (CLAUDE.md). "
+            "never changes its motor IDs, baud rate, firmware or calibration (AGENTS.md). "
             "Do that in its own project (LeLab)."
         )
 
@@ -302,7 +302,7 @@ def calibrate(device: Device, port: str) -> None:
     and switch torque on. Here the bus only opens (checks all six motors answer), calibrate()
     switches torque off first, and the port closes with torque off. Never a borrowed arm."""
     if device.borrowed:
-        raise Borrowed(f"{device.name} is borrowed: lab-os never calibrates it (CLAUDE.md)")
+        raise Borrowed(f"{device.name} is borrowed: lab-os never calibrates it (AGENTS.md)")
     cls, config = arm_class_and_config(device, port)
     arm = cls(config)
     arm.bus.connect()
