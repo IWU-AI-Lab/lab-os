@@ -161,7 +161,7 @@ def make_loop(args) -> TeleopLoop:
         print("REAL ARM: it moves only while the clutch is held; Esc / release = freeze.")
     if venue.limits_off:
         off = ", ".join(venue.limits_off)
-        print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety limits)")
+        print(f"LIMITS OFF in venue {venue.name}: {off} (Settings → Safety Limits and Shut Down)")
     kin = kinematics_for(arm.model)
     print(f"mapping: {'IK (hand space)' if kin else 'joint space'} for model {arm.model}")
     table = table_z_cm(arm.name)

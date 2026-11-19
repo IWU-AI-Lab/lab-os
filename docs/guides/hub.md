@@ -1,166 +1,204 @@
 # The hub
 
-The brain's start page: a start screen, then a status strip, module buttons (teleop, monitor), the assistant, and panels of real project facts. It comes in two looks:
-- **plain** (`/plain`, and `/` by default): simple on purpose, the same parts and names as the approved concept without its looks;
-- **designed** (`/design`): the approved concept (`docs/design/hub-concept.html`) made real (`docs/plan/current-focus.md` step 10), since 2026-11-10; the one demoed (the plain hub stays the default at `/`). Below: "The designed hub".
+The hub is the brain's start page: a start screen, then a status strip, module buttons (Teleop, Monitor, AI Control, Training), the assistant, and panels of real project facts. It has two looks:
+- **plain** (`/plain`, and `/` by default): simple on purpose. It has the same parts and names as the approved design, without its looks.
+- **designed** (`/design`): the approved design (`docs/design/hub-concept.html`), built since 2026-11-10. This is the one that we show (below: "The designed hub").
 
-`hub.look` in `config/theme.yaml` (`plain` or `design`) picks which one `/` shows; flip it when the design should be what everyone sees.
+`hub.look` in `config/theme.yaml` (`plain` or `design`, or ⚙ → The Lab → The Main Address Shows) selects which look `/` shows.
 
 ## Start it
 ```bash
-uv run lab-os serve                    # hub + teleop pages + the fake arm
+uv run lab-os serve                    # the hub, the teleop pages and the fake arm
 ```
 Then open **http://localhost:8080/** in a browser on the same computer. In VS Code: Run and Debug → "Hub: lab-os serve (fake arm)".
 
 | Address | What |
 |---|---|
-| `/` | the hub, in the look `hub.look` picks (add `#skip` to jump past the start screen, for a quick look) |
-| `/design`, `/plain` | each look by name, whatever `hub.look` says |
-| `/ai` | AI Control: what an AI tool is doing with the arm (below) |
-| `/settings` | the settings (also the gear in the hub's strip) |
-| `/xr` | the hub in VR/AR for the Quest: the designed hub's startup around you (ignition, hyperspace jump, the core assembling, the checks, the title and greeting), then the hub around you: the core, the four callouts (with their controls and details pages), the strip with ⏻, the typed log, the frame; point with a controller or hand and pull the trigger (or pinch) to press, B or Y closes a page, ⏻ goes back to the start (and the jump). Module buttons for the modules with a VR version (Teleop: the arm scene without leaving VR, it drives like `/teleop`; Monitor and AI Control: a watch-only arm hologram with STOP; Training has none). **Asking:** hold the trigger (or a pinch) on the ask line under the core and talk; the wake word listens on the headset's microphone while the hub is up; a question asked on another screen shows here too (`docs/guides/voice.md` → "In VR"). "Preview on this screen" elsewhere (drag to look around, click to press). `?slow=10` plays it ten times slower. The designed hub's strip shows a headset button where VR works |
-| `/training` | start the SO-101 training setup (green arms + LeLab) after a port check, on the brain's computer (`docs/guides/green-launcher.md`) |
-| `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
-| `/teleop` | the teleop page (the Quest opens this one under `lab-os serve`; `lab-os-teleop` still serves it at `/`) |
+| `/` | the hub, in the look that `hub.look` selects. Add `#skip` to go past the start screen. |
+| `/design`, `/plain` | each look by name |
+| `/ai` | AI Control: what an AI tool does with the arm (below) |
+| `/settings` | the settings (also the ⚙ in the hub's strip) |
+| `/xr` | the hub in VR or AR for the Quest (`docs/guides/quest-setup.md` → "The hub in VR"). On another computer, "Preview on this screen" shows it (drag to look around, click to press). The designed hub's strip shows a headset button where VR works. |
+| `/training` | start the SO-101 training setup (green arms and LeLab) after a port check, on the brain's computer (`docs/guides/green-launcher.md`) |
+| `/teleop` | the teleop page (the Quest opens this one with `lab-os serve`; `lab-os-teleop` shows it at `/`) |
 | `/monitor` | the arm monitor |
+| `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
 | `/perf` | the performance test (below) |
 
-Options are the same as `lab-os-teleop`'s: `--arm fake-xarm1`, `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/dev/places.md`); plus `--mcp-port` for the robot tools for AI (`docs/guides/ai-control.md`), `--persona` (`docs/dev/personas.md`), `--open desk` to open the hub on this computer as that device once the brain runs ("Devices" below), and `--status-line` to print teleop's live status line under the log (off by default for `lab-os serve`: the hub shows the state; `lab-os-teleop` still prints it unless `--quiet`). Real arms (`--arm so101-white`, `--arm xarm1`) need the builder's OK before anything moves (SAFETY.md). With a real arm and `--host 0.0.0.0`, other computers only watch (and STOP); `--drive-from pi01.iwu.ai.lab` (repeatable) lets that computer drive too.
+**Options** (the same as `lab-os-teleop`'s):
+- `--arm` (for example `fake-xarm1`, `so101-white`), `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/dev/places.md`).
+- `--mcp-port`: the robot tools for AI (`docs/guides/ai-control.md`).
+- `--persona` (`docs/dev/personas.md`).
+- `--open desk`: open the hub on this computer as that device when the brain runs ("Devices" below).
+- `--status-line`: show teleop's live status line under the log. It is off by default for `lab-os serve`, because the hub shows the state. `lab-os-teleop` shows it unless you add `--quiet`.
+- `--host 0.0.0.0`: other computers can open the hub. With a real arm, they only watch (and their STOP works). `--drive-from pi01.iwu.ai.lab` (you can use it more than once) lets that computer drive too.
 
-## Two taps
-Browsers allow full screen and sound only after a press, so:
-1. **Tap 1, full screen** ("Tap for full screen"): the builder's tap when leaving the hub on a screen. Skipped when the page is already full screen (kiosk mode, F11, an installed app) or the browser can't do it.
-2. **Tap 2, start** ("Tap, click or press any key to start"): the visitor's tap. Opens the hub.
+In a coding session, ask the builder before a real arm moves (`SAFETY.md`, `CLAUDE.md`).
 
-**The Full screen button** (since 2026-11-11): on every page (both hubs' status strips, next to ⏻ and ⚙ on the designed one; the bar of each module page; the classic pages; `/perf`), shown only while the page isn't full screen. It does what tap 1 does. Where the browser can't or won't go full screen, the button stays and **says why** when pressed (also in its tooltip): no Fullscreen API, turned off by the browser (`document.fullscreenEnabled` false, e.g. a kiosk or managed policy), blocked by a permissions policy, or refused with the browser's own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One helper does it for every page: `src/lab_os/web/fullscreen.js`.
+## The start screen
+**The plain hub has two taps,** because browsers allow full screen and sound only after a press:
+1. **Tap 1, full screen** ("Tap for full screen"): the builder taps when leaving the hub on a screen. The page skips it when it is already full screen (kiosk mode, F11, an installed app) or when the browser cannot do it.
+2. **Tap 2, start** ("Tap, click or press any key to start"): the visitor's tap. It opens the hub.
 
-Leaving full screen (a swipe, holding Esc, a reload) brings back the start screen with tap 1. Modules open **inside** the hub (no page load, which would leave full screen); **Back** or **Esc** returns. In Chrome and Edge, Esc means Back without leaving full screen (Keyboard Lock API; holding Esc still leaves). In teleop's desktop control, the first Esc leaves desktop control and the next one is Back.
+If the plain hub leaves full screen (a swipe, holding Esc, a reload), the start screen with tap 1 comes back.
 
-**Back to the start screen** after `hub.reset_after_s` (theme, 30 minutes since 2026-11-10, was 3; a venue profile can set its own `reset_after_s`; both timers are in the settings, ⚙ → The Lab) with no input on the hub or the open module. It stays full screen, so the next person only needs tap 2. It also clears the conversation. Never while something is in use: while any teleop page (the hub's or the Quest's) has the arm, an AI tool moves it, a chat answer is streaming, or a voice turn runs (from the mic press until the last spoken word).
+**The designed hub has one tap:** full screen, the unlock and the startup (about 8 s; any input skips it). Leaving full screen does not bring back the start screen.
 
-**The chat:** type anywhere on the hub (it lands in "Ask anything" under the circle) and press Enter; **History** opens the whole conversation. Keys, AI setups and the budget: `docs/dev/chat.md`. **Voice:** hold the mic button next to it (or Space) and talk; the answer is spoken. Or dictation, chosen per screen (⚙ → This device → Talking to it): tap the mic and the words go into the ask line (`docs/guides/voice.md`). The mic shows only on a secure page with a microphone.
+**The Full screen button** is on every page (the hubs' status strips, the bar of each module page, the classic pages, `/perf`), while the page is not full screen. It does what tap 1 does. If the browser cannot go full screen, the button stays, and when you press it, it **says why** (also in its tooltip). The reasons: no Fullscreen API; the browser switched it off (for example a kiosk or a managed policy); a permissions policy blocks it; or the browser refuses it with its own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One file does this for every page: `src/lab_os/web/fullscreen.js`.
+
+**Modules open inside the hub,** so the page stays full screen. **Back** or **Esc** closes them. In Chrome and Edge, Esc means Back without leaving full screen (Keyboard Lock; hold Esc to leave full screen). In Firefox (and Chromium browsers without the lock), Esc also leaves full screen; the next tap or key then goes full screen again. Leaving on purpose (F11, or Esc with nothing open) stays left. In teleop's desktop control, the first Esc leaves desktop control and the next one is Back.
+
+**Back to the start screen:** after `hub.reset_after_s` (30 minutes) with no input, the hub goes back to the start screen, still full screen, so the next person needs only one tap. It also starts a new conversation (bring back the last one with ↶, below). A venue can set its own `reset_after_s`. Both timers are in ⚙ → The Lab. It never goes back while something is in use: a teleop page (the hub's or the Quest's) has the arm, an AI tool moves it, a chat answer comes in, or a voice turn runs.
+
+**Sleep (designed hub):** after `motion.idle.sleep_after_s` (15 minutes) it dims to the network and the breathing core. Any input wakes it. Sleep shows only when it is shorter than the time to the start screen.
+
+## Asking the assistant
+Type anywhere on the hub: the letters go to "Ask anything" under the core. Press Enter. **History** opens the full conversation. Keys, AI setups and the budget: `docs/dev/chat.md`.
+
+**Voice:** hold the mic button next to it (or Space) and talk; the answer is spoken. Each screen can also use dictation or the wake word (⚙ → This Device → Talking to It). The mic shows only on a secure page with a microphone (`docs/guides/voice.md`).
+
+**Bring back the last conversation:** the small amber ↶ in the ask line (hover over it: how many questions, and when), or a line at the top of **History**.
+
+**Asking it to show something:** ask, typed or by voice: "pull up the teleop page", "show me the AI spend", "open the settings", "go back to the hub". It opens that page **on the screen that you asked** and says so in a few words ("Here's Teleop."). It knows what each screen can show: the module buttons, Settings, the panels' pages (designed hub), the conversation. Details: `docs/dev/chat.md` → "It opens pages".
+
+**The core on an open page:** while a module or a panel's page is open, the core is small in the bottom right corner. It still works: **hold it to talk** (like the mic). What it hears and says shows next to it for a while. With the wake word on, "hey Jarvis" also works with a page open, so "hey Jarvis, go back to the hub" works without hands.
 
 ## The designed hub (`/design`)
-The concept's look, motion and sound on the brain's real facts: the title is the place's name, the strip shows the venue, persona, internet and AI setup, the panels show the current focus (with its steps), AI spend, commits (with the latest few) and the devices from `devices.yaml`, the typed log at the bottom shows the latest commits and the current step, the **Arm** button opens a side view drawn from the arm's real joints, and the chat is the real one (answers stream in under the core; **History** is the conversation). The startup is real too: the checks (theme, sound, display, internet, AI, assistant, arm) say what just happened, and the greeting is the brain's.
-- **One tap** starts it: full screen + the unlock + the startup (about 8 s; any input skips). Unlike the plain hub, leaving full screen doesn't bring back the start screen.
-- **The strip's quiet tools** (top right, after the clock): **⏻** goes back to the start screen now (a fresh conversation for the next person; the last one can be brought back), **⚙** opens the settings. On the brain's own computer ⏻ opens a small menu instead: **Back to the start screen**, or **Shut down lab-os** (below).
-- **Shut down lab-os** (quick job 6; ⏻ on the brain's computer, or ⚙ → Shut down on either hub): asks first, and warns when the arm would drop (an SO-101 goes limp: put it down or hold it). Then it stops any move, tells every page, and stops the brain the same way Ctrl+C in its terminal does: the arm is let go, the microphones close (the pages' own; cameras are only open while a picture is taken). Every page then says **lab-os is off** (who shut it down and when) and comes back by itself once the brain runs again (the "Start lab-os" icon). Only from the brain's computer (on any venue: someone is always there).
-- **Answers type themselves out** at a steady ~125 characters a second (the AI streams in chunks; the page paces them), faster only when it falls far behind. `minimal` quality shows each chunk at once.
-- **Bring back the last conversation:** the small amber ↶ in the ask line (hover: how many questions, when), and a line at the top of **History**.
-- **Back to the start screen** after `hub.reset_after_s` with nobody there (never while something is in use), with a fresh conversation (the last one: "Bring back").
-- **Sleep:** after `motion.idle.sleep_after_s` (15 minutes) it dims to the network and the breathing core; any input wakes it. Then the reset (30 minutes). Sleep shows only when it's shorter than the reset time.
-- **Esc = Back keeps full screen** in Chrome and Edge (Keyboard Lock). In Firefox (and Chromium browsers without the lock) the browser also leaves full screen; the next tap or key then quietly goes full screen again (a page may only do that from a press). Leaving on purpose (F11, Esc with nothing open) stays left. Kiosk mode (`firefox --kiosk <url>`, `brave-browser --kiosk <url>`) keeps it full screen whatever Esc does.
-- **A slow screen** (e.g. Firefox on Linux, which often draws the canvas without the graphics card): the hyperspace jump drops stars until it runs at ~40 frames a second (not below ~1000); `reduced` detail starts with half of the theme's `stars`.
-- **Startup as a video** (since 2026-11-18, quick job 34; a test for the stutter at lab check 1.3): ⚙ → This device → **Startup as a video**, off by default. From the start press until the core has arrived (~6.9 s) the designed hub plays a recording (`src/lab_os/hub/web/media/startup-full.webm` or `startup-maximal.webm`, whichever matches the device's level of detail; 1920×1080, 60 frames a second) instead of drawing the stars, the jump, the flash and the core, which aren't drawn meanwhile; the words (the start screen's, the title, the checks, the greeting) stay live above it, and so do the sounds; then the live hub, in the same state by then, fades in over half a second (the core's rings may look doubled for that moment). For `maximal` (more rings on the core, a busier frame and network) set ⚙ → This device → Level of detail → maximal too. It plays only for the hyperspace startup at `full` or `maximal` detail on a screen shaped like the recording, with the theme it was recorded with (the `.json` beside each video); otherwise the startup is drawn as usual and the console says why. **The design stays the source:** after any change to the startup, record both again with `scripts/record_startup.py --quality full` and `--quality maximal` (needs Chrome and ffmpeg; its first lines say how); a test fails while the theme and the recording disagree. `--compare out.mp4` puts the live and the video startup side by side.
-- **In the address:** `?quality=full` (`maximal` is the theme's default since 2026-11-18: it adds the far-layer verses; also `reduced`, `minimal`), `?startup=assemble` (instead of `hyperspace`), `?sound=0`, `?full=0` (don't go full screen, for a laptop), `?res=0.5` (the drawing resolution, below), `#skip`. E.g. `http://localhost:8080/design?quality=full`.
-- **Drawing resolution** (since 2026-11-11, for slow screens like the Newline): how many pixels the moving pictures are drawn at before the screen scales them up. `auto` (the default) = the screen's own, up to 2× (a 4K panel at 2× = 3840×2160 pixels every frame); `1` = one per CSS pixel (a quarter of that on such a screen); `0.75`; `0.5` (a sixteenth: soft, but very light). Applies to the network and hyperspace, the effects layer, the arm drawings in modules, and the 3D arm in teleop/monitor and AI Control's side view. Set it per screen in ⚙ → This device (kept in that screen's browser), or in the address: `?res=` wins (also for the pages opened inside the hub). Same scale as `/perf?res=`, so a number that runs smoothly there is the one to pick. Text, the core and the frame are not affected (they're not canvases). The console says `hub: drawing at 1× (1920×1080 for 1920×1080)`.
-- **System diagram** (2026-11-18, quick job 12): the network icon beside **List all** in the Devices panel opens it full screen, like a details page. The brain as its core in the middle; the screens on the left (lit with the hub open, grey if listed but not open; this screen in brackets) and an AI tool (MCP) below them; the cameras and arms on the right (lit: the arm the brain drives), LeLab below a borrowed arm; the AI service above; the brain's parts in the order a move takes them. The kind of link is the line's style (USB solid, network dashed, MCP dotted, internet long dashes), and only real links carry pulses. It isn't a second devices map: it shows how things connect, not every device (no leader arms, the cameras as one). Drawn from the same facts as the panels each time (`devices.yaml`, the devices with the hub open, the AI setup), so another place or a new arm draws what it has; the names as people say them (`so101-white` → SO-101 White). The code: `src/lab_os/hub/web/system-diagram.js`. A copy for the docs, made from a running brain with `scripts/save_system_diagram.py` (its first lines say how):
+The design's look, motion and sound, on the brain's real facts:
+- The title is the place's name. The strip shows the venue, the persona, the internet and the AI setup.
+- The panels show the current focus (with its steps), the AI spend, the commits (with the latest few) and the devices from `devices.yaml`.
+- The log at the bottom shows the latest commits and the current step.
+- The startup's checks (theme, sound, display, internet, AI, assistant, arm) say what really happened. The greeting is the brain's.
+
+**The strip's tools** (top right, after the clock): **⏻** goes back to the start screen now. **⚙** opens Settings. On the brain's own computer, ⏻ opens a small menu instead: **Back to the start screen**, or **Shut down lab-os**.
+
+**Shut down lab-os** (⏻ on the brain's computer, or ⚙ → Safety Limits and Shut Down): it asks first. It warns when the arm would drop (an SO-101 goes limp: put it down or hold it). Then it stops any move, tells every page, and stops the brain as Ctrl+C in its terminal does: the brain lets go of the arm and the microphones close. Every page then says **lab-os is off** (who shut it down and when). The pages come back by themselves when the brain runs again (the "Start lab-os" icon). Only the brain's computer can do it, on any venue (a person is always there).
+
+**Answers show at a steady speed** (about 125 characters a second; the AI sends text in pieces, and the page sets the pace). They go faster only when the page is far behind. At the `minimal` level of detail, each piece shows at once.
+
+**A slow screen** (for example Firefox on Linux, which often draws without the graphics card): the hyperspace jump removes stars until it runs at about 40 frames a second (not below about 1000 stars). The `reduced` level starts with half of the theme's `stars`.
+
+**Startup as a video** (since 2026-11-18; a test for screens where the startup stutters, lab check F.8): ⚙ → This Device → **Startup as a Video**, off by default.
+- From the start press until the core arrives (about 6.9 s), the hub plays a recording (`src/lab_os/hub/web/media/startup-full.webm` or `startup-maximal.webm`, the one that matches the device's level of detail; 1920×1080, 60 frames a second). The words and the sounds stay live above it.
+- Then the live hub fades in over half a second (the core's rings can look doubled for that moment).
+- It plays only for the hyperspace startup at `full` or `maximal` detail, on a screen with the recording's shape, with the theme that it was recorded with (the `.json` next to each video). If not, the hub draws the startup as usual, and the browser console says why.
+- **The design stays the source.** After any change to the startup, record both again with `scripts/record_startup.py --quality full` and `--quality maximal` (it needs Chrome and ffmpeg; its first lines say how). A test fails while the theme and the recording are different. `--compare out.mp4` shows the live and the video startup side by side.
+
+**In the address:** `?quality=` (`maximal`, the theme's default since 2026-11-18, adds the far-layer verses; `full`, `reduced`, `minimal`), `?startup=assemble` (instead of `hyperspace`), `?sound=0`, `?full=0` (do not go full screen, for a laptop), `?res=0.5` (the drawing resolution, below), `#skip`. For example: `http://localhost:8080/design?quality=full`.
+
+**Drawing resolution** (for slow screens such as the Newline): how many pixels the moving pictures use before the screen scales them up.
+- `auto` (the default): the screen's own, up to 2× (a 4K panel at 2× draws 3840×2160 pixels in each frame).
+- `1`: one per CSS pixel (a quarter of that on such a screen). `0.75`. `0.5`: a sixteenth (soft, but very light).
+- It applies to the network and hyperspace, the effects layer, the arm drawings in modules, and the 3D arm in teleop, monitor and AI Control's side view. Text, the core and the frame do not change (they are not canvases).
+- Set it for each device in ⚙ → This Device (the brain keeps it under the device's name), or in the address: `?res=` wins (also for the pages that open inside the hub). The numbers are the same as for `/perf?res=`, so a number that runs smoothly there is the one to use. The browser console says `hub: drawing at 1× (1920×1080 for 1920×1080)`.
+
+**System diagram** (2026-11-18, quick job 12): the network icon next to **List all** in the Devices panel opens it in full screen, like a details page.
+- The brain is the core in the middle. The screens are on the left (lit with the hub open, gray if listed but not open; this screen in brackets), with an AI tool (MCP) below them. The cameras and arms are on the right (lit: the arm that the brain drives), with LeLab below a borrowed arm. The AI service is above. The brain's parts are in the order that a move goes through them.
+- The line's style shows the kind of link (USB solid, network dashed, MCP dotted, internet long dashes). Only real links carry pulses.
+- It shows how things connect, not every device (no leader arms; the cameras as one). It is drawn from the same facts as the panels each time (`devices.yaml`, the devices with the hub open, the AI setup), so another place or a new arm shows what it has. The names are as people say them (`so101-white` → SO-101 White). The code: `src/lab_os/hub/web/system-diagram.js`. A copy for the docs comes from a running brain with `scripts/save_system_diagram.py` (its first lines say how):
 
   ![System diagram](../dev/system-diagram.svg)
-- **Not real yet, so not shown:** whether a robot or camera is switched on (the roll call needs the lab router: the Devices panel's Power column says "not known"), alerts (no real alert source yet). The Devices panel is still the place's `devices.yaml` (robots, cameras); the devices with the hub open are in "Open on…" (below).
-- **The code:** one file, `src/lab_os/hub/web/design.html`: the concept's CSS, SVG and JavaScript, with the made-up data replaced by the brain's endpoints and the concept controls removed. Fonts are bundled in `src/lab_os/web/vendor/fonts/` (offline).
 
-## Asking it to show something (2026-11-14)
-Ask the assistant, typed or by voice: "pull up the teleop page", "show me the AI spend", "open the settings", "go back to the hub". It opens that page **on the screen you asked** and says so in a few words ("Here's Teleop."). It knows what each screen can show: the module buttons, Settings, the callouts' pages (designed hub), the conversation. Details: `docs/dev/chat.md` → "It opens pages".
+**Not real yet, so not shown:** whether a robot or camera is switched on (the roll call needs the lab router; the Devices panel's Power column says "not known"), and alerts (no real alert source yet). The Devices panel shows the place's `devices.yaml` (robots, cameras). The devices with the hub open are in "Open on…" (below).
 
-**The core on an open page:** while a module or a callout's page is open, the core sits small in the bottom right corner. It works there too: **hold it to talk** (like the mic), and what it hears and says shows beside it for a while. With the wake word on, "hey Jarvis" keeps working with a page open (it used to stop), so "hey Jarvis, go back to the hub" works hands-free.
+**The code:** one file, `src/lab_os/hub/web/design.html`: the design's CSS, SVG and JavaScript, with the brain's endpoints instead of the made-up data. The fonts are in `src/lab_os/web/vendor/fonts/` (offline).
 
 ## Visitor mode: "hey Jarvis, it's demo time" (2026-11-18, quick job 35)
-On the brain's own screen, tell the assistant that visitors are here, typed or by voice, in any words: "hey Jarvis, it's demo time", "say hello to our visitors", "we have guests". The AI decides; there are no fixed phrases. It has a tool to start visitor mode, which:
-- switches the running brain to the place's venue for visitors (the one with `visitors: true`: `visit-day` in the lab). It has the lab's robots, speed and 1:1, and its safety limits can be switched off like the lab's (the builder, 2026-11-18: no extra restrictions for visitors). The hub hides Settings (the ⚙ shows only **Visitor mode**) and the AI spend;
-- gives the assistant the facts for a short welcome, which it says in its own words: the place's name and what it is (`about:` in `place.yaml`), and which robot arms are really plugged in right now (the one the brain drives, and any other arm whose USB port is there). Typed, the welcome is spoken too;
-- shows the venue's **"try this" cards** above the core (`try_this:` in the venue file). Tapping a card that asks something asks it, like saying it. In the lab: "Ask me to wave" and "Open the VR hub" (in the headset's browser, the assistant opens the VR hub when asked). "What's on the table?" is in the file but switched off until that preview is built.
+On the brain's own screen, tell the assistant that visitors are here, typed or by voice, in any words: "hey Jarvis, it's demo time", "say hello to our visitors", "we have guests". The AI decides; there are no fixed phrases. Its tool to start visitor mode does three things:
+- It switches the running brain to the place's venue for visitors (the one with `visitors: true`: `visit-day` in the lab). That venue has the lab's robots, speed and 1:1, and its limits can be switched off as in the lab (the builder, 2026-11-18: no extra restrictions for visitors). The hub hides Settings (⚙ shows only **Visitor Mode**) and the AI spend.
+- It gives the assistant facts for a short welcome. The assistant says the welcome in its own words. The facts are the place's name, what the place is (`about:` in `place.yaml`), and the robot arms that are really plugged in now: the arm that the brain drives, and any other arm whose USB port is there. If no arm is plugged in, the welcome does not mention robots. A typed welcome is also spoken.
+- It shows the venue's **"try this" cards** above the core (`try_this:` in the venue file). Tapping a card that asks something asks it, as if you said it. In the lab: "Ask me to wave" and "Open the VR hub" (in the headset's browser, the assistant opens the VR hub when asked). "What's on the table?" is in the file but off until that preview exists.
 
-**The wave** (only in visitor mode): ask the assistant to wave, in any words, and it can use its wave tool. The arm goes to `ready` and plays a fixed wave from `config/gestures.yaml` (the shoulder turns 8°, the wrist nods 15°, twice), at the venue's speed. The AI decides to wave; it never chooses the motion. The soft joint limits, the floor, STOP and one controller at a time apply as for every move; while teleop drives the arm or another move runs, the assistant says it can't. It shows on AI Control like a tool call.
+**The wave** (only in visitor mode): ask the assistant to wave, in any words. The arm goes to `ready` and plays a fixed wave from `config/gestures.yaml` (the shoulder turns 8°, the wrist nods 15°, two times), at the venue's speed. The AI decides to wave; it never chooses the motion. The soft joint limits, the floor, STOP and one controller at a time apply, as for every move. While teleop drives the arm or another move runs, the assistant says that it cannot wave. AI Control shows the wave like a tool call.
 
-**Exit visitor mode:** ask the assistant ("exit visitor mode", "the visitors have left"), or ⚙ → **Exit visitor mode**. Back to the venue the brain started with; a restart does that too (the switch isn't saved anywhere). **Without asking:** ⚙ → Visitor mode → **Start visitor mode** switches it on (no welcome then).
+**Exit visitor mode:** ask the assistant ("exit visitor mode", "the visitors have left", "the demo is over"), or select ⚙ → **Exit Visitor Mode**. The brain goes back to the venue that it started with. A restart does that too: nothing saves the switch. **Without asking:** ⚙ → The Lab → **Start Visitor Mode** switches it on (with no welcome).
 
-These tools are only offered to a question asked on the brain's own computer (or the Quest on its USB cable); the ⚙ buttons work only there too. The brain refuses the switch when the arm it drives isn't one of the visitors' venue's `active_devices`.
+The assistant gets these tools only for a question asked on the brain's own computer (or the Quest on its USB cable). The ⚙ buttons work only there too. The brain refuses the switch if the arm that it drives is not in the visitors' venue's `active_devices`.
 
-## The module pages (teleop, monitor, AI Control)
-Since 2026-11-10 they're in the hub's design too (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub they drop their own frame and title; on their own screen they have both, the place's name, the clock and a **Full screen** button.
-- **Teleop** (`/teleop`): the arm in 3D on the left; on the right how to drive it (the Quest's Enter AR/VR, Desktop control and its keys) and what the page sends. Status (brain, control, arm) and **STOP** in the bar, always visible; while desktop control is on, "X = STOP" beside it (X on the keyboard stops in every mode).
-- **Monitor** (`/monitor`): for an onlooker screen: the arm in 3D, a gauge per joint, STOP. It watches; it never drives.
-- **AI Control** (`/ai`, the third button): what an AI tool (Claude Code + Fable, Codex, …) does with the arm, live: the arm seen from its side with its real geometry (from the arm's kinematics, in cm), where the last `move_to` aimed, every robot-tool call as it happens (ok / clipped / refused / stopped / error, with what came back), whether the tools are on and moves allowed, and STOP. Until the first call it says how to connect Claude Code. It never moves anything.
-- **The old pages** stay at `/classic/teleop` and `/classic/monitor` (same scripts, the old look), in case the new ones break somewhere (e.g. the Quest's browser).
+## The module pages (Teleop, Monitor, AI Control)
+They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub, they have no frame or title of their own. On their own screen, they have both, the place's name, the clock and a **Full screen** button.
+- **Teleop** (`/teleop`): the arm in 3D on the left. On the right: how to drive it (the Quest's Enter AR or VR, Desktop control and its keys) and what the page sends. The status (brain, control, arm) and **STOP** are in the bar, always in view. While desktop control is on, "X = STOP" shows next to it (X stops in every mode).
+- **Monitor** (`/monitor`): for a screen that people watch: the arm in 3D, a gauge for each joint, STOP. It only watches; it never drives.
+- **AI Control** (`/ai`): what an AI tool (Claude Code, Codex, and others) does with the arm, live. It shows the arm from its side with its real geometry (from the arm's kinematics, in cm), and where the last `move_to` aimed. It lists each robot-tool call as it happens (ok, clipped, refused, stopped, error), with the result. It shows if the tools are on and moves are allowed, and STOP. Until the first call, it says how to connect Claude Code. It never moves anything.
+- **The old pages** stay at `/classic/teleop` and `/classic/monitor` (the same scripts, the old look), in case the new ones break somewhere (for example in the Quest's browser).
 
-## What the Quest sees (2026-11-18)
-On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window showing what the Quest on the USB cable sees, so the room can watch. It needs scrcpy, downloaded once with `uv run lab-os quest-view --install`. `docs/guides/quest-view.md`.
+## What the Quest sees
+On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window with what the Quest on the USB cable sees, so that the room can watch. It needs scrcpy: `docs/guides/quest-view.md`.
 
 ## Settings (the ⚙, or `/settings`)
-The ⚙ in either hub opens this same page. Since 2026-11-19 (quick job 38) it follows common guidance for settings screens (Apple's Human Interface Guidelines, Nielsen Norman Group):
-- **Grouped by what a setting affects, most-used first:** This Device, Assistant, The Lab, Robots. A sidebar on the left jumps to a group; every group's heading folds it away (the page remembers which).
-- **Every row** shows its label, a short help line only where the setting isn't obvious, and its **current value on the right**. Every value ends at the same edge, with the unit after it. **"✓ Saved"** shows for a moment after a change; a problem shows as a sentence under the row.
-- **Restart Now:** settings that apply only on a restart (the robot and safety ones, the wake word, keeping conversations) collect in an amber bar at the top, with **Restart Now** (it asks first, and warns when an SO-101 would go limp). The brain stops as for "Shut down", then starts again by itself with the same options, and every page comes back by itself.
-- **Apart, at the bottom, with a red edge:** "Safety Limits and Shut Down": the switches for the AI tools' per-move limit, the speed cap and the floor (on by default; one that's off is marked "(Off)" and listed in the bar at the top; locked on a public venue or one with `limits_locked: true`), what's always kept (STOP, the soft joint limits, one controller at a time), and **Shut Down lab-os**.
-- **This Device:** level of detail, sound, the way in to voice and the wake word's sensitivity, the assistant's languages, full screen on the start press; then, for slow screens and other monitors: drawing resolution, the startup as a video, monitors on this computer, the device's "Lab Hub" icon. Kept by the brain under the device's name (below, "Devices"), so the Newline can run Full while a Pi runs Minimal. Any device can change its own.
-- **The Lab** starts with **Visitor Mode** (Start or Exit, "Visitor mode" above). While it's on, every other setting, This Device included, is hidden and can't be changed.
-- **Saved into the files:** the assistant, lab and robot settings are `theme.yaml`, `place.yaml` and the running venue's file, saved the moment they change, **with their comments kept**. In the lab they show up in `git diff config/`; commit them like any edit, or undo with `git checkout config/<file>`.
-- **Only on the brain's computer:** other screens see the settings but can't change them (a hallway screen shouldn't rename the lab or switch robots on).
-- **Growing with new modules:** the page draws whatever `src/lab_os/settings.py` lists, in its groups. A setting is one `Field` (file, path, label in Title Case, kind: choice / bool / number / text / color / list, an optional `default` shown when the file leaves it out); a new module adds its own group with `settings.register(Section(...))`. No page changes needed.
+The ⚙ in either hub opens this page. Since 2026-11-19 (quick job 38), it follows common guidance for settings screens (Apple's Human Interface Guidelines, Nielsen Norman Group):
+- **Grouped by what a setting affects, the most-used first:** This Device, Assistant, The Lab, Robots. A sidebar on the left goes to a group. Each group's heading folds the group (the page remembers which groups are folded).
+- **Each row** shows its label, a short help line only where the setting is not obvious, and its **current value on the right**. All values end at the same edge, with the unit after them. **"✓ Saved"** shows for a moment after a change. A problem shows as a sentence under the row.
+- **Restart Now:** settings that apply only after a restart (the robot and safety settings, the wake word, how long to keep conversations) collect in an amber bar at the top, with **Restart Now**. It asks first, and warns when an SO-101 would go limp. The brain stops as for "Shut down", then starts again by itself with the same options. Every page comes back by itself.
+- **Apart, at the bottom, with a red edge: "Safety Limits and Shut Down."** The switches for the AI tools' limit for each move, the speed cap and the floor (on by default). A limit that is off shows "(Off)" and is listed in the bar at the top. A public venue or a venue with `limits_locked: true` cannot switch them off. Then what always stays (STOP, the soft joint limits, one controller at a time), and **Shut Down lab-os**.
+- **This Device:** level of detail, sound, how to talk to it and the wake word's sensitivity, the assistant's languages, full screen on the start press. Then, for slow screens and other monitors: drawing resolution, the startup as a video, the monitors of this computer, the device's "Lab Hub" icon. The brain keeps these under the device's name ("Devices" below), so the Newline can run Full while a Pi runs Minimal. Each device can change its own.
+- **The Lab** starts with **Visitor Mode** (Start or Exit; "Visitor mode" above). While it is on, every other setting, This Device included, is hidden and cannot be changed.
+- **Saved into the files:** the Assistant, The Lab and Robots settings are in `theme.yaml`, `place.yaml` and the running venue's file. The page saves them as soon as they change, **and keeps the files' comments**. In the lab they show in `git diff config/`. Commit them like any edit, or undo with `git checkout config/<file>`.
+- **Only on the brain's computer:** other screens show the settings but cannot change them (a hallway screen must not rename the lab or switch robots on).
+- **For new modules:** the page shows what `src/lab_os/settings.py` lists, in its groups. A setting is one `Field` (file, path, label in Title Case, kind: choice, bool, number, text, color or list, and an optional `default` that shows when the file has no value). A new module adds its own group with `settings.register(Section(...))`. The page needs no change.
 
-## Other monitors on the brain's computer (HDMI / DisplayPort)
-Monitors plugged into the brain's computer are just more screens of the same browser, so any page can go there:
-- **From the hub:** open the module (Teleop, Monitor, AI Control, …), press **Open on…** next to Back, then **Another monitor of this computer** (designed hub). In Chrome on that computer the page opens on the other monitor (Chrome asks once to allow "window management"; it needs `localhost`, which the brain's own screen is); click it there for full screen. The hub closes its copy. Without that permission, or in another browser, it opens a window to drag over. Settings → This device → "Monitors on this computer" grants the permission ahead of time and lists them (and then other devices' "Open on…" lists name the monitors).
-- **Or a second hub on that monitor:** open the hub there too under the same name (`/design?device=desk`). Then the device has two windows and other devices' "Open on…" offers both (below, "Devices").
-- **By hand:** open `http://localhost:8080/monitor` in a new window, drag it to the monitor, press F11 (or the page's Full screen button). Or from a terminal, an app window at that monitor's position (here a second 1920-wide monitor to the right):
+## Other monitors on the brain's computer (HDMI, DisplayPort)
+Monitors connected to the brain's computer are more screens of the same browser, so any page can go there:
+- **From the hub (designed hub):** open the module (Teleop, Monitor, AI Control, …), press **Open on…** next to Back, then **Another monitor of this computer**. In Chrome on that computer, the page opens on the other monitor (Chrome asks once to allow "window management"; it needs `localhost`, which the brain's own screen is). Click it there for full screen. The hub closes its copy. Without that permission, or in another browser, it opens a window that you drag to the monitor. ⚙ → This Device → "Monitors on This Computer" gives the permission in advance and lists the monitors (then other devices' "Open on…" lists name the monitors).
+- **A second hub on that monitor:** open the hub there too, with the same name (`/design?device=desk`). Then the device has two windows, and other devices' "Open on…" offers both ("Devices" below).
+- **By hand:** open `http://localhost:8080/monitor` in a new window, drag it to the monitor, and press F11 (or the page's Full screen button). Or, from a terminal, open an app window at that monitor's position (here, a second monitor 1920 pixels wide, to the right):
   ```bash
   google-chrome --new-window --app=http://localhost:8080/monitor --window-position=1920,0 --start-fullscreen
   ```
 - Any page works this way: `/monitor`, `/ai`, `/teleop`, `/design` (a second hub), `/settings`.
-- **The Newline on an HDMI cable + its USB touch cable** to the brain's computer is the same thing: one more monitor (with touch), and it's `localhost`, so even voice will work there.
+- **The Newline on an HDMI cable and its USB touch cable** to the brain's computer is the same: one more monitor (with touch). It is `localhost`, so voice also works there.
 
 ## Devices (step 8): named devices, "Open on…", one tap each
-A **device** is a computer or screen with the hub open under a name in its address: `/?device=desk`, `/?device=newline`, `/?device=quest` (lowercase letters, digits and dashes). The brain keeps the list of devices that have the hub open right now; nothing else about them.
-- **The name** stays in the address (a reload keeps it), and the browser remembers it: the next time it opens `/` without a name, it's that device again. `?device=` with nothing after it opens it with no name.
-- **This device** (⚙): its settings are kept by the brain under the name, in the place's `hub-devices.yaml` (above, "Settings").
-- **A device's monitors:** each monitor with the hub open is a window of the device (e.g. the desk's two monitors, each with `/design?device=desk`). Other devices' "Open on…" opens on the free one (nothing open there); when two are free, or none, it asks which ("left monitor", "right monitor", or the monitor's own name once ⚙ → This device → "Monitors on this computer" was allowed).
-- **Open on…** (next to Back in an open module, both looks): lists the other devices with the hub open and what each shows, and the device's own other monitors. Pick one: the page opens **inside that device's hub**, as if someone had pressed the button there (even from its start screen, with no startup and no new conversation; a module open there gives way only when you picked that monitor). This hub closes its copy, so a teleop page never holds two connections. The page there says "Opened from <device>".
-- **Closing it:** **Back** there, or **Bring it back** here (a line at the top of the hub, "Monitor is on desk"): it closes there and opens here again.
-- **Only devices with the hub open are listed**, so a device used for something else (the Newline showing a slide) is never taken over. The menu opens on the left, so it never covers a page's STOP.
-- **When the brain restarts,** every hub page reconnects by itself within a few seconds and tells the brain again what it shows; "Bring it back" still works afterwards. (A page opened while the brain was off doesn't load at all: tap the icon again once it runs.)
-- **Who may:** any hub page can open a page on another device that has the hub open (it only changes what that screen shows; a real arm's teleop page on another computer is still view-only).
-- The Quest's VR hub (`/xr`) isn't a device yet: open `/design?device=quest-a` (or `quest-b`/`-c`: `config/devices.yaml`) in its browser to have the Quest listed.
+A **device** is a computer or screen with the hub open under a name in its address: `/?device=desk`, `/?device=newline`, `/?device=quest-a` (lowercase letters, digits and dashes). The brain keeps the list of the devices that have the hub open now, and nothing else about them.
+- **The name** stays in the address (a reload keeps it), and the browser remembers it: the next time it opens `/` without a name, it is that device again. `?device=` with nothing after it opens the hub with no name.
+- **This Device** (⚙): the brain keeps the device's settings under its name, in the place's `hub-devices.yaml` ("Settings" above).
+- **A device's monitors:** each monitor with the hub open is a window of the device (for example the desk's two monitors, each with `/design?device=desk`). Other devices' "Open on…" opens on the free monitor (nothing open there). When two are free, or none, it asks which ("left monitor", "right monitor", or the monitor's own name after ⚙ → This Device → "Monitors on This Computer" was allowed).
+- **Open on…** (next to Back in an open module, in both looks) lists the other devices with the hub open and what each shows, and this device's other monitors. Select one: the page opens **inside that device's hub**, as if someone pressed the button there. This also works from its start screen, with no startup and no new conversation. A module that is open there gives way only if you selected that monitor. This hub closes its copy, so a teleop page never has two connections. The page there says "Opened from <device>".
+- **To close it:** press **Back** there, or **Bring it back** here (a line at the top of the hub, "Monitor is on desk"). It closes there and opens here again.
+- **Only devices with the hub open are listed,** so the hub never takes over a device that does something else (the Newline showing a slide). The menu opens on the left, so it never covers a page's STOP.
+- **When the brain restarts,** every hub page connects again by itself within a few seconds and tells the brain again what it shows. "Bring it back" still works after that. (A page opened while the brain was off does not load: tap the icon again when the brain runs.)
+- **Who can:** any hub page can open a page on another device that has the hub open (it only changes what that screen shows; a real arm's teleop page on another computer still only watches).
+- The Quest's VR hub (`/xr`) is not a device yet. To list the Quest, open `/design?device=quest-a` (or `quest-b`, `quest-c`: `config/devices.yaml`) in its browser.
 
-**One tap per device** (nothing starts by itself):
+**One tap for each device** (nothing starts by itself):
 - **The brain's computer: "Start lab-os".** Make the icon once, in `~/lab-os`:
   ```bash
-  uv run lab-os icon --device desk                      # fake arm
-  uv run lab-os icon --device desk -- --arm so101-white # the white arm (moves only when asked)
+  uv run lab-os icon --device desk                      # the fake arm
+  uv run lab-os icon --device desk -- --arm so101-white # the white arm (it moves only when asked)
   ```
-  It's in Ubuntu's app list (right-click → Add to Favorites puts it in the dock). It opens a terminal that runs `lab-os serve --open desk --host 0.0.0.0 …` (the brain's log; Ctrl+C stops the brain) and, once the brain runs, the hub full screen as `desk` (Chrome's app window; any Chromium browser, else the default one). Tapping it again while the brain runs only opens the hub. On macOS or Windows, `lab-os icon` prints the command for a shortcut. Which hub look it opens: `hub.look` in the theme (⚙ → The Lab). `--host 0.0.0.0` is there so the other devices can reach it; with a real arm they only watch (and STOP).
-- **Other computers: a "Lab hub" icon.** Open the hub there once by the brain's address with the device's name (`http://<brain's IP address>:8080/?device=newline`), then ⚙ → This device → **"Lab hub" icon**: a Linux icon (`.desktop`: put it in `~/.local/share/applications/` or on the desktop and allow launching) or a Windows one (`.bat`), with the brain's address and the name filled in. By hand, the same thing:
+  The icon is in Ubuntu's app list (right-click → Add to Favorites puts it in the dock). It opens a terminal that runs `lab-os serve --open desk --host 0.0.0.0 …` (the brain's log; Ctrl+C stops the brain). When the brain runs, it opens the hub in full screen as `desk` (Chrome's app window; any Chromium browser, else the default browser). If the brain already runs, the icon only opens the hub. On macOS or Windows, `lab-os icon` shows the command for a shortcut. The look that it opens: `hub.look` (⚙ → The Lab). `--host 0.0.0.0` lets the other devices connect; with a real arm, they only watch (and their STOP works).
+- **Other computers: a "Lab hub" icon.** Open the hub there once at the brain's address with the device's name (`http://<brain's IP address>:8080/?device=newline`). Then select ⚙ → This Device → **"Lab Hub" Icon**. Select the Linux icon (`.desktop`) or the Windows icon (`.bat`); it has the brain's address and the name in it. Put the Linux icon in `~/.local/share/applications/` or on the desktop, and allow launching. By hand, it is the same as this command:
   ```bash
   google-chrome --app=http://<brain's IP address>:8080/?device=pi01 --start-fullscreen
   ```
-  (`chromium` on a Pi). The brain's address is the desktop's IP address for now: when it changes, make the icon again.
-- **The Newline (Android) or a tablet:** Chrome → `http://<brain's IP address>:8080/?device=newline` → ⋮ → **Add to Home screen**. On plain `http://` it opens as a normal tab: tap once for full screen.
+  (`chromium` on a Pi.) The brain's address is the desktop's IP address for now: when it changes, make the icon again.
+- **The Newline (Android) or a tablet:** in Chrome, open `http://<brain's IP address>:8080/?device=newline`, then ⋮ → **Add to Home screen**. On `http://` it opens as a normal tab: tap once for full screen.
 
-## Full screen without anyone tapping (kiosk-style)
-A page can go full screen only from a press (browsers' rule, on `http://` too). To skip even that, open the browser already full screen:
-- **A Linux or Windows desktop (Chrome/Chromium):** an app window, full screen, that closes like any window:
+## Full screen without a tap (kiosk)
+A page can go full screen only after a press (the browsers' rule, also on `http://`). To skip even that, open the browser already in full screen:
+- **A Linux or Windows desktop (Chrome, Chromium):** an app window in full screen that closes like any window:
   ```bash
   google-chrome --app=http://localhost:8080/design --start-fullscreen
   ```
-  (`chromium` instead of `google-chrome` on a Pi; another screen uses the brain's address instead of `localhost`). `--kiosk` instead of `--start-fullscreen` also hides the way out (Alt+F4 still closes it); keep it for screens nobody needs for anything else.
-- **The Newline (Android):** Chrome's menu → **Add to Home screen** gives an icon; on plain `http://` it opens as a normal tab (an installed full-screen app needs the secure address), so tap once for full screen. Test what the Newline allows: `docs/plan/ideas.md` → "Screens without browser bars".
+  (`chromium` instead of `google-chrome` on a Pi; another screen uses the brain's address instead of `localhost`.) `--kiosk` instead of `--start-fullscreen` also hides the way out (Alt+F4 still closes it). Use it only on screens that nobody needs for anything else.
+- **The Newline (Android):** Chrome's menu → **Add to Home screen** gives an icon. On `http://` it opens as a normal tab (an installed full-screen app needs a secure address), so tap once for full screen. What the Newline allows: `docs/plan/ideas.md` → "Screens without browser bars".
 
 ## Other screens (the Newline, a hallway desktop)
-`lab-os serve` listens on this computer only. Ways to show the hub on another screen:
-- **The screen is this computer's display** (HDMI + USB touch): open `http://localhost:8080/`. Everything works.
-- **Over the network:** `uv run lab-os serve --host 0.0.0.0` and open `http://<this computer's IP address>:8080/?device=<its name>` (or `/design?device=…`) on the screen ("Devices" above: the name lists it and keeps its settings). Find the address with `hostname -I` (Linux; the first one) or `ipconfig getifaddr en0` (macOS). The screen must be able to reach this computer: some networks block devices from reaching each other (`docs/guides/network-setup-checklist.md` → "Networks before the router").
-  - **With a real arm** (`--arm so101-white`): other screens are **view-only**. They show the hub, the arm and the monitor, and their **STOP works**, but teleop input from them is ignored ("view only: the arm is driven from the brain's computer"). Driving stays with this computer: its own browser, the AI tools (MCP, this computer only), and the Quest over `adb reverse` (it arrives as this computer).
-  - **Not a secure page** (`http://` + an address): Esc leaves full screen (no Keyboard Lock), the screen may sleep (no Wake Lock), and Copy and voice don't work. Full screen itself works. The secure address is deferred (decision 2026-11-10); its fallbacks (Chrome's flag, `adb reverse`) apply here too: `docs/guides/voice.md` → "Secure pages".
+`lab-os serve` listens on this computer only. To show the hub on another screen:
+- **The screen is this computer's display** (HDMI and USB touch): open `http://localhost:8080/`. Everything works.
+- **Over the network:** run `uv run lab-os serve --host 0.0.0.0` and open `http://<this computer's IP address>:8080/?device=<its name>` (or `/design?device=…`) on the screen ("Devices" above: the name lists the screen and keeps its settings). To find the address, run `hostname -I` (Linux; the first one) or `ipconfig getifaddr en0` (macOS). The screen must be able to connect to this computer: some networks block devices from each other (`docs/guides/network-setup-checklist.md` → "Networks before the router").
+  - **With a real arm** (`--arm so101-white`), other screens **only watch.** They show the hub, the arm and the monitor, and their **STOP works**. But the brain ignores their teleop input ("view only: the arm is driven from the brain's computer"). Only this computer drives: its own browser, the AI tools (MCP, this computer only), and the Quest over `adb reverse` (it arrives as this computer).
+  - **Not a secure page** (`http://` and an address): Esc leaves full screen (no Keyboard Lock), the screen can sleep (no Wake Lock), and Copy and voice do not work. Full screen itself works. The ways around it (Chrome's flag, `adb reverse`): `docs/guides/voice.md` → "Secure pages".
 
 ## Performance test (`/perf`)
-Drifting dots linked when close, and star streaks speeding up from the middle, drawn the same way as the concept's network and hyperspace, in plain gray. It shows frames per second (last second, average over 10 s, slowest frame) and the canvas size. Settings (what to draw, dots per million pixels, stars, resolution) are in the address, e.g. `/perf?draw=net&density=90&stars=3000&res=2`, so each screen can be bookmarked. Run it full screen on each screen for a minute and note the average: 55–60 fps can carry `full` quality; lower ones `reduced` or `minimal` (DESIGN.md → "Quality levels").
+It draws moving dots that link when they are near, and star streaks that speed up from the middle, in the same way as the design's network and hyperspace, in plain gray. It shows the frames per second (the last second, the average over 10 s, the slowest frame) and the canvas size. The settings (what to draw, dots per million pixels, stars, resolution) are in the address, for example `/perf?draw=net&density=90&stars=3000&res=2`, so that you can bookmark each screen's test. Run it in full screen on each screen for a minute and write down the average. 55 to 60 frames a second can carry `full`; lower numbers need `reduced` or `minimal` (DESIGN.md → "Quality levels").
 
 ## Where the code is
 - `src/lab_os/cli.py`: `lab-os serve`.
-- `src/lab_os/hub/`: `server.py` (pages, `/api/…` endpoints, the module list, the assistant's state, the look), `hub_devices.py` (the devices with the hub open, "open on…", each device's settings), `launch.py` (`--open`, the "Start lab-os" icon), `project.py` (the Steps list), `commits.py` (`git log`: per day, the latest few), `internet.py` (background check).
-- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the plain hub), `design.html` (the designed hub, one file), `system-diagram.js` (the system diagram), `ai.html` + `ai.js` (AI Control), `settings.html` + `settings.js`, `perf.html`, `perf.js`.
-- `src/lab_os/settings.py`: what the settings page shows and how values are checked and written.
-- `src/lab_os/teleop/web/`: `index.html` (teleop), `monitor.html`, `pages.css`; their scripts; `classic/` (the old pages).
+- `src/lab_os/hub/`: `server.py` (the pages, the `/api/…` endpoints, the module list, the assistant's state, the look), `hub_devices.py` (the devices with the hub open, "Open on…", each device's settings), `launch.py` (`--open`, the "Start lab-os" icon), `visitors.py` (visitor mode), `project.py` (the Steps list), `commits.py` (`git log`: for each day, and the latest few), `internet.py` (the internet check).
+- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the plain hub), `design.html` (the designed hub), `system-diagram.js`, `ai.html` and `ai.js` (AI Control), `settings.html` and `settings.js`, `perf.html` and `perf.js`.
+- `src/lab_os/settings.py`: what the settings page shows, and how it checks and writes the values.
+- `src/lab_os/teleop/web/`: `index.html` (teleop), `monitor.html`, `pages.css`, their scripts, `classic/` (the old pages).
 - `src/lab_os/web/design/`: the module pages' shared look (`kit.css`, `kit.js`, `icons.svg`).
-- `src/lab_os/web/`: files every page shares (vendored libraries, `theme.js`, `device.js`: this page's device name, its settings, the hub's connection and the "Open on…" lists).
-- Endpoints: `docs/dev/protocol.md` → "HTTP endpoints".
+- `src/lab_os/web/`: files that every page uses (the libraries, `theme.js`, `device.js`: this page's device name, its settings, the hub's connection, the "Open on…" lists; `off.js`: the "lab-os is off" screen).
+- The endpoints: `docs/dev/protocol.md` → "HTTP endpoints".
