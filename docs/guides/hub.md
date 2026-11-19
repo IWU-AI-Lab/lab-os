@@ -103,6 +103,21 @@ The design's look, motion and sound, on the brain's real facts:
 
 **The code:** one file, `src/lab_os/hub/web/design.html`: the design's CSS, SVG and JavaScript, with the brain's endpoints instead of the made-up data. The fonts are in `src/lab_os/web/vendor/fonts/` (offline).
 
+## AI Spend: what it counts (2026-11-19, quick job 41)
+The AI Spend panel shows "Estimated · this computer's brain only" under the total. The plain hub, the designed hub and the VR hub show the same words.
+- **Estimated:** lab-os calculates the cost itself. It does not get the bill from OpenAI. For chat, it multiplies the token counts that the AI service sends back by the prices in `config/models.yaml`. Somebody types these prices in by hand, so they can be out of date. For voice, it multiplies the seconds that lab-os measured by a price per minute.
+- **Less exact entries:** voice, and chat answers where the service sent no token counts (lab-os then counts about 4 characters per token). The spend log marks these entries `estimated: true`. The panel's page says how much of the total they are.
+- **This computer's brain only:** each brain writes its own spend log. The total counts every screen of this brain (the desk, the Newline, the Quest). It does not count another brain (for example the laptop) that uses the same OpenAI key. The monthly budget also uses only this brain's total.
+- When you ask the assistant how much the AI has cost, it says that the number is estimated.
+
+**The real cost from OpenAI (not built):** OpenAI's costs endpoint (`/v1/organization/costs`) gives the real cost of all brains on one key. It does not accept a normal project key. It needs an **Admin key** (`sk-admin-…`). Only an Organization Owner can make one. To get one, the professor does these steps:
+1. Sign in to platform.openai.com as an Organization Owner.
+2. Open Settings → Organization → Admin keys (`platform.openai.com/settings/organization/admin-keys`).
+3. Select **Create new Admin key** and set the permissions to **Read only**.
+4. Give the key to the builder for `.env`.
+
+An Admin key can read the costs of all projects in the organization. With a key, a later session can add the check (off by default) and show "from OpenAI" in place of "estimated".
+
 ## Visitor mode: "hey Jarvis, it's demo time" (2026-11-18, quick job 35)
 On the brain's own screen, tell the assistant that visitors are here, typed or by voice, in any words: "hey Jarvis, it's demo time", "say hello to our visitors", "we have guests". The AI decides; there are no fixed phrases. Its tool to start visitor mode does three things:
 - It switches the running brain to the place's venue for visitors (the one with `visitors: true`: `visit-day` in the lab). That venue has the lab's robots, speed and 1:1, and its limits can be switched off as in the lab (the builder, 2026-11-18: no extra restrictions for visitors). The hub hides Settings (⚙ shows only **Visitor Mode**) and the AI spend.

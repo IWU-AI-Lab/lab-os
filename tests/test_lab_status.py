@@ -25,6 +25,8 @@ def test_the_report_has_only_real_facts():
     assert r["internet"] is None  # not checked here: not claimed either way
     assert "next_step" in r and isinstance(r["warnings"], list)
     assert "budget_usd" not in r.get("ai_spend", {}) or r["ai_spend"]["budget_usd"] is not None
+    assert r["ai_spend"]["estimated"] is True  # quick job 41: the assistant says "estimated"
+    assert "this computer's brain only" in r["ai_spend"]["counts"]
 
 
 def test_limits_off_and_warm_servos_are_warnings():

@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — OpenAI's real cost needs an Admin key, not the key lab-os has
+**What:** quick job 41. OpenAI's usage and costs endpoints (`/v1/organization/usage/…`, `/v1/organization/costs`) refuse a normal project key (a missing `api.usage.read` scope). They need an Admin key (`sk-admin-…`), and only an Organization Owner can make one. So lab-os can't read the bill with the professor's key.
+**Fix:** none built. The AI Spend panel says "Estimated · this computer's brain only". `docs/guides/hub.md` → "AI Spend" says what the professor would have to create.
+
 ### 2026-11-19 — The settings page didn't come back after "Restart Now"
 **What:** quick job 38. The hub pages and teleop pages reload once the brain is back because their live connections (`/ws/hub-device`, `/ws`) notice it. The settings page has no live connection of its own, so after a restart it kept saying "lab-os is restarting".
 **Fix:** after asking for a restart or shutdown, the settings page asks `/api/status` every 2 s and reloads once it has seen the brain go and come back. A new page without a live connection needs the same.

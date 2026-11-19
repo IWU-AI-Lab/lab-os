@@ -432,6 +432,7 @@ body.q-maximal .side .head::before { background: linear-gradient(var(--c), var(-
 .money { font: 1.35rem/1 var(--f-digits); color: var(--hot); white-space: pre; }
 .money small { font: var(--w-lines) 0.55em/1 var(--f-lines); color: var(--text-dim); margin-left: 0.5rem; }
 .meter { height: 6px; background: var(--line); position: relative; }
+.how { font: var(--w-lines) 0.7rem/1.3 var(--f-lines); color: var(--text-dim); }
 .meter::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); min-width: 2px; background: var(--c); }
 #spark { width: 100%; height: 3.4rem; overflow: visible; color: var(--c); }
 #spark text { font: 10px var(--f-mono); fill: var(--text-dim); }
@@ -892,10 +893,11 @@ body[data-mod="page"] #module .send { display: flex; }
       <div class="prog"><div class="steps" id="steps" aria-hidden="true"></div><span class="stepn"></span></div>
       <div class="next"><span class="k">Next</span><svg class="chev" viewBox="0 0 7 5" aria-hidden="true"><rect x="0.1" y="0.1" width="0.8" height="0.8" style="--i:0"/><rect x="1.1" y="1.1" width="0.8" height="0.8" style="--i:1"/><rect x="2.1" y="2.1" width="0.8" height="0.8" style="--i:2"/><rect x="1.1" y="3.1" width="0.8" height="0.8" style="--i:1"/><rect x="0.1" y="4.1" width="0.8" height="0.8" style="--i:0"/><rect x="4.1" y="0.1" width="0.8" height="0.8" style="--i:4"/><rect x="5.1" y="1.1" width="0.8" height="0.8" style="--i:5"/><rect x="6.1" y="2.1" width="0.8" height="0.8" style="--i:6"/><rect x="5.1" y="3.1" width="0.8" height="0.8" style="--i:5"/><rect x="4.1" y="4.1" width="0.8" height="0.8" style="--i:4"/></svg><span></span></div>
     </div></div></div>
-    <div class="panel" data-detail="spend" title="What the AI service has cost this month"><div class="cut"><div class="in">
+    <div class="panel" data-detail="spend" title="An estimate of what the AI service has cost this month, counted by this computer's brain only"><div class="cut"><div class="in">
       <div class="head"><span class="cap">AI Spend</span><button class="open" type="button" aria-label="AI Spend details"><svg class="ico"><use href="#i-open"/></svg></button></div>
       <div class="row2"><span class="money" id="money"></span><span>this month</span></div>
       <div class="meter" style="--fill:0%"></div>
+      <div class="how">Estimated · this computer's brain only</div>
     </div></div></div>
   </aside>
 
@@ -1107,6 +1109,11 @@ function setMoney() {
   $("#money").innerHTML = `${usd(s.spent_usd)}${s.budget_usd ? `<small>of ${usd(s.budget_usd, 0)}</small>` : ""}`;
   const fill = s.budget_usd ? Math.min(100, (100 * s.spent_usd) / s.budget_usd) : 0;
   $('.panel[data-detail="spend"] .meter').style.setProperty("--fill", `${fill}%`);
+}
+// what the total is (quick job 41): this brain's own estimate, not the bill
+function spendHowLong(s) {
+  const exact = s.less_exact_usd ? ` ${usd(s.less_exact_usd)} of it is less exact: voice, and answers whose tokens lab-os counted itself.` : "";
+  return `This is an estimate. The brain on ${s.counted_on || "this computer"} multiplies the token counts from the AI service by the prices in models.yaml. Those prices are typed in by hand and can be out of date. Voice is priced by the seconds that lab-os measured.${exact} Another computer's brain that uses the same key keeps its own count, so it is not in this total.`;
 }
 
 /* ---------- far layer: the network ---------- */
@@ -2555,10 +2562,11 @@ function showDetail(id) {
     const w = 600, h = 170, top = Math.max(B || 0, spent, 0.01), x = (d) => (d / dim) * w, y = (v) => h - (v / top) * (h - 20);
     const rows = Object.entries(s.by_setup || {}).map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${usd(v, 4)}</td></tr>`).join("")
       || `<tr><td colspan="2">No chats yet this month</td></tr>`;
-    html = `<div class="detail"><div><div class="d-line">This month</div><div class="d-num">${usd(spent)}<small>${B ? `of ${usd(B, 0)}` : "no budget set"}</small></div>
+    html = `<div class="detail"><div><div class="d-line">This month, estimated</div><div class="d-num">${usd(spent)}<small>${B ? `of ${usd(B, 0)}` : "no budget set"}</small></div>
       <div class="meter" style="--fill:${B ? Math.min(100, (100 * spent) / B) : 0}%"></div>
       <p><b>${s.chats || 0} answer${s.chats === 1 ? "" : "s"}</b> so far this month; each one logs what it cost.</p>
-      ${B ? `<p>Budget: <b>${usd(B, 0)} a month</b>. At the budget the chat pauses and says why. It resets on the 1st.</p>` : ""}</div>
+      ${B ? `<p>Budget: <b>${usd(B, 0)} a month</b>. At the budget the chat pauses and says why. It resets on the 1st.</p>` : ""}
+      <p>${esc(spendHowLong(s))}</p></div>
       <div><div class="d-line">Spent so far${B ? `, against an even pace to ${usd(B, 0)}` : ""}</div>
       <svg class="d-chart" viewBox="0 0 ${w} ${h + 22}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--line)"/>
         ${B ? `<line x1="0" y1="${y(0)}" x2="${w}" y2="${y(B)}" stroke="var(--text-dim)" stroke-dasharray="4 5"/><text x="${w - 4}" y="${y(B) - 6}" text-anchor="end">${usd(B, 0)}</text>` : ""}
