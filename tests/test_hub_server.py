@@ -122,7 +122,7 @@ def test_assistant_states():
         a.set("dancing")
 
 
-# Anything a page fetches, imports or links from http(s):// would break offline (CLAUDE.md).
+# Anything a page fetches, imports or links from http(s):// would break offline (AGENTS.md).
 LOADS = re.compile(
     r"""(?:src|href|action)\s*=\s*["']https?://"""
     r"""|import\s[^;]*?from\s*["']https?://"""

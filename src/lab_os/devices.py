@@ -10,7 +10,7 @@ the repo's own config/devices.yaml are added at every place, so switching to ano
 can never make them openable or take their rules away.
 
 **Borrowed** devices (`borrowed: true`: the green arms and their cameras, another project's) may be
-driven and used, with CLAUDE.md's rules: no motor setup or calibration (lab_os.robots.so101_setup
+driven and used, with AGENTS.md's rules: no motor setup or calibration (lab_os.robots.so101_setup
 refuses them), their training calibration read only from LeRobot's cache, and never a port or
 camera that another program has open (`check_not_in_use`, used for every device we open,
 borrowed or not).
@@ -69,7 +69,7 @@ class Device:
     ports: tuple[str, ...] = ()
     usb: tuple[UsbId, ...] = ()
     notes: str = ""
-    borrowed: bool = False  # another project's: drive/use it, never set it up (CLAUDE.md)
+    borrowed: bool = False  # another project's: drive/use it, never set it up (AGENTS.md)
     # borrowed arms: the training calibration in LeRobot's cache (read only, the source of truth),
     # e.g. "robots/so_follower/sheep.json"; lab-os drives with its copy in calibration/<name>/
     training_calibration: str = ""
@@ -282,7 +282,7 @@ def users_of(path: str, proc: Path = Path("/proc")) -> list[str] | None:
 
 def check_not_in_use(name: str, paths: list[str], proc: Path = Path("/proc")) -> None:
     """Raise InUse with a sentence if another program has any of these device files open.
-    Run right before opening a port or a camera (CLAUDE.md: one program per port)."""
+    Run right before opening a port or a camera (AGENTS.md: one program per port)."""
     for path in paths:
         users = users_of(path, proc)
         if users is None:

@@ -33,7 +33,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 - `--status-line`: show teleop's live status line under the log. It is off by default for `lab-os serve`, because the hub shows the state. `lab-os-teleop` shows it unless you add `--quiet`.
 - `--host 0.0.0.0`: other computers can open the hub. With a real arm, they only watch (and their STOP works). `--drive-from pi01.iwu.ai.lab` (you can use it more than once) lets that computer drive too.
 
-In a coding session, ask the builder before a real arm moves (`SAFETY.md`, `CLAUDE.md`).
+In a coding session, ask the builder before a real arm moves (`SAFETY.md`, `AGENTS.md`).
 
 ## The start screen
 **The plain hub has two taps,** because browsers allow full screen and sound only after a press:

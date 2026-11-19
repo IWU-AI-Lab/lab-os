@@ -16,7 +16,7 @@ One AI brain, today's `lab-os serve`, that understands the place it's in, works 
 
   A "leaving the lab" checklist will be written before May 2027.
 - **No ceiling camera.** Cameras are at table height or close to it: each SO-101's stand camera (on the 3D-printed stand, about 2 ft up) and wrist camera, plus webcams, laptop and phone cameras, and the Kinect. Seeing the room means combining several of these.
-- **Look for existing work first** (CLAUDE.md): most pieces below exist somewhere already. Use and extend them before building our own.
+- **Look for existing work first** (AGENTS.md): most pieces below exist somewhere already. Use and extend them before building our own.
 
 ## The parts, and where they stand
 1. **Personal assistant:** long-term memory of the lab, projects, people and decisions; tasks and reminders; calendar and email (with permission); research and summaries; a daily briefing. Can tell a chat from a project question from a command that changes real things. *Today:* the hub's chat with the project read tools, personas, the greeting with real facts.

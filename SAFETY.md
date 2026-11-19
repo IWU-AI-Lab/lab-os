@@ -23,7 +23,7 @@ The arm **freezes** whenever any of these happens: clutch released · hand/contr
 - Only approved demo commands; no free-form AI control of motion with visitors.
 
 ## AI tools
-An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call. Claude Code doesn't ask before each move (decided 2026-11-13, the move tools are on the repo's allow list), because STOP on every screen is enough when it does something it shouldn't; a coding session still asks before it runs anything that moves a real arm (CLAUDE.md). Someone stays near the arm with STOP in reach. The hub's built-in chat can't move anything. `docs/guides/ai-control.md`.
+An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call. Claude Code doesn't ask before each move (decided 2026-11-13, the move tools are on the repo's allow list), because STOP on every screen is enough when it does something it shouldn't; a coding session still asks before it runs anything that moves a real arm (AGENTS.md). Someone stays near the arm with STOP in reach. The hub's built-in chat can't move anything. `docs/guides/ai-control.md`.
 
 ## Remote mode
 Remote sessions (from home, Remote Control, any off-site connection) = **no motion by default**. Read-only checks only, unless someone is physically next to the robot.
@@ -32,4 +32,4 @@ Remote sessions (from home, Remote Control, any off-site connection) = **no moti
 Excluded from AI, voice and visitor control.
 
 ## The green arms (the training set)
-`so101-green` is the builder's training set. Since 2026-11-12 lab-os may drive it like `so101-white` (focus step 11, built the same day), with four rules (`CLAUDE.md`): never change its motor IDs or firmware, its calibration is read-only, never touch the `lerobot` conda env, and never open a port that LeLab or a training run is using. Same safety as every arm: the builder present when it moves, STOP from every screen.
+`so101-green` is the builder's training set. Since 2026-11-12 lab-os may drive it like `so101-white` (focus step 11, built the same day), with four rules (`AGENTS.md`): never change its motor IDs or firmware, its calibration is read-only, never touch the `lerobot` conda env, and never open a port that LeLab or a training run is using. Same safety as every arm: the builder present when it moves, STOP from every screen.

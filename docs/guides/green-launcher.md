@@ -19,7 +19,7 @@ Use one of these:
 The button and `--stop` stop only the LeLab that the launcher started. The launcher writes that process in `logs/green-lelab.json` and checks that it is still the same LeLab. They leave a LeLab that something else started, and they say so. A recording or a training run in LeLab stops with LeLab.
 
 ## LeLab's calibration (since 2026-11-17)
-LeLab has one entry, **SO-101_Green**, for both arms. Its calibration files (`lelab_green.json`) are copies of the training files. The training files are the source of truth: `sheep.json` (follower) and `shepherd.json` (leader), from LeRobot's command line. The rules for these files are in `CLAUDE.md` → "Hard rules".
+LeLab has one entry, **SO-101_Green**, for both arms. Its calibration files (`lelab_green.json`) are copies of the training files. The training files are the source of truth: `sheep.json` (follower) and `shepherd.json` (leader), from LeRobot's command line. The rules for these files are in `AGENTS.md` → "Hard rules".
 
 To keep the training files safe:
 - On LeLab's calibration page, never use the names `sheep` or `shepherd`.

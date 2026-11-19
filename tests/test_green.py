@@ -14,7 +14,7 @@ def lelab_installed(monkeypatch):
     monkeypatch.setattr(green, "_lelab", lambda: "/usr/local/bin/lelab")  # CI has no LeLab
 
 
-FOLLOWER = "usb-1a86_USB_Single_Serial_5B41533501-if00"  # as in devices.yaml (CLAUDE.md)
+FOLLOWER = "usb-1a86_USB_Single_Serial_5B41533501-if00"  # as in devices.yaml (AGENTS.md)
 LEADER = "usb-1a86_USB_Single_Serial_5B41531599-if00"
 WHITE = "usb-1a86_USB_Single_Serial_5B41532410-if00"
 
