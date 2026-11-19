@@ -26,7 +26,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from lab_os import REPO_ROOT
+from lab_os import REPO_ROOT, term
 from lab_os.devices import load_registry, users_of
 
 BY_ID = Path("/dev/serial/by-id")
@@ -294,9 +294,11 @@ def main(wait: bool = False) -> int:
     c = check()
     print("SO-101 training setup (so101-green + LeLab)\n")
     for fine, text in c.lines:
-        print(f"  {'ok ' if fine else 'NO '} {text}")
+        print(f"  ok  {text}" if fine else term.error(f"  NO  {text}"))
     if not c.ok:
-        print("\nNot started: fix the lines marked NO, then try again. Nothing was opened.")
+        print()
+        not_started = "Not started: fix the lines marked NO, then try again. Nothing was opened."
+        print(term.error(not_started))
         if wait:
             input("\nPress Enter to close.")
         return 1

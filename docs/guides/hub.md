@@ -33,6 +33,8 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 - `--status-line`: show teleop's live status line under the log. It is off by default for `lab-os serve`, because the hub shows the state. `lab-os-teleop` shows it unless you add `--quiet`.
 - `--host 0.0.0.0`: other computers can open the hub. With a real arm, they only watch (and their STOP works). `--drive-from pi01.iwu.ai.lab` (you can use it more than once) lets that computer drive too.
 
+**The terminal** (since 2026-11-19): each log line starts with the time ("12:04:31 INFO …"). In a terminal, warnings are amber and errors are red. The other lines stay plain. In a pipe or a log file, there is no colour. To switch the colours off, set `NO_COLOR=1` (no-color.org).
+
 In a coding session, ask the builder before a real arm moves (`SAFETY.md`, `AGENTS.md`).
 
 ## The start screen
