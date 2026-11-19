@@ -229,6 +229,8 @@ async function load() {
   }
   $("#mode").textContent = data.writable ? `saved into the config files (venue: ${data.venue})` : data.why_not;
   $("#mode").className = `pill ${data.writable ? "on" : "warn"}`;
+  if (data.visitor_mode) visitorCard(data);  // first: start or exit it without asking the assistant
+  if (data.visitor_mode?.on) return;
   const offNow = new Map(); // safety limits that are off in the venue file: label → true
   const showOff = () => {
     $("#limits-off").hidden = offNow.size === 0;
@@ -240,7 +242,7 @@ async function load() {
     card.innerHTML = `<div class="in"><h2>${esc(s.title)}</h2>${s.help ? `<p class="section-help">${esc(s.help)}</p>` : ""}</div>`;
     const inner = card.querySelector(".in");
     for (const f of s.fields) {
-      // a safety limit: marked when off; locked (public / visit-day venue) = can't be switched
+      // a safety limit: marked when off; locked (a public venue or limits_locked: true) = can't be switched
       const field = f.locked ? { ...f, help: `${f.help}. Locked: ${f.locked}` } : f;
       let row = null;
       const markOff = (on) => {
@@ -264,5 +266,32 @@ async function load() {
     }
     $("#sections").append(card);
   }
+}
+/* ---------- visitor mode (quick job 35): start or exit it here, without asking the assistant ---------- */
+function visitorCard(data) {
+  const m = data.visitor_mode;
+  if (m.on) local.closest(".card").hidden = true;  // in visitor mode, "This device" hides too: only the way out
+  const card = document.createElement("section");
+  card.className = "card";
+  const what = m.on
+    ? `On: the ${esc(m.venue)} venue. Settings and the AI spend are hidden and the hub shows the try-this cards. Exit here, or ask the assistant ("exit visitor mode"): back to ${esc(m.back_to)}.`
+    : `Switches to the ${esc(m.venue)} venue: the hub shows the try-this cards, hides Settings and the AI spend, and the assistant can wave the arm. Or ask the assistant ("hey Jarvis, it's demo time"), who also welcomes the visitors.`;
+  const label = m.on ? "Exit visitor mode" : "Start visitor mode";
+  card.innerHTML = `<div class="in"><h2><svg class="ico"><use href="/web/design/icons.svg#i-user"/></svg>Visitor mode</h2>
+    <p class="section-help">${what}</p>
+    <div class="field"><label>${m.on ? "On" : "Off"}</label><div class="help">${m.here ? "until it's exited or the brain restarts" : "only on the brain's own computer"}</div>
+    <div class="ctl"><button class="btn" type="button" ${m.here ? "" : "disabled"}>${label}</button></div><div class="said" aria-live="polite"></div></div></div>`;
+  const said = card.querySelector(".said");
+  card.querySelector("button").addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/venue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: m.on ? "normal" : "visitors" }) });
+      const r = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: await res.text() };
+      if (r.ok) { tellHub(); location.reload(); return; }
+      said.className = "said bad"; said.textContent = r.message;
+    } catch (e) {
+      said.className = "said bad"; said.textContent = `Not switched: ${e.message}`;
+    }
+  });
+  $("#sections").prepend(card);
 }
 load();

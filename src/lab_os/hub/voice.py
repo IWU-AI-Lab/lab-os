@@ -59,6 +59,7 @@ from lab_os.ai.wake import (
 )
 from lab_os.hub.greeting import HELLOS, time_of_day
 from lab_os.personas import Persona
+from lab_os.teleop.server import is_local
 
 log = logging.getLogger(__name__)
 
@@ -217,6 +218,8 @@ class VoiceDesk:
     links: set = field(default_factory=set)
     resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
     venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
+    # a typed turn's answer to speak (visitor mode's welcome, quick job 35), taken once; None = none
+    say: Callable[[], str | None] = lambda: None
     wake_models: WakeModels = field(default_factory=WakeModels)
     timings: deque = field(default_factory=lambda: deque(maxlen=TIMINGS_KEPT))
     _session: aiohttp.ClientSession | None = None
@@ -489,8 +492,11 @@ class Speaker:
 class VoiceLink:
     """One page's voice connection."""
 
-    def __init__(self, desk: VoiceDesk, ws: web.WebSocketResponse, device: str = ""):
+    def __init__(
+        self, desk: VoiceDesk, ws: web.WebSocketResponse, device: str = "", local: bool = False
+    ):
         self.desk, self.ws, self.device = desk, ws, device
+        self.local = local  # the page runs on the brain's computer (visitor mode's tools)
         self.hearing = None
         self._starting: asyncio.Task | None = None  # connecting to the service (audio waits)
         self.mode = "ask"
@@ -572,6 +578,8 @@ class VoiceLink:
             self.played(msg)
         elif kind == "greet":
             self.greet(str(msg.get("way") or "push_to_talk"))
+        elif kind == "say":
+            self.say()
         elif kind == "wake":
             await self.wake(bool(msg.get("on")), msg.get("sensitivity"))
         elif kind == "playing":
@@ -791,7 +799,7 @@ class VoiceLink:
     async def _turn(self, text: str, setup: VoiceSetup) -> None:
         speaker = Speaker(self, setup)
         try:
-            async for ev in self.desk.chat.ask(text, self.pages, self.answer_in):
+            async for ev in self.desk.chat.ask(text, self.pages, self.answer_in, local=self.local):
                 self.send(ev)
                 if ev["type"] == "text":
                     if self.timing:
@@ -800,6 +808,7 @@ class VoiceLink:
         finally:
             speaker.close()
             await speaker.task
+            self.desk.chat.take_say()  # a spoken welcome was just said: nothing left to say
             self.send({"type": "audio_end", "count": speaker.sent})
             self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
             if speaker.sent:
@@ -858,6 +867,27 @@ class VoiceLink:
         self.last_greet = time.monotonic()
         self.task = asyncio.create_task(self._greet(setup, text, saved))
 
+    def say(self) -> None:
+        """Speak the welcome a typed turn left waiting (visitor mode, typed on this screen): only
+        that answer, once, and only on the brain's own computer."""
+        text = self.desk.say() if self.local else None
+        if not text or (self.task and not self.task.done()) or self.desk.why_not():
+            self.send({"type": "audio_end", "count": 0})
+            return
+        self.task = asyncio.create_task(self._say(self.desk.setup(), text))
+
+    async def _say(self, setup: VoiceSetup, text: str) -> None:
+        speaker = Speaker(self, setup, split_first=False)
+        speaker.add(text)
+        speaker.close()
+        await speaker.task
+        self.send({"type": "audio_end", "count": speaker.sent})
+        self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
+        if speaker.sent:
+            self.desk.assistant.set("speaking", 0.5)
+        else:
+            self._settle()
+
     def _greeted(self, count: int) -> None:
         self.send({"type": "audio_end", "count": count, "greeting": True})
 
@@ -894,7 +924,7 @@ async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketRespon
     ws = web.WebSocketResponse(heartbeat=20, max_msg_size=4 * 1024 * 1024)
     await ws.prepare(request)
     device = re.sub(r"[^a-z0-9-]", "", request.query.get("device", "").lower())[:32]
-    link = VoiceLink(desk, ws, device)
+    link = VoiceLink(desk, ws, device, local=is_local(request))
     desk.links.add(link)
     try:
         async for msg in ws:

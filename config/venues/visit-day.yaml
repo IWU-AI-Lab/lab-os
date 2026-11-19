@@ -1,11 +1,12 @@
-# Venue profile: visitor demo away from the lab (portable kit, USB only, no lab network).
+# Venue profile: visitors (visitor mode, quick job 35): the lab with guests. The same robots, speed and 1:1 as the
+# lab (the builder, 2026-11-18: no extra restrictions); the hub hides Settings and the AI spend and shows the cards.
 name: visit-day
-active_devices: [so101-white]
+active_devices: [fake-arm, xarm1, so101-white, so101-green]   # as the lab's
 motion_allowed: true
 persona: default   # who the assistant is here: a persona's id (config/personas/), or `default` = the place's (place.yaml)
 wake_word: default   # "hey jarvis" on screens that chose it (docs/guides/voice.md): on, off, or default = off on a public venue
-max_speed_scale: 0.3   # slower with visitors at the controls
-one_to_one_max_deg_per_s: off   # teleop 1:1 (fast, follows the hand exactly) not with visitors
+max_speed_scale: 0.5   # fraction of each arm's max speed (as the lab's)
+one_to_one_max_deg_per_s: 180   # teleop 1:1: fastest joint turn (°/s), as the lab's; 1:1 is the most intuitive way to drive from the headset
 ai_tools:              # what an AI tool may do per call (docs/guides/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call
@@ -14,4 +15,12 @@ limits:                # safety limits that can be switched off (here or Setting
   per_move: on               # the AI tools' per-call limit (max_joint_change_deg, max_move_cm)
   speed_cap: on              # max_speed_scale and one_to_one_max_deg_per_s (off: up to full speed)
   floor: on                  # min_z_cm, for the AI tools and teleop alike
-limits_locked: true    # visitors: the limits above can never be switched off (public venues neither)
+visitors: true         # visitor mode (quick job 35): the assistant switches here when told visitors are here ("hey
+                       # Jarvis, it's demo time"), and back when told to exit visitor mode; so does ⚙ → Visitor mode.
+                       # The hub hides Settings (except Visitor mode) and the AI spend, the assistant welcomes them
+                       # and shows the cards below, and it can wave the arm.
+try_this:              # the hub's "try this" cards while visitors are here. say = the words on the card;
+                       # ask = what tapping it asks (left out: the card is only read); line = a short line under it
+  - {say: "Ask me to wave", ask: "Please wave hello to us"}
+  # - {say: "What's on the table?", ask: "What's on the table?"}   # once that preview is built (current-focus item 7)
+  - {say: "Open the VR hub", line: "Put on the headset, then say it"}

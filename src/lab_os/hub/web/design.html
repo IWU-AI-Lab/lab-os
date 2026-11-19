@@ -204,6 +204,28 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
 #reply .a .code { font: 400 0.85em var(--f-mono); color: var(--c); }
+/* visitor mode (quick job 35): "try this" cards in a row above the core, under the strip (the calm space
+   there; the answer and the ask line stay free below). A card that asks something is a box to press
+   (brackets, like a module button); one that's only read is quieter */
+#try { position: absolute; top: calc(2.2rem + var(--edge-h) + 2vh); left: 50%; transform: translateX(-50%); z-index: 1; display: flex; gap: 1.6rem; width: max-content; max-width: 92%; }
+#try[hidden] { display: none; }
+.trycard { position: relative; display: flex; width: 16rem; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
+.trycard > .cut { flex: 1; }
+.trycard .in { display: grid; align-content: center; grid-template-columns: 1.6rem 1fr; align-items: center; gap: 0.15rem 0.7rem; padding: 0.75rem 1rem 0.75rem 0.8rem; }
+.trycard .ico { grid-row: span 2; width: 1.5rem; height: 1.5rem; color: var(--c); }
+.trycard b { font: 600 1.05rem/1.25 var(--f-ui); color: var(--text); }
+.trycard small { font: var(--w-lines) 0.8rem/1.3 var(--f-lines); color: var(--text-dim); }
+.trycard.read .cut { background: color-mix(in srgb, var(--line) 90%, transparent); }
+.trycard.read .ico { color: var(--text-dim); }
+button.trycard { cursor: pointer; }
+button.trycard:hover .cut, button.trycard:focus-visible .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
+button.trycard:hover b, button.trycard:focus-visible b { color: var(--hot); }
+button.trycard:focus-visible { outline: none; }
+body:is(.q-full, .q-maximal) button.trycard::before, body:is(.q-full, .q-maximal) button.trycard::after { content: ""; position: absolute; width: 0.7rem; height: 0.7rem; border: 1px solid color-mix(in srgb, var(--c) 70%, transparent); pointer-events: none; transition: inset 0.3s var(--arrive); }
+body:is(.q-full, .q-maximal) button.trycard::before { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
+body:is(.q-full, .q-maximal) button.trycard::after { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
+body:is(.q-full, .q-maximal) button.trycard:hover::before { top: -8px; right: -8px; }
+body:is(.q-full, .q-maximal) button.trycard:hover::after { bottom: -8px; left: -8px; }
 body[data-layout="panels"] #ask-btn { display: none; }
 #errmsg { position: absolute; top: calc(50% + min(var(--orb), 100%) * 0.2); left: 50%; transform: translateX(-50%); width: min(92%, 21rem); display: none; }
 #errmsg b { display: block; font: 600 0.95rem/1.3 var(--f-ui); color: var(--text); }
@@ -666,10 +688,11 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     --orb: min(74vw, 40vh);
     height: auto; min-height: 100%;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto var(--orb) auto auto auto auto;
-    grid-template-areas: "strip strip" "core core" "mods mods" "chat chat" "left right" "log log";
+    grid-template-rows: auto var(--orb) auto auto auto auto auto;
+    grid-template-areas: "strip strip" "core core" "mods mods" "try try" "chat chat" "left right" "log log";
     padding: 1.4rem max(16px, env(safe-area-inset-left, 0px)) 1.4rem max(16px, env(safe-area-inset-right, 0px));
   }
+  #try { grid-area: try; position: static; transform: none; width: auto; max-width: none; flex-wrap: wrap; justify-content: center; gap: 1rem; }
   body[data-layout] #mods { grid-area: mods; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
   body[data-layout] .mcol { display: contents; }
   .mod { width: 6.4rem; }
@@ -806,6 +829,8 @@ body[data-mod="page"] #module .send { display: flex; }
 
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
   <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
+  <!-- visitor mode (quick job 35): the venue's "try this" cards, above the core -->
+  <div id="try" hidden aria-label="Try this"></div>
 
   <section class="core alertable" data-state="idle" aria-label="Assistant: open the chat">
     <svg id="orb" viewBox="-132 -132 264 264" aria-hidden="true">
@@ -2031,6 +2056,7 @@ function beginTurn(q, fromCore, voiced = false) {
   if (fromCore) { clearTimeout(replyTimer); r.querySelector(".q").textContent = q; a.innerHTML = ""; r.classList.add("on"); }
   setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
   let live = null;  // the answer's bubble in the conversation
+  let sayAfter = false;  // visitor mode started on a typed turn: have the welcome spoken at the end
   const show = (text, typing) => {
     if (!live) return;  // no answer came (an error)
     live.innerHTML = richText(text); live.classList.toggle("typing", typing); $("#log-chat").scrollTop = 1e9;
@@ -2041,6 +2067,10 @@ function beginTurn(q, fromCore, voiced = false) {
   const onEvent = (ev) => {
     if (ev.type === "state") { if (!voiced && !(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out; spoken: the voice decides
     else if (ev.type === "open") showPage(ev.page);  // the assistant opened a page on this screen
+    else if (ev.type === "venue") {  // visitor mode on or off (quick job 35): cards, spend, settings
+      pollStatus(); refreshFacts();
+      sayAfter = !voiced && ev.visitors && S.sound;  // typed: the welcome is spoken too, once it's all there
+    }
     else if (ev.type === "tool") {
       if (ev.name === "open_page") return;
       if (!answer.content && fromCore) a.innerHTML = `<span class="look">Looking up ${esc(TOOL_WORDS[ev.name] || ev.name)}…</span>`;
@@ -2066,6 +2096,7 @@ function beginTurn(q, fromCore, voiced = false) {
     if (fromCore) replyTimer = setTimeout(() => r.classList.remove("on"), 14000);
     S.lastInput = performance.now();
     getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
+    if (sayAfter) V?.say();
   }
   return { onEvent, end, pace: (chars, ms) => pacer?.pace(chars, ms), free: () => pacer?.free() };
 }
@@ -2449,6 +2480,7 @@ function pagesHere() {
   const out = { hub: "the hub", chat: "the conversation" };
   for (const id of S.modules) if (MODULES[id]?.[2] === "page") out[id] = MODULES[id][0];
   if (S.page.settings) out.settings = "Settings";
+  if (!$("#xr-btn").hidden) out.xr = "the VR hub";  // a headset's browser: "open the VR hub"
   for (const [id, [title]] of Object.entries(DETAILS)) {
     const p = document.querySelector(`.side .panel[data-detail="${id}"]`);
     if (p && !p.hidden && getComputedStyle(p).display !== "none") out[id] = title;
@@ -2456,6 +2488,7 @@ function pagesHere() {
   return out;
 }
 function showPage(id) {
+  if (id === "xr" && !$("#xr-btn").hidden) { location.href = "/xr"; return; }
   if (!S.booted || S.showing === id || (id === "hub" && !S.moduleOpen)) return;
   const target = id === "hub" ? null : id === "chat" ? $(".core") : id === "settings" ? $("#settings-btn")
     : document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`);
@@ -3107,6 +3140,7 @@ async function pollStatus() {
   }
   S.clockOffset = st.time_ms - Date.now();
   setFact("#f-venue", st.venue); setFact("#f-persona", st.persona.display_name);
+  renderTry(st.visitors);
   const iv = $("#ign-venue"); if (iv) iv.textContent = st.venue;
   setFact("#f-net", st.internet === true ? "online" : st.internet === false ? "offline" : "checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
@@ -3120,6 +3154,21 @@ async function pollStatus() {
   }
   return st;
 }
+// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
+function renderTry(visitors) {
+  const box = $("#try"), cards = visitors?.cards || [], key = JSON.stringify(cards);
+  box.hidden = !cards.length;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = cards.map((c, i) => {
+    const inner = `<div class="cut"><div class="in"><svg class="ico"><use href="#i-chat"/></svg><b>${esc(c.say)}</b>${c.line ? `<small>${esc(c.line)}</small>` : ""}</div></div>`;
+    return c.ask ? `<button class="trycard" type="button" data-i="${i}">${inner}</button>` : `<div class="trycard read">${inner}</div>`;
+  }).join("");
+  box.querySelectorAll("button.trycard").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation(); S.lastInput = performance.now(); SFX.blip(); ask(cards[+b.dataset.i].ask, true);
+  }));
+}
+$("#try").addEventListener("click", (e) => e.stopPropagation());  // not the core's "open the chat"
 let armBusy = false;
 async function pollArm() {
   if (armBusy) return;

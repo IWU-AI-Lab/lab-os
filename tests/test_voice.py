@@ -682,9 +682,9 @@ async def test_the_device_languages_reach_the_turn(aiohttp_client, aiohttp_serve
     app, conv, _ = await voice_app(aiohttp_server, tmp_path)
     asked, real = [], conv.ask
 
-    def ask(text, pages=None, answer_in=None):
+    def ask(text, pages=None, answer_in=None, local=False):
         asked.append(answer_in)
-        return real(text, pages, answer_in)
+        return real(text, pages, answer_in, local=local)
 
     conv.ask = ask
     client = await aiohttp_client(app)

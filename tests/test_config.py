@@ -251,7 +251,7 @@ def test_one_to_one_speed_per_venue():
     with pytest.raises(config.ConfigError):
         one_to_one_speed(-5)
     assert load_venue("lab", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0
-    assert load_venue("visit-day", REPO_ROOT / "config").one_to_one_deg_per_s == 0.0
+    assert load_venue("visit-day", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0  # 2026-11-18
 
 
 def test_a_port_in_use_stops_serve_with_a_sentence(no_run, monkeypatch):

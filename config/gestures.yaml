@@ -1,0 +1,14 @@
+# Fixed moves the hub plays on an arm (quick job 35): no AI chooses the motion. Per arm model
+# (an Arm's `model`): a start pose from poses.yaml (`from`) and steps, each relative to it (degrees,
+# shared joint names); the arm ends back at the start pose. Played at the venue's speed, through
+# the robot tools' checks: the soft joint limits, the floor, STOP and one controller at a time
+# (tests/test_visitors.py). The arm goes to the start pose first, wherever it is.
+
+so101:
+  wave:   # "wave" while visitors are here: the shoulder turns a little, the wrist nods
+    from: ready
+    steps:
+      - {shoulder_pan: 8, wrist_flex: -15}
+      - {shoulder_pan: -8, wrist_flex: 15}
+      - {shoulder_pan: 8, wrist_flex: -15}
+      - {shoulder_pan: -8, wrist_flex: 15}

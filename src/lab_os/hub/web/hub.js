@@ -417,6 +417,27 @@ document.addEventListener("keydown", (e) => e.key === "Escape" && onEsc(e, docum
 /* ---------- status strip, the assistant's state, the clock ---------- */
 // one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
 let statusMisses = 0;
+// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
+function renderTry(visitors) {
+  const box = $("#try"), cards = visitors?.cards || [], key = JSON.stringify(cards);
+  box.hidden = !cards.length;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.replaceChildren(
+    ...cards.map((c) => {
+      const card = document.createElement(c.ask ? "button" : "div");
+      card.className = "trycard";
+      if (c.ask) {
+        card.type = "button";
+        card.addEventListener("click", () => ask(c.ask));
+      }
+      card.append(Object.assign(document.createElement("b"), { textContent: c.say }));
+      if (c.line) card.append(Object.assign(document.createElement("small"), { textContent: c.line }));
+      return card;
+    }),
+  );
+}
+
 async function pollStatus() {
   const st = await getJSON("/api/status");
   statusMisses = st ? 0 : statusMisses + 1;
@@ -439,6 +460,7 @@ function renderStatus(st) {
   }
   S.clockOffset = st.time_ms - Date.now();
   for (const el of [$("#f-venue"), $("#ign-venue")]) el.textContent = `Venue: ${st.venue}`;
+  renderTry(st.visitors);
   $("#f-persona").textContent = `Assistant: ${st.persona.display_name}`;
   net.textContent =
     st.internet === true ? "Internet: online" : st.internet === false ? "Internet: offline" : "Internet: checking…";
@@ -583,6 +605,10 @@ async function ask(text) {
   }
   S.asking = false;
   noteInput();
+  if (S.sayAfter) {
+    S.sayAfter = false;
+    voice.say();
+  }
   renderSpend(await getJSON("/api/spend")); // what that answer cost
 }
 
@@ -605,6 +631,11 @@ function onChatEvent(ev, answer, paced = false) {
     if (!paced) setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
   }
   else if (ev.type === "open") showPage(ev.page); // the assistant opened a page on this screen
+  else if (ev.type === "venue") { // visitor mode on or off (quick job 35): cards, spend, settings
+    pollStatus();
+    refreshFacts();
+    S.sayAfter = !paced && ev.visitors; // typed: the welcome is spoken too, once it's all there
+  }
   else if (ev.type === "tool" && ev.name === "open_page") return;
   else if (ev.type === "tool") $("#state-word").textContent = `looking up: ${TOOL_WORDS[ev.name] || ev.name}`;
   else if (ev.type === "text") {
