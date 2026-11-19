@@ -16,7 +16,7 @@ from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import RESTART, create_brain_app
 from lab_os.personas import current_persona, load_persona
-from lab_os.teleop.cli import add_arm_args, make_loop, serve, use_config
+from lab_os.teleop.cli import add_arm_args, any_real_arm, close_arms, make_loop, serve, use_config
 from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import SHUTDOWN
 from lab_os.tools.mcp_server import DEFAULT_PORT as MCP_PORT
@@ -236,7 +236,7 @@ def main(argv: list[str] | None = None) -> None:
             print(launch.open_hub(launch.hub_url(args.port, device)))
 
     # a real arm on the network: other screens watch (and can STOP), only this computer drives
-    local_control_only = args.host not in LOCAL_HOSTS and not args.arm.startswith("fake")
+    local_control_only = args.host not in LOCAL_HOSTS and any_real_arm(args)
     args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
     logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
     use_config(args)
@@ -263,11 +263,14 @@ def main(argv: list[str] | None = None) -> None:
         print(f"recording teleop input to {args.record}")
     if args.mcp_port and not args.arm.startswith("fake"):
         print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
+    if loop.left:
+        print(f"AI tools drive only {loop.arm.name}; {loop.left.arm.name} is for teleop only.")
     if args.host not in LOCAL_HOSTS:
         print(f"listening on {args.host}: other computers on the network can open the hub")
     if local_control_only:
         also = f" and {', '.join(sorted(drive_from))}" if drive_from else ""
-        print(f"Other screens are view-only for {args.arm} (STOP works); drive it from here{also}.")
+        arms = args.arm + (f" and {args.left_arm}" if loop.left else "")
+        print(f"Other screens are view-only for {arms} (STOP works); drive from here{also}.")
     elif drive_from and args.host in LOCAL_HOSTS:
         print("--drive-from needs --host 0.0.0.0: other computers can't reach the hub yet.")
     try:
@@ -277,8 +280,7 @@ def main(argv: list[str] | None = None) -> None:
                 serve(app, args.port, host=args.host, banner=banner, after_start=after_start)
             )
     finally:  # Ctrl+C, or "Shut down lab-os" in the hub: the same letting go
-        loop.arm.stop()
-        loop.arm.close()
+        close_arms(loop)
     print()
     if app[RESTART]["asked"]:  # Settings' "Restart Now": the same options, without --open
         print(f"lab-os is restarting ({loop.arm.name} was let go); it starts again now.")

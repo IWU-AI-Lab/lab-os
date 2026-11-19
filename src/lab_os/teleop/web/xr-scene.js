@@ -277,7 +277,7 @@ export class StatusPanel {
     if (key === this.key) return;
     this.key = key;
     const g = this.canvas.getContext("2d");
-    const [col, chipText, ico] = LEVEL[t.level];
+    const [col] = LEVEL[t.level];
     g.clearRect(0, 0, W, H);
     // the box: cut corners top left and bottom right, a nearly opaque fill, a hairline frame
     cutPath(g, 3, 3, W - 6, H - 6, 34);
@@ -289,23 +289,14 @@ export class StatusPanel {
     g.strokeStyle = col; g.lineWidth = 4; g.beginPath();
     g.moveTo(3, 3 + 34 + 70); g.lineTo(3, 3 + 34); g.lineTo(3 + 34, 3); g.lineTo(3 + 34 + 220, 3); g.stroke();
     g.restore();
-    // the state, as a chip
-    g.textBaseline = "middle";
-    g.font = `600 52px ${PF.ui}`; spaced(g, PF.spacing);
-    const word = t.state.toUpperCase(), chipH = 92, x0 = 44, y0 = 40;
-    const iconW = ico ? 56 : 0;
-    let tw = g.measureText(word).width;
-    const maxW = W - 2 * x0 - 48 - iconW;
-    if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
-    cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
-    g.fillStyle = t.level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
-    g.lineWidth = 2; g.strokeStyle = rgba(col, t.level === "held" ? 1 : 0.7); g.stroke();
-    if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
-    g.fillStyle = chipText; g.textAlign = "left";
-    g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);
-    spaced(g, 0);
+    // the state, as a chip; two arms at once: the left arm's chip on the left, the right arm's after it
+    if (t.left) {
+      const half = (W - 88 - 24) / 2;
+      chip(g, 44, half, t.left.state, t.left.level);
+      chip(g, 44 + half + 24, half, t.state, t.level);
+    } else chip(g, 44, W - 88, t.state, t.level);
     // gripper and speed: a small CAPS label over a number in the digit font, its unit after it
-    fact(g, 44, 176, "Gripper", t.gripper, t.gripper == null ? "" : "% open");
+    fact(g, 44, 176, t.left ? "Right gripper" : "Gripper", t.gripper, t.gripper == null ? "" : "% open");
     if (t.speed) fact(g, 500, 176, t.speed.label, t.speed.value, t.speed.unit);
     else fact(g, 500, 176, "Speed", null, "");
     // a hairline, then the hint in the light font, its parts apart (no dot separators)
@@ -314,6 +305,27 @@ export class StatusPanel {
     hintLine(g, t.hint, 44, 398, W - 88);
     this.texture.needsUpdate = true;
   }
+}
+
+/** The state as a chip at x (at most `width` wide): its level's colour and icon, the words in CAPS,
+ * shrunk to fit. */
+function chip(g, x0, width, state, level) {
+  const [col, chipText, ico] = LEVEL[level];
+  const chipH = 92, y0 = 40;
+  g.textBaseline = "middle";
+  g.font = `600 52px ${PF.ui}`; spaced(g, PF.spacing);
+  const word = state.toUpperCase();
+  const iconW = ico ? 56 : 0;
+  let tw = g.measureText(word).width;
+  const maxW = width - 48 - iconW;
+  if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
+  cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
+  g.fillStyle = level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
+  g.lineWidth = 2; g.strokeStyle = rgba(col, level === "held" ? 1 : 0.7); g.stroke();
+  if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
+  g.fillStyle = chipText; g.textAlign = "left";
+  g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);
+  spaced(g, 0);
 }
 
 /** One fact: label (small CAPS, dim), then the value (digits, padded to 3 places) and its unit. */

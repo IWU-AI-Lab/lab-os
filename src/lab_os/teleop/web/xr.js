@@ -3,6 +3,10 @@
 // Message format: docs/dev/protocol.md.
 //   - Controllers: right grip = clutch, trigger = gripper, A/X = stop, right thumbstick up/down =
 //     speed. Left grip held = move and turn the 3D arm (e.g. onto the real one), Y = put it back.
+//   - Two arms at once (the brain's status has `left_arm`; preview 3): each controller drives its
+//     own arm, grip = clutch, trigger = gripper, A or X stops both. The left grip then never moves
+//     the 3D arm (it stays where it was put, and stays on the right arm). Bare hands drive only
+//     the right arm, as above.
 //   - Hands (controllers put down): right wrist = the controller, left pinch = clutch, right pinch
 //     = gripper. Sent as a "right controller" with grip/trigger from the pinches (source "hands").
 //   - Hand positions are sent in the 3D arm's frame (from its base, turned with it; "frame": "arm"):
@@ -216,9 +220,10 @@ export class TeleopSession {
     if (source === "hands") hands = handsAsController(bare);
 
     const left = hands.left, right = hands.right;
+    const twoArms = !!feed.status?.left_arm; // the left grip is the left arm's clutch then
     if (source === "controllers") {
       // left grip: drag and turn the 3D arm (not while the right clutch is held: no jumps)
-      if (left?.pos && left.grip > 0.6 && !(right && right.grip > 0.4)) {
+      if (!twoArms && left?.pos && left.grip > 0.6 && !(right && right.grip > 0.4)) {
         if (!this.drag) this.drag = { place: { ...this.place }, pos: left.pos, yaw: yawOf(left.quat) };
         const d = this.drag;
         this.place = {

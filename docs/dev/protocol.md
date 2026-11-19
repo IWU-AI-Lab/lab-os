@@ -44,7 +44,8 @@ Sent every XR frame (72–120 Hz on a Quest).
 - `source` (optional): `"hands"` when the Quest tracks bare hands instead of controllers. The page then sends the right wrist as the right "controller", with `grip` = the **left** hand's pinch (the clutch) and `trigger` = the right hand's pinch (the gripper); no buttons. The server treats it like controllers.
 - `pos` / `quat` are `null` when tracking is lost (treated like releasing the clutch).
 - `trigger`, `grip`: 0..1 (analog).
-- `buttons.a` is the lower face button on **either** controller (A on the right, X on the left); `buttons.b` is the upper one (B / Y).
+- `buttons.a` is the lower face button on **either** controller (A on the right, X on the left); `buttons.b` is the upper one (B / Y). With two arms, either one stops both arms.
+- Two arms at once (`lab-os serve --left-arm`, preview 3, 2026-11-19): the same message. `hands.right` drives the first arm, `hands.left` the second (its own `grip` and `trigger`). The page then doesn't use the left grip to move the 3D arm.
 - A missing hand key means that controller isn't present.
 
 ### `joint_input`
@@ -79,7 +80,7 @@ The XR session ended (user exited, headset removed, Esc in desktop control). Fro
 ```
 
 ### `stop`
-The STOP button, from any page (input or monitor). Freezes the arm like A/X; the driver must release the clutch and press it again to continue. Control stays where it is.
+The STOP button, from any page (input or monitor). Freezes the arm (both arms with `--left-arm`) like A/X; the driver must release the clutch and press it again to continue. Control stays where it is.
 ```json
 {"type": "stop"}
 ```
@@ -102,7 +103,8 @@ Broadcast to all clients at 10 Hz.
   "arm": {"name": "fake-arm", "model": "so101", "connected": true, "problem": null},
   "joints": {"shoulder_pan": -12.0, "...": 0.0},
   "limits": {"shoulder_pan": [-110.0, 110.0], "...": [0, 0]},
-  "last_command": { "...": "the latest arm_command, or null" }
+  "last_command": { "...": "the latest arm_command, or null" },
+  "left_arm": null
 }
 ```
 - `frozen`: dead-man freeze is active (input stale > 250 ms, disconnected, session ended, or A/X pressed).
@@ -115,6 +117,7 @@ Broadcast to all clients at 10 Hz.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
 - `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
+- `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "frozen", "clutch", "needs_release", "joints", "limits"}`, each as above for that arm. It has only the relative mode, and only pose input drives it. Every other field is the right arm's.
 
 ### `arm_command`, `arm_stop`, `arm_resume`
 Sent the moment the teleop loop calls the arm driver, one message per call, so viewers (3D view, later the Quest ghost arm) show **exactly what the driver received**.
@@ -128,6 +131,7 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 - `joints` / `speed_scale`: the arguments of `Arm.move_joints(...)`, unmodified (degrees, shared joint names).
 - `driver_joints`: what the driver reported right after that call. Differences = the driver clamped the command.
 - `seq` increases by one per message; a gap means a viewer missed something.
+- Only the first (right-hand) arm sends these. With two arms, the left arm's state is in `status.left_arm`: the pages' 3D arm is the right one.
 
 ### `error`
 ```json
@@ -187,6 +191,7 @@ Polled every 3 s by the hub.
             "service": "gemini", "wake": {"available": true, "why": null, "phrase": "hey Jarvis"}},
   "assistant": {"state": "idle", "loudness": 0.0},
   "arm": {"name": "fake-arm", "connected": true, "control": "free"},
+  "left_arm": null,
   "in_use": [],
   "time_ms": 1794264745533
 }
@@ -199,6 +204,7 @@ Polled every 3 s by the hub.
 - `assistant.state`: `idle`, `listening`, `thinking`, `speaking`, `offline`, `error`; `loudness` 0–1 while speaking (a spoken answer: the loudness the page reports). `offline` while no AI is connected; `error` after a failed answer until the service answers again.
 - `arm.connected`: `false` while the arm's USB is unplugged (as in `status.arm.connected`).
 - `arm.control`: `taken` while a teleop page (in the hub or on the Quest) drives the arm, `ai` while an AI tool's move runs, else `free`.
+- `left_arm`: `null`, or with two arms at once `{"name", "connected"}` of the second arm (teleop only).
 - `in_use`: what's in use right now (`"teleop"`, `"ai"`, `"chat"` while an answer streams, `"voice"` from a mic press until the answer's last spoken word); the hub never goes back to the start screen while it isn't empty.
 - `time_ms`: the brain's clock (ms since 1970), so every screen shows the same time.
 
@@ -240,7 +246,7 @@ The robot tools' calls this brain run (the last 50 after `T`, epoch seconds), fo
 The training launcher (`docs/guides/green-launcher.md`). `GET /api/green` → `{"ok": false, "lines": [{"ok": true, "text": "nothing else on a serial port (the white arm is unplugged)"}, …], "running": false, "url": "http://127.0.0.1:8000", "here": true}`: the port check (names in `/dev/serial/by-id/` and LeLab's saved settings only; nothing is opened), `running` = LeLab already answers, `here` = this page is on the brain's computer. `POST /api/green/start` checks again and, if every line is fine, opens a terminal on the brain's computer that starts LeLab: the same answer plus `"started": true | false`. Only from the brain's computer (`403` otherwise).
 
 ### `/api/shutdown`
-Quick job 6 (`docs/guides/hub.md` → "Shut down lab-os"). `GET` → `{"allowed": true, "why_not": null, "warning": "so101-white goes limp: if it's lifted, it drops. Put it down (home) or hold it first."}` (`warning` null when nothing drops). `POST {"from": "desk"}` → `{"ok": true, "message": "lab-os is shutting down."}`: any move stops (an AI move ends with "lab-os is shutting down"), every page gets `brain_off` (below), and half a second later the brain stops as with Ctrl+C. `403` (and `allowed: false` with `why_not`) from another computer.
+Quick job 6 (`docs/guides/hub.md` → "Shut down lab-os"). `GET` → `{"allowed": true, "why_not": null, "warning": "so101-white goes limp: if it's lifted, it drops. Put it down (home) or hold it first."}` (`warning` null when nothing drops; with two arms it names both: "so101-white and so101-green go limp …"). `POST {"from": "desk"}` → `{"ok": true, "message": "lab-os is shutting down."}`: any move stops (an AI move ends with "lab-os is shutting down"), every page gets `brain_off` (below), and half a second later the brain stops as with Ctrl+C. `403` (and `allowed: false` with `why_not`) from another computer.
 
 **`brain_off`**, on `/ws` (every teleop, monitor and AI Control page) and `/ws/hub-device` (every hub page): `{"type": "brain_off", "from": "desk", "time_ms": 1795038737206}` (`from`: the device that asked, `""` without a name). The page covers itself with "lab-os is off" (`src/lab_os/web/off.js`), closes its microphone, and reloads once the brain answers again.
 ### `/api/quest-view`

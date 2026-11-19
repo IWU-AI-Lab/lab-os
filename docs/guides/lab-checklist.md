@@ -136,6 +136,45 @@ Setup: the desktop and the Newline (or a laptop instead of the Newline). No arm.
 - **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
 - **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names, with the Newline's resolution still 0.5? (yes / no)
 
+---
+
+## For Tuesday 2026-11-24: the previews
+
+## T. Two arms from the Quest (35 min)
+Preview 3: the right controller drives `so101-white`, and the left controller drives `so101-green`. How it works: `docs/guides/quest-setup.md` → "Two arms at once".
+
+Before you start:
+- Stop LeLab and any training or recording run. The brain refuses the green arm while another program has its port open.
+- Do not move the green arm's stand or its cameras (the training setup). If the two arms face different directions, leave them so, and write it in T.4.
+
+Cables to plug in, on the lab desktop:
+- `so101-white` (the follower): its USB cable and its power supply.
+- `so101-green` (the follower): its USB cable and its power supply.
+- The Quest: its USB-C data cable.
+- The arms need no cameras for this part. If no USB socket is free, unplug the two cameras in sockets 7 and 8.
+- The green leader arm can stay plugged in. lab-os does not open it.
+
+Then run:
+```bash
+ls /dev/serial/by-id/
+uv run --extra so101 lab-os serve --arm so101-white --left-arm so101-green --speed 0.3
+```
+In a second terminal, run `adb reverse tcp:8080 tcp:8080`.
+
+- **T.1** Read the `ls` output. → does it show both `…5B41532410-if00` (white) and `…5B41533501-if00` (green)? (yes / no)
+- **T.2** Read the brain's terminal. → does it say `two arms: the right controller drives so101-white, the left one so101-green`? (yes / no; if no, copy the last line)
+- **T.3** On the desktop, open http://localhost:8080/teleop. → does it show **Right arm** and **Left arm**, both "holding"? (yes / no) Keep this page open, with the mouse near **STOP**, for all steps.
+- **T.4** In the Quest's browser, open `http://localhost:8080/teleop` and select **Enter AR**. Look at the status panel. → does it show two labels, "Left holding" on the left and "Right holding" on the right? (yes / no) Do the arms face the same direction? (yes / no; if no, which way does each face?)
+- **T.5** Hold the right grip. Move the right controller slowly 10 cm to the right, then back. → did only `so101-white` move, to the right and back? (yes / no)
+- **T.6** Hold the left grip. Move the left controller slowly 10 cm to the left, then back. → did only `so101-green` move, to the left and back? (yes / no)
+- **T.7** Hold both grips. Move both hands slowly forward 10 cm, then up 10 cm. → did both arms move the same way as your hands? (yes / no) Was one arm slower or shakier than the other? (which one?)
+- **T.8** Hold both grips. Pull the right trigger, then the left trigger. → did each trigger close only its own arm's gripper? (yes / no)
+- **T.9** Hold both grips and move. Press **X** (left controller). → did both arms stop? Does the panel say "Left frozen: let go" and "Right frozen: let go"? (yes / no each) Release both grips and hold them again. → do both arms move again? (yes / no)
+- **T.10** Hold both grips and move. Press **STOP** on the desktop page. → did both arms stop? (yes / no)
+- **T.11** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
+- **T.12** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
+- **T.13** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
+
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
 - **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)

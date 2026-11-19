@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — The pages' 3D arm takes every `arm_command`, whatever its `device`
+**What:** two arms at once (preview 3). Every `arm_command`, `arm_stop` and `arm_resume` has a `device` field, but `ArmFeed` (`teleop/web/arm/arm-feed.js`) never reads it. A second arm's commands on `/ws` would make the 3D arm jump between the two arms, and its `arm_stop` would show the right arm as frozen.
+**Fix:** the second loop sends no `arm_*` messages. Its state goes in `status.left_arm`. A 3D view of two arms must first make `ArmFeed` filter by `device`.
+
+### 2026-11-19 — The Claude Code hook refuses a command that only names LeRobot's calibration folder
+**What:** a Bash command that wrote a lab checklist step (in a heredoc) was refused, because the step's text had the path of the green arm's training calibration in it. The hook (`.claude/hooks/guard.sh`) reads the command's text, not what it does.
+**Fix:** write such doc text with the editor tool instead of a shell command. Leave the hook as it is: it guards the green arms' rules.
+
 ### 2026-11-19 — The settings page didn't come back after "Restart Now"
 **What:** quick job 38. The hub pages and teleop pages reload once the brain is back because their live connections (`/ws/hub-device`, `/ws`) notice it. The settings page has no live connection of its own, so after a restart it kept saying "lab-os is restarting".
 **Fix:** after asking for a restart or shutdown, the settings page asks `/api/status` every 2 s and reloads once it has seen the brain go and come back. A new page without a live connection needs the same.

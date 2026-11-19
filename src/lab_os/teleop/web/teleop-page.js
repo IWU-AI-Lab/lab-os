@@ -48,6 +48,18 @@ link.on("status", (s) => {
   sp.max = Math.round((s.max_speed_scale ?? 1) * 100);
   if (document.activeElement !== sp) sp.value = Math.round(s.speed_scale * 100);
 });
+// Two arms at once (preview 3): the left controller's arm, next to the right one's state.
+link.on("status", (s) => {
+  const l = s.left_arm;
+  if (!$("left-chip")) return; // the classic page (/classic/teleop) shows only the right arm
+  $("left-chip").hidden = !l;
+  $("arm-label").textContent = l ? "Right arm" : "Arm";
+  if (!l) return;
+  if (l.connected === false) setPill($("left-state"), "disconnected (USB)", "warn");
+  else if (l.frozen) setPill($("left-state"), l.needs_release ? "frozen: release grip" : "frozen", "warn");
+  else if (l.clutch) setPill($("left-state"), "following (clutch)", "on");
+  else setPill($("left-state"), "holding", "off");
+});
 // hand → arm: relative or 1:1 (the brain keeps it; 1:1 only for arms with kinematics)
 link.on("status", (s) => {
   const sel = $("mode-set");

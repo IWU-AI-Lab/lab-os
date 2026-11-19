@@ -26,7 +26,7 @@ With the controllers:
 - **Trigger:** the gripper. Released = open. Fully pressed = closed. It applies while you hold the clutch.
 - **A or X:** stop.
 - **Right thumbstick** up or down: the speed, in 5 % steps, up to the venue's top speed. The Speed slider on the page does the same.
-- **Left grip** (hold): move and turn the 3D arm. **Y** puts it back.
+- **Left grip** (hold): move and turn the 3D arm. **Y** puts it back. With two arms, the left grip drives the second arm (section 6).
 
 The arm freezes when you release the grip, when tracking stops, when the connection drops, or when the session ends. After a freeze, release the grip and press it again.
 
@@ -147,6 +147,34 @@ In the Quest's browser, open `http://localhost:8080/xr` and select **Enter VR** 
 - `/xr?slow=10` plays everything ten times slower and without sound, so that you can look at each moment of the startup.
 - `/xr?preview&passthrough` draws the preview the AR way (see-through) over the page. Put a light background behind it to find anything that would cover the room in AR (GOTCHAS 2026-11-18).
 - Limits: headless Chrome draws the scene in software at about 7 frames a second. Then teleop's dead-man stop freezes the arm right after the clutch engages (GOTCHAS 2026-10-24), so the arm only follows with the headset. Chrome's fake microphone (`--use-file-for-fake-audio-capture`, GOTCHAS 2026-11-12) can ask a spoken question on the ask line.
+
+## 6. Two arms at once (preview)
+A preview for the demo (`docs/plan/current-focus.md`, item 7). The right controller drives one arm. The left controller drives a second arm at the same time. One Quest page drives both.
+
+```bash
+uv run lab-os serve --left-arm fake        # two software arms: fake-arm (right hand), fake-left (left hand)
+uv run --extra so101 lab-os serve --arm so101-white --left-arm so101-green --speed 0.3   # the lab's arms
+```
+Then do `adb reverse` and open the teleop page, as in section 4. `lab-os-teleop serve` also takes `--left-arm`.
+
+The controls (with the controllers):
+- **Right grip** (hold): the clutch of the `--arm` arm. **Left grip** (hold): the clutch of the `--left-arm` arm. Each arm follows its own hand, relative to where it is.
+- **Each trigger:** the gripper of that hand's arm.
+- **A or X:** stops both arms. STOP on any page also stops both arms.
+- **Right thumbstick** and the Speed slider: the speed of both arms.
+
+What is different from one arm:
+- The left grip does not move the 3D arm. The 3D arm shows only the right arm. To put it on the real right arm, do that before, with one arm (the Quest's browser keeps the position).
+- The left arm has only the relative mode. The 1:1 mode applies only to the right arm.
+- Bare hands drive only the right arm (a left pinch is its clutch), as with one arm.
+- Desktop control and the AI tools drive only the right arm. While an AI tool moves the right arm, the left arm holds.
+- The status panel in the headset has two labels: the left arm on the left ("Left following"), the right arm on the right. The teleop page shows "Right arm" and "Left arm".
+- If one arm's USB cable is disconnected, the other arm continues.
+- Ctrl+C makes both SO-101s go limp. Hold both arms first.
+
+**Where to put the arms:** next to each other, both facing away from you, with the `--arm` arm on the right. Stand behind them. Then a hand forward moves its gripper forward. Each arm moves in its own directions: if an arm faces another way, its gripper moves in that arm's "forward".
+
+**The green arm:** `--left-arm so101-green` has the same checks as `--arm so101-green` (`docs/guides/ai-control.md` → "The green arm"). It must be in the venue's `active_devices`. The brain refuses it while LeLab or a training run has its port open. The brain drives it with its copy of the training calibration and never changes the arm.
 
 ## Troubleshooting
 - The page does not load → `adb reverse --list` must show `tcp:8080 tcp:8080`. Run `adb reverse` again after you connect the cable again.

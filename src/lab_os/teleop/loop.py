@@ -14,6 +14,14 @@ port without writing (`drop()`), and say so in `status`; teleop input is ignored
 back under the same /dev/serial/by-id/ name: `connect()` again, the same checks and the same
 "goals = where the motors are, then torque" as at startup (a borrowed arm that LeLab took in the
 meantime is refused, and tried again later). The clutch must be released and grabbed again.
+
+Two arms at once (preview 3, 2026-11-19): `left` is a second loop for a second arm, driven by the
+left controller (its mapper's `hand`), while this one follows the right. Both read the same
+`InputState`, so the dead-man rule, one input page at a time and A/X freeze both. STOP, the speed
+and a venue's caps are passed on to it. The left arm is pose input in relative mode only (the
+Quest page lines its 3D arm up on the right arm, so 1:1 has no frame for the left one); jogging
+and the AI tools drive only this loop's arm. It sends no `arm_*` messages (the pages' 3D arm is
+this one): its state is the `left_arm` part of `status`.
 """
 
 import asyncio
@@ -111,6 +119,10 @@ class TeleopLoop:
     reconnect_s: float = 1.0
     _link_t: float = 0.0
     _last_joints: dict[str, float] = field(default_factory=dict)
+    # Two arms at once (see the module docstring): the left controller's arm, and on that loop,
+    # True (pose input only, relative only).
+    left: "TeleopLoop | None" = None
+    is_left: bool = False
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -149,8 +161,11 @@ class TeleopLoop:
         self.jog.reset(require_release=True)
 
     def set_speed(self, scale: float) -> float:
-        """The teleop page's speed control: 5 % up to the venue's cap. Returns what was set."""
+        """The teleop page's speed control: 5 % up to the venue's cap. Returns what was set.
+        The left arm (two arms at once) gets the same speed."""
         self.speed_scale = round(min(max(scale, 0.05), self.max_speed_scale), 3)
+        if self.left:
+            self.left.set_speed(scale)
         return self.speed_scale
 
     def use_caps(
@@ -166,6 +181,8 @@ class TeleopLoop:
             self.mapper.config.mode = "relative"
         self.mapper.reset(require_release=True)
         self.jog.reset(require_release=True)
+        if self.left:
+            self.left.use_caps(max_speed_scale, speed_scale, one_to_one_deg_per_s)
 
     def set_mode(self, mode: str) -> str:
         """The teleop page's mode: "relative" or "one_to_one" (1:1). A change drops the clutch:
@@ -179,9 +196,13 @@ class TeleopLoop:
             self.mapper.reset(require_release=True)
         return mode
 
+    def _follows_fast(self) -> bool:
+        """The venue's follow speed applies: kinematics and 1:1 not switched off."""
+        return self.mapper.kinematics is not None and self.one_to_one_deg_per_s > 0
+
     def modes(self) -> list[str]:
-        ok = self.mapper.kinematics is not None and self.one_to_one_deg_per_s > 0
-        return list(MODES) if ok else ["relative"]
+        """1:1 where the venue and kinematics allow it; never on the left arm (no frame for it)."""
+        return list(MODES) if self._follows_fast() and not self.is_left else ["relative"]
 
     @property
     def servos_hot(self) -> bool:
@@ -197,8 +218,9 @@ class TeleopLoop:
         """The top joint speed for a relative grab: the 1:1 follow speed scaled by the speed
         control (its top = the follow speed; half way = half). None where 1:1 isn't available
         (visit days, no kinematics): then the old `max_deg_per_s` × speed (decision 2026-11-16:
-        the old 45°/s left the arm far behind the hand)."""
-        if "one_to_one" not in self.modes():
+        the old 45°/s left the arm far behind the hand). The left arm follows as fast as the
+        right one, though it has no 1:1."""
+        if not self._follows_fast():
             return None
         share = self.speed_scale / self.max_speed_scale if self.max_speed_scale > 0 else 1.0
         return self.one_to_one_cap() * min(max(share, 0.0), 1.0)
@@ -228,8 +250,10 @@ class TeleopLoop:
 
     def stop(self, why: str = "stopped") -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch.
-        `why`: what an AI move that was running is told."""
+        `why`: what an AI move that was running is told. The left arm freezes too."""
         self._freeze(why)
+        if self.left:
+            self.left.stop(why)
 
     def check_link(self, now: float, force: bool = False) -> None:
         """Is the arm's USB still there; is it back? (drivers with `port_present`, see above)
@@ -326,8 +350,8 @@ class TeleopLoop:
         stop_pressed = isinstance(frame, XRFrame) and any(
             c.buttons.get("a") for c in frame.hands.values()
         )
-        if not live or frame is None or stop_pressed:
-            self._freeze()
+        if not live or frame is None or stop_pressed or (self.is_left and kind == "joints"):
+            self._freeze()  # the left arm: jogging is for the right arm only
             return
         if kind != self.input_kind:
             if self.input_kind is not None:
@@ -418,6 +442,24 @@ class TeleopLoop:
             },
             "joints": joints,
             "last_command": self.last_command,
+            "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
+            # two arms at once: the left controller's arm, or None
+            "left_arm": self.left.left_status() if self.left else None,
+        }
+
+    def left_status(self) -> dict:
+        """The left arm's part of the right arm's `status` (two arms at once)."""
+        if self.arm_connected:
+            self._last_joints = self.arm.read_joints()
+        return {
+            "name": self.arm.name,
+            "model": getattr(self.arm, "model", "unknown"),
+            "connected": self.arm_connected,
+            "problem": self.arm_problem,
+            "frozen": self.frozen,
+            "clutch": self.mapper.engaged,
+            "needs_release": self.mapper.needs_release,
+            "joints": self._last_joints,
             "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
         }
 

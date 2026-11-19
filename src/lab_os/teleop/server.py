@@ -13,7 +13,8 @@ WS  /ws          input page connects here; /ws?role=monitor for watchers
 Only one input page drives at a time ("has control"): the first page to send input while control
 is free. Others are ignored until the driver releases control (session_end or disconnect); it's
 handed over, never grabbed. While the AI tools move the arm (lab_os.tools), they have control and
-all teleop input is ignored. Any page, monitors included, can send `stop`; it also ends an AI move.
+all teleop input is ignored. Any page, monitors included, can send `stop`; it also ends an AI move,
+and with two arms at once (`TeleopLoop.left`) it stops both arms.
 
 `local_control_only` (the brain sets it for a real arm served to the network): input pages from
 other computers are watchers, so another screen can show the hub and the arm but only STOP it.
@@ -236,6 +237,8 @@ async def _broadcaster(app: web.Application) -> None:
 async def _background(app: web.Application):
     app[LOOP].on_command = app[OUTBOX].put_nowait
     tasks = [asyncio.create_task(app[LOOP].run()), asyncio.create_task(_broadcaster(app))]
+    if app[LOOP].left:  # two arms at once: its state goes out in status, not as arm_* messages
+        tasks.append(asyncio.create_task(app[LOOP].left.run()))
     yield
     for t in tasks:
         t.cancel()
