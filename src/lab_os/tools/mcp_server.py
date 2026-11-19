@@ -198,7 +198,8 @@ def add_lab_status(server: MCPServer, report, calls) -> None:
         AI spend and budget (not on a public venue), the focus's next step, and warnings (limits
         switched off, warm servos, the chat paused). Only what the brain knows; anything not
         listed isn't known. For "how's the lab?" / "give me a status report": say it in a few
-        sentences, warnings first."""
+        sentences, warnings first. The AI spend is an estimate that counts this computer's brain
+        only: say "estimated" with the number."""
         r = report()
         calls.write("lab_status", {}, "ok", {"warnings": r.get("warnings", [])})
         return r

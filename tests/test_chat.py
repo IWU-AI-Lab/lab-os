@@ -303,6 +303,20 @@ def test_spend_log_months(tmp_path):
     assert not log.over_budget()
 
 
+def test_spend_says_it_is_an_estimate_and_marks_the_less_exact_entries(tmp_path):
+    # quick job 41: the total is this brain's estimate; voice and counted tokens are less exact
+    log = SpendLog(tmp_path)
+    log.write("main", "m", Usage(10, 10), 0.5)  # the service sent the token counts
+    log.write("main", "m", Usage(10, 10, estimated=True), 0.25)  # counted here
+    voice = log.write_voice("main", "openai", 3.0, 0, 0.125, "heard")
+    with (tmp_path / f"{datetime.now():%Y-%m}.jsonl").open("a") as f:  # before quick job 41
+        f.write(json.dumps({"kind": "voice", "setup": "main", "cost_usd": 0.125}) + "\n")
+    assert voice["estimated"] is True
+    m = log.month()
+    assert m["estimated"] is True and m["counted_on"]
+    assert m["spent_usd"] == 1.0 and m["less_exact_usd"] == 0.5
+
+
 # ---------- the hub: endpoints and page ----------
 
 
@@ -452,3 +466,12 @@ async def test_a_lasting_failure_is_not_connected_and_says_why(
     async with aiohttp.ClientSession() as s:
         assert await reach(s, setup_for(server)) is None
     await conv.close()
+
+
+def test_every_ai_spend_panel_says_estimated_and_this_brain_only():
+    # quick job 41: the plain hub, the designed hub and the VR hub
+    web = SRC / "hub" / "web"
+    for page in ("index.html", "design.html", "xr/panels.js"):
+        assert "Estimated · this computer's brain only" in (web / page).read_text(), page
+    assert "This month, estimated" in (web / "design.html").read_text()
+    assert "This month, estimated" in (web / "xr" / "panels.js").read_text()
