@@ -31,13 +31,14 @@ export function showOff(msg = {}) {
   box.id = "lab-os-off";
   box.setAttribute("role", "alert");
   const who = msg.from ? ` from ${msg.from}` : "";
+  const restarting = !!msg.restart;  // Settings' "Restart Now": it comes back by itself
   box.innerHTML = `<div class="box">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v8"/><path d="M7.2 6.5a7 7 0 1 0 9.6 0"/></svg>
-    <h1>lab-os is off</h1>
+    <h1>${restarting ? "lab-os is restarting" : "lab-os is off"}</h1>
     <p>It was shut down${who} at ${hhmm(msg.time_ms)}. The arm was let go, and the cameras and microphones are closed.</p>
-    <p>To start it again, use the "Start lab-os" icon on the brain's computer. This page comes back by itself once it runs.</p>
+    <p>${restarting ? "It starts again by itself in a few seconds, and this page comes back then." : 'To start it again, use the "Start lab-os" icon on the brain\'s computer. This page comes back by itself once it runs.'}</p>
   </div>`;
-  box.querySelector("p").textContent = `It was shut down${who} at ${hhmm(msg.time_ms)}. The arm was let go, and the cameras and microphones are closed.`;
+  box.querySelector("p").textContent = `It was ${restarting ? "restarted" : "shut down"}${who} at ${hhmm(msg.time_ms)}. The arm was let go, and the cameras and microphones are closed.`;
   document.head.append(style);
   document.body.append(box);
   document.exitPointerLock?.();

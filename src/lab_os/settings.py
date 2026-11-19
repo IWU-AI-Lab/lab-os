@@ -45,6 +45,8 @@ class Field:
     step: float | None = None
     unit: str = ""
     applies: str = "reload"
+    # what the brain uses when the file leaves it out (shown: the current value is always visible)
+    default: Any = None
     # a safety limit (bool): the page shows clearly when it's off, and it can't be switched off
     # in a public venue or one with `limits_locked: true`
     safety: bool = False
@@ -63,6 +65,7 @@ class Section:
     title: str
     fields: tuple[Field, ...]
     help: str = ""
+    risky: bool = False  # switching off or stopping: shown apart, at the bottom (quick job 38)
 
 
 def _personas() -> list[str]:
@@ -77,115 +80,39 @@ def _modules() -> list[str]:
     return list(MODULES)
 
 
+# Grouped by what a setting affects, most-used first (quick job 38): the assistant, the lab (its hub
+# and its name), the robots, then the risky ones apart (`risky`: switching a safety limit off; the
+# page adds "Shut down" there). "This device" is the page's own (settings.js). Labels in Title Case;
+# a help line only where a setting isn't obvious.
 SECTIONS: list[Section] = [
     Section(
-        "hub",
-        "The hub",
-        (
-            Field(
-                "theme",
-                "hub.look",
-                "Which hub the main address shows",
-                "choice",
-                "plain until the reveal",
-                ("plain", "design"),
-            ),
-            Field(
-                "theme",
-                "quality.default",
-                "Level of detail",
-                "choice",
-                "maximal adds the extra rings, frame details and the far-layer verses; minimal "
-                "is still and light. A device can pick its own under This device.",
-                QUALITY,
-            ),
-            Field(
-                "theme",
-                "hub.modules",
-                "Buttons around the core",
-                "list",
-                "in this order, alternating left and right",
-                _modules,
-            ),
-            Field("theme", "startup.style", "Startup", "choice", "", ("hyperspace", "assemble")),
-            Field(
-                "theme",
-                "startup.hyperspace.impact_frame",
-                "Impact frame before the flash",
-                "bool",
-                "~80 ms, black lines on white",
-            ),
-            Field("theme", "clock", "Clock", "choice", "", ("24h", "12h")),
-            Field(
-                "theme",
-                "hub.reset_after_s",
-                "Back to the start screen after",
-                "number",
-                "nobody touching it this long (never while something is in use)",
-                min=60,
-                max=7200,
-                step=60,
-                unit="s",
-            ),
-            Field(
-                "theme",
-                "motion.idle.sleep_after_s",
-                "Dim (sleep) after",
-                "number",
-                "only shows if it's shorter than the reset time",
-                min=60,
-                max=7200,
-                step=60,
-                unit="s",
-            ),
-            Field("theme", "hub.type_to_chat", "Typing anywhere goes to the ask line", "bool"),
-            Field(
-                "theme",
-                "colors.primary",
-                "Main color",
-                "color",
-                "lines, rings, the assistant; the rest is tinted to match",
-            ),
-        ),
-    ),
-    Section(
         "assistant",
-        "The assistant",
+        "Assistant",
         (
             Field(
                 "place",
                 "persona",
-                "Assistant (the place's)",
+                "Who It Is",
                 "choice",
-                "who it is: name, how it talks, which AI setup",
+                "Its name, how it talks and which AI it uses.",
                 _personas,
                 applies="next",
             ),
             Field(
                 "venue",
                 "persona",
-                "Assistant in this venue",
+                "Who It Is in This Venue",
                 "choice",
-                "`default` = the place's",
+                "Default: the same as above.",
                 lambda: ["default", *_personas()],
                 applies="next",
             ),
             Field(
-                "venue",
-                "wake_word",
-                "Wake word in this venue",
-                "choice",
-                'devices that chose it listen for "hey jarvis" (⚙ → This device); '
-                "default = off on a public venue, on otherwise",
-                choices=("default", "on", "off"),
-                applies="restart",
-            ),
-            Field(
                 "place",
                 "ai_budget_usd_month",
-                "Monthly AI budget",
+                "Monthly AI Budget",
                 "number",
-                "the chat pauses when this month's spend reaches it; raising it un-pauses it",
+                "The chat pauses when this month's spend reaches it.",
                 min=0,
                 max=1000,
                 step=1,
@@ -193,11 +120,20 @@ SECTIONS: list[Section] = [
                 applies="next",
             ),
             Field(
+                "venue",
+                "wake_word",
+                "Wake Word in This Venue",
+                "choice",
+                'Devices that chose "hey Jarvis" listen for it. Default: off on a public venue.',
+                choices=("default", "on", "off"),
+                applies="restart",
+            ),
+            Field(
                 "place",
                 "chat_keep_minutes",
-                "Keep a conversation for",
+                "Keep a Conversation For",
                 "number",
-                "so an accidental reset can be undone (0 = keep nothing)",
+                "So a reset by mistake can be undone. 0 keeps nothing.",
                 min=0,
                 max=1440,
                 step=5,
@@ -207,28 +143,93 @@ SECTIONS: list[Section] = [
         ),
     ),
     Section(
-        "place",
-        "This place",
-        (Field("place", "name", "Title", "text", "the place's name: top left and the startup"),),
+        "lab",
+        "The Lab",
+        (
+            Field("place", "name", "Name", "text", "The hub's title and the startup's."),
+            Field(
+                "theme",
+                "hub.look",
+                "The Main Address Shows",
+                "choice",
+                "",
+                ("plain", "design"),
+            ),
+            Field(
+                "theme",
+                "quality.default",
+                "Level of Detail",
+                "choice",
+                "For devices that don't pick their own.",
+                QUALITY,
+            ),
+            Field(
+                "theme",
+                "hub.modules",
+                "Buttons Around the Core",
+                "list",
+                "In this order, left and right of the core.",
+                _modules,
+            ),
+            Field("theme", "startup.style", "Startup", "choice", "", ("hyperspace", "assemble")),
+            Field(
+                "theme",
+                "startup.hyperspace.impact_frame",
+                "Impact Frame Before the Flash",
+                "bool",
+                "Black lines on white for a moment.",
+            ),
+            Field("theme", "clock", "Clock", "choice", "", ("24h", "12h")),
+            Field(
+                "theme",
+                "hub.reset_after_s",
+                "Back to the Start Screen After",
+                "number",
+                "With nobody using it. Never during teleop, a move or a voice turn.",
+                min=60,
+                max=7200,
+                step=60,
+                unit="s",
+            ),
+            Field(
+                "theme",
+                "motion.idle.sleep_after_s",
+                "Dim After",
+                "number",
+                "Only if shorter than the time above.",
+                min=60,
+                max=7200,
+                step=60,
+                unit="s",
+            ),
+            Field("theme", "hub.type_to_chat", "Typing Anywhere Goes to the Ask Line", "bool"),
+            Field(
+                "theme",
+                "colors.primary",
+                "Main Color",
+                "color",
+                "Lines, rings and the assistant; the rest is tinted to match.",
+            ),
+        ),
     ),
     Section(
         "robots",
-        "Robots in this venue",
+        "Robots",
         (
             Field(
                 "venue",
                 "motion_allowed",
-                "Robots may move",
+                "Robots May Move",
                 "bool",
-                "off = teleop and AI tools refuse every move",
+                "Off: teleop and the AI tools refuse every move.",
                 applies="restart",
             ),
             Field(
                 "venue",
                 "max_speed_scale",
-                "Top speed",
+                "Top Speed",
                 "number",
-                "share of each arm's max speed",
+                "A share of each arm's full speed (1 = full).",
                 min=0.05,
                 max=1,
                 step=0.05,
@@ -237,19 +238,19 @@ SECTIONS: list[Section] = [
             Field(
                 "venue",
                 "one_to_one_max_deg_per_s",
-                "Teleop 1:1: top joint speed",
+                "Teleop 1:1 Top Joint Speed",
                 "choice",
-                "°/s. 1:1 follows the hand as fast as this allows (the top speed above doesn't "
-                "apply). none = the servos' own top speed (~270–310°/s); off = relative only",
+                "°/s. None: the servos' own top speed. Off: relative only.",
                 choices=("off", "90", "120", "180", "240", "none"),
                 applies="restart",
             ),
             Field(
                 "venue",
                 "ai_tools.max_joint_change_deg",
-                "AI: largest joint change per move",
+                "AI: Largest Joint Turn per Move",
                 "number",
                 "",
+                default=30,
                 min=1,
                 max=90,
                 step=1,
@@ -259,9 +260,10 @@ SECTIONS: list[Section] = [
             Field(
                 "venue",
                 "ai_tools.max_move_cm",
-                "AI: largest move of the gripper",
+                "AI: Largest Gripper Move",
                 "number",
                 "",
+                default=10,
                 min=1,
                 max=30,
                 step=1,
@@ -269,46 +271,43 @@ SECTIONS: list[Section] = [
                 applies="restart",
             ),
         ),
-        help="Safety settings: they apply when the brain restarts.",
+        help="In this venue. These apply when the brain restarts.",
     ),
     Section(
         "limits",
-        "Safety limits in this venue",
+        "Safety Limits and Shut Down",
         (
             Field(
                 "venue",
                 "limits.per_move",
-                "AI: limit each move",
+                "AI: Limit Each Move",
                 "bool",
-                "off = an AI tool may move any distance in one call (the AI numbers under Robots "
-                "don't apply)",
+                "Off: an AI tool may move any distance in one call.",
                 applies="restart",
                 safety=True,
             ),
             Field(
                 "venue",
                 "limits.speed_cap",
-                "Speed cap",
+                "Speed Cap",
                 "bool",
-                "off = up to each arm's full speed (the top speed above becomes the starting "
-                "speed) and 1:1 at the servos' own top speed",
+                "Off: up to each arm's full speed, and 1:1 at the servos' top speed.",
                 applies="restart",
                 safety=True,
             ),
             Field(
                 "venue",
                 "limits.floor",
-                "Floor (stay above the table)",
+                "Floor (Stay Above the Table)",
                 "bool",
-                "off = teleop and the AI tools may take the gripper below the table line "
-                "(ai_tools.min_z_cm, cm above the table)",
+                "Off: teleop and the AI tools may take the gripper below the table line.",
                 applies="restart",
                 safety=True,
             ),
         ),
-        help="Each on by default. Always kept, whatever is set here: STOP on every screen, the "
-        "soft joint limits (3° inside each joint's range) and one controller at a time. Can't be "
-        "switched off on a public venue or one with limits_locked: true.",
+        help="Always kept, whatever is set here: STOP on every screen, the soft joint limits "
+        "and one controller at a time.",
+        risky=True,
     ),
 ]
 
@@ -370,6 +369,8 @@ def read(venue: str | None = None) -> list[dict]:
         fields = []
         for f in s.fields:
             value = _get(data(f.file), f.path)
+            if value is None:
+                value = f.default
             if f.safety:
                 value = value is not False and str(value).lower() not in ("off", "false", "no")
             fields.append(
@@ -390,7 +391,9 @@ def read(venue: str | None = None) -> list[dict]:
                     "locked": locked if f.safety else "",
                 }
             )
-        out.append({"id": s.id, "title": s.title, "help": s.help, "fields": fields})
+        out.append(
+            {"id": s.id, "title": s.title, "help": s.help, "risky": s.risky, "fields": fields}
+        )
     return out
 
 

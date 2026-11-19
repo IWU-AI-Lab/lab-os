@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — The settings page didn't come back after "Restart Now"
+**What:** quick job 38. The hub pages and teleop pages reload once the brain is back because their live connections (`/ws/hub-device`, `/ws`) notice it. The settings page has no live connection of its own, so after a restart it kept saying "lab-os is restarting".
+**Fix:** after asking for a restart or shutdown, the settings page asks `/api/status` every 2 s and reloads once it has seen the brain go and come back. A new page without a live connection needs the same.
+
 ### 2026-11-18 — A pop-up inside a hub panel is cut off, even with `position: fixed`
 **What:** the ⏻ menu (quick job 6), put next to its button inside the designed hub's status strip, didn't show at all. Every `.panel` has a `clip-path` (the unfolding, the cut corners), and a clip-path clips its descendants, `position: fixed` ones included.
 **Fix:** pop-ups go straight under `<body>` (the ⏻ menu is appended there by its script, like the full-screen notice), never inside a `.panel`.

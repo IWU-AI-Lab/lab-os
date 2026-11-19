@@ -101,3 +101,47 @@ def test_pages_hear_it():
     assert "function off()" in (SRC / "web/voice.js").read_text()
     assert "/api/shutdown" in (SRC / "hub/web/settings.js").read_text()
     assert '"power-menu"' in (SRC / "hub/web/design.html").read_text()
+
+
+# ---------- restart (quick job 38): Settings' "Restart Now" ----------
+
+
+async def test_restart_is_a_shutdown_that_asks_to_start_again(aiohttp_client):
+    app = make_app()
+    client = await aiohttp_client(app)
+    hub, _ = await page(client, "desk")
+    assert not app[hub_server.RESTART]["asked"]
+    resp = await client.post("/api/restart", json={"from": "desk"})
+    assert resp.status == 200 and (await resp.json())["message"] == "lab-os is restarting."
+    told = await next_of(hub, "brain_off")
+    assert told["restart"] is True and told["from"] == "desk"  # the pages say it comes back
+    await asyncio.wait_for(app[SHUTDOWN].wait(), timeout=2)
+    assert app[hub_server.RESTART]["asked"]  # lab_os.cli starts it again
+    await hub.close()
+
+
+async def test_restart_only_from_the_brains_computer(aiohttp_client, monkeypatch):
+    app = make_app()
+    client = await aiohttp_client(app)
+    monkeypatch.setattr(hub_server, "is_local", lambda request: False)
+    assert (await client.post("/api/restart", json={})).status == 403
+    assert not app[hub_server.RESTART]["asked"]
+
+
+async def test_settings_that_need_a_restart_are_listed(aiohttp_client, monkeypatch):
+    from lab_os import settings
+
+    monkeypatch.setattr(settings, "write", lambda key, value, venue=None: value)
+    client = await aiohttp_client(make_app())
+    for key in ("venue:max_speed_scale", "theme:clock", "venue:max_speed_scale"):
+        value = 0.4 if key.endswith("scale") else "24h"
+        assert (await client.post("/api/settings", json={"key": key, "value": value})).status == 200
+    s = await (await client.get("/api/settings")).json()
+    assert s["restart_needed"] == ["Top Speed"]  # the clock applies at once; listed once
+
+
+def test_a_restart_doesnt_open_the_hub_again():
+    from lab_os.cli import _without_open
+
+    argv = ["serve", "--open", "desk", "--arm", "so101-white", "--open=quest", "--port", "8080"]
+    assert _without_open(argv) == ["serve", "--arm", "so101-white", "--port", "8080"]

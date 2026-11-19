@@ -12,6 +12,8 @@ POST /api/green/start    check again, then start LeLab in a terminal (the brain'
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
 GET /api/shutdown        may this page shut lab-os down, and what to warn about first
 POST /api/shutdown       {"from": device}: stop any move, tell every page, stop the brain as Ctrl+C
+POST /api/restart        {"from": device}: the same, then the brain starts again with the same
+                         options (Settings' "Restart Now", for settings that apply on a restart)
                          does (lets go of the arm). Brain's computer only
 GET /api/quest-view      what the Quest sees (scrcpy, quick job 36): installed, running, headsets
 POST /api/quest-view/start  {"headset"?}: open its view in a window here (the brain's computer)
@@ -56,7 +58,7 @@ import logging
 import math
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from aiohttp import web
@@ -125,6 +127,8 @@ class Brain:
     check_ai: bool = False  # check the AI service in the background (off in tests)
     visitors: VisitorDesk | None = None  # "say hello to our visitors" (quick job 35)
     started_in: str = ""  # the venue the brain started with: exiting visitor mode goes there
+    # settings changed since the start that apply on a restart (labels), for "Restart Now"
+    restart_needed: list = field(default_factory=list)
 
 
 BRAIN = web.AppKey("brain", Brain)
@@ -134,6 +138,7 @@ MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
 QUEST_VIEW = web.AppKey("quest_view", QuestView)
+RESTART = web.AppKey("restart", dict)  # {"asked": bool}: start again after stopping (lab_os.cli)
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -267,6 +272,17 @@ async def api_shutdown_get(request: web.Request) -> web.Response:
 async def api_shutdown(request: web.Request) -> web.Response:
     """Shut down: stop any move now, tell every page lab-os is off, then stop the server the way
     Ctrl+C does; `lab-os serve`'s cleanup then lets go of the arm (lab_os.cli)."""
+    return await _stop_brain(request, restart=False)
+
+
+async def api_restart(request: web.Request) -> web.Response:
+    """Restart (quick job 38): as a shutdown, then `lab-os serve` starts again with the same
+    options (lab_os.cli), so settings that apply on a restart take effect. Pages reload by
+    themselves once it's back."""
+    return await _stop_brain(request, restart=True)
+
+
+async def _stop_brain(request: web.Request, restart: bool) -> web.Response:
     why = _shutdown_check(request)
     if why:
         raise web.HTTPForbidden(text=why)
@@ -276,13 +292,17 @@ async def api_shutdown(request: web.Request) -> web.Response:
     except (ValueError, AttributeError, DeviceError):
         by = ""
     app = request.app
-    log.warning("shutting down: asked from the hub (%s)", by or "a page with no device name")
-    app[LOOP].stop("lab-os is shutting down")
+    what = "restarting" if restart else "shutting down"
+    log.warning("%s: asked from the hub (%s)", what, by or "a page with no device name")
+    app[LOOP].stop(f"lab-os is {what}")
+    app[RESTART]["asked"] = restart
     msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
+    if restart:
+        msg["restart"] = True
     app[OUTBOX].put_nowait(msg)  # teleop, monitor, AI Control
     await app[HUB_DEVICES].tell_all(msg)  # the hub pages
     asyncio.get_running_loop().call_later(SHUTDOWN_DELAY_S, app[SHUTDOWN].set)
-    return web.json_response({"ok": True, "message": "lab-os is shutting down."})
+    return web.json_response({"ok": True, "message": f"lab-os is {what}."})
 
 
 async def api_ai_calls(request: web.Request) -> web.Response:
@@ -346,6 +366,7 @@ async def api_settings_get(request: web.Request) -> web.Response:
             else "Settings change only on the brain's computer.",
             "venue": brain.venue.name,
             "visitor_mode": mode,
+            "restart_needed": brain.restart_needed,
         }
     )
 
@@ -369,6 +390,9 @@ async def api_settings_post(request: web.Request) -> web.Response:
         return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
     field = settings.find(key)
     log.info("setting %s = %r (from the settings page)", key, value)
+    needed = request.app[BRAIN].restart_needed
+    if field.applies == "restart" and field.label not in needed:
+        needed.append(field.label)
     return web.json_response({"ok": True, "key": key, "value": value, "applies": field.applies})
 
 
@@ -1004,6 +1028,7 @@ def create_brain_app(
         lambda: {m["id"]: m["title"] for m in hub_modules(load_theme())}, device_settings
     )
     app[QUEST_VIEW] = quest_view or QuestView()
+    app[RESTART] = {"asked": False}
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
@@ -1015,6 +1040,7 @@ def create_brain_app(
     app.router.add_post("/api/green/stop", api_green_stop)
     app.router.add_get("/api/shutdown", api_shutdown_get)
     app.router.add_post("/api/shutdown", api_shutdown)
+    app.router.add_post("/api/restart", api_restart)
     app.router.add_get("/api/quest-view", api_quest_view)
     app.router.add_post("/api/quest-view/start", api_quest_view_start)
     app.router.add_post("/api/quest-view/stop", api_quest_view_stop)

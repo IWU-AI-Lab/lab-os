@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-19
+- **Settings, laid out anew** (quick job 38): grouped by what a setting affects, most-used first (This Device, Assistant, The Lab, Robots), a sidebar to jump between groups, groups that fold, plain Title Case labels, short help only where needed, every current value on one edge, "Saved" for a moment after a change, and the risky things (switching a safety limit off, shutting down) apart at the bottom with a red edge. Settings that need a restart collect in a bar with **Restart Now**, which restarts the brain and brings every page back by itself. Sliders got the hub's look (a thin line filling cyan, a tick per step, a glowing diamond). Before, the sections sat side by side in boxes with long help texts, and a restart meant Ctrl+C and starting it again.
 - **Shut down from the hub on any venue**: the brain's computer can shut lab-os down on a public venue too (someone is always there). Before, a public venue refused it.
 - **Visitor mode's welcome** no longer says "no robots are here" when none is plugged in: it leaves robots out, and names the cards on the screen.
 

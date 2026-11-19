@@ -59,7 +59,7 @@ link.on("status", (s) => {
   const top = s.one_to_one_deg_per_s == null ? "the servos' own top speed" : `${s.one_to_one_deg_per_s}°/s`;
   const warm = s.servos?.hot ? ` Servos warm (${Math.round(s.servos.max_temp_c)} °C): slowed to relative speed.` : "";
   $("mode-speed").textContent = off
-    ? "1:1 is off in this venue (⚙ Settings → Robots → Teleop 1:1)."
+    ? "1:1 is off in this venue (⚙ Settings → Robots → Teleop 1:1 Top Joint Speed)."
     : `1:1 follows as fast as ${top}; the Speed slider applies to relative only.${warm}`;
   $("mode-hint").hidden = s.mode !== "one_to_one";
 });
