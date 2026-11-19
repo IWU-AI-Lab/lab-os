@@ -1,111 +1,118 @@
 # Lab checklist
 
-Every step has a tag (like **9.4**). What to report is on the same line after **→**. Report as `9.4: yes` or `9.4: 6 s`. Run commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
+Every step has a tag (for example **9.4**). The line after **→** says what to report. Report as `9.4: yes` or `9.4: 6 s`. Run the commands in a terminal on the lab desktop, in `~/lab-os`. Each part works alone.
 
-Only what's still to do; finished steps are removed (their results are in `docs/dev/GOTCHAS.md` and `docs/plan/quick-jobs.md`). **Thursday 2026-11-19, top to bottom:** 0, F (only the steps whose quick job is done: `docs/plan/quick-jobs.md` → Done), 9 if the room is quiet, 3b, 11, 2.
+This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
+
+**Order for Thursday 2026-11-19:** 0, then F (only the steps whose quick job is in `docs/plan/quick-jobs.md` → Done), then 9 if the room is quiet, then 3b, 11, 2.
 
 Rules:
-- A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm is powered.
-- Ctrl+C in the brain's terminal makes the arm go limp. Hold the arm first if it is lifted.
-- Green arms: never change motor IDs or firmware, never recalibrate, never touch the `lerobot` conda env, never start lab-os on them while LeLab is running.
-- The voice is OpenAI's (the professor's key, in `.env` since 2026-11-18; restart the brain after any `.env` change). Only without it does the free Gemini key take over (about 15–20 spoken answers a day).
+- A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
+- Ctrl+C in the brain's terminal makes an SO-101 go limp. If the arm is lifted, hold it first.
+- The green arms have their own rules (`CLAUDE.md` → "Hard rules"). Never start lab-os on them while LeLab runs.
+- The voice is OpenAI's (the professor's key, in `.env`). After you change `.env`, restart the brain. Without that key, the free Gemini key speaks (about 15 to 20 answers a day).
 
-No ruler needed. Measure with: a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm), a bank card (8.6 cm long, 5.4 cm wide), the cube (3 cm), your phone lying flat (about 1 cm thick).
+You need no ruler. Measure with these:
+- a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm);
+- a bank card (8.6 cm long, 5.4 cm wide);
+- the cube (3 cm);
+- your phone, flat on the table (about 1 cm thick).
 
 ---
 
 ## 0. Update (5 min)
 ```bash
 cd ~/lab-os
-git switch main && git pull && git switch green-training-calibration && git merge main
+git switch main && git pull
 uv sync --extra so101
 uv run pytest -q
 ```
-- **0.1** Read the last line `pytest` printed. → copy the line.
+- **0.1** Read the last line that `pytest` shows. → copy the line.
 
-## F. This week's fixes on the real arm (25 min)
-Setup: `so101-white` and its two cameras plugged in, green arms unplugged.
+## F. This week's fixes on the real arm (40 min)
+Setup: plug in `so101-white` and its two cameras. Unplug the green arms. Then run:
 ```bash
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --host 0.0.0.0
 ```
-In a **new** Claude Code session in `~/lab-os`: `/mcp` → `lab-os` → reconnect.
-- **F.1** (quick job 29) Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-wrist.` → does it show the view along the jaws? (yes / no)
-- **F.2** (quick job 28) Open http://localhost:8080/teleop → Desktop control. Jog the gripper down, slowly, until the jaw tips just touch the table. Read the gripper's z on http://localhost:8080/ai. → z ___ cm (it should be about 0 now that quick job 28 is in; if not, add it to `table_z_cm` of `so101-white` in `config/devices.yaml`, e.g. z 0.3 → −1.3). The floor (1.1 cm above the table) may stop the jog before the tips touch: then note the lowest z and how far the tips are from the table.
-- **F.3** (quick job 30) Hand on STOP. Prompt: `Go to the home pose.` (it takes three or four calls) → did it fold into nearly the position you always leave it in, the gripper hovering a little above where it rests, without hitting anything? (yes / no; how high are the jaw tips above the table? ___ cm)
-- **F.4** (quick job 27) Open http://localhost:8080/design → Teleop. Unplug the arm's USB cable. → within a few seconds, does the hub show the arm as disconnected? (yes / no)
-- **F.5** Plug it back in. Wait 10 seconds (the terminal should say `so101-white reconnected`). Desktop control → jog a joint (let go of the keys first, then press again). → did the arm move? (yes / no; copy any line the terminal keeps repeating)
-- **F.6** (the Quest's wake word) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, `http://localhost:8080/design?device=quest-a` → ⚙ → This device → Wake word sensitivity → 7. Open `http://localhost:8080/xr` → Enter VR. Say "Hey Jarvis" 10 times with pauses. → number of misses.
-- **F.7** (quick job 32) While doing the rest, leave the designed hub open on the desktop and glance at the brain's terminal now and then. → did the strip ever say "AI not connected"? (yes / no; copy any line starting `AI:` or `internet:`)
-- **F.8** (quick job 34) On the desktop's hub (`/design?device=desk`): press ⏻ and start 3 times, watching the core. Then ⚙ → This device → **Startup as a video** on → Back, and press ⏻ and start 3 times again. → which looked smoother: drawn / video / the same? Any jump when the video hands over? Then the same with ⚙ → This device → Level of detail → **maximal** (its own recording): drawn vs video. Then switch both back.
-- **F.9** (quick job 6) Hand on the arm. Prompt: `Go to the ready pose.` Then on the desktop's hub (`/design?device=desk`) press ⏻ → **Shut down lab-os**. → does the confirmation say so101-white goes limp? (yes / no) Press **Shut down**, holding the arm. → did it go limp in your hand, did the terminal say `lab-os was shut down from the hub; so101-white was let go.`, and did every open page (the Quest's too, if open) say "lab-os is off"? (yes / no each) Start it again with the "Start lab-os" icon. → did the pages come back by themselves? (yes / no)
-- **F.10** (quick job 10) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In its browser `http://localhost:8080/xr` → **Enter AR**. At the start screen, look straight ahead past the circle. → is there still a dark clump of lines? (yes / no) Start it. → do the stars and the network look like light over the room, with no dark specks or lines? (yes / no) Then ⏻ (back to the start) once and look again. → clump? (yes / no)
-- **F.11** (quick job 35) Hand on STOP, the arm at `ready` or `home`. On the desktop's hub (`/design?device=desk`), say `Hey Jarvis, it's demo time`. → is the venue in the strip `visit-day`, is a welcome spoken that names the white SO-101 arm, are the cards above the core, is AI Spend gone, does ⚙ show only Visitor mode? (yes / no for each) Tap **Ask me to wave**. → did the arm go to `ready` and wave, the shoulder a little and the wrist nodding, without touching anything? (yes / no) Say `Hey Jarvis, wave at everyone` and press STOP during it. → did it stop? (yes / no) Teleop 1:1 from the Quest while in visitor mode. → works as in the lab? (yes / no) Say `Hey Jarvis, the visitors have left`. → venue `lab` again, AI Spend back? (yes / no) Then ⚙ → Start visitor mode, and ⚙ → Exit visitor mode. → both work? (yes / no)
-- **F.12** (quick job 36) Once, in a terminal in `~/lab-os`: `uv run lab-os quest-view --install`. Restart the brain's hub page. The Quest on USB (`adb devices` lists it as `device`), the teleop page or the VR hub running in it. On the desktop's hub, press the Quest view button in the strip (the screen-with-goggles icon). → does a window open showing what the headset sees, without flicker? (yes / no) → is teleop still smooth while it's open, and does `adb reverse --list` still show `tcp:8080 tcp:8080`? (yes / no) → which: both eyes side by side, or one? For one eye, try `mirror: ["--crop=2064:2208:0:0"]` under `quest-a` in `config/devices.yaml` and press the button twice; note the crop that looks right: ___. Press the button again. → did the window close? (yes / no)
-- **F.13** (quick job 37) The Quest on USB, `adb reverse tcp:8080 tcp:8080`. In its browser `http://localhost:8080/xr` → Enter VR → Teleop. Look at the status panel to the right of the arm. → is it the hub's style (cut corners, cyan, the numbers in the clock's digits) and easy to read at a glance? (yes / no) Hold the grip: → does it turn green "Following"? Let go: → "Holding"? Put a controller down: → amber "No controller"? (yes / no) Leave, then **Enter AR** → Teleop. → still easy to read over the room? (yes / no)
-- **F.14** (quick job 38) Hand on the arm (it goes limp for a moment). On the desktop's hub, ⚙. → are the groups easy to find (sidebar, folding), every value lined up on the right? (yes / no) Robots → Top Speed: change it to the same number it has now ± 0.05, then back. → "✓ Saved" each time, and the amber bar with Restart Now? (yes / no) Press Restart Now → Restart. → does every screen say "lab-os is restarting" and come back by itself within ~15 s, the arm connected again? (yes / no)
-- Hold the arm. Ctrl+C in the brain's terminal.
+Open a **new** Claude Code session in `~/lab-os`. Type `/mcp`, select `lab-os`, then "reconnect".
+
+- **F.1** (quick job 29) Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-wrist.` → does the picture show the view along the jaws? (yes / no)
+- **F.2** (quick job 28) Open http://localhost:8080/teleop and select Desktop control. Move the gripper down slowly until the jaw tips touch the table. Read the gripper's z on http://localhost:8080/ai. → z ___ cm. It should be about 0. If it is not, change `table_z_cm` of `so101-white` in `config/devices.yaml` by that amount (for example, z 0.3 → −1.3). The floor (1.1 cm above the table) can stop the gripper before the tips touch. Then write the lowest z, and how far the tips are from the table.
+- **F.3** (quick job 30) Keep a hand at STOP. Prompt: `Go to the home pose.` (it takes three or four moves). → did the arm fold to almost the position where you usually leave it, with the gripper a little above its rest, without hitting anything? (yes / no; how high are the jaw tips above the table? ___ cm)
+- **F.4** (quick job 27) Open http://localhost:8080/design and select Teleop. Unplug the arm's USB cable. → after a few seconds, does the hub show the arm as disconnected? (yes / no)
+- **F.5** Plug the cable in again. Wait 10 seconds. The terminal should say `so101-white reconnected`. In Desktop control, release the keys, then move a joint. → did the arm move? (yes / no; copy any line that the terminal shows again and again)
+- **F.6** (the Quest's wake word) Connect the Quest with USB and run `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, open `http://localhost:8080/design?device=quest-a`. Select ⚙ → This Device → Wake Word Sensitivity → 7. Open `http://localhost:8080/xr` and select Enter VR. Say "Hey Jarvis" 10 times, with pauses. → the number of misses.
+- **F.7** (quick job 32) During the other steps, keep the designed hub open on the desktop. Look at the brain's terminal now and then. → did the strip show "AI not connected" at any time? (yes / no; copy any line that starts with `AI:` or `internet:`)
+- **F.8** (quick job 34) On the desktop's hub (`/design?device=desk`), press ⏻ and start 3 times. Look at the core. Then select ⚙ → This Device → **Startup as a Video** → on, and press Back. Press ⏻ and start 3 times again. → which was smoother: drawn, video, or the same? Did the picture jump when the video changed to the live hub? Then do the same with ⚙ → This Device → Level of Detail → **Maximal** (it has its own recording): drawn or video? Then set both back.
+- **F.9** (quick job 6) Hold the arm. Prompt: `Go to the ready pose.` On the desktop's hub (`/design?device=desk`), press ⏻ → **Shut down lab-os**. → does the confirmation say that so101-white goes limp? (yes / no) Hold the arm and press **Shut down**. → three answers: did the arm go limp in your hand? Did the terminal say `lab-os was shut down from the hub; so101-white was let go.`? Did every open page (also the Quest's, if open) say "lab-os is off"? (yes / no each) Start lab-os again with the "Start lab-os" icon. → did the pages come back by themselves? (yes / no)
+- **F.10** (quick job 10) Connect the Quest with USB and run `adb reverse tcp:8080 tcp:8080`. In its browser, open `http://localhost:8080/xr` and select **Enter AR**. On the start screen, look straight ahead, past the circle. → do you still see a dark cluster of lines? (yes / no) Start it. → do the stars and the network look like light over the room, with no dark spots or lines? (yes / no) Press ⏻ once and look again. → cluster? (yes / no)
+- **F.11** (quick job 35) Keep a hand at STOP. Put the arm at `ready` or `home`. On the desktop's hub (`/design?device=desk`), say `Hey Jarvis, it's demo time`. → five answers: does the strip show the venue `visit-day`? Does it speak a welcome that names the white SO-101 arm? Are the cards above the core? Is AI Spend gone? Does ⚙ show only Visitor Mode? (yes / no each) Tap **Ask me to wave**. → did the arm go to `ready` and wave (the shoulder a little, the wrist nodding) without touching anything? (yes / no) Say `Hey Jarvis, wave at everyone` and press STOP during the wave. → did it stop? (yes / no) Use teleop 1:1 from the Quest in visitor mode. → does it work as in the lab? (yes / no) Say `Hey Jarvis, the visitors have left`. → is the venue `lab` again, and is AI Spend back? (yes / no) Select ⚙ → Start Visitor Mode, then ⚙ → Exit Visitor Mode. → did both work? (yes / no)
+- **F.12** (quick job 36) Once, in a terminal in `~/lab-os`, run `uv run lab-os quest-view --install`. Reload the brain's hub page. Connect the Quest with USB (`adb devices` shows it as `device`) and open the teleop page or the VR hub in it. On the desktop's hub, press the Quest view button in the strip (the screen-with-goggles icon). → does a window open with what the headset sees, without flicker? (yes / no) → is teleop still smooth while the window is open, and does `adb reverse --list` still show `tcp:8080 tcp:8080`? (yes / no) → does the window show both eyes side by side, or one? For one eye, add `mirror: ["--crop=2064:2208:0:0"]` under `quest-a` in `config/devices.yaml`, and press the button two times. Write the crop that looks correct: ___. Press the button again. → did the window close? (yes / no)
+- **F.13** (quick job 37) Connect the Quest with USB and run `adb reverse tcp:8080 tcp:8080`. In its browser, open `http://localhost:8080/xr`, select Enter VR, then Teleop. Look at the status panel to the right of the arm. → is it in the hub's style (cut corners, cyan, the numbers in the clock's digits), and easy to read quickly? (yes / no) Hold the grip. → does it show green "Following"? Release the grip. → "Holding"? Put a controller down. → amber "No controller"? (yes / no) Leave VR, select **Enter AR**, then Teleop. → is it still easy to read over the room? (yes / no)
+- **F.14** (quick job 38) Hold the arm (it goes limp for a moment). On the desktop's hub, open ⚙. → is each group easy to find (sidebar, folding), and is every value lined up on the right? (yes / no) In Robots → Top Speed, change the number by 0.05, then change it back. → do you see "✓ Saved" each time, and the amber bar with Restart Now? (yes / no) Press Restart Now, then Restart. → does every screen say "lab-os is restarting" and come back by itself in about 15 s, with the arm connected again? (yes / no)
+- To finish: hold the arm, then press Ctrl+C in the brain's terminal.
 
 ## 9. Voice (20 min)
-Setup: USB microphone plugged in and picked in Ubuntu Settings → Sound → Input. Speakers on.
+Setup: plug in the USB microphone and select it in Ubuntu Settings → Sound → Input. Switch the speakers on. Then run:
 ```bash
 uv run lab-os serve --persona jarvis
 ```
-Open http://localhost:8080/design in Chrome. Press start. Keep the terminal visible.
-- **9.1** Listen to the greeting. → was it spoken? (yes / no)
-- **9.2** Press ⏻, wait 10 seconds, press start again. → did the greeting start at once? (yes / no)
-- **9.3** Hold the mic button, say "What's the next step?", let go. Count the seconds until the first spoken word. → seconds.
-- **9.4** ⚙ → This device → Talking to it → **wake word** → Back. Say "Hey Jarvis, what's the next step" in one breath. → was the start of your question cut off on the screen? (yes / no)
+Open http://localhost:8080/design in Chrome. Press start. Keep the terminal in view.
+- **9.1** Listen to the greeting. → did it speak? (yes / no)
+- **9.2** Press ⏻. Wait 10 seconds. Press start again. → did the greeting start immediately? (yes / no)
+- **9.3** Hold the mic button. Say "What's the next step?". Release the button. Count the seconds until the first spoken word. → seconds.
+- **9.4** Select ⚙ → This Device → Talking to It → **Wake Word**, then Back. Say "Hey Jarvis, what's the next step" in one breath. → was the start of your question missing on the screen? (yes / no)
 - **9.5** Do 9.4 two more times. → copy the three `voice timing` lines from the terminal.
-- **9.6** Walk backwards, one step at a time, saying "Hey Jarvis" at each step, until it stops working. → number of steps from the microphone.
-- **9.7** From that spot: ⚙ → This device → Wake word sensitivity → 7. Try. Then 8. Try. → the lowest of 5, 7, 8 that works there.
-- **9.8** At that sensitivity, talk normally near the microphone for one minute. Say "Jarvis" inside a sentence once. → number of times it woke by mistake.
+- **9.6** Walk backwards one step at a time. At each step, say "Hey Jarvis". Stop when it does not hear you. → the number of steps from the microphone.
+- **9.7** At that position, select ⚙ → This Device → Wake Word Sensitivity → 7 and try. Then try 8. → the lowest of 5, 7 and 8 that works there.
+- **9.8** At that sensitivity, talk normally near the microphone for one minute. Say "Jarvis" once inside a sentence. → how many times did it wake by mistake?
 - **9.9** Say "Hey Jarvis, pull up the teleop page." → did Teleop open? (yes / no)
 - **9.10** Say "Hey Jarvis, show me the AI spend." → did the AI Spend page open? (yes / no)
 - **9.11** Say "Hey Jarvis, go back to the hub." → did everything close? (yes / no)
 - **9.12** Type in the ask line: `show me the commits`. → did the Commits page open? (yes / no)
-- **9.13** (quick job 33) ⚙ → This device → Assistant language → Input: English, Output: English → Back. Say "Hey Jarvis, what's the next step?" twice. → answered in English both times? (yes / no)
-- **9.14** Type in the ask line: `¿Cuál es el siguiente paso?` → answered in English? (yes / no). Then set Output back to Any.
+- **9.13** (quick job 33) Select ⚙ → This Device → Assistant Language → Listens: English, Answers: English, then Back. Say "Hey Jarvis, what's the next step?" two times. → did it answer in English both times? (yes / no)
+- **9.14** Type in the ask line: `¿Cuál es el siguiente paso?` → did it answer in English? (yes / no) Then set Answers back to Any.
 
 ---
 
 ## 3b. The stand camera's cm grid (15 min)
-Setup: `so101-white` and its stand camera plugged in. Print `models/charuco/calibration-sheet-letter.pdf` with the printer set to **100 % / "Actual size"** (not "Fit to page").
+Setup: plug in `so101-white` and its stand camera. Print `models/charuco/calibration-sheet-letter.pdf` with the printer at **100 % ("Actual size")**, not "Fit to page". Then run:
 ```bash
 uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
 ```
-- **3b.1** Lay the sheet flat in front of the arm, long edge pointing straight away from it, roughly centred. On `http://localhost:8080/teleop`, drive the gripper (keyboard) until the jaw tips touch the sheet's **"Board origin"** corner (top left as you look from the arm). Read the gripper's x and y on the AI Control page (`/ai`). → x ___ cm, y ___ cm
-- **3b.2** Drive the arm up and to the side so it covers none of the sheet. In a second terminal: `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (the numbers from 3b.1). → corners seen ___ of 24, worst ___ mm (or the error it printed)
-- **3b.3** Open the preview it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines run along the sheet's squares? (yes / no)
-- **3b.4** Take the sheet away. Put the cube anywhere in front of the arm. New Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what it said ___; is the gripper over the cube? (yes / off by about ___ cube-widths, which way ___)
-- **3b.5** Same session. Prompt: `Pick it up with pick_at, then tell me whether you're holding it.` Watch `/ai`. → is the cube in the jaws? (yes / no) What did it say: holding or missed? Did `/ai` show each step before it moved? (yes / no)
+- **3b.1** Put the sheet flat in front of the arm, with the long edge pointing straight away from the arm, approximately in the center. On `http://localhost:8080/teleop`, move the gripper with the keyboard until the jaw tips touch the sheet's **"Board origin"** corner (top left, seen from the arm). Read the gripper's x and y on the AI Control page (`/ai`). → x ___ cm, y ___ cm
+- **3b.2** Move the arm up and to the side, so that it covers no part of the sheet. In a second terminal, run `uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x> <y>` (with the numbers from 3b.1). → corners seen: ___ of 24; worst: ___ mm (or the error that it shows)
+- **3b.3** Open the picture that it names (`logs/table-maps/…jpg`). → is the red dot on the arm's base? (yes / no / not in the picture) Do the grid lines follow the sheet's squares? (yes / no)
+- **3b.4** Remove the sheet. Put the cube anywhere in front of the arm. Start a new Claude Code session (`/mcp` → `lab-os` → reconnect). Prompt: `Use the lab-os tools. Take a picture with so101-white-cam-stand and tell me where the cube is, in cm. Then move the gripper to 3 cm above that spot, pointing straight down.` → what did it say? ___ Is the gripper above the cube? (yes / no: about ___ cube-widths off, in which direction ___)
+- **3b.5** In the same session, prompt: `Pick it up with pick_at, then tell me whether you're holding it.` Look at `/ai`. → is the cube in the jaws? (yes / no) Did it say "holding" or "missed"? Did `/ai` show each step before the arm moved? (yes / no)
 
 ## 11. Devices (30 min)
-Setup: the desktop and the Newline (or a laptop in place of the Newline). No arm.
-- **11.1** Stop any running brain (Ctrl+C). Run `uv run lab-os icon --device desk`. Ubuntu's app list → click **Start lab-os**. → did a terminal and a full-screen hub open? (yes / no)
-- **11.2** Look at the hub's address. → does it contain `?device=desk`? (yes / no)
-- **11.3** Click **Start lab-os** a second time. → did a second brain start? (yes / no)
-- **11.4** On the desktop run `hostname -I` and take the first address. On the Newline's Chrome open `http://<address>:8080/?device=newline`. → did the page load? (yes / no)
-- **11.5** On the Newline: ⚙ → This device → Drawing resolution → 0.5. On the desktop run `cat ~/lab-os/config/hub-devices.yaml`. → does it show `newline:` with `res: '0.5'`? (yes / no)
-- **11.6** On the Newline: Chrome menu → Add to Home screen. Close Chrome. Tap the new icon. Open ⚙. → does it say "This device: newline"? (yes / no)
-- **11.7** On the Newline: open Monitor → **Open on…** → **desk**. → did Monitor open on the desk? (yes / no)
-- **11.8** Look at the Newline. → does it show "Monitor is on desk"? (yes / no)
-- **11.9** On the desk press **Back**. → did Monitor close on the desk and the line disappear on the Newline? (yes / no)
-- **11.10** On the Newline: Monitor → Open on… → desk. Then on the Newline press **Bring it back**. → did Monitor come back to the Newline? (yes / no)
-- **11.11** On the desk: open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
-- **11.12** Send Monitor to the desk again. Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without reloading? (yes / no) After how many seconds?
-- **11.13** Shut down the desktop and switch the Newline off. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names, the Newline's resolution still 0.5? (yes / no)
+Setup: the desktop and the Newline (or a laptop instead of the Newline). No arm.
+- **11.1** Stop any brain that runs (Ctrl+C). Run `uv run lab-os icon --device desk`. In Ubuntu's app list, click **Start lab-os**. → did a terminal and a full-screen hub open? (yes / no)
+- **11.2** Look at the hub's address. → does it have `?device=desk` in it? (yes / no)
+- **11.3** Click **Start lab-os** again. → did a second brain start? (yes / no)
+- **11.4** On the desktop, run `hostname -I` and use the first address. In the Newline's Chrome, open `http://<address>:8080/?device=newline`. → did the page load? (yes / no)
+- **11.5** On the Newline, select ⚙ → This Device → Drawing Resolution → 0.5. On the desktop, run `cat ~/lab-os/config/hub-devices.yaml`. → does it show `newline:` with `res: '0.5'`? (yes / no)
+- **11.6** On the Newline, select Chrome's menu → Add to Home screen. Close Chrome. Tap the new icon. Open ⚙. → does it say "This Device: newline"? (yes / no)
+- **11.7** On the Newline, open Monitor → **Open on…** → **desk**. → did Monitor open on the desk? (yes / no)
+- **11.8** Look at the Newline. → does it say "Monitor is on desk"? (yes / no)
+- **11.9** On the desk, press **Back**. → did Monitor close on the desk, and did the line go away on the Newline? (yes / no)
+- **11.10** On the Newline, select Monitor → Open on… → desk. Then, on the Newline, press **Bring it back**. → did Monitor come back to the Newline? (yes / no)
+- **11.11** On the desk, open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
+- **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
+- **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names, with the Newline's resolution still 0.5? (yes / no)
 
 ## 2. The Newline (20 min)
-Setup for 2.1–2.4: an Ethernet cable from the desktop to the Newline. Brain: `uv run lab-os serve --host 0.0.0.0`. The desktop's address: `hostname -I`, the first one.
-- **2.1** On the Newline's Chrome: `chrome://flags` → search "Insecure origins treated as secure" → type `http://<address>:8080` → Enabled → Relaunch. Open `http://<address>:8080/design?device=newline`. Press start. → is there a mic button next to "Ask anything"? (yes / no)
-- **2.2** Hold the mic button and ask a question. → did it hear and answer? (yes / no)
-- **2.3** ⚙ → This device → Drawing resolution → 1. Press ⏻, then start. → is the startup smooth? (yes / no)
-- **2.4** Same with Drawing resolution 0.5. → is the startup smooth? (yes / no) Does it look too blurry? (yes / no)
-- **2.5** Plug the desktop into the Newline's HDMI. Ubuntu Settings → Displays → the Newline → 1920×1080. → the refresh rate shown, in Hz.
-- **2.6** In the Newline's own picture menu, look for a "PC" or "Game" mode and switch it on. → the mode's name, or "none found".
-- **2.7** Open http://localhost:8080/design on the Newline's screen. Press start. → is the startup smooth at 1920×1080? (yes / no)
+Setup for 2.1 to 2.4: connect the desktop to the Newline with an Ethernet cable. Start the brain with `uv run lab-os serve --host 0.0.0.0`. The desktop's address is the first one that `hostname -I` shows.
+- **2.1** In the Newline's Chrome, open `chrome://flags` and search for "Insecure origins treated as secure". Type `http://<address>:8080`, select Enabled, then Relaunch. Open `http://<address>:8080/design?device=newline` and press start. → is there a mic button next to "Ask anything"? (yes / no)
+- **2.2** Hold the mic button and ask a question. → did it hear you and answer? (yes / no)
+- **2.3** Select ⚙ → This Device → Drawing Resolution → 1. Press ⏻, then start. → is the startup smooth? (yes / no)
+- **2.4** Do the same with Drawing Resolution 0.5. → is the startup smooth? (yes / no) Is it too blurry? (yes / no)
+- **2.5** Connect the desktop to the Newline's HDMI. In Ubuntu Settings → Displays, select the Newline and 1920×1080. → the refresh rate that it shows, in Hz.
+- **2.6** In the Newline's own picture menu, find a "PC" or "Game" mode and switch it on. → the name of the mode, or "none found".
+- **2.7** Open http://localhost:8080/design on the Newline's screen and press start. → is the startup smooth at 1920×1080? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
-Setup: the Raspbot reached by cable. Phone hotspot security set to **WPA2-Personal**.
-- **R.1** On the Raspbot: `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it join? (yes / no; if no, copy the error line)
-- **R.2** `sudo nmcli con up Raspbot`. → nothing to report.
+Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
+- **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)
+- **R.2** Run `sudo nmcli con up Raspbot`. → nothing to report.
