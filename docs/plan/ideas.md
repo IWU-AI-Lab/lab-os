@@ -53,7 +53,7 @@ In the Quest, with the 3D arm lined up on the real one, point at a spot on the t
 Hand signs seen by a webcam or the Kinect do hub things: move a window to another screen, open a page, go back. Later than the webcam teleop preview, and on the same hand tracking. **Watch out:** a gesture must not fire by accident while someone talks with their hands; one clear "start" sign first. The older "Kinect gestures" line under "Triggers & sign-in" below is the same idea.
 
 ### One AI budget for every brain
-Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key. One budget for the key would count both. Two ways: OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs. Quick job 41 labels what the page shows today.
+Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key, so the budget on one brain doesn't see what the other spent. One budget for the key would count both. Ways: the real cost from OpenAI (it counts every brain on the key; quick job 41 checks whether our key can read it), OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs.
 
 ## Recent ideas (2026-11-18)
 
@@ -69,6 +69,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm
+- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Jarvis, hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4).
 - **What:** someone asks the hub's assistant (typed or by voice) to move the arm ("wave", "pick up the cube"), not only a developer's AI tool (the builder, 2026-11-13).
 - **Watch out:** today the hub's chat stays in the read tier because anyone in the room can talk to it (current focus, "A public screen"). Needs: which venues allow it (never `public: true`), one controller at a time, STOP on every screen, and probably a person nearby.
 - **Plugs into:** the move tools (same safety layer), voice, the persona.
@@ -103,7 +104,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 
 ### Demo away from the lab with the brain still in the lab (Tailscale)
 - **What:** the brain keeps running on a lab desktop (on the lab network), and the demo happens somewhere else with the travel router. The demo devices (screens, the Quest, a Raspbot) join the travel router, which gets its internet from a phone hotspot (or, less likely, the university Wi-Fi there). **Tailscale** (a free private network across the internet; "remote level 2" in the log) links the two places, so the demo devices open the brain as if it were in the same room. Nothing is opened on the campus network: both ends connect outward.
-- **How, likely:** Tailscale on the desktop (an app; installing it needs `sudo`) and on the travel router (the Beryl AX has it built in). The router lets its own devices through (a "subnet route"), so the Newline and the Quest don't need Tailscale themselves. To check: that the router's devices can reach the desktop this way (GL.iNet's settings mostly describe the other direction); if not, the Tailscale app on the screens that can run it (phones, laptops, Pis, Android screens).
+- **How, likely:** Tailscale on the desktop (an app; installing it needs `sudo`) and on the travel router (the Beryl 7 has it built in). The router lets its own devices through (a "subnet route"), so the Newline and the Quest don't need Tailscale themselves. To check: that the router's devices can reach the desktop this way (GL.iNet's settings mostly describe the other direction); if not, the Tailscale app on the screens that can run it (phones, laptops, Pis, Android screens).
 - **The alternative:** move the brain instead: a laptop as the field brain (the portability plan), or carry the desktop along (the builder would rather not).
 - **Bonus to check:** Tailscale can give the desktop a real certificate for its Tailscale name (`tailscale cert`, e.g. `https://<desktop>.<tailnet>.ts.net`), so pages would be secure (voice, Wake Lock) without the `hub.indwesailab.com` setup. Probably only on devices that run Tailscale themselves (the name is looked up through Tailscale).
 - **Watch out:**
