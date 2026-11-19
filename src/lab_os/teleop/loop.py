@@ -18,10 +18,10 @@ meantime is refused, and tried again later). The clutch must be released and gra
 Two arms at once (preview 3, 2026-11-19): `left` is a second loop for a second arm, driven by the
 left controller (its mapper's `hand`), while this one follows the right. Both read the same
 `InputState`, so the dead-man rule, one input page at a time and A/X freeze both. STOP, the speed
-and a venue's caps are passed on to it. The left arm is pose input in relative mode only (the
-Quest page lines its 3D arm up on the right arm, so 1:1 has no frame for the left one); jogging
-and the AI tools drive only this loop's arm. Its `arm_*` messages carry its own `device` (the
-pages' ArmFeed tells the two arms apart by it); its state is the `left_arm` part of `status`.
+and a venue's caps and the mode (relative or 1:1) are passed on to it. The left arm is pose input
+only (the Quest page measures the left hand from the left 3D arm, so 1:1 works for it too);
+jogging and the AI tools drive only this loop's arm. Its `arm_*` messages carry its own `device`
+(the pages' ArmFeed tells the two arms apart by it); its state is the `left_arm` part of `status`.
 """
 
 import asyncio
@@ -120,7 +120,7 @@ class TeleopLoop:
     _link_t: float = 0.0
     _last_joints: dict[str, float] = field(default_factory=dict)
     # Two arms at once (see the module docstring): the left controller's arm, and on that loop,
-    # True (pose input only, relative only).
+    # True (pose input only).
     left: "TeleopLoop | None" = None
     is_left: bool = False
 
@@ -194,6 +194,8 @@ class TeleopLoop:
         if mode != self.mapper.config.mode:
             self.mapper.config.mode = mode
             self.mapper.reset(require_release=True)
+        if self.left and mode in self.left.modes():  # two arms: the same mode for both
+            self.left.set_mode(mode)
         return mode
 
     def _follows_fast(self) -> bool:
@@ -201,8 +203,8 @@ class TeleopLoop:
         return self.mapper.kinematics is not None and self.one_to_one_deg_per_s > 0
 
     def modes(self) -> list[str]:
-        """1:1 where the venue and kinematics allow it; never on the left arm (no frame for it)."""
-        return list(MODES) if self._follows_fast() and not self.is_left else ["relative"]
+        """1:1 where the venue and kinematics allow it."""
+        return list(MODES) if self._follows_fast() else ["relative"]
 
     @property
     def servos_hot(self) -> bool:
@@ -218,8 +220,7 @@ class TeleopLoop:
         """The top joint speed for a relative grab: the 1:1 follow speed scaled by the speed
         control (its top = the follow speed; half way = half). None where 1:1 isn't available
         (visit days, no kinematics): then the old `max_deg_per_s` × speed (decision 2026-11-16:
-        the old 45°/s left the arm far behind the hand). The left arm follows as fast as the
-        right one, though it has no 1:1."""
+        the old 45°/s left the arm far behind the hand)."""
         if not self._follows_fast():
             return None
         share = self.speed_scale / self.max_speed_scale if self.max_speed_scale > 0 else 1.0
@@ -459,6 +460,12 @@ class TeleopLoop:
             "frozen": self.frozen,
             "clutch": self.mapper.engaged,
             "needs_release": self.mapper.needs_release,
+            "mode": self.mapper.config.mode,
+            "one_to_one": self.mapper.absolute and self.mapper.engaged,
+            "hand_gap_cm": None
+            if self.mapper.hand_gap_m is None
+            else round(self.mapper.hand_gap_m * 100, 1),
+            "capture_cm": round(self.mapper.config.capture_m * 100, 1),
             "joints": self._last_joints,
             "limits": {j: [lim.low, lim.high] for j, lim in self.arm.limits.items()},
         }

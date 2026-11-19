@@ -10,8 +10,10 @@
 function leftText(l) {
   return l.connected === false ? ["Left disconnected", "offline"]
     : l.frozen ? [l.needs_release ? "Left frozen: let go" : "Left frozen", "held"]
-    : l.clutch ? ["Left following", "following"]
-    : ["Left holding", "normal"];
+    : l.clutch ? [l.one_to_one ? "Left following 1:1" : "Left following", "following"]
+    : l.mode === "one_to_one" && l.hand_gap_cm != null && l.hand_gap_cm > l.capture_cm
+      ? [`Left: reach the gripper ${Math.round(l.hand_gap_cm)} cm`, "normal"]
+      : ["Left holding", "normal"];
 }
 
 /** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts],
@@ -25,10 +27,13 @@ export function panelText(feed, noController, source, moving = false) {
   const oneToOne = feed.status.mode === "one_to_one";
   const hint = hands ? ["Two arms: controllers only", "now: right arm", "left pinch = move"]
     : moving ? ["Y held: a grip moves its 3D arm", "the arms hold", "tap Y = put back"]
-      : oneToOne ? ["Right 1:1: hand in the ball", "left relative", "Y + grip = move 3D arm", "A/X = stop both"]
+      : oneToOne ? ["1:1: each hand in its ball", "hold grip = move", "Y + grip = move 3D arm", "A/X = stop both"]
         : ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm", "A/X = stop both"];
   const right = one.state.replace(/^Frozen: let go of the (grip|pinch)$/, "Frozen: let go");
-  return { ...one, state: `Right ${right.charAt(0).toLowerCase()}${right.slice(1)}`, hint, left: { state, level } };
+  const words = right.startsWith("Reach the gripper: ")
+    ? `Right: reach the gripper ${right.slice("Reach the gripper: ".length)}`
+    : `Right ${right.charAt(0).toLowerCase()}${right.slice(1)}`;
+  return { ...one, state: words, hint, left: { state, level } };
 }
 
 function oneArmText(feed, noController, source) {

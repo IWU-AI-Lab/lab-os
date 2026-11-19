@@ -140,7 +140,7 @@ Setup: the desktop and the Newline (or a laptop instead of the Newline). No arm.
 
 ## For Tuesday 2026-11-24: the previews
 
-## T. Two arms from the Quest (35 min)
+## T. Two arms from the Quest (45 min)
 Preview 3: the right controller drives `so101-white`, and the left controller drives `so101-green`. How it works: `docs/guides/quest-setup.md` → "Two arms at once".
 
 Before you start:
@@ -171,11 +171,12 @@ In a second terminal, run `adb reverse tcp:8080 tcp:8080`.
 - **T.8** Hold the left grip. Move the left controller slowly 10 cm to the left, then back. → did only `so101-green` move, to the left and back? (yes / no)
 - **T.9** Hold both grips. Move both hands slowly forward 10 cm, then up 10 cm. → did both arms move the same way as your hands? (yes / no) Was one arm slower or shakier than the other? (which one?)
 - **T.10** Hold both grips. Pull the right trigger, then the left trigger. → did each trigger close only its own arm's gripper? (yes / no)
-- **T.11** Hold both grips and move. Press **X** (left controller). → did both arms stop? Does the panel say "Left frozen: let go" and "Right frozen: let go"? (yes / no each) Release both grips and hold them again. → do both arms move again? (yes / no)
-- **T.12** Hold both grips and move. Press **STOP** on the desktop page. → did both arms stop? (yes / no)
-- **T.13** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
-- **T.14** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
-- **T.15** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
+- **T.11** Release both grips. On the desktop's teleop page, set **Hand → arm** to **1:1**. → does the headset show a green ball at each 3D gripper? (yes / no) Put your left hand in the left ball and hold the left grip. Move the hand slowly 5 cm up, then 5 cm forward. → does `so101-green`'s gripper stay with your hand? (yes / no; about how many cm off?) Do the same with the right hand and `so101-white`. → (yes / no; cm off?) Then use both hands at once. → does it work? (yes / no) Set **Hand → arm** back to **Relative**.
+- **T.12** Hold both grips and move. Press **X** (left controller). → did both arms stop? Does the panel say "Left frozen: let go" and "Right frozen: let go"? (yes / no each) Release both grips and hold them again. → do both arms move again? (yes / no)
+- **T.13** Hold both grips and move. Press **STOP** on the desktop page. → did both arms stop? (yes / no)
+- **T.14** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
+- **T.15** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
+- **T.16** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

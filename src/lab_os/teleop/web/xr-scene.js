@@ -135,16 +135,18 @@ export class XRScene {
 
   /** Called every XR frame with the controller states (in room space), their source
    * ("controllers" / "hands" / null) and, for hands, each one's pinch (0..1). */
-  /** 1:1 mode, not holding: a ball around the 3D gripper point, green once the hand is in it. */
-  _updateGrabZone(clutch) {
-    const s = this.feed.status;
-    const tip = this.arm?.object.getObjectByName("gripper_frame_link");
+  /** 1:1 mode, not holding: a ball around the 3D gripper point, green once the hand is in it.
+   * Two arms: the left 3D arm has its own ball (`left`). */
+  _updateGrabZone(clutch, left = false) {
+    const s = left ? this.leftFeed?.status : this.feed.status;
+    const zone = left ? this.leftZone : this.grabZone;
+    const tip = (left ? this.armLeft : this.arm)?.object.getObjectByName("gripper_frame_link");
     const show = !!(s && s.mode === "one_to_one" && s.hand_gap_cm != null && !clutch && tip);
-    this.grabZone.visible = show;
+    zone.visible = show;
     if (!show) return;
-    this.grabZone.position.copy(this.root.worldToLocal(tip.getWorldPosition(new THREE.Vector3())));
-    this.grabZone.scale.setScalar((s.capture_cm || 8) / 100);
-    this.grabZone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
+    zone.position.copy(this.root.worldToLocal(tip.getWorldPosition(new THREE.Vector3())));
+    zone.scale.setScalar((s.capture_cm || 8) / 100);
+    zone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
   }
 
   /** `moving`: two arms, Y held (the grips move the 3D arms; the panel says so). */
@@ -161,6 +163,7 @@ export class XRScene {
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
     const lf = this.leftFeed?.status ? this.leftFeed : null; // two arms at once
     const leftClutch = !!lf?.status.clutch && !lf.frozen;
+    this._updateGrabZone(leftClutch, true);
     this._updateGrabZone(clutch);
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
@@ -242,6 +245,9 @@ export class XRScene {
     );
     this.grabZone.visible = false;
     this.root.add(this.grabZone);
+    this.leftZone = new THREE.Mesh(this.grabZone.geometry, this.grabZone.material.clone()); // two arms
+    this.leftZone.visible = false;
+    this.root.add(this.leftZone);
     if (this.ar) {
       // a faint footprint, so the floating ghost arm reads as "standing" somewhere
       const ring = new THREE.Mesh(

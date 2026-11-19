@@ -152,10 +152,47 @@ def test_speed_and_venue_caps_reach_the_left_arm():
     assert (left.max_speed_scale, left.speed_scale, left.one_to_one_deg_per_s) == (0.4, 0.2, 0.0)
 
 
-def test_the_left_arm_is_relative_only_but_follows_as_fast():
+def test_both_arms_have_1_to_1_and_the_mode_reaches_the_left_arm():
     right, left = two_arms()
-    assert right.modes() == ["relative", "one_to_one"] and left.modes() == ["relative"]
+    assert right.modes() == left.modes() == ["relative", "one_to_one"]
     assert left.relative_cap() == right.relative_cap() is not None
+    right.set_mode("one_to_one")
+    assert left.mapper.config.mode == "one_to_one"
+    s = right.status()["left_arm"]
+    assert s["mode"] == "one_to_one" and s["one_to_one"] is False and "capture_cm" in s
+    right.use_caps(0.5, 0.5, 0.0)  # a venue without 1:1: both back to relative
+    assert left.mapper.config.mode == "relative"
+
+
+def test_the_left_hand_grabs_the_left_gripper_in_1_to_1():
+    """1:1: the left clutch engages only with the left hand at the left gripper (positions from
+    the left 3D arm's base), and the gripper then goes where the hand goes."""
+    right, left = two_arms()
+    right.set_mode("one_to_one")
+    kin = left.mapper.kinematics
+    tip = kin.fk(left.arm.read_joints())[0]  # arm axes: x forward, y left, z up
+
+    def page(p):  # arm axes → the page's (WebXR) axes
+        return [-p[1], p[2], -p[0]]
+
+    far = {"pos": page((tip[0], tip[1], tip[2] + 0.3)), "quat": [0, 0, 0, 1], "grip": 1.0}
+    raw = {"type": "xr_input", "t": 0, "frame": "arm", "hands": {"left": far}}
+    for i in range(5):
+        right.inputs.update(parse_frame(raw), now=i * DT)
+        left.step(i * DT, DT)
+    assert not left.mapper.engaged and left.status()["hand_gap_cm"] > 20  # too far: no grab
+    now = 5 * DT
+    for i in range(80):  # at the gripper, then 5 cm up
+        up = min(i, 40) * 0.05 / 40
+        hand = {"pos": page((tip[0], tip[1], tip[2] + up)), "quat": [0, 0, 0, 1], "grip": 1.0}
+        if i == 0:
+            hand["grip"] = 0.0  # let go once (it was held while far away)
+        now += DT
+        right.inputs.update(parse_frame(raw | {"hands": {"left": hand}}), now=now)
+        left.step(now, DT)
+    reached = kin.fk(left.arm.read_joints())[0]
+    assert left.mapper.engaged and left.mapper.absolute
+    assert abs(reached[2] - (tip[2] + 0.05)) < 0.01
 
 
 def test_status_has_the_left_arm():

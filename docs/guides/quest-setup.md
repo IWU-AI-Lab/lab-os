@@ -169,7 +169,7 @@ The controls (with the controllers):
 
 What is different from one arm:
 - The left grip does not move a 3D arm by itself. Hold Y with it.
-- The left arm has only the relative mode. The 1:1 mode applies only to the right arm.
+- **Hand → arm** on the teleop page sets the mode of both arms. In 1:1, each 3D arm has its own green ball: put that hand in it and hold the grip. Put both 3D arms on their real arms first (Y and the grip).
 - Bare hands drive only the right arm (a left pinch is its clutch), as with one arm.
 - Desktop control and the AI tools drive only the right arm. While an AI tool moves the right arm, the left arm holds.
 - The status panel in the headset has two labels: the left arm on the left ("Left following"), the right arm on the right. While you hold Y, it says "Y held: a grip moves its 3D arm".

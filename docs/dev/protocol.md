@@ -117,7 +117,7 @@ Broadcast to all clients at 10 Hz.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
 - `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
-- `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "frozen", "clutch", "needs_release", "joints", "limits"}`, each as above for that arm. It has only the relative mode, and only pose input drives it. Every other field is the right arm's.
+- `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "frozen", "clutch", "needs_release", "mode", "one_to_one", "hand_gap_cm", "capture_cm", "joints", "limits"}`, each as above for that arm. `set_mode` sets the mode of both arms. Only pose input drives it. Every other field is the right arm's.
 
 ### `arm_command`, `arm_stop`, `arm_resume`
 Sent the moment the teleop loop calls the arm driver, one message per call, so viewers (3D view, later the Quest ghost arm) show **exactly what the driver received**.

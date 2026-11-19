@@ -134,3 +134,14 @@ def test_two_arms_hint_and_short_frozen_words():
 def test_two_arms_y_held_says_the_grips_move_the_3d_arms():
     p = panel(status=TWO, moving=True)
     assert p["hint"][0] == "Y held: a grip moves its 3D arm" and "tap Y = put back" in p["hint"]
+
+
+def test_two_arms_in_1_to_1_each_arm_says_where_its_hand_is():
+    left = TWO["left_arm"] | {"mode": "one_to_one", "hand_gap_cm": 14.4, "capture_cm": 8.0}
+    s = TWO | {"mode": "one_to_one", "hand_gap_cm": 20.2, "left_arm": left}
+    p = panel(status=s)
+    assert p["state"] == "Right: reach the gripper 20 cm"
+    assert p["left"] == {"state": "Left: reach the gripper 14 cm", "level": "normal"}
+    assert p["hint"][0] == "1:1: each hand in its ball"
+    held = left | {"clutch": True, "one_to_one": True}
+    assert panel(status=s | {"left_arm": held})["left"]["state"] == "Left following 1:1"
