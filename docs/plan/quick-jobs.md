@@ -5,9 +5,20 @@ Small jobs that are **already decided** and can be built in one Claude Code sess
 Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a focus step (`docs/plan/current-focus.md`).
 
 ## To do
-Order: 6.
+Order: 6 (waiting for the builder's review, PR #127), then 35, 36, 37, 38, 39.
 
 6. **Shut down from the hub.** A "Shut down lab-os" button (Settings, and in the ⏻ menu on the brain's own screen), with a confirmation: stops any move, lets go of the arms the same way Ctrl+C does now (warn first that a lifted SO-101 goes limp), closes cameras and the microphone, stops the brain; every page then says it's off. Never from a public venue. Touches letting go of the arms: leave the PR for the builder.
+
+35. **"Say hello to our visitors"** (decided 2026-11-18). Saying or typing "Hey Jarvis, say hello to our visitors" (or "demo time", "we have visitors") on the brain's own screen:
+   - switches to the visit-day venue: safety limits locked, settings and AI costs hidden;
+   - speaks a short welcome: what the lab is and which robots are on today (from the device list, only what's really connected);
+   - shows three "try this" cards: "Ask me to wave", "What's on the table?", "Open the VR hub";
+   - "wave" plays a fixed list of poses on the arm (a few degrees of `shoulder_pan` and `wrist_flex` around `ready`, at the venue's speed cap): no AI choosing the motion.
+   "Back to normal" (spoken, or in ⚙) switches the venue back. The wave touches arm movement: leave the PR for the builder.
+36. **See what the Quest sees on another screen** (the builder, 2026-11-18): so people in the room can watch. Look for existing work first: `scrcpy` (open source, widely used) mirrors a Quest over the same USB `adb` connection teleop uses, and Meta has its own casting. Try those before building anything; if one works, add a hub button that starts it on the brain's computer (no `sudo`: a downloaded copy in a lab-os folder, with how to remove it written down). Lab check: a new step in part F.
+37. **The VR/AR status box in the design style.** The status box in the VR hub (`/xr`) doesn't match `docs/design/DESIGN.md` and `config/theme.yaml` (colours, type, spacing). Make it match; keep it readable in AR (passthrough) as well as VR.
+38. **Settings overhaul** (after job 6 merges). Re-lay out Settings (both hubs and `/settings`) following common guidelines for settings screens (for example Apple's Human Interface Guidelines and Nielsen Norman Group): group by what a setting affects (this device, the assistant, safety, the lab), most-used first, plain labels, the current value always visible, a short line only where a setting isn't obvious, saving shown, and risky actions (shut down, limits off) apart at the bottom. Show the builder a screenshot of the plan before building.
+39. **Plain-English docs (ASD-STE100) and one place per fact.** Rewrite the human-facing docs (`docs/guides/`, the lab checklist, `README.md`, `FEATURES.md`) with STE's main rules: short sentences (about 20 words for instructions), one instruction per sentence, active voice, one word for one meaning, no shorthand. Not full STE dictionary compliance. While reading every doc: list facts said in more than one place, keep each in one place with pointers elsewhere, and fix what contradicts the newest decision (`docs/plan/lab-jarvis-log.md`). Report the list of what was out of date.
 
 ## Done
 - 10. **VR hub: a cluster of linked dots far away** (done 2026-11-18, PR #129). Seen without the headset (`/xr?preview&passthrough`, the AR way over a light page): the network's links, black while the dots wait far ahead for the jump, covered the room in AR because additive blending also writes opacity (black on black in VR). Not where the dots wait (that's the arrival from the middle, as designed) but how glows are drawn: every glow in the VR hub now adds light without covering the room (`GLOW` in `xr/draw.js`); the start screen's stars lost their dark specks too. VR looks the same. Lab: lab-checklist F.10.
