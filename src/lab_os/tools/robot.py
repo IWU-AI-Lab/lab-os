@@ -747,7 +747,7 @@ class RobotTools:
         return out
 
     def use_venue(self, venue: Venue) -> None:
-        """Another venue while running (the hub's visitors' mode, quick job 35): its limits."""
+        """Another venue while running (the hub's visitor mode, quick job 35): its limits."""
         self.venue, self.limits = venue, AiLimits.from_venue(venue)
 
     def gesture_path(self, name: str) -> tuple[list[dict], list[str]]:
@@ -781,7 +781,8 @@ class RobotTools:
 
     async def wave(self, arm: str | None = None) -> dict:
         """The wave (quick job 35): gestures.yaml's fixed poses around `ready`, at the venue's
-        speed. Logged like a tool call; the hub plays it, never an AI tool."""
+        speed. Logged like a tool call. The hub's assistant may start it in visitor mode; it never
+        chooses the motion, and it isn't one of the MCP tools."""
         self._check_arm(arm)
         path, notes = self.gesture_path("wave")
         return await self._run(path, notes)

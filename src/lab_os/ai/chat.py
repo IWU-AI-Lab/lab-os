@@ -8,8 +8,8 @@ The hub's chat reads and answers (rule 5), and opens pages on the screen that as
 2026-11-14): the page sends what it can show (`pages`), the model gets an `open_page` tool for them,
 and the turn yields an `open` event the page acts on. A round that only opens a page is answered
 right away ("Here's Teleop."), without asking the model again.
-With `commands` (the hub's visitors' mode, lab_os.hub.visitors) a few fixed phrases are answered
-before the AI is asked: no AI, no cost, also offline or with the budget used up.
+With `actions` (the hub's visitor mode, lab_os.hub.visitors) the model also gets the tools that
+start and exit visitor mode and wave the arm, when the question comes from the brain's own computer.
 With a `store` (lab_os.ai.history) the conversation is kept for a short while: saved after every
 answer, put aside by a reset, brought back with `restore()`.
 """
@@ -19,7 +19,7 @@ import contextlib
 import json
 import logging
 import re
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 
 import aiohttp
@@ -41,7 +41,8 @@ CONFIRM_TRIES, CONFIRM_GAP_S = 2, 3.0  # a failed check while connected: ask aga
 
 RULES = """\
 You are the assistant on the hub screen of {place}. It is {now}.
-You answer questions. You can't move the robot arms from here; your tools are what you can do now.
+You answer questions. Your tools are what you can do now: you can't move the robot arms from here
+except with a tool made for it.
 Answer in plain text without markdown, in one to four short sentences unless asked for more."""
 
 OPEN_PAGE = "open_page"
@@ -115,9 +116,10 @@ class Conversation:
         persona: Callable[[], Persona] | None = None,
         tools: ChatTools | None = None,
         store: ChatStore | None = None,
-        commands: Callable[[str, bool], Awaitable] | None = None,
+        actions=None,
     ):
-        """`commands(text, local)`: a fixed phrase's answer (`.text`, `.events`), or None.
+        """`actions`: more tools for this turn, `.tools(local)` → OpenAI-style tools and
+        `await .call(name, local)` → (the result for the model, events for the page).
         `persona`: read before every turn, so a venue or persona edit applies without a restart;
         it then sets the setup (`model`) and the personality instead of the two arguments."""
         self.assistant = assistant
@@ -130,7 +132,8 @@ class Conversation:
         self.place_name = place_name
         self._setups = setups
         self.store = store
-        self.commands = commands
+        self.actions = actions
+        self.say_next: str | None = None  # a welcome a typed turn's page asks to hear (`say`)
         # what's on screen: {"role": "user"|"assistant", ...}; after a restart, the one kept last
         self.messages: list[dict] = store.load() if store else []
         self.busy = False
@@ -292,21 +295,11 @@ class Conversation:
         self.store.save(self.messages)
         return True
 
-    async def _fixed(self, text: str, handled) -> AsyncIterator[dict]:
-        """A fixed phrase's turn: its line as the answer, its events first. Nothing was asked of
-        the AI, so nothing is spent."""
-        self.messages.append({"role": "user", "content": text})
-        self.assistant.set("speaking", 1.0)
-        yield {"type": "state", "state": "speaking"}
-        for ev in handled.events:
-            yield ev
-        yield {"type": "text", "text": handled.text}
-        self.messages.append({"role": "assistant", "content": handled.text})
-        if self.store:
-            self.store.save(self.messages)
-        self._settle()
-        yield {"type": "state", "state": self.assistant.state}
-        yield {"type": "done", "setup": None, "cost_usd": 0.0, "tools": 0, "fixed": True}
+    def take_say(self) -> str | None:
+        """The last welcome (the turn that started visitor mode), once: a typed turn's page asks
+        for it to be spoken."""
+        text, self.say_next = self.say_next, None
+        return text
 
     async def ask(
         self,
@@ -318,7 +311,7 @@ class Conversation:
         """One turn. Yields events for the page: state, text (pieces of the answer), open (show
         this page), done or error. Never raises for AI trouble: an error event carries the
         sentence to show. `pages`: what the asking page can show ({id: title}); none = no
-        open_page tool. `local`: asked on the brain's own computer (the visitors' phrases)."""
+        open_page tool. `local`: asked on the brain's own computer (visitor mode's tools)."""
         text = text.strip()
         pages = clean_pages(pages)
         if not text:
@@ -326,16 +319,6 @@ class Conversation:
         if self.busy:
             yield {"type": "error", "message": "I'm still answering the last question."}
             return
-        if self.commands:
-            self.busy = True
-            try:
-                handled = await self.commands(text, local)
-            finally:
-                self.busy = False
-            if handled is not None:
-                async for ev in self._fixed(text, handled):
-                    yield ev
-                return
         why = self.paused()
         if why:
             yield {"type": "error", "message": why}
@@ -349,6 +332,10 @@ class Conversation:
         tools = await self.tools.openai_tools() if self.tools else []
         if pages:
             tools = [*tools, page_tool(pages)]
+        actions = self.actions.tools(local) if self.actions else []
+        action_names = {t["function"]["name"] for t in actions}
+        tools = [*tools, *actions]
+        welcomed = False  # visitor mode started this turn: its answer is the welcome
         error, completed, rounds = None, False, 0
         try:
             self.assistant.set("thinking")
@@ -401,6 +388,12 @@ class Conversation:
                         else:
                             only_pages = False
                             result = f"Error: not a page here (one of: {', '.join(pages)})."
+                    elif call.name in action_names:
+                        only_pages = False
+                        result, events = await self.actions.call(call.name, local)
+                        for ev in events:
+                            welcomed = welcomed or (ev["type"] == "venue" and ev.get("visitors"))
+                            yield ev
                     elif self.tools:
                         only_pages = False
                         result = await self.tools.call(call.name, call.arguments)
@@ -456,6 +449,8 @@ class Conversation:
             cost,
         )
         self.messages.append({"role": "assistant", "content": answer.strip()})
+        if welcomed:
+            self.say_next = answer.strip()
         if self.store:
             self.store.save(self.messages)
         self.connected, self.problem = True, None

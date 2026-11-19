@@ -25,7 +25,7 @@ GET /api/devices         the place's devices (devices.yaml): kind, off limits, l
 GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
 GET /api/settings        the settings (src/lab_os/settings.py) and their values
 POST /api/settings       {"key": "theme:hub.look", "value": "design"}: change one (here only)
-POST /api/venue          {"to": "normal"}: visitors' mode off (Settings → Back to normal)
+POST /api/venue          {"to": "visitors" | "normal"}: visitor mode on or off (Settings; here only)
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
@@ -72,7 +72,7 @@ from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
-from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name, welcome
+from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
 from lab_os.quest_view import QuestView, QuestViewError
@@ -121,7 +121,7 @@ class Brain:
     voice: VoiceDesk
     check_ai: bool = False  # check the AI service in the background (off in tests)
     visitors: VisitorDesk | None = None  # "say hello to our visitors" (quick job 35)
-    started_in: str = ""  # the venue the brain started with: "back to normal" goes there
+    started_in: str = ""  # the venue the brain started with: exiting visitor mode goes there
 
 
 BRAIN = web.AppKey("brain", Brain)
@@ -254,19 +254,35 @@ async def api_ai_calls(request: web.Request) -> web.Response:
     )
 
 
-VISITORS_SETTINGS = "Settings are hidden while visitors are here. Back to normal shows them again."
+VISITORS_SETTINGS = "Settings are hidden in visitor mode. Exit visitor mode to see them again."
+
+
+def _visitor_mode(request: web.Request) -> dict | None:
+    """Settings → Visitor mode: on or not, its venue, where exiting goes, and whether this page may
+    switch it (the brain's computer only). None: the place has no venue for visitors."""
+    brain = request.app[BRAIN]
+    name = brain.venue.name if brain.venue.visitors else visitors_venue_name()
+    if name is None:
+        return None
+    return {
+        "on": brain.venue.visitors,
+        "venue": name,
+        "back_to": brain.started_in,
+        "here": is_local(request),
+    }
 
 
 async def api_settings_get(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
-    if brain.venue.visitors:  # visitors' mode: nothing to see or change, only the way back
+    mode = await asyncio.to_thread(_visitor_mode, request)
+    if brain.venue.visitors:  # visitor mode: nothing to see or change but the way out
         return web.json_response(
             {
                 "sections": [],
                 "writable": False,
                 "why_not": VISITORS_SETTINGS,
                 "venue": brain.venue.name,
-                "visitors": {"back_to": brain.started_in, "here": is_local(request)},
+                "visitor_mode": mode,
             }
         )
     return web.json_response(
@@ -277,6 +293,7 @@ async def api_settings_get(request: web.Request) -> web.Response:
             if is_local(request)
             else "Settings change only on the brain's computer.",
             "venue": brain.venue.name,
+            "visitor_mode": mode,
         }
     )
 
@@ -323,12 +340,13 @@ def switch_venue(app: web.Application, name: str | None) -> Venue:
     app[TOOLS_PROJECT].venue = venue
     loop.use_caps(venue.speed_cap_scale, venue.max_speed_scale, venue.one_to_one_cap)
     loop.mapper.config.floor_m = teleop_floor_m(venue, loop.arm.name)
-    log.info("venue: now %s (%s)", venue.name, "visitors" if venue.visitors else "back to normal")
+    log.info("venue: now %s (visitor mode %s)", venue.name, "on" if venue.visitors else "off")
     return venue
 
 
-def _welcome(app: web.Application, venue: Venue) -> str:
-    """The visitors' welcome: the place, what it is, the robots really plugged in now."""
+def _facts(app: web.Application, venue: Venue) -> dict:
+    """What the visitors' welcome may say: the place, what it is, the robot arms really plugged
+    in now, the cards on the screen. Only real facts: the assistant words it."""
     brain, loop = app[BRAIN], app[LOOP]
     try:
         place = config.load_place()  # re-read: the settings page may have changed it
@@ -339,9 +357,14 @@ def _welcome(app: web.Application, venue: Venue) -> str:
         names = robots_here(registry, loop.arm.name, loop.arm_connected)
         robots = [spoken_name(n, registry.devices[n].kind) for n in names]
     except (config.ConfigError, OSError) as e:
-        log.warning("visitors: no device list (%s)", e)
+        log.warning("visitor mode: no device list (%s)", e)
         robots = []
-    return welcome(place.name, place.about, robots, len(venue.cards))
+    return {
+        "place": place.name,
+        "about": place.about,
+        "robots_here": robots,
+        "cards_on_screen": [c["say"] for c in venue.cards],
+    }
 
 
 WAVE_REFUSED = {
@@ -376,21 +399,28 @@ async def _wave(app: web.Application) -> None:
 
 
 async def api_venue(request: web.Request) -> web.Response:
-    """Settings' "Back to normal": visitors' mode off (the brain's computer only)."""
+    """Settings → Visitor mode: start or exit it without asking the assistant (the brain's
+    computer only)."""
     if not is_local(request):
-        raise web.HTTPForbidden(text="Visitors' mode is switched off on the brain's computer.")
+        raise web.HTTPForbidden(text="Visitor mode is switched on the brain's computer.")
     body = await _body(request)
-    if body.get("to") != "normal":
-        raise web.HTTPBadRequest(text='send {"to": "normal"}')
+    to = body.get("to")
+    if to not in ("visitors", "normal"):
+        raise web.HTTPBadRequest(text='send {"to": "visitors"} or {"to": "normal"}')
+    name = visitors_venue_name() if to == "visitors" else None
+    if to == "visitors" and name is None:
+        return web.json_response(
+            {"ok": False, "message": "This place has no venue for visitors."}, status=400
+        )
     try:
-        venue = await asyncio.to_thread(switch_venue, request.app, None)
+        venue = await asyncio.to_thread(switch_venue, request.app, name)
     except ValueError as e:
         return web.json_response({"ok": False, "message": str(e)}, status=400)
-    return web.json_response({"ok": True, "venue": venue.name})
+    return web.json_response({"ok": True, "venue": venue.name, "visitors": venue.visitors})
 
 
 def _visitors(venue: Venue) -> dict | None:
-    """What the hub shows while visitors are here: the cards (None: not in visitors' mode)."""
+    """What the hub shows in visitor mode: the cards (None: visitor mode is off)."""
     return {"cards": list(venue.cards)} if venue.visitors else None
 
 
@@ -441,7 +471,7 @@ async def api_status(request: web.Request) -> web.Response:
     return web.json_response(
         {
             "venue": brain.venue.name,
-            "visitors": _visitors(brain.venue),  # visitors' mode: the cards (quick job 35)
+            "visitors": _visitors(brain.venue),  # visitor mode: the cards (quick job 35)
             "persona": brain.persona().public(),
             "internet": brain.internet.online if brain.internet else None,  # None = not known
             "ai": brain.chat.status(),
@@ -871,7 +901,7 @@ def create_brain_app(
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     own_place = place is None  # the active place's files: the budget is re-read as it changes
     place = place or config.load_place()
-    # the venue now (visitors' mode switches it while running), not the one it started with
+    # the venue now (visitor mode switches it while running), not the one it started with
     persona = persona or (lambda: current_persona(venue=app[BRAIN].venue.name))
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
@@ -889,10 +919,10 @@ def create_brain_app(
         venue=lambda: app[BRAIN].venue,
         visitors_venue=visitors_venue_name,
         switch=lambda name: switch_venue(app, name),
-        welcome=lambda v: _welcome(app, v),
+        facts=lambda v: _facts(app, v),
         wave=lambda: _wave(app),
     )
-    chat.commands = visitors.handle
+    chat.actions = visitors
     voice = VoiceDesk(
         chat,
         assistant,
@@ -902,7 +932,7 @@ def create_brain_app(
         greeting=lambda: _opening(chat),
         recordings=lambda: config.recordings_dir() / "greetings",
         venue_wake=lambda: app[BRAIN].venue.wake_word_on,
-        say=visitors.take_say,
+        say=chat.take_say,
     )
     app[BRAIN] = Brain(
         place,

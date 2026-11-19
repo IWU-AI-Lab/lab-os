@@ -156,7 +156,7 @@ class TeleopLoop:
     def use_caps(
         self, max_speed_scale: float, speed_scale: float, one_to_one_deg_per_s: float
     ) -> None:
-        """Another venue's caps while running (the hub's visitors' mode, quick job 35): its top
+        """Another venue's caps while running (the hub's visitor mode, quick job 35): its top
         speed, its starting speed and 1:1's top speed (0 = no 1:1: back to relative). The
         clutch drops, so the next grab starts under the new caps."""
         self.max_speed_scale = max_speed_scale

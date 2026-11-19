@@ -1,21 +1,24 @@
-"""Visitors' mode (quick job 35): "Hey Jarvis, say hello to our visitors" on the brain's own screen.
+"""Visitor mode (quick job 35): "Hey Jarvis, it's demo time" on the brain's own screen.
 
-A few fixed phrases are caught before the AI (so they work offline and cost nothing):
-- "say hello to our visitors", "demo time", "we have visitors": switch to the place's venue for
-  visitors (`visitors: true`, e.g. visit-day: the limits locked, Settings and the AI spend hidden),
-  speak a short welcome (what the place is, which robots are really plugged in) and show the
-  venue's "try this" cards;
-- "wave" (only while visitors are here): the arm plays gestures.yaml's fixed wave;
-- "back to normal": the venue the brain started with again.
-The switch lasts until "back to normal" or a restart. Only from the brain's own computer (or a
-headset on its USB): other screens may be in a hallway.
+The hub's assistant gets three tools, and the AI decides when to use them (no fixed phrases):
+- `start_visitor_mode`: when told visitors are here, a demo or tour is starting, guests arrived…
+  The brain switches to the place's venue for visitors (`visitors: true`, e.g. visit-day: Settings
+  and the AI spend hidden, the "try this" cards shown). The tool returns facts for the welcome (the
+  place, what it is, the robot arms really plugged in now); the assistant says it in its own words.
+- `exit_visitor_mode`: when told to exit visitor mode, the visitors have left, the demo is over.
+  Back to the venue the brain started with.
+- `wave` (only while visitors are here): the arm plays gestures.yaml's fixed wave. The AI decides
+  to wave; it never chooses the motion.
+Only offered to a question asked on the brain's own computer (or a headset on its USB cable):
+other screens may be in a hallway. Settings → Visitor mode does the same without asking.
+The switch lasts until it's exited or the brain restarts.
 """
 
 import asyncio
+import json
 import logging
-import re
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from lab_os.devices import Registry
@@ -23,26 +26,28 @@ from lab_os.venues import Venue
 
 log = logging.getLogger(__name__)
 
-TO_VISITORS = re.compile(
-    r"\b(say (hello|hi) to (our|the) (visitors|guests)|demo time|"
-    r"we('ve got| have got| have| got) (some )?(visitors|guests))\b"
-)
-TO_NORMAL = re.compile(r"\b(back to normal|normal mode)\b")
-WAVE = re.compile(r"\bwave\b")
-
+START, EXIT, WAVE = "start_visitor_mode", "exit_visitor_mode", "wave"
 ARM_KINDS = {"so101": "SO-101 arm", "xarm1s": "xArm"}  # robots the welcome names, as said aloud
 
+NO_ARGS = {"type": "object", "properties": {}}
+TOOLS = {
+    START: "Switch this hub to visitor mode. Use it when someone says visitors or guests are here, "
+    "it's demo time, a tour or a demo is starting, or asks you to say hello to the visitors. It "
+    "returns facts for your welcome: then welcome them in two or three short sentences (the place, "
+    "what it is, the robots that are here: only those) and point them to the cards on the screen.",
+    EXIT: "Leave visitor mode: back to the lab's normal mode. Use it when someone asks to exit or "
+    "stop visitor mode, says the visitors have left or the demo is over.",
+    WAVE: "Wave hello with the robot arm: a fixed, gentle wave (the arm goes to its ready pose "
+    "first). Use it when someone asks you or the robot to wave or say hi with the arm.",
+}
 
-def heard(text: str) -> str | None:
-    """Which fixed phrase this is: "visitors", "normal", "wave", or None (a question for the AI)."""
-    t = " ".join(re.sub(r"[^a-z' ]", " ", text.lower().replace("’", "'")).split())
-    if TO_VISITORS.search(t):
-        return "visitors"
-    if TO_NORMAL.search(t):
-        return "normal"
-    if WAVE.search(t):
-        return "wave"
-    return None
+
+def tool(name: str) -> dict:
+    """A tool in the OpenAI-style format the chat sends."""
+    return {
+        "type": "function",
+        "function": {"name": name, "description": TOOLS[name], "parameters": NO_ARGS},
+    }
 
 
 def spoken_name(name: str, kind: str) -> str:
@@ -67,79 +72,55 @@ def robots_here(
     return out
 
 
-def _and(items: list[str]) -> str:
-    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
-
-
-def welcome(place: str, about: str, robots: list[str], cards: int) -> str:
-    """The short welcome, from real facts only."""
-    first = f"Hello, and welcome to the {place}" + (f", {about}." if about else ".")
-    if robots:
-        verb = "is" if len(robots) == 1 else "are"
-        line = f"{_and(robots)[0].upper()}{_and(robots)[1:]} {verb} here today."
-    else:
-        line = "No robot arm is plugged in right now, but you can still talk to me."
-    try_line = " Try one of the cards on the screen." if cards else ""
-    return f"{first} {line}{try_line}"
-
-
-@dataclass
-class Handled:
-    """A fixed phrase's answer: the line said and shown, and events for the asking page."""
-
-    text: str
-    events: list[dict] = field(default_factory=list)
-
-
 @dataclass
 class VisitorDesk:
-    """The fixed phrases. `switch(name)` puts the brain in another venue (None = the one it
-    started with) and returns it; `venue()` is the venue now; `wave()` checks and starts the
-    wave (raises with a sentence if the arm can't); `welcome()` is the welcome's text."""
+    """The visitor-mode tools for the hub's chat. `switch(name)` puts the brain in another venue
+    (None = the one it started with) and returns it; `venue()` is the venue now; `facts(venue)` is
+    what the welcome may say; `wave()` checks and starts the wave (raises ValueError with a
+    sentence if the arm can't)."""
 
     venue: Callable[[], Venue]
     visitors_venue: Callable[[], str | None]
     switch: Callable[[str | None], Venue]
-    welcome: Callable[[Venue], str]
+    facts: Callable[[Venue], dict]
     wave: Callable[[], Awaitable[None]]
-    started_in: str = ""
-    to_say: str | None = None  # the last welcome, for a typed turn's page to have it spoken
 
-    def take_say(self) -> str | None:
-        """The welcome waiting to be spoken (a typed turn's page asks for it once)."""
-        line, self.to_say = self.to_say, None
-        return line
-
-    async def handle(self, text: str, local: bool) -> Handled | None:
-        what = heard(text)
-        now = self.venue()
-        if what is None or (what == "wave" and not now.visitors):
-            return None  # a question for the AI
+    def tools(self, local: bool) -> list[dict]:
+        """What the assistant may do now: start visitor mode, or (while it's on) exit it and wave.
+        Nothing for a screen other than the brain's own."""
         if not local:
-            return Handled("Visitors' mode is switched on and off from the brain's own screen.")
-        if what == "visitors":
-            name = self.visitors_venue()
-            if name is None:
-                return Handled(
-                    "This place has no venue for visitors yet (visitors: true in a venue file)."
-                )
+            return []
+        if self.venue().visitors:
+            return [tool(EXIT), tool(WAVE)]
+        return [tool(START)] if self.visitors_venue() else []
+
+    async def call(self, name: str, local: bool) -> tuple[str, list[dict]]:
+        """Run one: (the result for the AI, events for the asking page)."""
+        if not local or name not in TOOLS:
+            return f"Error: {name} isn't a tool you have here.", []
+        if name == START:
+            target = self.visitors_venue()
+            if target is None:
+                return "Error: this place has no venue for visitors.", []
+            now = self.venue()
             try:
-                venue = now if now.name == name else await asyncio.to_thread(self.switch, name)
+                venue = now if now.name == target else await asyncio.to_thread(self.switch, target)
             except ValueError as e:
-                return Handled(str(e))
-            line = self.welcome(venue)
-            self.to_say = line
-            return Handled(line, [{"type": "venue", "venue": venue.name, "visitors": True}])
-        if what == "normal":
-            if not now.visitors:
-                return Handled("We're already in the normal mode.")
+                return f"Error: visitor mode didn't start: {e}", []
+            facts = self.facts(venue) | {"visitor_mode": "on"}
+            return json.dumps(facts), [{"type": "venue", "venue": venue.name, "visitors": True}]
+        if name == EXIT:
+            if not self.venue().visitors:
+                return "Visitor mode was already off.", []
             venue = await asyncio.to_thread(self.switch, None)
-            return Handled(
-                f"Back to normal: the {venue.name} venue again.",
+            return (
+                f"Visitor mode is off: the {venue.name} venue again. Say so in a few words.",
                 [{"type": "venue", "venue": venue.name, "visitors": venue.visitors}],
             )
+        if not self.venue().visitors:
+            return "Error: the wave is only for visitor mode.", []
         try:
             await self.wave()
         except ValueError as e:
-            return Handled(f"I can't wave right now: {e}")
-        return Handled("Hello there!", [{"type": "wave"}])
+            return f"Error: the arm can't wave right now: {e} Say so kindly.", []
+        return "The arm is waving now (a few seconds). Say hello.", [{"type": "wave"}]

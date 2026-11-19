@@ -204,7 +204,7 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
 #reply .a .code { font: 400 0.85em var(--f-mono); color: var(--c); }
-/* visitors' mode (quick job 35): "try this" cards in a row above the core, under the strip (the calm space
+/* visitor mode (quick job 35): "try this" cards in a row above the core, under the strip (the calm space
    there; the answer and the ask line stay free below). A card that asks something is a box to press
    (brackets, like a module button); one that's only read is quieter */
 #try { position: absolute; top: calc(2.2rem + var(--edge-h) + 2vh); left: 50%; transform: translateX(-50%); z-index: 1; display: flex; gap: 1.6rem; width: max-content; max-width: 92%; }
@@ -829,7 +829,7 @@ body[data-mod="page"] #module .send { display: flex; }
 
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
   <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
-  <!-- visitors' mode (quick job 35): the venue's "try this" cards, above the core -->
+  <!-- visitor mode (quick job 35): the venue's "try this" cards, above the core -->
   <div id="try" hidden aria-label="Try this"></div>
 
   <section class="core alertable" data-state="idle" aria-label="Assistant: open the chat">
@@ -2056,6 +2056,7 @@ function beginTurn(q, fromCore, voiced = false) {
   if (fromCore) { clearTimeout(replyTimer); r.querySelector(".q").textContent = q; a.innerHTML = ""; r.classList.add("on"); }
   setState("thinking"); traces.forEach((t, i) => setTimeout(() => pulseTrace(t), i * 120));
   let live = null;  // the answer's bubble in the conversation
+  let sayAfter = false;  // visitor mode started on a typed turn: have the welcome spoken at the end
   const show = (text, typing) => {
     if (!live) return;  // no answer came (an error)
     live.innerHTML = richText(text); live.classList.toggle("typing", typing); $("#log-chat").scrollTop = 1e9;
@@ -2066,9 +2067,9 @@ function beginTurn(q, fromCore, voiced = false) {
   const onEvent = (ev) => {
     if (ev.type === "state") { if (!voiced && !(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out; spoken: the voice decides
     else if (ev.type === "open") showPage(ev.page);  // the assistant opened a page on this screen
-    else if (ev.type === "venue") {  // visitors' mode on or off (quick job 35): cards, spend, settings
+    else if (ev.type === "venue") {  // visitor mode on or off (quick job 35): cards, spend, settings
       pollStatus(); refreshFacts();
-      if (!voiced && ev.visitors && S.sound) V?.say();  // typed: the welcome is spoken too
+      sayAfter = !voiced && ev.visitors && S.sound;  // typed: the welcome is spoken too, once it's all there
     }
     else if (ev.type === "tool") {
       if (ev.name === "open_page") return;
@@ -2095,6 +2096,7 @@ function beginTurn(q, fromCore, voiced = false) {
     if (fromCore) replyTimer = setTimeout(() => r.classList.remove("on"), 14000);
     S.lastInput = performance.now();
     getJSON("/api/spend").then((s) => { S.spend = s; renderSpend(); });  // what that answer cost
+    if (sayAfter) V?.say();
   }
   return { onEvent, end, pace: (chars, ms) => pacer?.pace(chars, ms), free: () => pacer?.free() };
 }
@@ -3152,7 +3154,7 @@ async function pollStatus() {
   }
   return st;
 }
-// visitors' mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
+// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
 function renderTry(visitors) {
   const box = $("#try"), cards = visitors?.cards || [], key = JSON.stringify(cards);
   box.hidden = !cards.length;

@@ -417,7 +417,7 @@ document.addEventListener("keydown", (e) => e.key === "Escape" && onEsc(e, docum
 /* ---------- status strip, the assistant's state, the clock ---------- */
 // one missed poll (every 3 s) isn't "brain not reachable" yet: two in a row are (quick job 32)
 let statusMisses = 0;
-// visitors' mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
+// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
 function renderTry(visitors) {
   const box = $("#try"), cards = visitors?.cards || [], key = JSON.stringify(cards);
   box.hidden = !cards.length;
@@ -605,6 +605,10 @@ async function ask(text) {
   }
   S.asking = false;
   noteInput();
+  if (S.sayAfter) {
+    S.sayAfter = false;
+    voice.say();
+  }
   renderSpend(await getJSON("/api/spend")); // what that answer cost
 }
 
@@ -627,10 +631,10 @@ function onChatEvent(ev, answer, paced = false) {
     if (!paced) setAssistant(ev.state, ev.state === "speaking" ? 1 : 0);
   }
   else if (ev.type === "open") showPage(ev.page); // the assistant opened a page on this screen
-  else if (ev.type === "venue") { // visitors' mode on or off (quick job 35): cards, spend, settings
+  else if (ev.type === "venue") { // visitor mode on or off (quick job 35): cards, spend, settings
     pollStatus();
     refreshFacts();
-    if (!paced && ev.visitors) voice.say(); // typed: the welcome is spoken too
+    S.sayAfter = !paced && ev.visitors; // typed: the welcome is spoken too, once it's all there
   }
   else if (ev.type === "tool" && ev.name === "open_page") return;
   else if (ev.type === "tool") $("#state-word").textContent = `looking up: ${TOOL_WORDS[ev.name] || ev.name}`;

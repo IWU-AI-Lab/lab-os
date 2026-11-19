@@ -1,6 +1,6 @@
 """Safety limits that can be switched off (quick job 2): the per-move limit, the speed cap and the
 floor, each on by default, off in the venue file or from Settings; never off on a public venue or
-the visit-day venue (`limits_locked`). On the fake arm; no hardware."""
+one with `limits_locked: true`. On the fake arm; no hardware."""
 
 import argparse
 import asyncio
@@ -82,14 +82,15 @@ def test_speed_cap_off_leaves_1to1_off_where_it_is_off(home):
     assert load_venue("home").one_to_one_cap == 0.0  # 1:1 switched off is a mode, not a limit
 
 
-def test_the_visit_day_venue_and_public_venues_refuse(home):
+def test_locked_and_public_venues_refuse(home):
     write_venue(home, "  floor: off\n", "limits_locked: true\n")
     with pytest.raises(config.ConfigError, match="can't be switched off here.*limits.floor"):
         load_venue("home")
     write_venue(home, "  speed_cap: off\n", "public: true\n")
     with pytest.raises(config.ConfigError, match="limits.speed_cap is off"):
         load_venue("home")
-    assert load_venue("visit-day", REPO_ROOT / "config").limits_fixed
+    # visit-day was locked until 2026-11-18; the builder then asked for no extra restrictions
+    assert not load_venue("visit-day", REPO_ROOT / "config").limits_fixed
 
 
 def test_unknown_limit_is_an_error(home):
@@ -178,9 +179,9 @@ def test_settings_switch_each_off_and_on(home):
     assert load_venue("home").limits_off == ["per_move", "speed_cap"]
 
 
-def test_settings_refuse_on_the_visit_day_venue(home):
+def test_settings_refuse_on_a_locked_venue(home):
     write_venue(home, extra="limits_locked: true\n")
-    assert all("visit days" in f["locked"] for f in limit_fields().values())
+    assert all("limits_locked: true" in f["locked"] for f in limit_fields().values())
     with pytest.raises(settings.SettingError, match="can't be switched off here"):
         settings.write("venue:limits.floor", False, "home")
     assert settings.write("venue:limits.floor", True, "home") is True  # on is always fine

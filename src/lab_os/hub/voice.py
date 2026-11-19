@@ -218,7 +218,7 @@ class VoiceDesk:
     links: set = field(default_factory=set)
     resting: dict = field(default_factory=dict)  # TTS models over their limit → until when
     venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
-    # a typed fixed answer to speak (the visitors' welcome, quick job 35), taken once; None = none
+    # a typed turn's answer to speak (visitor mode's welcome, quick job 35), taken once; None = none
     say: Callable[[], str | None] = lambda: None
     wake_models: WakeModels = field(default_factory=WakeModels)
     timings: deque = field(default_factory=lambda: deque(maxlen=TIMINGS_KEPT))
@@ -496,7 +496,7 @@ class VoiceLink:
         self, desk: VoiceDesk, ws: web.WebSocketResponse, device: str = "", local: bool = False
     ):
         self.desk, self.ws, self.device = desk, ws, device
-        self.local = local  # the page runs on the brain's computer (the visitors' phrases)
+        self.local = local  # the page runs on the brain's computer (visitor mode's tools)
         self.hearing = None
         self._starting: asyncio.Task | None = None  # connecting to the service (audio waits)
         self.mode = "ask"
@@ -808,6 +808,7 @@ class VoiceLink:
         finally:
             speaker.close()
             await speaker.task
+            self.desk.chat.take_say()  # a spoken welcome was just said: nothing left to say
             self.send({"type": "audio_end", "count": speaker.sent})
             self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
             if speaker.sent:
@@ -867,8 +868,8 @@ class VoiceLink:
         self.task = asyncio.create_task(self._greet(setup, text, saved))
 
     def say(self) -> None:
-        """Speak the typed fixed answer waiting to be said (the visitors' welcome, typed on this
-        screen): only that line, once, and only on the brain's own computer."""
+        """Speak the welcome a typed turn left waiting (visitor mode, typed on this screen): only
+        that answer, once, and only on the brain's own computer."""
         text = self.desk.say() if self.local else None
         if not text or (self.task and not self.task.done()) or self.desk.why_not():
             self.send({"type": "audio_end", "count": 0})
