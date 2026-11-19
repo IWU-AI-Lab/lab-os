@@ -18,6 +18,7 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
    - **Point and "move there"** in the headset: in the Quest with the 3D arm lined up, point at a spot on the table, say or press "move there", and the gripper goes there. No AI. The first piece of "put that there".
    - **"What's on the table?"**: the stand camera's picture goes to Gemini, which names the objects; the hub shows the picture with labels and the assistant says them.
    - **Two arms at once:** in the Quest, the left hand drives one SO-101 and the right hand the other (`docs/plan/ideas.md` → "Two arms at once").
+   - **Tic-tac-toe** (stretch, added 2026-11-18): the arm plays tic-tac-toe with cubes on a paper grid, seeing it with the stand camera, from an AI tool through the brain's MCP tools. Tried with more than one model (Claude Code, Codex, Gemini CLI are all MCP clients), so if one model can't, another may.
 8. **The Newline** (step 12): pick the route if it's used; not blocking.
 9. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-12-03` (demo only from a tag).
 

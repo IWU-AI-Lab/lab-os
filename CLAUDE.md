@@ -39,6 +39,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
 - **Small commits, branch per feature**; `main` always runs. Demo only from a tagged version.
 - **Before you start, look at what other sessions are doing:** `gh pr list` and `git branch -r`. Stay out of files an open pull request changes; if you must touch one, say so in your report. Two sessions at once never share a folder (each its own `git worktree`).
 - **Merge your own pull request once the tests pass on GitHub** (`gh pr checks --watch`, then `gh pr merge --merge --delete-branch`). Except when it changes arm movement or the safety layer (STOP, limits, the floor, speed caps, one controller at a time), the green arms' rules, or `.claude/` (permissions, the hook): then leave it open and tell the builder in one sentence what to look at.
+- **Say each fact in one place** (what's waiting on whom in `docs/plan/current-focus.md`, devices in `config/devices.yaml`, decisions in the log) and point to it elsewhere, so there's one copy to keep right. When two docs disagree, the newest decision in `docs/plan/lab-jarvis-log.md` wins: fix the other one.
 - **Update the docs in the same pull request, and leave no leftovers.** When you change how something works or what it's called, search every doc for the old name and wording (`grep -rn`) and fix or delete each place that's now wrong. Dated history (the log's decision rows, `docs/archive/`, GOTCHAS entries) stays as written; add a line saying what replaced it.
 
 ## Commands
