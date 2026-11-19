@@ -636,9 +636,12 @@ def lab_status(app: web.Application) -> dict:
     }
     if not brain.venue.hides_spend:  # a public screen or visitors: not what's spent
         m = brain.chat.spend.month()
-        out["ai_spend"] = {"month": m["month"], "spent_usd": round(m["spent_usd"], 2)} | (
-            {"budget_usd": m["budget_usd"]} if m["budget_usd"] is not None else {}
-        )
+        out["ai_spend"] = {
+            "month": m["month"],
+            "spent_usd": round(m["spent_usd"], 2),
+            "estimated": True,  # say "about" / "estimated" (quick job 41)
+            "counts": "this computer's brain only, not other brains that use the same key",
+        } | ({"budget_usd": m["budget_usd"]} if m["budget_usd"] is not None else {})
     nxt = app[TOOLS_PROJECT].project_status().get("next") if TOOLS_PROJECT in app else None
     if nxt:
         out["next_step"] = nxt

@@ -37,6 +37,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Typed chat under the core ("Ask anything"); the answers show at a steady speed; the History page | ✅ | OpenAI (`main`) since 2026-11-18; the free Gemini key is the fallback. |
 | AI setups in `config/models.yaml` (OpenAI, Gemini, a local Ollama); Gemini when there is no OpenAI key | ✅ | |
 | A spend log for each answer and a monthly budget that pauses the chat; the budget changes in Settings and applies at once | ✅ | $20 a month in the lab. |
+| The AI Spend panel says "Estimated · this computer's brain only"; its page says how the cost is calculated and how much of it is less exact (voice, counted tokens). The assistant says "estimated" with the number. | 🧪 | Tested without hardware and in headless Chrome. The real cost from OpenAI needs an Admin key (`docs/guides/hub.md` → "AI Spend"). Lab: check F.15. |
 | The chat knows the project: it reads the docs, the git history and the device list, and writes prompts for Claude Code or Codex (Copy button) | ✅ | Read tools only. The one move it can start is visitor mode's fixed wave. |
 | **Push-to-talk:** hold the mic button (or Space), talk, release. The answer is spoken sentence by sentence, and the core follows its loudness. The same conversation as typing. | ✅ | Works at the lab desktop with a USB microphone and on the Quest. No mic button without a secure page, a microphone, or voice at the brain. |
 | **Dictation:** tap the mic (or Space). The words go into the ask line while you talk; it stops after a short silence or a second tap. | 🧪 | Selected for each device: ⚙ → This Device → Talking to It. |
@@ -105,6 +106,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Works offline: every web library and font is in the repository | ✅ | |
 | A one-line install on a new Linux computer (`scripts/install.sh`) | ✅ | |
 | Tests and lint on every push (GitHub Actions), no hardware needed | ✅ | |
+| Colours in the terminal: each log line starts with the time, warnings are amber and errors red. There is no colour in a pipe or a log file, or when `NO_COLOR` is set. | 🧪 | Tested without hardware and in a pseudo-terminal on macOS. Lab: check F.16. |
 
 ## Training launcher (so101-green)
 | Feature | Status | Notes |

@@ -305,9 +305,10 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
 This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.
 ```json
 {"available": true, "month": "2026-11", "spent_usd": 0.0123, "budget_usd": 20.0, "chats": 7,
- "by_setup": {"main": 0.0123, "backup": 0.0}}
+ "by_setup": {"main": 0.0123, "backup": 0.0}, "estimated": true, "counted_on": "lab-desktop",
+ "less_exact_usd": 0.002}
 ```
-`{"available": false}` on a venue with `public: true`, or in visitor mode (`visitors: true`). `budget_usd` is `null` when the place sets none. Also `"voice_minutes"` (heard + spoken this month); `chats` counts chat turns only.
+`{"available": false}` on a venue with `public: true`, or in visitor mode (`visitors: true`). `budget_usd` is `null` when the place sets none. Also `"voice_minutes"` (heard + spoken this month); `chats` counts chat turns only. Since 2026-11-19 (quick job 41): `estimated` is always `true` (lab-os calculates the cost; `docs/guides/hub.md` → "AI Spend"), `counted_on` is the brain's computer name (only this brain's log is counted), and `less_exact_usd` is the part from voice and from counted tokens (entries with `estimated: true`).
 
 ### Voice (`/ws/voice`)
 A WebSocket per page (`docs/guides/voice.md`): `ws://<host>:8080/ws/voice?device=<name>` (`device`: the page's device name, only for the brain's log; may be left out). The page records and plays; the brain hears, answers through the chat above, and speaks. One utterance at a time per page; the chat's one turn at a time still holds.

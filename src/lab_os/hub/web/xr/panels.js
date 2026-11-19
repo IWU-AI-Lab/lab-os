@@ -40,6 +40,7 @@ export function wrap(g, text, maxW, lines = 99) {
 }
 const fmtDay = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short" }); };
 export const usd = (v, dec = 2) => `$${Number(v || 0).toFixed(dec)}`;
+const SPEND_HOW = "Estimated · this computer's brain only"; // the AI Spend callout (quick job 41)
 const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], camera: ["i-cam", "Cameras"], pc: ["i-pc", "Computers"], pi: ["i-pi", "Raspberry Pis"] };
 const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
 export function devicesFrom(list) {
@@ -185,7 +186,10 @@ export class Callout {
       g.textAlign = "right"; g.font = `${FONT.linesW} 0.78px ${FONT.lines}`; g.fillText("this month", w, 1.5);
       g.fillStyle = C.line; g.fillRect(0, 2.3, w, 6 / R);
       g.fillStyle = C.primary; g.fillRect(0, 2.3, Math.max(2 / R, B ? (w * Math.min(1, spent / B)) : 0), 6 / R);
-      return 2.3 + 6 / R;
+      // what the total is (quick job 41): this brain's own estimate, not the bill
+      g.textAlign = "left"; g.font = `${FONT.linesW} 0.7px ${FONT.lines}`; g.fillStyle = C.dim;
+      g.fillText(SPEND_HOW, 0, 3.6);
+      return 3.8;
     }
     if (this.id === "commits") {
       const per = (d?.per_day || []).map((x) => x.count), days = this.days, counts = per.slice(-days);
@@ -383,11 +387,12 @@ export class DetailsPage {
       });
     } else if (id === "spend") {
       const s = f.spend || {}, B = s.budget_usd, spent = s.spent_usd || 0, now = new Date();
-      dline(L, top, "This month", colW);
+      dline(L, top, "This month, estimated", colW);
       bigNum(L, top + 12, usd(spent), B ? `of ${usd(B, 0)}` : "no budget set");
       g.fillStyle = C.line; g.fillRect(L, top + 16, colW, 0.8); g.fillStyle = C.primary; g.fillRect(L, top + 16, Math.max(0.3, B ? colW * Math.min(1, spent / B) : 0), 0.8);
       let y = para(L, top + 23, `${s.chats || 0} answer${s.chats === 1 ? "" : "s"} so far this month; each one logs what it cost.`, colW);
-      if (B) para(L, y + 2, `Budget: ${usd(B, 0)} a month. At the budget the chat pauses and says why. It resets on the 1st.`, colW);
+      if (B) y = para(L, y + 2, `Budget: ${usd(B, 0)} a month. At the budget the chat pauses and says why. It resets on the 1st.`, colW);
+      para(L, y + 2, "This is an estimate by this computer's brain: the token counts times the prices in models.yaml. Another brain that uses the same key is not counted.", colW, 2.1, C.dim);
       dline(R2, top, B ? `Spent so far, against an even pace to ${usd(B, 0)}` : "Spent so far", colW);
       const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate(), today = now.getDate(), ch = 34, cy = top + 6, topV = Math.max(B || 0, spent, 0.01);
       const X = (dd) => R2 + (dd / dim) * colW, Y = (v) => cy + ch - (v / topV) * (ch - 4);

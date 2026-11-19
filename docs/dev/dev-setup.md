@@ -97,6 +97,8 @@ Build at home against fakes → test in the lab on real hardware → note surpri
 ## Standards
 Device names, accounts, folders on robots, logs, secrets and principles: `docs/plan/lab-jarvis-log.md` → "Standards" (the one list). Hacks: `# HACK:` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
 
+**Terminal output** (quick job 40, 2026-11-19): `src/lab_os/term.py` holds the one rule, after clig.dev and no-color.org. Colour goes only to a terminal. `NO_COLOR` (not empty) switches it off, and `FORCE_COLOR` switches it on. A new command calls `term.setup_logging()` for its log (the time, amber warnings, red errors; the `colorlog` library). It prints a warning with `print(term.warning(...))` and an error with `term.error(...)`. Its entry point in `pyproject.toml` is `run = term.exit_in_red(main)`, so a `SystemExit("...")` message shows in red. Keep each line's words: lab checks copy them.
+
 ---
 
 ## Sources

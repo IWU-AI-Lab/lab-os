@@ -1,9 +1,16 @@
 """What the AI has cost: one JSON line per chat turn (and per voice turn: seconds heard and spoken)
 in <logs>/ai-spend/<YYYY-MM>.jsonl, the month's total,
-and the monthly budget (place.yaml → ai_budget_usd_month) that pauses the chat."""
+and the monthly budget (place.yaml → ai_budget_usd_month) that pauses the chat.
+
+Every cost here is an estimate made by this brain (quick job 41): chat = the token counts the
+service sends back × the prices typed into models.yaml; voice = the seconds lab-os measured × a
+price per minute. Entries that are less exact than that (voice, and chat whose tokens lab-os
+counted itself) have `estimated: true`. Another brain that uses the same key keeps its own log, so
+it isn't counted here. OpenAI's own costs need an Admin key (docs/guides/hub.md → "AI Spend")."""
 
 import json
 import logging
+import socket
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -86,6 +93,7 @@ class SpendLog:
             "what": what,
             "heard_s": round(heard_s, 2),
             "spoken_s": round(spoken_s, 2),
+            "estimated": True,  # seconds measured here, not what the service billed
             "cost_usd": round(cost_usd, 6),
         }
         self.folder.mkdir(parents=True, exist_ok=True)
@@ -94,15 +102,20 @@ class SpendLog:
         return entry
 
     def month(self, now: datetime | None = None) -> dict:
-        """This month so far: total, per setup, the budget and what's left."""
+        """This month so far: total, per setup, the budget and what's left. `estimated` and
+        `counted_on` say what the total is: this brain's own estimate (the pages show both)."""
         entries = self.entries(now)
         by_setup: dict[str, float] = {}
         for e in entries:
             by_setup[e["setup"]] = by_setup.get(e["setup"], 0.0) + float(e["cost_usd"])
         total = sum(by_setup.values())
+        less_exact = sum(float(e["cost_usd"]) for e in entries if less_exact_entry(e))
         return {
             "month": f"{now or datetime.now():%Y-%m}",
             "spent_usd": round(total, 6),
+            "estimated": True,
+            "counted_on": socket.gethostname(),
+            "less_exact_usd": round(less_exact, 6),
             "budget_usd": self.budget_usd,
             "chats": sum(1 for e in entries if e.get("kind", "chat") == "chat"),
             "voice_minutes": round(
@@ -114,3 +127,9 @@ class SpendLog:
     def over_budget(self, now: datetime | None = None) -> bool:
         budget = self.budget_usd
         return budget is not None and self.month(now)["spent_usd"] >= budget
+
+
+def less_exact_entry(entry: dict) -> bool:
+    """Voice (measured seconds) and chat whose tokens lab-os counted itself. Voice entries written
+    before quick job 41 have no `estimated` field."""
+    return bool(entry.get("estimated")) or entry.get("kind") == "voice"

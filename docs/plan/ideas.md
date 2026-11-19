@@ -53,7 +53,7 @@ In the Quest, with the 3D arm lined up on the real one, point at a spot on the t
 Hand signs seen by a webcam or the Kinect do hub things: move a window to another screen, open a page, go back. Later than the webcam teleop preview, and on the same hand tracking. **Watch out:** a gesture must not fire by accident while someone talks with their hands; one clear "start" sign first. The older "Kinect gestures" line under "Triggers & sign-in" below is the same idea.
 
 ### One AI budget for every brain
-Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key, so the budget on one brain doesn't see what the other spent. One budget for the key would count both. Ways: the real cost from OpenAI (it counts every brain on the key; quick job 41 checks whether our key can read it), OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs.
+Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key, so the budget on one brain doesn't see what the other spent. One budget for the key would count both. Ways: the real cost from OpenAI (it counts every brain on the key; it needs an Admin key that only an Organization Owner can make, quick job 41, 2026-11-19: `docs/guides/hub.md` → "AI Spend"), OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs.
 
 ## Recent ideas (2026-11-18)
 

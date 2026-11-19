@@ -4,13 +4,12 @@ pages inside it, and drives the fake arm (or a real one via --arm)."""
 import argparse
 import asyncio
 import contextlib
-import logging
 import os
 import socket
 import sys
 from pathlib import Path
 
-from lab_os import config
+from lab_os import config, term
 from lab_os.hub import launch
 from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
@@ -238,7 +237,7 @@ def main(argv: list[str] | None = None) -> None:
     # a real arm on the network: other screens watch (and can STOP), only this computer drives
     local_control_only = args.host not in LOCAL_HOSTS and any_real_arm(args)
     args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
-    logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
+    term.setup_logging()
     use_config(args)
     drive_from = _addresses(args.drive_from)
     loop = make_loop(args)  # stops with a message if the venue or arm doesn't fit this place
@@ -318,5 +317,7 @@ def _icon(args) -> None:
         print("  " + " ".join(launch.start_command(device, extra)))
 
 
+run = term.exit_in_red(main)  # the `lab-os` command; tests call main()
+
 if __name__ == "__main__":
-    main()
+    run()
