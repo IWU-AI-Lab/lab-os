@@ -80,6 +80,31 @@ fullscreenButton($("#fs-btn"), {
   },
 });
 
+// what the Quest sees (quick job 36): scrcpy in a window on the brain's computer. Only there, and only
+// once it's installed (lab-os quest-view --install)
+async function pollQuestView() {
+  const q = await getJSON("/api/quest-view");
+  const b = $("#qv-btn");
+  b.hidden = !q?.here || !q.installed;
+  if (b.hidden) return;
+  b.setAttribute("aria-pressed", q.running);
+  b.textContent = q.running ? "Close Quest view" : "Quest view";
+  b.title = q.running ? `The view of ${q.headset} is open` : q.why_not || "Show what the Quest sees, in a window here";
+}
+$("#qv-btn").addEventListener("click", async () => {
+  const on = $("#qv-btn").getAttribute("aria-pressed") === "true";
+  try {
+    const res = await fetch(`/api/quest-view/${on ? "stop" : "start"}`, { method: "POST", body: "{}" });
+    const r = await res.json();
+    if (!r.ok) showError(r.message);
+  } catch (e) {
+    showError(`The Quest's view didn't ${on ? "close" : "open"}: ${e.message}`);
+  }
+  pollQuestView();
+});
+pollQuestView();
+setInterval(pollQuestView, 5000);
+
 function onFullscreenChange() {
   if (fsElement()) lockEsc();
   if (S.screen === "start") renderStart();
