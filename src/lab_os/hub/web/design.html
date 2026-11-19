@@ -726,6 +726,14 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .tool:hover, .tool:focus-visible { color: var(--hot); opacity: 1; outline: none; }
 .tool[hidden] { display: none; }  /* .tool's display: grid would otherwise beat the hidden attribute */
 .tool.fs-unavailable { opacity: 0.4; }
+/* ⏻ on the brain's own screen (quick job 6): back to the start screen, or shut lab-os down (asks first) */
+#power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
+#power-menu[hidden] { display: none; }
+#power-menu p { margin: 0.2rem 0 0.6rem; font: var(--w-lines) 0.85rem/1.45 var(--f-lines); color: var(--text-dim); }
+#power-menu .warn { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--accent); }
+#power-menu .warn .ico { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; }
+#power-menu .oo-row.go { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+#power-menu .oo-row.go:hover:not(:disabled), #power-menu .oo-row.go:focus-visible { border-color: var(--danger); color: var(--hot); }
 .tool[aria-pressed="true"] { color: var(--c); opacity: 1; filter: drop-shadow(0 0 4px var(--c)); }  /* the Quest's view is open */
 .fs-why { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; max-width: 26rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line); background: var(--surface, var(--bg));
   font: var(--w-lines) 0.8rem/1.45 var(--f-lines); color: var(--accent); }
@@ -3284,7 +3292,70 @@ $("#qv-btn").addEventListener("click", async (e) => {
 });
 pollQuestView();
 setInterval(pollQuestView, 5000);
-$("#sleep-btn").addEventListener("click", (e) => { e.stopPropagation(); SFX.close(); toStart("the power button"); });
+// ⏻: back to the start screen. On the brain's own screen (and not on a public venue) it opens a small menu
+// that can also shut lab-os down, with a confirmation that warns about the arm first (quick job 6)
+let canShutDown = false;
+getJSON("/api/shutdown").then((r) => (canShutDown = !!r?.allowed));
+const PM = document.body.appendChild(Object.assign(document.createElement("div"), { id: "power-menu", hidden: true }));  // outside the strip: its cut corner would clip it
+function closePower() { PM.hidden = true; $("#sleep-btn").setAttribute("aria-expanded", "false"); }
+function powerRow(label, sub, run, cls = "") {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = `oo-row ${cls}`;
+  b.innerHTML = `<span class="oo-name"></span><span class="oo-sub"></span>`;
+  b.querySelector(".oo-name").textContent = label; b.querySelector(".oo-sub").textContent = sub;
+  b.addEventListener("click", (e) => { e.stopPropagation(); run(); });
+  return b;
+}
+function powerMenu() {
+  PM.replaceChildren(Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Power" }),
+    powerRow("Back to the start screen", "lab-os stays on", () => { closePower(); SFX.close(); toStart("the power button"); }),
+    powerRow("Shut down lab-os", "asks first", confirmShutDown));
+}
+async function confirmShutDown() {
+  const r = await getJSON("/api/shutdown");
+  if (!r?.allowed) { PM.replaceChildren(Object.assign(document.createElement("p"), { className: "oo-msg", textContent: r?.why_not || "The brain didn't answer." })); return; }
+  const say = document.createElement("p");
+  say.textContent = "Stops any move, lets go of the arm, closes the cameras and microphones and stops the brain. Every screen then says lab-os is off; the \"Start lab-os\" icon starts it again.";
+  const parts = [Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Shut down lab-os?" }), say];
+  if (r.warning) {
+    const w = document.createElement("p");
+    w.className = "warn";
+    w.innerHTML = `<svg class="ico"><use href="#i-warn"/></svg><span></span>`;
+    w.querySelector("span").textContent = r.warning;
+    parts.push(w);
+  }
+  const msg = Object.assign(document.createElement("p"), { className: "oo-msg" });
+  msg.setAttribute("aria-live", "polite");
+  const go = powerRow("Shut down", "now", async () => {
+    PM.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    msg.textContent = "Shutting down…";
+    try {
+      const res = await fetch("/api/shutdown", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: D?.name || "" }) });
+      if (!res.ok) throw new Error(await res.text());
+      const m = await res.json();
+      closePower();
+      (await import("/web/off.js")).showOff({ from: D?.name || "", time_ms: Date.now() + (S.clockOffset || 0) });
+      V?.off();
+      console.info(`hub: ${m.message}`);
+    } catch (e) {
+      msg.textContent = `Not shut down: ${e.message}`;
+      PM.querySelectorAll("button").forEach((b) => (b.disabled = false));
+    }
+  }, "go");
+  parts.push(go, powerRow("Cancel", "keep it running", closePower), msg);
+  PM.replaceChildren(...parts);
+  go.focus();
+}
+$("#sleep-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!canShutDown) { SFX.close(); toStart("the power button"); return; }
+  if (!PM.hidden) return closePower();
+  SFX.blip(); powerMenu();
+  PM.hidden = false; $("#sleep-btn").setAttribute("aria-expanded", "true");
+});
+PM.addEventListener("click", (e) => e.stopPropagation());
+addEventListener("pointerdown", (e) => { if (!PM.hidden && !PM.contains(e.target) && e.target.closest("#sleep-btn") === null) closePower(); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !PM.hidden) { e.stopImmediatePropagation(); closePower(); } }, { capture: true });
 $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
 // A module page full screen on another monitor of this computer (HDMI/DP): Chrome's Window Management
 // API places the window there (it asks once for permission; localhost or https only). The page then asks
@@ -3371,6 +3442,7 @@ import("/web/device.js").then((m) => {
     onClose: () => { if (S.moduleOpen === "page") closeModule(); },
     onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
+    onOff: () => V?.off(),
   });
 }).catch((e) => console.warn(`hub: no devices (${e.message})`));
 // nobody there for hub.reset_after_s (never while something is in use): back to the start screen, with a

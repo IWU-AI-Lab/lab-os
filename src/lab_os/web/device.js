@@ -1,7 +1,8 @@
 // This page's device (focus step 8, docs/guides/hub.md → "Devices"): a computer or screen with the hub open
 // under a name in its address (`/?device=desk`). The brain keeps the list of devices that have the hub open
 // and each device's own settings ("This device"); a hub page keeps one WebSocket to it (/ws/hub-device,
-// docs/dev/protocol.md → "Devices"), which reconnects by itself when the brain restarts.
+// docs/dev/protocol.md → "Devices"), which reconnects by itself when the brain restarts. When the brain is shut
+// down from the hub ("brain_off"), the page says lab-os is off (/web/off.js) and reloads once it's back.
 //
 //   deviceName()       the name: `?device=` in this page's address, else the hub's around it, else the
 //                      name this browser last used ("" = no name)
@@ -10,6 +11,8 @@
 //   connectDevice({…}) the hub page's connection: the device list, "open on…", "bring it back"
 //
 // The designed hub (design.html) reads the settings with the same rule inline (prefsKey there).
+
+import { backOn, showOff } from "/web/off.js";
 
 const NAME_KEY = "lab-os.device"; // the name this browser last used
 const LEGACY_KEY = "lab-os.screen"; // "This screen" before step 8; still the settings of a page with no name
@@ -84,7 +87,8 @@ async function screenInfo() {
  * h.look: "plain" | "design"; h.state(): {stage: "start"|"hub", showing: module id | null, from, from_window};
  * h.onOpen(module, from, fromWindow): open that module here (sent from another device);
  * h.onClose(): close the module here ("bring it back" there); h.onDevices(list): the brain's list changed;
- * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not.
+ * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not;
+ * h.onOff(): lab-os was shut down (the page is covered; close the microphone).
  */
 export function connectDevice(h) {
   const name = deviceName();
@@ -122,6 +126,7 @@ export function connectDevice(h) {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (m.type === "welcome") {
+        backOn();
         wid = m.window;
         try { sessionStorage.setItem("lab-os.window", wid); } catch { /* none */ }
         if (m.why_no_name) console.warn(`device: ${m.why_no_name}`);
@@ -137,6 +142,10 @@ export function connectDevice(h) {
       } else if (m.type === "settings") applySettings(m.settings, false);
       else if (m.type === "open") h.onOpen?.(m.module, m.from || "", m.from_window || "");
       else if (m.type === "close") h.onClose?.();
+      else if (m.type === "brain_off") {
+        showOff(m);
+        h.onOff?.();
+      }
     };
     ws.onclose = () => {
       if (up) console.info("device: the brain went away; reconnecting");

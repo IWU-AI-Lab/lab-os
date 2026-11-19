@@ -1,6 +1,10 @@
 // One auto-reconnecting WebSocket to the brain per role, shared by every module on the page.
 //   const link = getLink("input");  link.on("status", fn);  link.send({type: "xr_input", ...})
 // Message format: docs/dev/protocol.md. Events "open" / "close" fire on (re)connect / disconnect.
+// "brain_off" (the hub's "Shut down lab-os") covers the page with "lab-os is off" (/web/off.js); the page
+// reloads once the brain answers again.
+import { backOn, showOff } from "/web/off.js";
+
 const links = {};
 
 export function getLink(role = "input") {
@@ -13,13 +17,17 @@ export function getLink(role = "input") {
 
   function open() {
     ws = new WebSocket(url);
-    ws.onopen = () => emit("open");
+    ws.onopen = () => {
+      backOn();
+      emit("open");
+    };
     ws.onclose = () => {
       emit("close");
       setTimeout(open, 1000);
     };
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
+      if (msg.type === "brain_off") showOff(msg);
       emit(msg.type, msg);
     };
   }

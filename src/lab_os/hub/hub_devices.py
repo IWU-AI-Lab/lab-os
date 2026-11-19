@@ -252,6 +252,10 @@ class HubDevices:
         msg = {"type": "devices", "devices": self.listing()}
         await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values())))
 
+    async def tell_all(self, msg: dict) -> None:
+        """One message to every hub page (e.g. lab-os is off)."""
+        await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values())))
+
     async def push_settings(self, device: str, values: dict) -> None:
         msg = {"type": "settings", "settings": values}
         await asyncio.gather(*(self._send(w, msg) for w in self.of(device)))

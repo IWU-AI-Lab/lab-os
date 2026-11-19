@@ -4,6 +4,9 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-18 — A pop-up inside a hub panel is cut off, even with `position: fixed`
+**What:** the ⏻ menu (quick job 6), put next to its button inside the designed hub's status strip, didn't show at all. Every `.panel` has a `clip-path` (the unfolding, the cut corners), and a clip-path clips its descendants, `position: fixed` ones included.
+**Fix:** pop-ups go straight under `<body>` (the ⏻ menu is appended there by its script, like the full-screen notice), never inside a `.panel`.
 ### 2026-11-18 — scrcpy brings its own adb, and two adb versions stop each other
 **What:** quick job 36. scrcpy's release (v5.0.1) includes adb 37.0.0. When a different adb version runs a command, it finds the other version's server on port 5037, stops it ("adb server version doesn't match this client; killing...") and starts its own, which drops every `adb reverse`: teleop's page on the Quest loses the brain. Also: Quest system versions 74 and later gave scrcpy a black or flickering picture (scrcpy issue #5913) until scrcpy v4.0 (2026-05) worked around it.
 **Fix:** lab-os starts scrcpy with `ADB=` the system's adb when there is one (the one `adb reverse` was run with), the bundled one only when there's none. Pinned to scrcpy v5.0.1.

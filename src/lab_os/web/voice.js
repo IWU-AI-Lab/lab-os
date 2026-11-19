@@ -252,9 +252,9 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       st.wakeOn = st.wakeTurn = false;
       if (st.pressed) {
         st.pressed = st.sending = false;
-        onEvent({ type: "error", message: "Lost the connection to the brain." });
+        if (!st.off) onEvent({ type: "error", message: "Lost the connection to the brain." });
       }
-      setTimeout(() => can().ok && connect(), 2000);
+      if (!st.off) setTimeout(() => can().ok && connect(), 2000);
     };
   }
   function send(msg) {
@@ -555,9 +555,21 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.decoding.then(checkPlayed);
   }
 
+  // lab-os was shut down (quick job 6): the microphone closes now and stays closed (the page reloads when
+  // the brain is back)
+  function off() {
+    st.off = true;
+    st.wakeWanted = st.wakeOn = st.wakeTurn = st.pressed = st.sending = false;
+    clearInterval(st.watchTimer);
+    stopSpeaking();
+    closeMic();
+    st.ws?.close();
+  }
+
   return {
     can,
     setStatus,
+    off,
     unlock,
     press,
     release,

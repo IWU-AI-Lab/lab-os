@@ -44,6 +44,9 @@
     :disabled { cursor: default !important; opacity: 0.55; }
     /* a safety limit that's off: an accent bar and "OFF" after its name, and a chip in the bar */
     .field.limit-off { box-shadow: inset 3px 0 0 var(--accent); padding-left: 0.7rem; }
+    /* "Shut down" (quick job 6): the button that does it is the one red-edged thing on the page */
+    .btn.go { box-shadow: inset 0 0 0 1px var(--danger); }
+    .btn.go:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 30%, transparent); }
     .field.limit-off label::after { content: " · OFF"; color: var(--accent); font-weight: 600; }
   </style>
 </head>

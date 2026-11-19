@@ -346,6 +346,7 @@ const device = connectDevice({
     if (shouldRefill($("#open-on")) && S.module) fillMenu(); // the list changed while it's open
   },
   onSettings: () => renderMic(),
+  onOff: () => voice.off(),
 });
 
 // a module sent from another device: shown at once, even from the start screen (that device has the hub
