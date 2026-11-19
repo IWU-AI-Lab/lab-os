@@ -3292,7 +3292,7 @@ $("#qv-btn").addEventListener("click", async (e) => {
 });
 pollQuestView();
 setInterval(pollQuestView, 5000);
-// ⏻: back to the start screen. On the brain's own screen (and not on a public venue) it opens a small menu
+// ⏻: back to the start screen. On the brain's own screen it opens a small menu
 // that can also shut lab-os down, with a confirmation that warns about the arm first (quick job 6)
 let canShutDown = false;
 getJSON("/api/shutdown").then((r) => (canShutDown = !!r?.allowed));

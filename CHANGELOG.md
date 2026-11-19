@@ -2,6 +2,10 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-19
+- **Shut down from the hub on any venue**: the brain's computer can shut lab-os down on a public venue too (someone is always there). Before, a public venue refused it.
+- **Visitor mode's welcome** no longer says "no robots are here" when none is plugged in: it leaves robots out, and names the cards on the screen.
+
 ## 2026-11-18
 - **The hub's default level of detail is maximal** (the builder's choice): more rings on the core, a busier frame and network, and the far-layer verses, on every device that hasn't picked its own level (⚙ → This device). Before, the default was full.
 - **The headset's teleop status panel in the hub's design** (quick job 37): the panel beside the arm in VR and AR teleop (in the VR hub's Teleop and on the teleop page) now has cut corners, the theme's colours and fonts, the state as a chip whose colour says how serious it is (rust with a pause sign when held still), the gripper and speed as numbers in the digit font under small labels, and the hint without dot separators. It's a little bigger and nearly opaque, so it reads over the room in AR. Before, it was a rounded grey box in the system font with its own colours.

@@ -219,7 +219,7 @@ async def test_the_ai_starts_visitor_mode_and_welcomes_them(hub):
     assert {"type": "venue", "venue": "visit-day", "visitors": True} in events
     facts = json.loads(tool_result(seen[1]))  # what the AI words the welcome from
     assert facts["place"] == "AI Comp Lab" and facts["about"].startswith("a lab where")
-    assert facts["robots_here"] == []  # the fake arm isn't a robot
+    assert "robots_here" not in facts  # the fake arm isn't a robot: none listed, none mentioned
     assert facts["cards_on_screen"] == ["Ask me to wave", "Open the VR hub"]
     assert answer(events) == "Welcome to the AI Comp Lab!"
     assert app[hub_server.BRAIN].chat.take_say() == "Welcome to the AI Comp Lab!"  # typed: speak it
