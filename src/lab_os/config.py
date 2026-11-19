@@ -128,6 +128,7 @@ class Place:
     calendar: tuple = ()  # dates the greeting may mention: ({"date": "2026-12-15", "what": ...},)
     persona: str | None = None  # who the assistant is (personas/<id>.yaml); None = the plain one
     chat_keep_minutes: float = 30  # the hub keeps a reset or interrupted conversation this long
+    about: str = ""  # what the place is, in a few words: the welcome for visitors (quick job 35)
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
@@ -140,6 +141,7 @@ PLACE_FIELDS = {
     "calendar",
     "persona",
     "chat_keep_minutes",
+    "about",
 }
 
 
@@ -172,6 +174,7 @@ def load_place(path: Path | None = None) -> Place:
         calendar=tuple(c for c in (raw.get("calendar") or []) if isinstance(c, dict)),
         persona=str(raw["persona"]) if raw.get("persona") else None,
         chat_keep_minutes=float(raw.get("chat_keep_minutes", 30)),
+        about=" ".join(str(raw.get("about") or "").split()),
         extra=extra,
     )
 

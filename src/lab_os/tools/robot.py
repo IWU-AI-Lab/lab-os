@@ -113,6 +113,23 @@ def load_poses(path: Path | None = None) -> dict[str, dict[str, dict[str, float]
     }
 
 
+def load_gestures(path: Path | None = None) -> dict[str, dict[str, dict]]:
+    """Fixed moves per arm model (gestures.yaml: the place's own, else config/gestures.yaml):
+    {model: {name: {"from": pose, "steps": [{joint: degrees relative to the pose}]}}}."""
+    path = path or config.shared_path("gestures.yaml")
+    raw = (yaml.safe_load(path.read_text()) if path.is_file() else None) or {}
+    return {
+        model: {
+            name: {
+                "from": str(g["from"]),
+                "steps": [{j: float(v) for j, v in step.items()} for step in g.get("steps") or []],
+            }
+            for name, g in gestures.items()
+        }
+        for model, gestures in raw.items()
+    }
+
+
 def _angle_diff(a: float, b: float) -> float:
     return (a - b + 180.0) % 360.0 - 180.0
 
@@ -158,6 +175,7 @@ class RobotTools:
         poses: dict | None = None,
         calls: CallLog | None = None,
         table_z_cm: float | None = None,
+        gestures: dict | None = None,
     ):
         self.loop = loop
         self.arm = loop.arm
@@ -171,6 +189,7 @@ class RobotTools:
         self.table_z_cm = table_z_cm
         self.kin = on_table(kinematics_for(self.arm.model), table_z_cm)
         self.poses = (load_poses() if poses is None else poses).get(self.arm.model, {})
+        self.gestures = (load_gestures() if gestures is None else gestures).get(self.arm.model, {})
         self.calls = calls or CallLog()
         self.last_target: tuple[tuple[float, float, float], float] | None = None  # move_to's
 
@@ -726,6 +745,46 @@ class RobotTools:
         )
         out["result"] = "holding" if held else "missed"
         return out
+
+    def use_venue(self, venue: Venue) -> None:
+        """Another venue while running (the hub's visitors' mode, quick job 35): its limits."""
+        self.venue, self.limits = venue, AiLimits.from_venue(venue)
+
+    def gesture_path(self, name: str) -> tuple[list[dict], list[str]]:
+        """A fixed move's waypoints (gestures.yaml): the start pose, each step, the start pose
+        again; clipped to the soft limits and checked against the floor all the way, like a
+        move tool's. Raises Refused (nothing moved) when the arm can't move or it would go below
+        the floor. Not limited per call like an AI tool's move: no AI chooses it."""
+        self._check_can_move(None)
+        gesture = self.gestures.get(name)
+        if gesture is None:
+            raise Refused(f"no {name} for the {self.arm.model} model (gestures.yaml)")
+        if gesture["from"] not in self.poses:
+            raise Refused(f"{name} starts from {gesture['from']!r}, which isn't in poses.yaml")
+        current = self.arm.read_joints()
+        base = {j: v for j, v in self.poses[gesture["from"]].items() if j in current}
+        points = [
+            base,
+            *(
+                {**base, **{j: base[j] + d for j, d in step.items() if j in base}}
+                for step in gesture["steps"]
+            ),
+            base,
+        ]
+        notes: list[str] = []
+        path = [self._clip_to_limits(current, p, notes) for p in points]
+        prev = current
+        for wp in path:
+            self._check_floor(current, self._line(prev, prev | wp))
+            prev = prev | wp
+        return path, sorted(set(notes))
+
+    async def wave(self, arm: str | None = None) -> dict:
+        """The wave (quick job 35): gestures.yaml's fixed poses around `ready`, at the venue's
+        speed. Logged like a tool call; the hub plays it, never an AI tool."""
+        self._check_arm(arm)
+        path, notes = self.gesture_path("wave")
+        return await self._run(path, notes)
 
     async def stop(self, arm: str | None = None) -> dict:
         """Always allowed: freeze now, whoever has control."""

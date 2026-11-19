@@ -20,6 +20,8 @@ The starter has:
 | `venues/home.yaml` | how cautious to be here (speed, motion allowed, active devices) |
 | `.env.example` | copy to `.env` in the same folder (your place's folder, not lab-os's `src/lab_os/place_template/`) and put your own API keys in it |
 
+`place.yaml` may also say what the place is, in a few words (`about: "a lab where students build robots"`): the visitors' welcome uses it ("Welcome to the AI Comp Lab, a lab where …"; `docs/guides/hub.md` → "Visitors' mode"). A venue with `visitors: true` is the one "say hello to our visitors" switches to; its `try_this:` lists the hub's cards then. A fixed move like the wave is in `gestures.yaml` (shared, like `poses.yaml`).
+
 ## Which file comes from where
 - **Place files** are only ever read from the place's own folder: `place.yaml`, `devices.yaml`, `venues/`. A home brain never borrows the lab's name, devices or venues. If one is missing, lab-os stops and says so.
 - **`hub-devices.yaml`** (since step 8) is a place file the hub writes itself: each device's own settings by name (⚙ → This device; `docs/guides/hub.md` → "Devices"). It appears on the first change; a place without one starts with every device at the defaults. In the lab it's `config/hub-devices.yaml`: changes from the Newline show up in `git status` like the settings page's.

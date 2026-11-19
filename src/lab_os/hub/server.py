@@ -22,6 +22,7 @@ GET /api/devices         the place's devices (devices.yaml): kind, off limits, l
 GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
 GET /api/settings        the settings (src/lab_os/settings.py) and their values
 POST /api/settings       {"key": "theme:hub.look", "value": "design"}: change one (here only)
+POST /api/venue          {"to": "normal"}: visitors' mode off (Settings → Back to normal)
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
@@ -62,13 +63,16 @@ from lab_os.ai.languages import clean_language
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
+from lab_os.devices import load_registry
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
+from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name, welcome
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
+from lab_os.teleop.cli import teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import CONTROL, LOOP, create_app, is_local
@@ -77,7 +81,7 @@ from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
 from lab_os.tools.project import ProjectTools
 from lab_os.tools.robot import Refused, RobotTools
-from lab_os.venues import Venue
+from lab_os.venues import Venue, load_venue, visitors_venue_name
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
 LOOKS = {"plain": "index.html", "design": "design.html"}  # theme hub.look picks the one at /
@@ -112,6 +116,8 @@ class Brain:
     project: ProjectTools  # the read tools' device list, docs, git (shared with the MCP server)
     voice: VoiceDesk
     check_ai: bool = False  # check the AI service in the background (off in tests)
+    visitors: VisitorDesk | None = None  # "say hello to our visitors" (quick job 35)
+    started_in: str = ""  # the venue the brain started with: "back to normal" goes there
 
 
 BRAIN = web.AppKey("brain", Brain)
@@ -119,6 +125,7 @@ TOOLS = web.AppKey("tools", RobotTools)
 TOOLS_PROJECT = web.AppKey("tools_project", ProjectTools)
 MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
+WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -242,8 +249,21 @@ async def api_ai_calls(request: web.Request) -> web.Response:
     )
 
 
+VISITORS_SETTINGS = "Settings are hidden while visitors are here. Back to normal shows them again."
+
+
 async def api_settings_get(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
+    if brain.venue.visitors:  # visitors' mode: nothing to see or change, only the way back
+        return web.json_response(
+            {
+                "sections": [],
+                "writable": False,
+                "why_not": VISITORS_SETTINGS,
+                "venue": brain.venue.name,
+                "visitors": {"back_to": brain.started_in, "here": is_local(request)},
+            }
+        )
     return web.json_response(
         {
             "sections": settings.read(brain.venue.name),
@@ -260,6 +280,8 @@ async def api_settings_post(request: web.Request) -> web.Response:
     """Change one setting. Only from the brain's computer: other screens may be in a hallway."""
     if not is_local(request):
         raise web.HTTPForbidden(text="Settings change only on the brain's computer.")
+    if request.app[BRAIN].venue.visitors:
+        return web.json_response({"ok": False, "message": VISITORS_SETTINGS}, status=403)
     try:
         body = await request.json()
         key, value = str(body["key"]), body["value"]
@@ -276,6 +298,97 @@ async def api_settings_post(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "key": key, "value": value, "applies": field.applies})
 
 
+def switch_venue(app: web.Application, name: str | None) -> Venue:
+    """Put the running brain in another venue (None = the one it started with): its limits for
+    the robot tools and teleop (top speed, starting speed, 1:1, the floor), what the hub hides,
+    its cards. Read from the venue file now; lasts until the next switch or a restart. Raises
+    ValueError (a sentence) when the arm it drives isn't one of that venue's devices."""
+    brain, loop = app[BRAIN], app[LOOP]
+    try:
+        venue = load_venue(name or brain.started_in)
+    except config.ConfigError as e:
+        raise ValueError(str(e)) from None
+    if loop.arm.name not in venue.active_devices:
+        raise ValueError(
+            f"{loop.arm.name} isn't one of the {venue.name} venue's robots (active_devices in "
+            f"venues/{venue.name}.yaml), so I stayed in {brain.venue.name}."
+        )
+    brain.venue = venue
+    app[TOOLS].use_venue(venue)
+    app[TOOLS_PROJECT].venue = venue
+    loop.use_caps(venue.speed_cap_scale, venue.max_speed_scale, venue.one_to_one_cap)
+    loop.mapper.config.floor_m = teleop_floor_m(venue, loop.arm.name)
+    log.info("venue: now %s (%s)", venue.name, "visitors" if venue.visitors else "back to normal")
+    return venue
+
+
+def _welcome(app: web.Application, venue: Venue) -> str:
+    """The visitors' welcome: the place, what it is, the robots really plugged in now."""
+    brain, loop = app[BRAIN], app[LOOP]
+    try:
+        place = config.load_place()  # re-read: the settings page may have changed it
+    except (config.ConfigError, OSError):
+        place = brain.place
+    try:
+        registry = load_registry()
+        names = robots_here(registry, loop.arm.name, loop.arm_connected)
+        robots = [spoken_name(n, registry.devices[n].kind) for n in names]
+    except (config.ConfigError, OSError) as e:
+        log.warning("visitors: no device list (%s)", e)
+        robots = []
+    return welcome(place.name, place.about, robots, len(venue.cards))
+
+
+WAVE_REFUSED = {
+    "teleop": "someone is driving the arm with teleop.",
+    "ai": "the arm is already moving.",
+}
+
+
+async def _wave(app: web.Application) -> None:
+    """Check the wave can run (raises ValueError with a sentence), then play it in the
+    background: the answer doesn't wait for the arm."""
+    tools = app[TOOLS]
+    who = tools.who_has_control()
+    if who in WAVE_REFUSED:
+        raise ValueError(WAVE_REFUSED[who])
+    if tools._disconnected():
+        raise ValueError(f"{tools.arm.name} is disconnected.")
+    try:
+        tools.gesture_path("wave")
+    except Refused as e:
+        raise ValueError(f"{e}.") from None
+
+    async def play():
+        try:
+            await tools.call("wave")
+        except Exception as e:  # refused after all, or the arm stopped answering: logged
+            log.warning("wave: %s", e)
+
+    task = asyncio.create_task(play())
+    app[WAVES].add(task)
+    task.add_done_callback(app[WAVES].discard)
+
+
+async def api_venue(request: web.Request) -> web.Response:
+    """Settings' "Back to normal": visitors' mode off (the brain's computer only)."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="Visitors' mode is switched off on the brain's computer.")
+    body = await _body(request)
+    if body.get("to") != "normal":
+        raise web.HTTPBadRequest(text='send {"to": "normal"}')
+    try:
+        venue = await asyncio.to_thread(switch_venue, request.app, None)
+    except ValueError as e:
+        return web.json_response({"ok": False, "message": str(e)}, status=400)
+    return web.json_response({"ok": True, "venue": venue.name})
+
+
+def _visitors(venue: Venue) -> dict | None:
+    """What the hub shows while visitors are here: the cards (None: not in visitors' mode)."""
+    return {"cards": list(venue.cards)} if venue.visitors else None
+
+
 async def perf_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "perf.html")
 
@@ -287,6 +400,7 @@ async def api_status(request: web.Request) -> web.Response:
     return web.json_response(
         {
             "venue": brain.venue.name,
+            "visitors": _visitors(brain.venue),  # visitors' mode: the cards (quick job 35)
             "persona": brain.persona().public(),
             "internet": brain.internet.online if brain.internet else None,  # None = not known
             "ai": brain.chat.status(),
@@ -348,7 +462,7 @@ def lab_status(app: web.Application) -> dict:
         "ai": {"connected": ai["connected"], "setup": ai["setup"], "paused": ai["paused"]},
         "internet": brain.internet.online if brain.internet else None,
     }
-    if not brain.venue.public:  # a public screen doesn't say what's spent
+    if not brain.venue.hides_spend:  # a public screen or visitors: not what's spent
         m = brain.chat.spend.month()
         out["ai_spend"] = {"month": m["month"], "spent_usd": round(m["spent_usd"], 2)} | (
             {"budget_usd": m["budget_usd"]} if m["budget_usd"] is not None else {}
@@ -518,7 +632,8 @@ async def api_chat_post(request: web.Request) -> web.StreamResponse:
         raise web.HTTPBadRequest(text='send {"text": "..."}') from None
     resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
     await resp.prepare(request)
-    async for event in request.app[BRAIN].chat.ask(text, pages, answer_in):
+    chat = request.app[BRAIN].chat
+    async for event in chat.ask(text, pages, answer_in, local=is_local(request)):
         await resp.write((json.dumps(event) + "\n").encode())
     await resp.write_eof()
     return resp
@@ -623,8 +738,8 @@ async def api_hub_device_settings_post(request: web.Request) -> web.Response:
 
 async def api_spend(request: web.Request) -> web.Response:
     brain = request.app[BRAIN]
-    if brain.venue.public:
-        return web.json_response({"available": False})  # a public screen hides spend
+    if brain.venue.hides_spend:
+        return web.json_response({"available": False})  # a public screen or visitors: hidden
     return web.json_response({"available": True} | brain.chat.spend.month())
 
 
@@ -714,7 +829,8 @@ def create_brain_app(
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     own_place = place is None  # the active place's files: the budget is re-read as it changes
     place = place or config.load_place()
-    persona = persona or (lambda: current_persona(venue=venue.name))
+    # the venue now (visitors' mode switches it while running), not the one it started with
+    persona = persona or (lambda: current_persona(venue=app[BRAIN].venue.name))
     assistant = chat.assistant if chat else Assistant()
     chat = chat or Conversation(
         assistant,
@@ -727,6 +843,14 @@ def create_brain_app(
         tools=ChatTools(server),
         store=_chat_store(place),
     )
+    visitors = VisitorDesk(
+        venue=lambda: app[BRAIN].venue,
+        visitors_venue=visitors_venue_name,
+        switch=lambda name: switch_venue(app, name),
+        welcome=lambda v: _welcome(app, v),
+        wave=lambda: _wave(app),
+    )
+    chat.commands = visitors.handle
     voice = VoiceDesk(
         chat,
         assistant,
@@ -735,11 +859,25 @@ def create_brain_app(
         voices=voices or load_voices,
         greeting=lambda: _opening(chat),
         recordings=lambda: config.recordings_dir() / "greetings",
-        venue_wake=lambda: venue.wake_word_on,
+        venue_wake=lambda: app[BRAIN].venue.wake_word_on,
+        say=visitors.take_say,
     )
     app[BRAIN] = Brain(
-        place, venue, internet, assistant, focus_file, repo, chat, persona, project, voice, check_ai
+        place,
+        venue,
+        internet,
+        assistant,
+        focus_file,
+        repo,
+        chat,
+        persona,
+        project,
+        voice,
+        check_ai,
+        visitors=visitors,
+        started_in=venue.name,
     )
+    app[WAVES] = set()
     app[HUB_DEVICES] = HubDevices(
         lambda: {m["id"]: m["title"] for m in hub_modules(load_theme())}, device_settings
     )
@@ -763,6 +901,7 @@ def create_brain_app(
     app.router.add_get("/api/ai-calls", api_ai_calls)
     app.router.add_get("/api/settings", api_settings_get)
     app.router.add_post("/api/settings", api_settings_post)
+    app.router.add_post("/api/venue", api_venue)
     app.router.add_get("/api/hub", api_hub)
     app.router.add_get("/api/greeting", api_greeting)
     app.router.add_post("/api/chat/start", api_chat_start)

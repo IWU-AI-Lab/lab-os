@@ -229,6 +229,7 @@ async function load() {
   }
   $("#mode").textContent = data.writable ? `saved into the config files (venue: ${data.venue})` : data.why_not;
   $("#mode").className = `pill ${data.writable ? "on" : "warn"}`;
+  if (data.visitors) return visitorsCard(data);
   const offNow = new Map(); // safety limits that are off in the venue file: label → true
   const showOff = () => {
     $("#limits-off").hidden = offNow.size === 0;
@@ -264,5 +265,27 @@ async function load() {
     }
     $("#sections").append(card);
   }
+}
+/* ---------- visitors' mode (quick job 35): settings hidden, only the way back ---------- */
+function visitorsCard(data) {
+  local.closest(".card").hidden = true;  // "This device" too: nothing to change while visitors are here
+  const card = document.createElement("section");
+  card.className = "card";
+  card.innerHTML = `<div class="in"><h2><svg class="ico"><use href="/web/design/icons.svg#i-user"/></svg>Visitors are here</h2>
+    <p class="section-help">The ${esc(data.venue)} venue: the safety limits are locked, Settings and the AI spend are hidden. "Back to normal" (or saying it) returns to ${esc(data.visitors.back_to)}.</p>
+    <div class="field"><label>Back to normal</label><div class="help">${data.visitors.here ? `the ${esc(data.visitors.back_to)} venue and its settings again` : "only on the brain's own computer"}</div>
+    <div class="ctl"><button class="btn" type="button" ${data.visitors.here ? "" : "disabled"}>Back to normal</button></div><div class="said" aria-live="polite"></div></div></div>`;
+  const said = card.querySelector(".said");
+  card.querySelector("button").addEventListener("click", async () => {
+    try {
+      const res = await fetch("/api/venue", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: "normal" }) });
+      const r = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: await res.text() };
+      if (r.ok) { tellHub(); location.reload(); return; }
+      said.className = "said bad"; said.textContent = r.message;
+    } catch (e) {
+      said.className = "said bad"; said.textContent = `Not switched: ${e.message}`;
+    }
+  });
+  $("#sections").append(card);
 }
 load();

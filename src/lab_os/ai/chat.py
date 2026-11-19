@@ -8,6 +8,8 @@ The hub's chat reads and answers (rule 5), and opens pages on the screen that as
 2026-11-14): the page sends what it can show (`pages`), the model gets an `open_page` tool for them,
 and the turn yields an `open` event the page acts on. A round that only opens a page is answered
 right away ("Here's Teleop."), without asking the model again.
+With `commands` (the hub's visitors' mode, lab_os.hub.visitors) a few fixed phrases are answered
+before the AI is asked: no AI, no cost, also offline or with the budget used up.
 With a `store` (lab_os.ai.history) the conversation is kept for a short while: saved after every
 answer, put aside by a reset, brought back with `restore()`.
 """
@@ -17,7 +19,7 @@ import contextlib
 import json
 import logging
 import re
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import datetime
 
 import aiohttp
@@ -113,8 +115,10 @@ class Conversation:
         persona: Callable[[], Persona] | None = None,
         tools: ChatTools | None = None,
         store: ChatStore | None = None,
+        commands: Callable[[str, bool], Awaitable] | None = None,
     ):
-        """`persona`: read before every turn, so a venue or persona edit applies without a restart;
+        """`commands(text, local)`: a fixed phrase's answer (`.text`, `.events`), or None.
+        `persona`: read before every turn, so a venue or persona edit applies without a restart;
         it then sets the setup (`model`) and the personality instead of the two arguments."""
         self.assistant = assistant
         self._persona = persona
@@ -126,6 +130,7 @@ class Conversation:
         self.place_name = place_name
         self._setups = setups
         self.store = store
+        self.commands = commands
         # what's on screen: {"role": "user"|"assistant", ...}; after a restart, the one kept last
         self.messages: list[dict] = store.load() if store else []
         self.busy = False
@@ -287,13 +292,33 @@ class Conversation:
         self.store.save(self.messages)
         return True
 
+    async def _fixed(self, text: str, handled) -> AsyncIterator[dict]:
+        """A fixed phrase's turn: its line as the answer, its events first. Nothing was asked of
+        the AI, so nothing is spent."""
+        self.messages.append({"role": "user", "content": text})
+        self.assistant.set("speaking", 1.0)
+        yield {"type": "state", "state": "speaking"}
+        for ev in handled.events:
+            yield ev
+        yield {"type": "text", "text": handled.text}
+        self.messages.append({"role": "assistant", "content": handled.text})
+        if self.store:
+            self.store.save(self.messages)
+        self._settle()
+        yield {"type": "state", "state": self.assistant.state}
+        yield {"type": "done", "setup": None, "cost_usd": 0.0, "tools": 0, "fixed": True}
+
     async def ask(
-        self, text: str, pages: dict | None = None, answer_in: str | None = None
+        self,
+        text: str,
+        pages: dict | None = None,
+        answer_in: str | None = None,
+        local: bool = False,
     ) -> AsyncIterator[dict]:
         """One turn. Yields events for the page: state, text (pieces of the answer), open (show
         this page), done or error. Never raises for AI trouble: an error event carries the
         sentence to show. `pages`: what the asking page can show ({id: title}); none = no
-        open_page tool."""
+        open_page tool. `local`: asked on the brain's own computer (the visitors' phrases)."""
         text = text.strip()
         pages = clean_pages(pages)
         if not text:
@@ -301,6 +326,16 @@ class Conversation:
         if self.busy:
             yield {"type": "error", "message": "I'm still answering the last question."}
             return
+        if self.commands:
+            self.busy = True
+            try:
+                handled = await self.commands(text, local)
+            finally:
+                self.busy = False
+            if handled is not None:
+                async for ev in self._fixed(text, handled):
+                    yield ev
+                return
         why = self.paused()
         if why:
             yield {"type": "error", "message": why}

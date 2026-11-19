@@ -74,6 +74,14 @@ body[data-tap="full"] #ign-what, body:not([data-tap="full"]) #ign-full { display
 #reply .q { color: #aaa; }
 #reply .q:empty, #reply .a:empty { display: none; }
 #reply .a { margin-top: 0.3em; max-height: 9em; overflow-y: auto; }
+/* visitors' mode (quick job 35): "try this" cards; one that asks something is a button */
+#try { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8em; margin-top: 1em; }
+#try[hidden] { display: none; }
+.trycard { display: grid; gap: 0.2em; min-width: 12em; padding: 0.7em 1em; background: #161616; border: 1px solid #333; border-radius: 6px; color: inherit; font: inherit; text-align: left; }
+.trycard b { font-weight: 600; }
+.trycard small { color: #aaa; }
+button.trycard { cursor: pointer; border-color: #555; }
+button.trycard:hover, button.trycard:focus-visible { border-color: #aaa; }
 #errmsg { width: min(32em, 80vw); color: #e0b0b0; }
 .money { font-size: 1.3em; font-variant-numeric: tabular-nums; }
 .meter { height: 0.5em; margin-top: 0.5em; background: #333; }

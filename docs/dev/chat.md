@@ -1,6 +1,6 @@
 # The hub's chat (typed)
 
-The assistant under the hub's circle answers typed questions (focus step 5). It **reads, answers and opens pages** on the screen it's talking to (focus rule 5, decision 2026-11-14); it can't move the arms from the hub. What it can do is the tools it's given (the builder, 2026-11-14: no hard "never changes anything" rule, more abilities may come).
+The assistant under the hub's circle answers typed questions (focus step 5). It **reads, answers and opens pages** on the screen it's talking to (focus rule 5, decision 2026-11-14); the AI can't move the arms from the hub. A few fixed phrases are answered before the AI is asked (visitors' mode, quick job 35, `docs/guides/hub.md`): one of them, "wave", moves the arm with fixed poses while visitors are here. What it can do is the tools it's given (the builder, 2026-11-14: no hard "never changes anything" rule, more abilities may come).
 
 ## Try it
 1. Put a key in `.env` in the repo's **top folder**, next to `pyproject.toml` (copy `.env.example` there if there's none; not the one in `src/lab_os/place_template/`). Without it, the chat says which file it looked for. The names, exactly:

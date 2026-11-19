@@ -1,6 +1,6 @@
 # Venue profile: visitor demo away from the lab (portable kit, USB only, no lab network).
 name: visit-day
-active_devices: [so101-white]
+active_devices: [so101-white, fake-arm]   # fake-arm: the software arm, to try visitors' mode without a robot
 motion_allowed: true
 persona: default   # who the assistant is here: a persona's id (config/personas/), or `default` = the place's (place.yaml)
 wake_word: default   # "hey jarvis" on screens that chose it (docs/guides/voice.md): on, off, or default = off on a public venue
@@ -15,3 +15,11 @@ limits:                # safety limits that can be switched off (here or Setting
   speed_cap: on              # max_speed_scale and one_to_one_max_deg_per_s (off: up to full speed)
   floor: on                  # min_z_cm, for the AI tools and teleop alike
 limits_locked: true    # visitors: the limits above can never be switched off (public venues neither)
+visitors: true         # for visitors (quick job 35): "Hey Jarvis, say hello to our visitors" on the brain's own
+                       # screen switches here, "back to normal" switches back. The hub hides Settings and the
+                       # AI spend, says a short welcome and shows the cards below; "wave" waves the arm.
+try_this:              # the hub's "try this" cards while visitors are here. say = the words on the card;
+                       # ask = what tapping it asks (left out: the card is only read); line = a short line under it
+  - {say: "Ask me to wave", ask: "wave"}
+  # - {say: "What's on the table?", ask: "What's on the table?"}   # once that preview is built (current-focus item 7)
+  - {say: "Open the VR hub", line: "Put on the headset, then say it"}
