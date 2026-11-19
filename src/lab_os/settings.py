@@ -308,7 +308,7 @@ SECTIONS: list[Section] = [
         ),
         help="Each on by default. Always kept, whatever is set here: STOP on every screen, the "
         "soft joint limits (3° inside each joint's range) and one controller at a time. Can't be "
-        "switched off on a public venue or one with limits_locked: true (visit days).",
+        "switched off on a public venue or one with limits_locked: true.",
     ),
 ]
 
@@ -399,7 +399,7 @@ def limits_locked_why(venue_data: dict) -> str:
     if venue_data.get("public"):
         return "a public venue: the limits always stay on"
     if venue_data.get("limits_locked"):
-        return "this venue has limits_locked: true (visit days): the limits always stay on"
+        return "this venue has limits_locked: true: the limits always stay on"
     return ""
 
 

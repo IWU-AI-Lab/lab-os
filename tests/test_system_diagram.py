@@ -106,3 +106,9 @@ def test_the_hub_opens_it_from_the_devices_panel():
     assert 'id="devsys" data-detail="system"' in html
     assert 'system: ["System diagram"' in html
     assert 'import("/hub/system-diagram.js")' in html
+
+
+def test_closing_takes_the_diagram_away():
+    # 2026-11-18: closing removed only .detail pages, so each reopening added a diagram beside the
+    # old one (half the width, drawn on the left)
+    assert '"#mod-slot .detail, #mod-slot .sysbox"' in DESIGN.read_text()

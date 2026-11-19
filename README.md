@@ -27,7 +27,7 @@ With `lab-os serve`, open http://localhost:8080/ for the hub (`docs/guides/hub.m
 | Path | What |
 |---|---|
 | `src/lab_os/` | The code. `devices.py` (robot registry + port safety), `robots/` (arm interface, fake arm), `teleop/` (WebXR page, WebSocket server, clutch mapping, record/replay, 3D arm view in `web/arm/`), `hub/` (the hub page and its endpoints), `ai/` (the hub's chat: AI setups, client, conversation, spend), `tools/` (robot and project tools for AI, MCP server), `web/` (files all pages share: vendored three.js and fonts, `theme.js`, the module pages' look in `design/`), `cli.py` (`lab-os serve`), `venues.py`, `personas.py`, `config.py` (the place's config folder), `settings.py` (the settings page), `green.py` (the training launcher) |
-| `config/` | The lab's place (`docs/dev/places.md`): `place.yaml` (the lab's name), `devices.yaml` (robot registry), `venues/` (lab, visit-day, …); shared by every place: `theme.yaml` (design tokens: colors, font), `poses.yaml`, `models.yaml` (AI setups, no keys), `personas/` |
+| `config/` | The lab's place (`docs/dev/places.md`): `place.yaml` (the lab's name), `devices.yaml` (robot registry), `venues/` (lab, visit-day, …); shared by every place: `theme.yaml` (design tokens: colors, font), `poses.yaml`, `gestures.yaml` (the hub's fixed wave), `models.yaml` (AI setups, no keys), `personas/` |
 | `models/` | Robot models (SO-101 URDF + meshes) for the 3D view and, later, inverse kinematics |
 | `calibration/<robot>/` | Each arm's calibration files, so they travel with the arm |
 | `tests/` | Automatic checks that run without hardware |

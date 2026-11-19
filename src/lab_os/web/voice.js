@@ -11,6 +11,7 @@
 //   v.cancel()                  stop listening, ask nothing
 //   v.greet(way)                the spoken greeting: asked for at the start press, held until
 //   v.playHeld()                ... the page plays it (after the jump); talking first drops it
+//   v.say()                     speak the brain's waiting line: a typed visitors' welcome (quick job 35)
 //   v.stopSpeaking()            cut the answer short
 //   v.wake(on)                  stream the microphone for the wake word (the brain listens for it, at
 //                               this device's sensitivity); on "wake", the brain hears the question:
@@ -542,6 +543,11 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     send({ type: "greet", way });
     return true;
   }
+  function say() {
+    if (!st.brain?.available || st.pressed) return false;
+    send({ type: "say" });
+    return true;
+  }
   function playHeld() {
     if (!st.holding) return;
     st.holding = false;
@@ -569,6 +575,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     release,
     cancel,
     greet,
+    say,
     playHeld,
     stopSpeaking,
     speaking,

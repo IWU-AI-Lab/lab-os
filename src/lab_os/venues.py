@@ -32,10 +32,19 @@ class Venue:
     speed_cap: bool = True  # max_speed_scale and one_to_one_max_deg_per_s
     floor: bool = True  # the AI tools' min_z_cm and teleop's floor (the same number)
     limits_locked: bool = False
+    # a venue for visitors (quick job 35): the hub hides Settings and the AI spend, shows the
+    # "try this" cards, and the wave works. "Say hello to our visitors" switches to it.
+    visitors: bool = False
+    cards: tuple[dict, ...] = ()  # the "try this" cards: {"say", "ask"?, "line"?} (`try_this:`)
 
     @property
     def wake_word_on(self) -> bool:
         return (not self.public) if self.wake_word is None else self.wake_word
+
+    @property
+    def hides_spend(self) -> bool:
+        """The hub doesn't say what the AI costs here (a public screen, or visitors)."""
+        return self.public or self.visitors
 
     @property
     def limits_fixed(self) -> bool:
@@ -118,6 +127,16 @@ def _limits(raw: dict, name: str, fixed: bool) -> dict[str, bool]:
     return out
 
 
+def _cards(raw: dict, name: str) -> tuple[dict, ...]:
+    """`try_this:` the hub's cards while visitors are here: what to say (`say`), what tapping the
+    card asks (`ask`, optional: without it the card is only read), a short line (`line`)."""
+    given = raw.get("try_this") or []
+    if not isinstance(given, list) or not all(isinstance(c, dict) and c.get("say") for c in given):
+        raise config.ConfigError(f'venue {name}: try_this must be a list of {{say: "..."}} cards')
+    keep = ("say", "ask", "line")
+    return tuple({k: str(c[k]) for k in keep if c.get(k)} for c in given)
+
+
 def _persona(value) -> str | None:
     text = str(value).strip() if value else ""
     return None if text in ("", "default") else text
@@ -126,6 +145,16 @@ def _persona(value) -> str | None:
 def venue_names(config_dir: Path | None = None) -> list[str]:
     folder = (config_dir or config.active_dir()) / "venues"
     return sorted(p.stem for p in folder.glob("*.yaml"))
+
+
+def visitors_venue_name(config_dir: Path | None = None) -> str | None:
+    """The place's venue for visitors (`visitors: true`; the first by name), or None."""
+    folder = (config_dir or config.active_dir()) / "venues"
+    for name in venue_names(config_dir):
+        raw = yaml.safe_load((folder / f"{name}.yaml").read_text()) or {}
+        if raw.get("visitors"):
+            return name
+    return None
 
 
 def default_venue_name(config_dir: Path | None = None) -> str:
@@ -171,4 +200,6 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
         speed_cap=limits["speed_cap"],
         floor=limits["floor"],
         limits_locked=locked,
+        visitors=bool(raw.get("visitors", False)),
+        cards=_cards(raw, raw["name"]),
     )

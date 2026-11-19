@@ -185,7 +185,23 @@ def main(argv: list[str] | None = None) -> None:
     tm.add_argument("--square-mm", type=float, default=35.0, help="one printed square (35)")
     tm.add_argument("--image", help="calibrate from this picture instead of the camera")
     tm.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
+    qv = sub.add_parser(
+        "quest-view",
+        help="what the Quest sees, on this computer (scrcpy): --install downloads it into "
+        "downloads/scrcpy/, --remove deletes it; without either, says what's there "
+        "(docs/guides/quest-view.md)",
+    )
+    qv.add_argument("--install", action="store_true", help="download scrcpy (no sudo)")
+    qv.add_argument("--remove", action="store_true", help="delete the downloaded scrcpy")
     args = parser.parse_args(argv)
+    if args.command == "quest-view":
+        from lab_os import quest_view
+
+        try:
+            print(quest_view.main(args.install, args.remove))
+        except (quest_view.QuestViewError, OSError) as e:
+            raise SystemExit(str(e)) from None
+        return
     if args.command == "table-map":
         return _table_map(args)
     if args.command == "icon":

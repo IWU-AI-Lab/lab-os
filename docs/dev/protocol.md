@@ -176,6 +176,7 @@ Polled every 3 s by the hub.
 ```json
 {
   "venue": "lab",
+  "visitors": null,
   "persona": {"id": "lab-assistant", "display_name": "Lab Assistant",
               "picture": {"type": "orb", "style": "plain", "color": "primary"},
               "voice": "main", "sounds": "default"},
@@ -190,6 +191,7 @@ Polled every 3 s by the hub.
   "time_ms": 1794264745533
 }
 ```
+- `visitors`: `null`, or in visitor mode (quick job 35) `{"cards": [{"say": "Ask me to wave", "ask": "Please wave hello to us"}, {"say": "Open the VR hub", "line": "Put on the headset, then say it"}]}`: the venue's "try this" cards (`ask`: what tapping the card asks; without it the card is only read).
 - `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/dev/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
 - `ai`: the chat's AI setup (`docs/dev/chat.md`; `setup` is `null` when none is usable), `connected` (`null` until the first check, then `true`/`false`), `paused` (a full sentence when the chat can't answer: no key, budget used up), `problem` (the last failure, a sentence), `busy` (a turn is running).
@@ -241,9 +243,14 @@ The training launcher (`docs/guides/green-launcher.md`). `GET /api/green` → `{
 Quick job 6 (`docs/guides/hub.md` → "Shut down lab-os"). `GET` → `{"allowed": true, "why_not": null, "warning": "so101-white goes limp: if it's lifted, it drops. Put it down (home) or hold it first."}` (`warning` null when nothing drops). `POST {"from": "desk"}` → `{"ok": true, "message": "lab-os is shutting down."}`: any move stops (an AI move ends with "lab-os is shutting down"), every page gets `brain_off` (below), and half a second later the brain stops as with Ctrl+C. `403` (and `allowed: false` with `why_not`) from another computer or on a public venue.
 
 **`brain_off`**, on `/ws` (every teleop, monitor and AI Control page) and `/ws/hub-device` (every hub page): `{"type": "brain_off", "from": "desk", "time_ms": 1795038737206}` (`from`: the device that asked, `""` without a name). The page covers itself with "lab-os is off" (`src/lab_os/web/off.js`), closes its microphone, and reloads once the brain answers again.
+### `/api/quest-view`
+What the Quest sees (quick job 36, `docs/guides/quest-view.md`). `GET` → `{"installed": true, "running": false, "headset": "", "headsets": [{"name": "quest-a", "connected": true}], "why_not": null, "here": true}` (`why_not`: a sentence when it can't start; `here`: the asking page is on the brain's computer, where the window opens). `POST /api/quest-view/start` with `{"headset": "quest-a"}` (optional: default the first one connected) → `{"ok": true, "headset": "quest-a"}` or `400 {"ok": false, "message"}`; `POST /api/quest-view/stop` → `{"ok": true, "stopped": true}`. Both only from the brain's computer (`403` otherwise). One window at a time.
 
 ### `/api/settings`
-`GET`: `{"sections": [{"id", "title", "help", "fields": [{"key": "theme:hub.look", "file", "label", "kind", "help", "choices", "min", "max", "step", "unit", "applies", "value", "safety", "locked"}]}], "writable": true, "why_not": null, "venue": "lab"}` (from `src/lab_os/settings.py`). `POST {"key": "theme:hub.look", "value": "design"}` changes one value in its file (comments kept): `{"ok": true, "key", "value", "applies": "reload" | "next" | "restart"}`, or `400 {"ok": false, "message": "<why>"}`. `safety: true` marks a switchable safety limit (its `value` is `true` unless it's off); `locked` says why it can't be switched off in this venue ("" = it can), and switching it off is then a `400`. Only from the brain's computer: `403` otherwise, and `writable: false`.
+`GET`: `{"sections": [{"id", "title", "help", "fields": [{"key": "theme:hub.look", "file", "label", "kind", "help", "choices", "min", "max", "step", "unit", "applies", "value", "safety", "locked"}]}], "writable": true, "why_not": null, "venue": "lab"}` (from `src/lab_os/settings.py`). `POST {"key": "theme:hub.look", "value": "design"}` changes one value in its file (comments kept): `{"ok": true, "key", "value", "applies": "reload" | "next" | "restart"}`, or `400 {"ok": false, "message": "<why>"}`. `safety: true` marks a switchable safety limit (its `value` is `true` unless it's off); `locked` says why it can't be switched off in this venue ("" = it can), and switching it off is then a `400`. Only from the brain's computer: `403` otherwise, and `writable: false`. Also `"visitor_mode": {"on": false, "venue": "visit-day", "back_to": "lab", "here": true}` (`null` when the place has no venue for visitors; `here`: the asking page is on the brain's computer, where it can be switched). While visitor mode is on: `"sections": []`, `"writable": false`, `why_not` a sentence, and a `POST` is a `403`.
+
+### `/api/venue`
+`POST {"to": "visitors"}` or `{"to": "normal"}` → `{"ok": true, "venue": "visit-day", "visitors": true}`: Settings → Visitor mode, start or exit it without asking the assistant (no welcome). `normal` goes back to the venue the brain started with. Only from the brain's computer (`403` otherwise); `400` for anything else, or when the brain's arm isn't one of that venue's robots.
 
 ### `/api/devices`
 The place's devices from `devices.yaml` (no ports, nothing opened or probed):
@@ -280,6 +287,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
   {"type": "done", "setup": "main", "cost_usd": 0.000164, "tools": 1}
   ```
   When the assistant opens a page: `{"type": "tool", "name": "open_page"}`, then `{"type": "open", "page": "teleop", "title": "Teleop"}` (show it on this screen; `hub` = close what's open), usually followed by the text "Here's Teleop." with no second round.
+  **Visitor mode** (quick job 35): asked on the brain's computer, the model also gets the tools `start_visitor_mode` (visitor mode off) or `exit_visitor_mode` and `wave` (visitor mode on). Like any tool, each shows as `{"type": "tool", "name": …}`; then `{"type": "venue", "venue": "visit-day", "visitors": true}` (the venue changed: read `/api/status` again; on a typed turn that started visitor mode, the page sends voice `say` after `done` to have the welcome spoken) or `{"type": "wave"}` (the wave started). The model then answers as usual.
   or `{"type": "error", "message": "<a full sentence for the screen>"}` (no key, budget used up, the service refused or didn't answer, "I'm still answering the last question."). One turn at a time.
 - `POST /api/chat/clear` → `{"ok": true}`: start over; the conversation is put aside (if it has a question).
 - `POST /api/chat/restore` → `{"ok": true | false, "messages": […], "previous": … | null}`: bring back the conversation put aside; the current one is put aside in its place (if it has a question), so a second call swaps back. `ok: false` when there's none (or a turn is running).
@@ -290,7 +298,7 @@ This month's AI spend (`logs/ai-spend/`), for the AI Spend panel.
 {"available": true, "month": "2026-11", "spent_usd": 0.0123, "budget_usd": 20.0, "chats": 7,
  "by_setup": {"main": 0.0123, "backup": 0.0}}
 ```
-`{"available": false}` on a venue with `public: true`. `budget_usd` is `null` when the place sets none. Also `"voice_minutes"` (heard + spoken this month); `chats` counts chat turns only.
+`{"available": false}` on a venue with `public: true`, or in visitor mode (`visitors: true`). `budget_usd` is `null` when the place sets none. Also `"voice_minutes"` (heard + spoken this month); `chats` counts chat turns only.
 
 ### Voice (`/ws/voice`)
 A WebSocket per page (`docs/guides/voice.md`): `ws://<host>:8080/ws/voice?device=<name>` (`device`: the page's device name, only for the brain's log; may be left out). The page records and plays; the brain hears, answers through the chat above, and speaks. One utterance at a time per page; the chat's one turn at a time still holds.
@@ -302,6 +310,7 @@ A WebSocket per page (`docs/guides/voice.md`): `ws://<host>:8080/ws/voice?device
 - `{"type": "wake", "on": true | false, "sensitivity": 5}`: listen for the wake word: the page then streams its microphone (binary, as above) while it isn't playing an answer; the brain runs the detector on it (nothing leaves the brain). `sensitivity`: this device's setting, 1–9 (missing or invalid = 5); sent again with `on: true` when it, `pages` or `lang` changes. Answered with `{"type": "wake_on", "phrase": "hey Jarvis"}` or `{"type": "wake_off", "why": "…"}`.
 - `{"type": "playing", "seq": 0}`: the page started playing that spoken piece (the brain's timing: the first word heard).
 - `{"type": "wake_mic", "ok": false, "why": "the page's sound is suspended"}`: while the wake word is on, the microphone stopped giving audio and the page couldn't wake it (`ok: true` once it's back). Only logged.
+- `{"type": "say"}`: speak the answer of the typed turn that started visitor mode (the welcome), once; only from the brain's computer. Answered with the audio and `audio_end` (`count: 0` when there's nothing to say or no voice).
 - `{"type": "greet", "way": "push_to_talk" | "dictation" | "wake_word" | "none"}`: say the greeting: the time of day of the conversation's first message (set by `POST /api/chat/start`), never its news, and a hint how to talk (`none`: no hint, the screen has no microphone). One piece, from the place's `recordings/greetings/` when this voice said it before (no voice request), else spoken and saved. At most every 10 s; a refused greet still gets `audio_end` with `count: 0`.
 
 **Brain → page**

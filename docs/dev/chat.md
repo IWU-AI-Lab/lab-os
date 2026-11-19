@@ -1,6 +1,6 @@
 # The hub's chat (typed)
 
-The assistant under the hub's circle answers typed questions (focus step 5). It **reads, answers and opens pages** on the screen it's talking to (focus rule 5, decision 2026-11-14); it can't move the arms from the hub. What it can do is the tools it's given (the builder, 2026-11-14: no hard "never changes anything" rule, more abilities may come).
+The assistant under the hub's circle answers typed questions (focus step 5). It **reads, answers and opens pages** on the screen it's talking to (focus rule 5, decision 2026-11-14); it can't move the arms from the hub, except one fixed wave in visitor mode. On the brain's own computer it also has tools to start and exit visitor mode and (in visitor mode) to wave (quick job 35, `lab_os/hub/visitors.py`, `docs/guides/hub.md`). What it can do is the tools it's given (the builder, 2026-11-14: no hard "never changes anything" rule, more abilities may come).
 
 ## Try it
 1. Put a key in `.env` in the repo's **top folder**, next to `pyproject.toml` (copy `.env.example` there if there's none; not the one in `src/lab_os/place_template/`). Without it, the chat says which file it looked for. The names, exactly:
@@ -31,7 +31,7 @@ Every setup speaks the OpenAI-style chat interface (`POST …/chat/completions`)
 - The **AI Spend** panel shows the month's total against the budget. A venue with `public: true` hides it (a hallway screen).
 
 ## What it knows
-The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/dev/personas.md`) plus a few fixed rules: the place's name, the date and time, "you can't move the robot arms from here; your tools are what you can do now", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
+The system prompt is the persona's personality text (`config/personas/<id>.md`, `docs/dev/personas.md`) plus a few fixed rules: the place's name, the date and time, "your tools are what you can do now: you can't move the robot arms from here except with a tool made for it", short plain-text answers. Up to the last 20 messages go along with each question. The conversation starts with the greeting (the start press).
 
 **It looks things up (step 6):** the chat gets the brain's MCP **read tools**: the project's docs (`project_status`, `read_doc`, `search_docs`, …), git history and the device list, plus `arm_status`. It uses them for "what's next?" or "what's on hold?", and **drafts a prompt to paste into Claude Code or Codex** ("Prompt:" + the text; History has a **Copy** button that copies the part after "Prompt:"). At most 4 look-ups per question; the status word under the circle says what it's reading. **Read only:** it gets only tools annotated read-only, never a move tool or `stop`. `docs/design/` is included since 2026-11-12 (the design isn't a surprise any more).
 

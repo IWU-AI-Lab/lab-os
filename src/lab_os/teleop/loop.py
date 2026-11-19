@@ -153,6 +153,20 @@ class TeleopLoop:
         self.speed_scale = round(min(max(scale, 0.05), self.max_speed_scale), 3)
         return self.speed_scale
 
+    def use_caps(
+        self, max_speed_scale: float, speed_scale: float, one_to_one_deg_per_s: float
+    ) -> None:
+        """Another venue's caps while running (the hub's visitor mode, quick job 35): its top
+        speed, its starting speed and 1:1's top speed (0 = no 1:1: back to relative). The
+        clutch drops, so the next grab starts under the new caps."""
+        self.max_speed_scale = max_speed_scale
+        self.speed_scale = round(min(max(speed_scale, 0.05), max_speed_scale), 3)
+        self.one_to_one_deg_per_s = one_to_one_deg_per_s
+        if self.mapper.config.mode not in self.modes():
+            self.mapper.config.mode = "relative"
+        self.mapper.reset(require_release=True)
+        self.jog.reset(require_release=True)
+
     def set_mode(self, mode: str) -> str:
         """The teleop page's mode: "relative" or "one_to_one" (1:1). A change drops the clutch:
         grip again (released first) to move in the new mode. Returns what was set."""

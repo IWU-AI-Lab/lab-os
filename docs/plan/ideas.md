@@ -44,6 +44,17 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-18)
+
+### Start the hub with a card
+Swipe a card to start the hub (the startup and greeting), and greet the person by name. The lab has a USB card reader: it types the card's number like a keyboard (a student ID gives a string of numbers; a bank card gives its usual data). The Newline also has an NFC tap reader, used for its Android profiles; it might be reusable. **Privacy:** only cards listed in config start anything; store a hash of the number, never the number; ignore and never log anything else (bank cards above all).
+
+### Gemini 4 Hydrogen and Google's Antigravity robotics plugin (probably not)
+Google's robotics model (Nov 2026, `gemini-4-hydrogen`, replaces Gemini Robotics ER 2) and an Antigravity plugin that brings up an SO-101, simulates in MuJoCo and runs tasks from chat (demos: sorting, packing, chess in simulation). Needs a paid Google AI plan the builder doesn't have; the plugin drives the arm with its own code, outside lab-os's STOP and limits, and calibrates arms (forbidden on the green ones). Probably not: the models will have changed by the time it matters. If ever: Hydrogen as one more model behind the brain's own tools.
+
+### A photo as a 3D scene in the headset
+Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone did this with Apple's ml-sharp: one photo → a `.ply` in under a second on a GPU). Apple's weights are for research use only. Needs a splat viewer vendored for the Quest page (offline rule).
+
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm

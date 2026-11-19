@@ -37,6 +37,7 @@ async def test_pages_served(aiohttp_client):
         "/static/xr.js",
         "/static/desktop-input.js",
         "/static/xr-scene.js",
+        "/static/status-text.js",  # the headset status panel's words (quick job 37)
         "/static/arm/arm-feed.js",
         "/static/monitor.js",
         "/web/theme.js",

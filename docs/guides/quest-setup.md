@@ -45,7 +45,7 @@ The trigger is the gripper: use the right controller's trigger control in the em
 
 `localhost` counts as a secure context, so WebXR works over plain `http://`. No certificates needed.
 
-**What you see inside the session** (emulator or headset): the arm standing on a table in front of you, facing away (you operate it from behind), moving with exactly what the driver receives. Also a marker on each controller (the right one turns green while the clutch is held), a dashed line from where you grabbed, and a floating status panel (FOLLOWING / HOLDING / FROZEN, gripper, speed). In VR there's a dim room and a table. In AR (passthrough on the Quest) the arm is a see-through ghost and the real room shows. Add `?xrarm=stick` to the page URL for the lighter stick-figure arm.
+**What you see inside the session** (emulator or headset): the arm standing on a table in front of you, facing away (you operate it from behind), moving with exactly what the driver receives. Also a marker on each controller (the right one turns green while the clutch is held), a dashed line from where you grabbed, and a floating status panel in the hub's design (since 2026-11-18): the state as a coloured chip (cyan Holding, green Following, amber No controller, rust Frozen with a pause sign, gray Connecting), the gripper's opening and the speed in the digit font, and how to drive. It stays readable over the room in AR. In VR there's a dim room and a table. In AR (passthrough on the Quest) the arm is a see-through ghost and the real room shows. Add `?xrarm=stick` to the page URL for the lighter stick-figure arm.
 
 ## 4. The real Quest over USB
 The trick: the Quest's browser opens `http://localhost:8080`, and **`adb reverse`** forwards the headset's port 8080 through the USB cable to the desktop. To the browser it's still `localhost` (secure, WebXR allowed), and nothing goes over the lab network.
@@ -77,7 +77,7 @@ On the teleop page, **Hand → arm → 1:1** (the brain keeps the choice until i
 
 **Scale (checked 2026-11-16, quick job 13):** nothing in the chain scales the hand: metres from the Quest, the 3D arm at real size (the URDF), the real arm's link lengths, LeRobot's gripper point. If 1:1 feels off on the real arm, it's the arm (sag, the height offset) or the lag; lab checks 7.2–7.4 measure it. One fix: on a headset without a floor-level space the hand was measured from the wrong base (`docs/dev/GOTCHAS.md`).
 
-**Speed (2026-11-11):** 1:1 isn't slowed by the Speed slider or the venue's top speed: each joint turns as fast as the hand needs, up to the venue's `one_to_one_max_deg_per_s` (**180°/s in the lab**; off on visit days and at new places). Change it in ⚙ Settings → Robots → **Teleop 1:1: top joint speed** (off / 90 / 120 / 180 / 240 / none; `none` = no software cap, the servos' own top speed of roughly 270–310°/s), then restart the brain. For scale: a quick wave (1.5 Hz, 10 cm side to side) needs ~120°/s at the base; the old lab speed (~45°/s) kept only ~60 % of it. The panel and the page say "1:1 up to 180°/s".
+**Speed (2026-11-11):** 1:1 isn't slowed by the Speed slider or the venue's top speed: each joint turns as fast as the hand needs, up to the venue's `one_to_one_max_deg_per_s` (**180°/s in the lab and in visitor mode**; off at new places). Change it in ⚙ Settings → Robots → **Teleop 1:1: top joint speed** (off / 90 / 120 / 180 / 240 / none; `none` = no software cap, the servos' own top speed of roughly 270–310°/s), then restart the brain. For scale: a quick wave (1.5 Hz, 10 cm side to side) needs ~120°/s at the base; the old lab speed (~45°/s) kept only ~60 % of it. The panel and the page say "1:1 up to 180°/s".
 
 **The servos' health:** with a real SO-101 the brain reads each servo's temperature, load and voltage every 5 s and logs them to `logs/servo-health/<date>_<arm>.jsonl` (with the mode, so relative and 1:1 sessions can be compared). A servo at **60 °C** slows 1:1 down to relative speed (the panel says "SERVOS WARM, SLOWED"); the servos switch themselves off at 70 °C. Whether 1:1 wears the motors more: compare the temperatures of a relative and a 1:1 session of the same length.
 
@@ -110,5 +110,7 @@ Troubleshooting:
 - `unauthorized` in `adb devices` → put the headset on and accept the USB debugging prompt.
 - "WebXR not available" → the URL must be exactly `http://localhost:8080`, not the desktop's IP address (that's not a secure context).
 - Arm shows "frozen: release grip" → release the grip fully, then press again.
+
+**Showing what the headset sees** on the desktop's screen, for the room: `docs/guides/quest-view.md`.
 
 Later (not needed for the demo): Wi-Fi instead of USB needs HTTPS with a certificate the Quest trusts, or `adb` over Wi-Fi. USB is simpler and portable (see docs/archive/focus-2026-10-teleop-demo.md, "Fewest moving parts").

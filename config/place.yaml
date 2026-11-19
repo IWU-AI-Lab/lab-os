@@ -3,6 +3,8 @@
 version: 1
 name: "AI Comp Lab"   # the hub's title and the startup title: the lab's name, not the project's
                       # code name (docs/design/DESIGN.md). The same for every persona.
+about: "a lab where students build AI and robots that work together"   # what this place is, for the
+                      # visitors' welcome ("Welcome to the AI Comp Lab, a lab where …"; quick job 35)
 venue: lab            # the venue used when --venue / $LAB_OS_VENUE don't say
 persona: lab-assistant   # who the assistant is (config/personas/): lab-assistant (plain) | jarvis
                          # (show); --persona / $LAB_OS_PERSONA win (docs/dev/personas.md)
