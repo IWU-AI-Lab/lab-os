@@ -44,6 +44,17 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-19)
+
+### Point and "move there" in the headset
+In the Quest, with the 3D arm lined up on the real one, point at a spot on the table and say or press "move there"; the gripper goes there. No AI. The first piece of "put that there". It was a demo preview from 2026-11-16 to 2026-11-19; the builder moved it here to make room for Tuesday's three previews (`docs/plan/current-focus.md`).
+
+### Hand gestures for the hub
+Hand signs seen by a webcam or the Kinect do hub things: move a window to another screen, open a page, go back. Later than the webcam teleop preview, and on the same hand tracking. **Watch out:** a gesture must not fire by accident while someone talks with their hands; one clear "start" sign first. The older "Kinect gestures" line under "Triggers & sign-in" below is the same idea.
+
+### One AI budget for every brain
+Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key. One budget for the key would count both. Two ways: OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs. Quick job 41 labels what the page shows today.
+
 ## Recent ideas (2026-11-18)
 
 ### Start the hub with a card
@@ -112,6 +123,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** quality levels (theme), "This device" settings.
 
 ### Teleop with a webcam instead of the Quest
+- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo", 2026-11-19), with the webcam or the Kinect (version still to check).
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.
 - **Why:** anyone can try it at a desk; no Quest to charge, set up or put on; a fallback when the Quest is out.
 - **How:** a hand-tracking model that runs in the browser, offline, on the webcam (e.g. Google's MediaPipe hand landmarker, vendored like three.js; license to check), producing the same `xr_input` hand messages (`source: "hands"`). Or on the brain with OpenCV (`camera_snapshot` already uses it).

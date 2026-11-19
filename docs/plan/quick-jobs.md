@@ -5,7 +5,13 @@ Small jobs that are **already decided** and can be built in one Claude Code sess
 Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a focus step (`docs/plan/current-focus.md`).
 
 ## To do
-Nothing left: new decided jobs go here.
+Order: 41, then 40 (not urgent).
+
+- 41. **AI spend: say what it counts, and say "estimated"** (the builder, 2026-11-19). Today each brain writes its own spend log, so the AI Spend page counts every screen of this brain (the desk, the Newline, the Quest), but not another brain (the laptop) that uses the same OpenAI key. The cost is a calculation: chat = the token counts that the service sends back × the prices in `config/models.yaml` (the prices are typed in by hand and can be old); voice = the seconds lab-os measured × a price per minute. Nothing shows this. Do:
+  - The AI Spend page (designed and plain hub, and the VR hub if it shows the total) says "estimated" next to the total, and says that it counts this computer's brain only. Mark the entries that are less exact (voice, `estimated: true`) so they can be told apart.
+  - Look first: can lab-os read the real cost from OpenAI with the key it has? (OpenAI's usage and costs endpoints; find out which key they need.) If a normal project key can, add it as a check that is off by default, and show "from OpenAI" in place of "estimated". If it needs an admin key, build nothing: write in `docs/guides/hub.md` what the professor would have to create, and say so in the report.
+  - The same words in the voice answer to "show me the AI spend", if the assistant reads the number.
+- 40. **Colours in the terminal output** (the builder, 2026-11-19; not urgent). The brain's terminal lines (`lab-os serve`, `lab-os-teleop serve`, the CLI commands) are plain text. Follow the existing standard: the Command Line Interface Guidelines (clig.dev) and `NO_COLOR` (no-color.org): colour only when the output is a terminal, never in log files or pipes; `NO_COLOR` set = no colour; warnings amber, errors red, the rest plain, a short time at the start of each line. Look first at what Python already gives (logging handlers, a small library) before writing your own; a new dependency must be small and maintained. Keep the words of each line the same: lab checks copy them (for example `so101-white reconnected`, `voice timing`). Tests for "no colour when not a terminal" and `NO_COLOR`.
 
 
 ## Done

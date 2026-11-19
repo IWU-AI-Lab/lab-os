@@ -4,7 +4,7 @@ Every step has a tag (for example **9.4**). The line after **→** says what to 
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for Thursday 2026-11-19.** The AI club starts between 2:50 and 3:00 pm. Before that time, do the parts that need sound or a quiet room: 0, 9, 2, S, then F.11 and F.6 (about 90 min). After that time, do the rest of F, then 3b and 11.
+**Order for Thursday 2026-11-19.** The AI club starts between 2:50 and 3:00 pm. Before that time, do the parts that need sound or a quiet room: 0, 9, 2, S, then F.11 and F.6 (about 90 min). After that time, do the rest of F, then P, 3b and 11.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -102,6 +102,12 @@ Do F.11 and F.6 first, before the club starts: they need sound. Do the other ste
 ---
 
 ## After the club starts: no sound needed
+
+## P. For Tuesday's previews (5 min)
+Setup: none. These answers help the sessions that build the previews.
+- **P.1** Find the Kinect. Read the label under it. → the model number (for example 1414, 1473 or 1520). Is there a power adapter with it? (yes / no)
+- **P.2** Find pieces that the arm can pick for tic-tac-toe: about 5 of one colour and 5 of another, each about the size of the cube (3 cm). → what pieces and colours did you find, and how many of each?
+- **P.3** Find the lab's spare webcam. → its brand and model (on the label), or "not found".
 
 ## 3b. The stand camera's cm grid (15 min)
 Setup: plug in `so101-white` and its stand camera. Print `models/charuco/calibration-sheet-letter.pdf` with the printer at **100 % ("Actual size")**, not "Fit to page". Then run:

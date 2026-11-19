@@ -14,12 +14,13 @@ A demo of every feature on Thursday 2026-12-03 (decision 2026-11-12; date moved 
 4. **VR and teleop fixes** (step 10): 1:1 and relative at scale 1 work on the real arm (2026-11-17: "way more intuitive", about 0.5 s behind, a little shaking, accepted). Quick job 10 (the dot cluster) built 2026-11-18: lab check F.10.
 5. **More quick jobs** from the top of `docs/plan/quick-jobs.md` whenever a session has time.
 6. **Borrowed from existing work** (decision 2026-11-16; the comparison: `docs/dev/existing-work-teleop-ai.md`), before the 2026-11-19 lab day where possible: **teleop relative mode at scale 1.0 with a higher speed limit** (built 2026-11-16; lab: checklist 7.7); **the stand camera's cm grid** (Google's printed calibration sheet → pixels to table cm, drawn on `cam-stand`'s picture; built 2026-11-16, lab: checklist part 3b); **`pick_at(x, y)`**, a one-call pick (built 2026-11-16; it needs the height and sag fix in item 1 to grip low enough; lab: checklist 3b.5); robot_MCP's pick tips in the AI instructions (done 2026-11-16). Isaac Teleop as an input to the brain comes after the demo (`docs/plan/ideas.md` → "On hold").
-7. **Three previews** (decision 2026-11-16), shown at the end of the demo as "what's next". Started only after devices, the quick jobs and the voice polish are merged; each on its own page or behind a switch that's off by default, so it can't break what works; cut if it hasn't run on the real hardware by 2026-11-24:
-   - **Point and "move there"** in the headset: in the Quest with the 3D arm lined up, point at a spot on the table, say or press "move there", and the gripper goes there. No AI. The first piece of "put that there".
-   - **"What's on the table?"**: the stand camera's picture goes to Gemini, which names the objects; the hub shows the picture with labels and the assistant says them.
-   - **Two arms at once:** in the Quest, the left hand drives one SO-101 and the right hand the other (`docs/plan/ideas.md` → "Two arms at once").
-   - **Tic-tac-toe** (stretch, added 2026-11-18): the arm plays tic-tac-toe with cubes on a paper grid, seeing it with the stand camera, from an AI tool through the brain's MCP tools. Tried with more than one model (Claude Code, Codex, Gemini CLI are all MCP clients), so if one model can't, another may.
-8. **The Newline** (step 12): pick the route if it's used; not blocking.
+7. **Previews for the end of the demo, "But wait, there's more"** (decisions 2026-11-16 and 2026-11-19). Each on its own page or behind a switch that's off by default, so it can't break what works. Ready for the lab on **Tuesday 2026-11-24**; cut if it hasn't run on the real hardware that day. The builder's three, in order:
+   1. **The robot plays a game:** tic-tac-toe with pieces on a paper grid, seen with the stand camera, played by an AI tool through the brain's MCP tools. Tried with more than one model (Claude Code, Codex, Gemini CLI are all MCP clients), so if one model can't, another may.
+   2. **Teleop with a webcam or the Kinect:** your bare hand in front of a camera drives the arm, no headset (`docs/plan/ideas.md` → "Teleop with a webcam instead of the Quest"). The Kinect's depth camera may judge toward/away better than a webcam.
+   3. **Two arms from the Quest:** the left hand drives one SO-101 and the right hand the other (`docs/plan/ideas.md` → "Two arms at once").
+
+   Also, if time allows: **"What's on the table?"**: the stand camera's picture goes to the AI, which names the objects; the hub shows the picture with labels and the assistant says them (visitor mode's card for it waits in `visit-day.yaml`). Point and "move there" in the headset moved to `docs/plan/ideas.md` (2026-11-19).
+8. **The Newline** (step 12): the builder's priority since 2026-11-19: find out whether it can be JARVIS's screen, with a good refresh rate and a usable interface (lab check part 2, 2026-11-19). Then pick the route.
 9. **Before the demo:** go through `FEATURES.md` on the real hardware, fix what breaks, tag `demo-2026-12-03` (demo only from a tag).
 
 Lab checks for each step: `docs/guides/lab-checklist.md`.
@@ -76,12 +77,12 @@ The Current Project panel reads this list: each step's **bold title** is what th
     In the lab 2026-11-17 (part 8b): all passed; the launcher refuses while the brain has the arm. The training calibration (`sheep` / `shepherd`) is the source of truth since 2026-11-17 (`docs/plan/lab-jarvis-log.md`).
     - **Left:** the real home pose on the arm (quick job 30, built 2026-11-18: lab check F.3), then the AI on the green arm. Done 2026-11-17: quick jobs 17 (the launcher refuses while anything but LeLab has a green port), 18 (the calibration file that matches the motors) 20 (home is the folded pose, the working pose is `ready`) and 25 (the green cameras are `-cam-wrist` and `-cam-stand`).
 
-12. **Newline.** Not blocking: the demo is on the desktop's own screen. Measured 2026-11-13 (`docs/dev/GOTCHAS.md`): by HDMI from the desktop, choppy at 1920×1080 though the desktop draws 60 fps, smooth at 1600×900; in its own Chrome `/perf` gives 44–59 fps but the startup lags and there's no mic button.
+12. **Newline.** The demo is on the desktop's own screen; the Newline as JARVIS's screen is the builder's priority (2026-11-19, lab check part 2). Measured 2026-11-13 (`docs/dev/GOTCHAS.md`): by HDMI from the desktop, choppy at 1920×1080 though the desktop draws 60 fps, smooth at 1600×900; in its own Chrome `/perf` gives 44–59 fps but the startup lags and there's no mic button.
     - **Next, if it's used:** HDMI at 1600×900 is the simplest route (first check the refresh rate Ubuntu picks at 1920×1080 and the Newline's picture mode). Its own Chrome needs a lighter startup on slow devices (fewer stars, `?res=`) and Chrome's flag for the microphone. No extra hardware so far.
 
 ## Waiting on others
 - **The 7-port powered USB hub** (shopping list in the log): the white arm and its cameras without unplugging the green ones.
-- **The lab router** (the professor's OK): "Up next" below.
+- **The lab router:** the builder buys a travel router (Amazon B0GF1J99S4, about $90; 2026-11-19) and hopes to have it by Tuesday 2026-11-24. Before it stays on the lab's wall port, the professor's OK (decision 2026-10-22). Then "Up next" below.
 
 ## Hacks to clean up
 - `config/devices.yaml`: `so101-white-cam-stand` / `-cam-wrist` (2026-11-12; `-cam-a` / `-b` until quick job 15, 2026-11-16) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today (7 = wrist, 8 = stand on both sets; the white names were the wrong way round until quick job 29, 2026-11-18). Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
