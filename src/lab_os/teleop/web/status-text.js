@@ -1,0 +1,34 @@
+// What the headset's teleop status panel says (xr-scene.js draws it; quick job 37): the state and how
+// serious it is, the gripper's opening, the speed, and the hint. No imports, so tests run it with node.
+//   level: normal (cyan) | following (green) | warning (amber) | held (rust, pause icon) | offline (gray)
+// Plain words, no dot separators (docs/design/DESIGN.md → "Don't").
+
+/** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts]}. */
+export function panelText(feed, noController, source) {
+  const s = feed?.status, hands = source === "hands";
+  const [state, level] = noController ? [hands ? "No right hand" : "No controller", "warning"]
+    : !s ? ["Connecting…", "offline"]
+    : s.arm?.connected === false ? ["Arm disconnected", "offline"]
+    : feed.frozen ? [s.needs_release ? `Frozen: let go of the ${hands ? "pinch" : "grip"}` : "Frozen", "held"]
+    : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 slowed: servos warm", "warning"]
+    : s.clutch ? [s.one_to_one ? "Following 1:1" : "Following", "following"]
+    : s.mode === "one_to_one" && s.hand_gap_cm != null && s.hand_gap_cm > s.capture_cm
+      ? [`Reach the gripper: ${Math.round(s.hand_gap_cm)} cm`, "normal"]
+      : ["Holding", "normal"];
+  let gripper = null;
+  if (s && feed.joints.gripper !== undefined && s.limits?.gripper) {
+    const [lo, hi] = s.limits.gripper;
+    gripper = Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100);
+  }
+  const oneToOne = s?.mode === "one_to_one";
+  const speed = !s ? null
+    : oneToOne ? { label: "Speed 1:1", value: s.one_to_one_deg_per_s == null ? null : Math.round(s.one_to_one_deg_per_s), unit: s.one_to_one_deg_per_s == null ? "servo max" : "°/s top" }
+    : { label: "Speed", value: Math.round(s.speed_scale * 100), unit: "%" };
+  const hint = oneToOne && !noController
+    ? hands ? ["1:1: right wrist in the ball", "left pinch = move"] : ["1:1: hand in the ball", "hold grip = move", "A/X = stop"]
+    : hands ? ["Hold left pinch = move", "right pinch = gripper"]
+      : noController ? ["Pick up the controllers", "leave: palm up + pinch"]
+        : ["Hold grip = move", "trigger = gripper", "A/X = stop"];
+  return { state, level, gripper, speed, hint };
+}
+
