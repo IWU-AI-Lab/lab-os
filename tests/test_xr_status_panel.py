@@ -24,13 +24,15 @@ STATUS = {
 }
 
 
-def panel(status=STATUS, frozen=False, gripper=42, no_controller=False, source="controllers"):
+def panel(
+    status=STATUS, frozen=False, gripper=42, no_controller=False, source="controllers", moving=False
+):
     feed = (
         None
         if status is None
         else {"status": status, "frozen": frozen, "joints": {"gripper": gripper}}
     )
-    args = json.dumps([feed, no_controller, source])
+    args = json.dumps([feed, no_controller, source, moving])
     script = (
         f"import({json.dumps(MODULE.as_uri())}).then(m => "
         f"console.log(JSON.stringify(m.panelText(...{args}))))"
@@ -120,10 +122,15 @@ def test_two_arms_each_has_its_state(left, state, level):
 
 def test_two_arms_hint_and_short_frozen_words():
     p = panel(status=TWO)
-    assert p["hint"] == ["Each hand drives its arm", "grip = move", "trigger = gripper",
+    assert p["hint"] == ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm",
                          "A/X = stop both"]  # fmt: skip
     frozen = panel(frozen=True, status=TWO | {"needs_release": True})
     assert frozen["state"] == "Right frozen: let go"
     assert panel(status=TWO, source="hands")["hint"][0] == "Two arms: controllers only"
     assert panel(status=TWO, no_controller=True)["left"] is None  # one message: pick them up
     assert panel()["left"] is None  # one arm: as before
+
+
+def test_two_arms_y_held_says_the_grips_move_the_3d_arms():
+    p = panel(status=TWO, moving=True)
+    assert p["hint"][0] == "Y held: a grip moves its 3D arm" and "tap Y = put back" in p["hint"]

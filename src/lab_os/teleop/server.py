@@ -237,7 +237,8 @@ async def _broadcaster(app: web.Application) -> None:
 async def _background(app: web.Application):
     app[LOOP].on_command = app[OUTBOX].put_nowait
     tasks = [asyncio.create_task(app[LOOP].run()), asyncio.create_task(_broadcaster(app))]
-    if app[LOOP].left:  # two arms at once: its state goes out in status, not as arm_* messages
+    if app[LOOP].left:  # two arms at once: its arm_* messages too (pages tell them by `device`)
+        app[LOOP].left.on_command = app[OUTBOX].put_nowait
         tasks.append(asyncio.create_task(app[LOOP].left.run()))
     yield
     for t in tasks:

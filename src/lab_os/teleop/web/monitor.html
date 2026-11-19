@@ -25,7 +25,8 @@
       <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
       <span class="chip"><b>Input</b><span id="input" class="pill off">—</span></span>
       <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
-      <span class="chip"><b>Arm</b><span id="state" class="pill off">—</span></span>
+      <span class="chip"><b id="arm-label">Arm</b><span id="state" class="pill off">—</span></span>
+      <span class="chip" id="left-chip" hidden><b>Left arm</b><span id="left-state" class="pill off">—</span></span>
     </div>
     <span class="grow"></span>
     <span class="clock"></span>
@@ -36,7 +37,10 @@
     <section class="card view"><div id="arm-panel" class="in arm3d" data-role="monitor"></div></section>
     <aside class="side">
       <section class="card grow-card"><div class="in" id="joints">
-        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg>Joints <small>what the arm reports</small></h2>
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg><span id="joints-title">Joints</span> <small>what the arm reports</small></h2>
+      </div></section>
+      <section class="card grow-card" id="left-card" hidden><div class="in" id="joints-left">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg>Left arm <small id="left-name"></small></h2>
       </div></section>
       <p class="hint"><a href="/classic/monitor">classic page</a></p>
     </aside>

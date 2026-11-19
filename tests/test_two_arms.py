@@ -215,8 +215,8 @@ async def test_one_page_drives_both_and_stop_from_a_monitor_stops_both(aiohttp_c
     await monitor.send_json({"type": "stop"})
     assert await wait_for(lambda: right.frozen and left.frozen)
     listener.cancel()
-    # the pages' 3D arm is the right one: the left arm's commands never go out as arm_* messages
-    assert devices == {"fake-arm"}
+    # each arm's commands go out under its own name (the pages' ArmFeed tells them apart)
+    assert devices == {"fake-arm", "fake-left"}
 
 
 # ---------- the command line ----------

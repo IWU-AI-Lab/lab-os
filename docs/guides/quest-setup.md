@@ -162,17 +162,22 @@ The controls (with the controllers):
 - **Each trigger:** the gripper of that hand's arm.
 - **A or X:** stops both arms. STOP on any page also stops both arms.
 - **Right thumbstick** and the Speed slider: the speed of both arms.
+- **Y** (hold) **and a grip:** move and turn that hand's 3D arm. While you hold Y, the real arms hold still. After you release Y, release the grip and hold it again to drive.
+- **Y** (a short tap, no grip): put both 3D arms back to where they start.
+
+**The 3D arms:** the headset shows one 3D arm for each real arm. The left 3D arm starts 40 cm to the left of the right one. Put each 3D arm on its real arm (Y and the grip). The Quest's browser keeps both positions. Each hand's moves are measured from its own 3D arm: move your hand toward the front of a 3D arm, and that gripper goes forward, from any side.
 
 What is different from one arm:
-- The left grip does not move the 3D arm. The 3D arm shows only the right arm. To put it on the real right arm, do that before, with one arm (the Quest's browser keeps the position).
+- The left grip does not move a 3D arm by itself. Hold Y with it.
 - The left arm has only the relative mode. The 1:1 mode applies only to the right arm.
 - Bare hands drive only the right arm (a left pinch is its clutch), as with one arm.
 - Desktop control and the AI tools drive only the right arm. While an AI tool moves the right arm, the left arm holds.
-- The status panel in the headset has two labels: the left arm on the left ("Left following"), the right arm on the right. The teleop page shows "Right arm" and "Left arm".
+- The status panel in the headset has two labels: the left arm on the left ("Left following"), the right arm on the right. While you hold Y, it says "Y held: a grip moves its 3D arm".
+- The teleop page and the monitor show "Right arm" and "Left arm", and both arms in the 3D view (the left one 40 cm to the left; these pages do not know where the real arms stand). The monitor shows the joints of each arm.
 - If one arm's USB cable is disconnected, the other arm continues.
 - Ctrl+C makes both SO-101s go limp. Hold both arms first.
 
-**Where to put the arms:** next to each other, both facing away from you, with the `--arm` arm on the right. Stand behind them. Then a hand forward moves its gripper forward. Each arm moves in its own directions: if an arm faces another way, its gripper moves in that arm's "forward".
+**Where to put the arms:** next to each other, both facing away from you, with the `--arm` arm on the right, is the easiest. Stand behind them. If an arm faces another way, turn its 3D arm the same way (Y and the grip). Then that hand moves its gripper in the room's directions too.
 
 **The green arm:** `--left-arm so101-green` has the same checks as `--arm so101-green` (`docs/guides/ai-control.md` → "The green arm"). It must be in the venue's `active_devices`. The brain refuses it while LeLab or a training run has its port open. The brain drives it with its copy of the training calibration and never changes the arm.
 

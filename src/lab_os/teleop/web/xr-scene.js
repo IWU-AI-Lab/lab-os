@@ -4,6 +4,8 @@
 //   - a floating status panel (connected / following / frozen, gripper, speed, hint)
 //   - 1:1 mode: a see-through ball around the 3D gripper, where the hand grabs it to start
 //   - VR only: a dim room with a floor grid and a table, so there's something to stand in
+//   - two arms at once (a left feed with a status): the left arm too, in its own place, with its own
+//     clutch line from the left hand; each 3D arm can be moved (setPlacement(place, "left"); xr.js)
 // The arm stands on the table in front of you, facing away (you operate it from behind), until it's
 // moved (setPlacement: e.g. onto the real arm, with the left grip; xr.js).
 // Units: metres, WebXR local-floor space (+x right, +y up, -z forward).
@@ -21,11 +23,13 @@ const IDLE_COLOR = color("arm3d.idle_marker");
 
 export class XRScene {
   /**
-   * @param {import("./arm/arm-feed.js").ArmFeed} feed
+   * @param {import("./arm/arm-feed.js").ArmFeed} feed  the brain's first arm (the right hand's)
    * @param {{ar: boolean, style?: string}} opts  style: "stick" for a light model (default: mesh/boxes)
+   * @param {import("./arm/arm-feed.js").ArmFeed} [leftFeed]  the left hand's arm (two arms at once)
    */
-  constructor(feed, { ar, style }) {
+  constructor(feed, { ar, style }, leftFeed = null) {
     this.feed = feed;
+    this.leftFeed = leftFeed;
     this.ar = ar;
     this.style = style;
     this.scene = new THREE.Scene();
@@ -42,6 +46,10 @@ export class XRScene {
     for (const h of Object.values(this.hands)) this.root.add(h);
     this.clutchLine = this._clutchLine();
     this.root.add(this.clutchLine);
+    this.leftLine = this._clutchLine(); // two arms: from where the left hand grabbed
+    this.root.add(this.leftLine);
+    this._leftWas = false;
+    this._leftAnchor = null;
     this.panel = new StatusPanel();
     this.panel.mesh.position.set(0.48, 1.12, -0.62);
     this.panel.mesh.rotation.y = -0.35; // turned toward the user
@@ -50,23 +58,28 @@ export class XRScene {
     this.arm = null;
     this._clutchWas = false;
     this._anchor = null;
+    this.armLeft = null;
     feed.onChange(() => this._applyFeed());
+    leftFeed?.onChange(() => this._applyLeft());
     this._loadArm(feed.modelKind || "so101");
   }
 
-  /** Move the 3D arm from its usual spot by {x, y, z} metres and turn it by `yaw` radians. */
-  setPlacement({ x, y, z, yaw }) {
-    this.armHolder.position.set(ARM_BASE.x + x, ARM_BASE.y + y, ARM_BASE.z + z);
-    this.armHolder.rotation.y = Math.PI / 2 + yaw;
+  /** Move a 3D arm ("right": the first arm; "left": two arms' left one) from its usual spot by
+   * {x, y, z} metres and turn it by `yaw` radians. */
+  setPlacement({ x, y, z, yaw }, slot = "right") {
+    const holder = slot === "left" ? this.leftHolder : this.armHolder;
+    holder.position.set(ARM_BASE.x + x, ARM_BASE.y + y, ARM_BASE.z + z);
+    holder.rotation.y = Math.PI / 2 + yaw;
   }
 
   /** Where the 3D arm's base is, in the same space as the hands' positions (WebXR space; the
    * hands are drawn under `root` as they come), for hand positions relative to it. Not the world
    * position: with a "local" space `root` is shifted down 1.4 m, and the hand would look 1.4 m
    * from the gripper to the brain (found 2026-11-16, quick job 13). */
-  armBase() {
-    this.armHolder.updateWorldMatrix(true, false);
-    return this.root.worldToLocal(this.armHolder.getWorldPosition(new THREE.Vector3()));
+  armBase(slot = "right") {
+    const holder = slot === "left" ? this.leftHolder : this.armHolder;
+    holder.updateWorldMatrix(true, false);
+    return this.root.worldToLocal(holder.getWorldPosition(new THREE.Vector3()));
   }
 
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
@@ -84,6 +97,30 @@ export class XRScene {
     if (this.ar) arm.setOpacity(0.55);
     this.armHolder.add(arm.object);
     this._applyFeed();
+  }
+
+  /** Two arms at once: the left arm's model, shown only while the brain drives a left arm. */
+  async _loadLeft(kind) {
+    this.leftKind = kind;
+    const style = this.style === "stick" ? "stick" : kind === "so101" ? "mesh" : "boxes";
+    const arm = await loadArmModel(kind, { style });
+    if (this.leftKind !== kind) return;
+    if (this.armLeft) this.leftHolder.remove(this.armLeft.object);
+    this.armLeft = arm;
+    if (this.ar) arm.setOpacity(0.55);
+    this.leftHolder.add(arm.object);
+    this._applyLeft();
+  }
+
+  _applyLeft() {
+    const f = this.leftFeed;
+    this.leftHolder.visible = !!f?.status;
+    if (!f?.status) return;
+    if (f.modelKind && f.modelKind !== this.leftKind) this._loadLeft(f.modelKind);
+    if (this.armLeft) {
+      this.armLeft.setJoints(f.joints);
+      this.armLeft.setTint(f.frozen ? FROZEN_TINT : null);
+    }
   }
 
   _applyFeed() {
@@ -110,16 +147,20 @@ export class XRScene {
     this.grabZone.material.color.setHex(s.hand_gap_cm <= s.capture_cm ? CLUTCH_COLOR : IDLE_COLOR);
   }
 
-  updateHands(hands, source = "controllers", pinches = null) {
+  /** `moving`: two arms, Y held (the grips move the 3D arms; the panel says so). */
+  updateHands(hands, source = "controllers", pinches = null, moving = false) {
     // No right controller or hand: say so, and how to leave, instead of looking broken
     // (2026-10-29: the builder got stuck in the page).
     const missing = !hands.right?.pos;
-    if (missing !== this.panel.noController || source !== this.panel.source) {
+    if (missing !== this.panel.noController || source !== this.panel.source || moving !== this.panel.moving) {
       this.panel.noController = missing;
       this.panel.source = source;
+      this.panel.moving = moving;
       this.panel.update(this.feed);
     }
     const clutch = !!this.feed.status?.clutch && !this.feed.frozen;
+    const lf = this.leftFeed?.status ? this.leftFeed : null; // two arms at once
+    const leftClutch = !!lf?.status.clutch && !lf.frozen;
     this._updateGrabZone(clutch);
     for (const [side, marker] of Object.entries(this.hands)) {
       const c = hands[side];
@@ -131,7 +172,7 @@ export class XRScene {
       // clutch (the server engages above 0.6), the right one while the arm follows
       const p = pinches ? pinches[side] : 0;
       marker.userData.ball.scale.setScalar(1 + 1.5 * p);
-      const on = side === "right" ? clutch : !!pinches && p > 0.6;
+      const on = side === "right" ? clutch : lf && !pinches ? leftClutch : !!pinches && p > 0.6;
       marker.userData.ball.material.color.setHex(on ? CLUTCH_COLOR : IDLE_COLOR);
     }
     const right = hands.right;
@@ -147,6 +188,19 @@ export class XRScene {
       this._anchor = null;
     }
     this._clutchWas = clutch;
+    const left = hands.left;
+    if (leftClutch && left?.pos) {
+      if (!this._leftWas || !this._leftAnchor) this._leftAnchor = new THREE.Vector3().fromArray(left.pos);
+      const pts = this.leftLine.geometry.attributes.position;
+      pts.setXYZ(0, this._leftAnchor.x, this._leftAnchor.y, this._leftAnchor.z);
+      pts.setXYZ(1, left.pos[0], left.pos[1], left.pos[2]);
+      pts.needsUpdate = true;
+      this.leftLine.visible = true;
+    } else {
+      this.leftLine.visible = false;
+      this._leftAnchor = null;
+    }
+    this._leftWas = leftClutch;
   }
 
   // ---- building blocks -------------------------------------------------------------------
@@ -176,6 +230,11 @@ export class XRScene {
     this.armHolder.position.copy(ARM_BASE);
     this.armHolder.rotation.y = Math.PI / 2; // robot +x (its forward) → away from the user (-z)
     this.root.add(this.armHolder);
+    this.leftHolder = new THREE.Group(); // two arms at once: placed by xr.js, hidden until then
+    this.leftHolder.position.copy(ARM_BASE);
+    this.leftHolder.rotation.y = Math.PI / 2;
+    this.leftHolder.visible = false;
+    this.root.add(this.leftHolder);
     // 1:1 mode: the grab zone around the gripper point (the brain's capture distance)
     this.grabZone = new THREE.Mesh(
       new THREE.SphereGeometry(1, 24, 16),
@@ -191,6 +250,7 @@ export class XRScene {
       );
       ring.rotation.x = -Math.PI / 2;
       this.armHolder.add(ring);
+      this.leftHolder.add(ring.clone());
     }
   }
 
@@ -272,7 +332,7 @@ export class StatusPanel {
 
   update(feed) {
     this.last = feed;
-    const t = panelText(feed, this.noController, this.source);
+    const t = panelText(feed, this.noController, this.source, this.moving);
     const key = JSON.stringify(t);
     if (key === this.key) return;
     this.key = key;

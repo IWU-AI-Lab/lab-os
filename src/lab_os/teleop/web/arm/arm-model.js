@@ -298,8 +298,16 @@ export const MODEL_CHOICES = [
   { kind: "xarm1s", style: "stick", label: "xArm 1S (stick figure)" },
 ];
 
-export async function loadArmModel(kind, { style } = {}) {
-  if (kind === "so101") return loadSo101(style || "mesh");
-  if (kind === "xarm1s") return buildXarm(style || "boxes");
-  throw new Error(`no 3D model for arm kind "${kind}"`);
+// One load at a time: two at once (two arms) share three.js's file requests, and the second
+// loader's manager then said "done" before its meshes were in (docs/dev/GOTCHAS.md, 2026-11-19).
+let queue = Promise.resolve();
+
+export function loadArmModel(kind, { style } = {}) {
+  const next = queue.then(() => {
+    if (kind === "so101") return loadSo101(style || "mesh");
+    if (kind === "xarm1s") return buildXarm(style || "boxes");
+    throw new Error(`no 3D model for arm kind "${kind}"`);
+  });
+  queue = next.catch(() => {}); // a failed load doesn't hold up the next one
+  return next;
 }

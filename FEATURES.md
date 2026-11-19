@@ -67,7 +67,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Record and replay controller sessions (`--record`, `lab-os-teleop replay`) | ✅ | For tests without a headset. |
 | The redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | Old pages at `/classic/…`. |
 | The arm freezes on release, lost tracking, a lost connection or old input; STOP on every page | ✅ | |
-| **Two arms at once** (preview, 2026-11-19): `--left-arm so101-green` next to `--arm so101-white`; each controller drives its own arm (grip = clutch, trigger = gripper); A, X and STOP stop both; the headset panel shows both arms | 🧪 | Two software arms. Controllers only, the left arm relative only. Lab: check part T (2026-11-24). |
+| **Two arms at once** (preview, 2026-11-19): `--left-arm so101-green` next to `--arm so101-white`; each controller drives its own arm (grip = clutch, trigger = gripper); A, X and STOP stop both; the headset, the teleop page and the monitor show both 3D arms and both states; hold Y and a grip to move that hand's 3D arm | 🧪 | Two software arms, and the headset session in headless Chrome. Controllers only, the left arm relative only. Lab: check part T (2026-11-24). |
 
 ## AI tools drive the arm (MCP)
 http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`

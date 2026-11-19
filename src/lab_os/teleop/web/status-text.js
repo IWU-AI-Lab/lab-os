@@ -15,8 +15,8 @@ function leftText(l) {
 }
 
 /** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts],
- * left: {state, level} or null}. */
-export function panelText(feed, noController, source) {
+ * left: {state, level} or null}. `moving`: two arms, Y held (the grips move the 3D arms). */
+export function panelText(feed, noController, source, moving = false) {
   const one = oneArmText(feed, noController, source);
   const l = feed?.status?.left_arm;
   if (!l || noController) return { ...one, left: null };
@@ -24,8 +24,9 @@ export function panelText(feed, noController, source) {
   const hands = source === "hands";
   const oneToOne = feed.status.mode === "one_to_one";
   const hint = hands ? ["Two arms: controllers only", "now: right arm", "left pinch = move"]
-    : oneToOne ? ["Right 1:1: hand in the ball", "left relative", "A/X = stop both"]
-      : ["Each hand drives its arm", "grip = move", "trigger = gripper", "A/X = stop both"];
+    : moving ? ["Y held: a grip moves its 3D arm", "the arms hold", "tap Y = put back"]
+      : oneToOne ? ["Right 1:1: hand in the ball", "left relative", "Y + grip = move 3D arm", "A/X = stop both"]
+        : ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm", "A/X = stop both"];
   const right = one.state.replace(/^Frozen: let go of the (grip|pinch)$/, "Frozen: let go");
   return { ...one, state: `Right ${right.charAt(0).toLowerCase()}${right.slice(1)}`, hint, left: { state, level } };
 }

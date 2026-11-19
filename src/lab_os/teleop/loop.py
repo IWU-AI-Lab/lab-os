@@ -20,8 +20,8 @@ left controller (its mapper's `hand`), while this one follows the right. Both re
 `InputState`, so the dead-man rule, one input page at a time and A/X freeze both. STOP, the speed
 and a venue's caps are passed on to it. The left arm is pose input in relative mode only (the
 Quest page lines its 3D arm up on the right arm, so 1:1 has no frame for the left one); jogging
-and the AI tools drive only this loop's arm. It sends no `arm_*` messages (the pages' 3D arm is
-this one): its state is the `left_arm` part of `status`.
+and the AI tools drive only this loop's arm. Its `arm_*` messages carry its own `device` (the
+pages' ArmFeed tells the two arms apart by it); its state is the `left_arm` part of `status`.
 """
 
 import asyncio

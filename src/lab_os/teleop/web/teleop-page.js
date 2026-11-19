@@ -51,8 +51,9 @@ link.on("status", (s) => {
 // Two arms at once (preview 3): the left controller's arm, next to the right one's state.
 link.on("status", (s) => {
   const l = s.left_arm;
-  if (!$("left-chip")) return; // the classic page (/classic/teleop) shows only the right arm
+  if (!$("left-chip")) return; // the classic page (/classic/teleop) has no left-arm chip
   $("left-chip").hidden = !l;
+  $("two-arms-hint").hidden = !l;
   $("arm-label").textContent = l ? "Right arm" : "Arm";
   if (!l) return;
   if (l.connected === false) setPill($("left-state"), "disconnected (USB)", "warn");

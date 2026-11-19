@@ -45,7 +45,7 @@ Sent every XR frame (72–120 Hz on a Quest).
 - `pos` / `quat` are `null` when tracking is lost (treated like releasing the clutch).
 - `trigger`, `grip`: 0..1 (analog).
 - `buttons.a` is the lower face button on **either** controller (A on the right, X on the left); `buttons.b` is the upper one (B / Y). With two arms, either one stops both arms.
-- Two arms at once (`lab-os serve --left-arm`, preview 3, 2026-11-19): the same message. `hands.right` drives the first arm, `hands.left` the second (its own `grip` and `trigger`). The page then doesn't use the left grip to move the 3D arm.
+- Two arms at once (`lab-os serve --left-arm`, preview 3, 2026-11-19): the same message. `hands.right` drives the first arm, `hands.left` the second (its own `grip` and `trigger`). Each hand's `pos` / `quat` is measured from its own 3D arm (the left hand from the left 3D arm). While Y is held (the grips move the 3D arms), and after it until each grip is let go, the page sends both grips as 0, so the arms hold.
 - A missing hand key means that controller isn't present.
 
 ### `joint_input`
@@ -131,7 +131,7 @@ Sent the moment the teleop loop calls the arm driver, one message per call, so v
 - `joints` / `speed_scale`: the arguments of `Arm.move_joints(...)`, unmodified (degrees, shared joint names).
 - `driver_joints`: what the driver reported right after that call. Differences = the driver clamped the command.
 - `seq` increases by one per message; a gap means a viewer missed something.
-- Only the first (right-hand) arm sends these. With two arms, the left arm's state is in `status.left_arm`: the pages' 3D arm is the right one.
+- With two arms at once, both arms send these, each with its own `device`. A page's 3D arm takes only its own arm's messages (`ArmFeed` in `web/arm/arm-feed.js`, one for each arm), so check `device` in any new viewer.
 
 ### `error`
 ```json
