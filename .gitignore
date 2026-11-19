@@ -16,6 +16,9 @@ __pycache__/
 dist/
 build/
 
+# Downloaded programs (lab-os quest-view --install: scrcpy)
+downloads/
+
 # Data, recordings, models
 logs/
 *.log

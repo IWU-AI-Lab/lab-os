@@ -55,6 +55,8 @@ The features that are built and working today, plus a few lab robot projects tha
 
 | Feature | Status | Notes |
 |---|---|---|
+| The headset's status panel in the hub's design (2026-11-18): the state as a coloured chip, gripper and speed in the digit font, the hint; readable in VR and over the room in AR | 🧪 | Checked by eye on the Mac over dark and light backgrounds; in the headset: lab-checklist F.13 |
+| **What the Quest sees, on another screen** (2026-11-18): a button in the hub's strip on the brain's computer opens scrcpy's window mirroring the headset over its USB cable (watch only); `lab-os quest-view --install` downloads scrcpy into the lab-os folder, `--remove` deletes it (`docs/guides/quest-view.md`) | 🧪 | Download, start and stop tried on the Mac without a headset; on the Quest: lab-checklist F.12 |
 | Quest 3 controllers drive `so101-white` through inverse kinematics: grip = clutch, trigger = gripper, A/X = stop | ✅ | The working demo |
 | Bare-hand tracking: right wrist drives, left pinch = clutch, right pinch = gripper | 🟡 | Works but is hard to steer |
 | 1:1 mode ("Hand → arm"): the gripper goes exactly where your hand is | 🧪 | Fake arm only so far |

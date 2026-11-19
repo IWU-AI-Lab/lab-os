@@ -45,7 +45,7 @@ The trigger is the gripper: use the right controller's trigger control in the em
 
 `localhost` counts as a secure context, so WebXR works over plain `http://`. No certificates needed.
 
-**What you see inside the session** (emulator or headset): the arm standing on a table in front of you, facing away (you operate it from behind), moving with exactly what the driver receives. Also a marker on each controller (the right one turns green while the clutch is held), a dashed line from where you grabbed, and a floating status panel (FOLLOWING / HOLDING / FROZEN, gripper, speed). In VR there's a dim room and a table. In AR (passthrough on the Quest) the arm is a see-through ghost and the real room shows. Add `?xrarm=stick` to the page URL for the lighter stick-figure arm.
+**What you see inside the session** (emulator or headset): the arm standing on a table in front of you, facing away (you operate it from behind), moving with exactly what the driver receives. Also a marker on each controller (the right one turns green while the clutch is held), a dashed line from where you grabbed, and a floating status panel in the hub's design (since 2026-11-18): the state as a coloured chip (cyan Holding, green Following, amber No controller, rust Frozen with a pause sign, gray Connecting), the gripper's opening and the speed in the digit font, and how to drive. It stays readable over the room in AR. In VR there's a dim room and a table. In AR (passthrough on the Quest) the arm is a see-through ghost and the real room shows. Add `?xrarm=stick` to the page URL for the lighter stick-figure arm.
 
 ## 4. The real Quest over USB
 The trick: the Quest's browser opens `http://localhost:8080`, and **`adb reverse`** forwards the headset's port 8080 through the USB cable to the desktop. To the browser it's still `localhost` (secure, WebXR allowed), and nothing goes over the lab network.
@@ -110,5 +110,7 @@ Troubleshooting:
 - `unauthorized` in `adb devices` → put the headset on and accept the USB debugging prompt.
 - "WebXR not available" → the URL must be exactly `http://localhost:8080`, not the desktop's IP address (that's not a secure context).
 - Arm shows "frozen: release grip" → release the grip fully, then press again.
+
+**Showing what the headset sees** on the desktop's screen, for the room: `docs/guides/quest-view.md`.
 
 Later (not needed for the demo): Wi-Fi instead of USB needs HTTPS with a certificate the Quest trusts, or `adb` over Wi-Fi. USB is simpler and portable (see docs/archive/focus-2026-10-teleop-demo.md, "Fewest moving parts").

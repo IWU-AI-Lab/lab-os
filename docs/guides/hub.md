@@ -80,6 +80,9 @@ Since 2026-11-10 they're in the hub's design too (`src/lab_os/web/design/`: `kit
 - **AI Control** (`/ai`, the third button): what an AI tool (Claude Code + Fable, Codex, …) does with the arm, live: the arm seen from its side with its real geometry (from the arm's kinematics, in cm), where the last `move_to` aimed, every robot-tool call as it happens (ok / clipped / refused / stopped / error, with what came back), whether the tools are on and moves allowed, and STOP. Until the first call it says how to connect Claude Code. It never moves anything.
 - **The old pages** stay at `/classic/teleop` and `/classic/monitor` (same scripts, the old look), in case the new ones break somewhere (e.g. the Quest's browser).
 
+## What the Quest sees (2026-11-18)
+On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window showing what the Quest on the USB cable sees, so the room can watch. It needs scrcpy, downloaded once with `uv run lab-os quest-view --install`. `docs/guides/quest-view.md`.
+
 ## Settings (the ⚙, or `/settings`)
 The ⚙ in the designed hub opens this same page inside the hub. The sections sit side by side and the page **scrolls down** to the rest: the assistant (the monthly AI budget), this place, robots and the safety limits are below "This device" (since 2026-11-17; before, they spilled off to the right where they couldn't be reached).
 - **The hub, the assistant, this place, robots in this venue:** values from `theme.yaml`, `place.yaml` and the running venue's file, saved the moment they change, **into those files, with their comments kept**. Each one says when it applies: at once (the hub re-reads the theme), from the next question, or after a restart (the safety ones). They're ordinary config changes: in the lab they show up in `git diff config/`; commit them like any edit, or undo with `git checkout config/<file>`.

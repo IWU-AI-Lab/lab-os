@@ -6,28 +6,28 @@
 # _s seconds. "Used by" notes say where a token is read today; "(planned)" = for the hub, not read yet.
 
 colors:
-  background: "#05080b"  # near-black behind everything. Used by: the designed hub, the module pages (kit.js)
+  background: "#05080b"  # near-black behind everything. Used by: the designed hub, the module pages (kit.js), the headset's teleop status panel
   surface: "#0b161c"     # panel fill, drawn see-through (glow.panel_fill). Used by: the designed hub
-  line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. Used by: the designed hub
-  text: "#d4eef5"        # main text. Used by: the designed hub, the module pages (kit.js)
-  text_dim: "#6d8c96"    # labels, secondary text. Used by: the designed hub
+  line: "#1f3d48"        # quiet structure: grids, idle frames, background circuits. Used by: the designed hub, the headset's teleop status panel
+  text: "#d4eef5"        # main text. Used by: the designed hub, the module pages (kit.js), the headset's teleop status panel
+  text_dim: "#6d8c96"    # labels, secondary text. Used by: the designed hub, the headset's teleop status panel
   primary: "#29d4ff"     # cyan, the main color; change this to recolor (surface/line/hot/text are cyan-tinted). Used by: robot joints in the 3D views, controller pointer
   hot: "#eafcff"         # white-hot core of the brightest things only. Used by: the designed hub
-  accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views
+  accent: "#ff9a2e"      # amber: "look here", busy, warnings. Used by: gripper jaws in the 3D views, the headset's teleop status panel
   danger: "#ff2436"      # aggressive red: critical, a person must act (error, stop). Used by: the designed hub
-  offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. Used by: the designed hub
-  ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line
-  frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views
+  offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. Used by: the designed hub, the headset's teleop status panel
+  ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line, the headset's teleop status panel
+  frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views, the headset's teleop status panel
 
 font:                    # one font per role; every font in `bundled` ships with the code, so swap freely
   bundled: [Orbitron, Oxanium, Chakra Petch, Rajdhani, Inter, JetBrains Mono, DSEG7, DSEG14, Doto, Share Tech Mono]
   display: "Orbitron, 'Chakra Petch', system-ui, sans-serif"  # titles only, CAPS. Used by: the designed hub
   display_weight: 700
-  family: "'Chakra Petch', system-ui, sans-serif"   # interface + chat. Used by: headset status panel
+  family: "'Chakra Petch', system-ui, sans-serif"   # interface + chat. Used by: the designed hub, the headset's teleop status panel
   family_weight: 500
-  lines: "Inter, system-ui, sans-serif"             # typed-out lines, lighter secondary text. Used by: the designed hub
+  lines: "Inter, system-ui, sans-serif"             # typed-out lines, lighter secondary text. Used by: the designed hub, the headset's teleop status panel
   lines_weight: 300      # light only; heavier looks bloated
-  digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. Used by: the designed hub
+  digits: "DSEG7, 'JetBrains Mono', ui-monospace, monospace"  # clock, joint values, timestamps; numbers only. Used by: the designed hub, the headset's teleop status panel
   mono: "'JetBrains Mono', ui-monospace, monospace"           # commands and file names in chat. Used by: the designed hub
   base_size_px: 20       # body text on the 32" monitor. (planned)
   scale_with_screen: true  # hub sizes follow the screen (the smaller of width/height decides), so the core keeps its share. (planned)

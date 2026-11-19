@@ -7,6 +7,9 @@
 #                     its base). 0 (the default) when it stands on the table; negative when it stands
 #                     on a plate. Every height the AI tools, pick_at, the floor and teleop use is then
 #                     measured from the table (quick job 28).
+# serial           -> headsets: the serial number `adb devices` lists (the Quest's view, quick job 36)
+# mirror           -> headsets: extra scrcpy options for its view on the brain's computer, e.g.
+#                     ["--crop=2064:2208:0:0"] for one eye, ["--fullscreen"] (docs/guides/quest-view.md)
 # borrowed: true   -> another project's device (CLAUDE.md, "Hard rules"): lab-os may drive or use
 #                     it, but never sets it up (no motor IDs, baud rate, firmware, calibration),
 #                     drives it with a copy of its training calibration, and never opens it while
@@ -116,12 +119,15 @@ devices:
   # Quest's browser uses for the hub (`/design?device=quest-a`).
   quest-a:
     kind: quest
-    notes: Quest A, serial 2G97C5ZHB300FG. The builder's (probably). Teleop, the hub in VR.
+    serial: 2G97C5ZHB300FG
+    notes: Quest A. The builder's (probably). Teleop, the hub in VR.
 
   quest-b:
     kind: quest
-    notes: Quest B, serial 2G97C5ZHB3053L. B or C is on loan to an AI club member (which one isn't known yet).
+    serial: 2G97C5ZHB3053L
+    notes: Quest B. B or C is on loan to an AI club member (which one isn't known yet).
 
   quest-c:
     kind: quest
-    notes: Quest C, serial 2G97C5ZHB3034N. B or C is on loan to an AI club member (which one isn't known yet).
+    serial: 2G97C5ZHB3034N
+    notes: Quest C. B or C is on loan to an AI club member (which one isn't known yet).

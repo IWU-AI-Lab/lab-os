@@ -77,6 +77,8 @@ class Device:
     # arms: the table's height in the arm's own numbers (cm; its z = 0 is the bottom of its base).
     # An arm standing on a plate has a negative one (so101-white: -1.6, quick job 28).
     table_z_cm: float = 0.0
+    serial: str = ""  # headsets: the serial adb lists (the Quest's view, quick job 36)
+    mirror: tuple[str, ...] = ()  # headsets: extra scrcpy options for its view (crop, window)
 
 
 @dataclass(frozen=True)
@@ -128,6 +130,8 @@ def _read_devices(path: Path) -> dict[str, Device]:
             training_calibration=spec.get("training_calibration", ""),
             socket=spec.get("socket", ""),
             table_z_cm=float(spec.get("table_z_cm", 0.0)),
+            serial=str(spec.get("serial") or ""),
+            mirror=tuple(str(a) for a in (spec.get("mirror") or ())),
         )
         for name, spec in (raw.get("devices") or {}).items()
     }

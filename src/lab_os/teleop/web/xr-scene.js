@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
 import { color, theme } from "/web/theme.js";
+import { panelText } from "./status-text.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
@@ -17,7 +18,6 @@ const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
 const FROZEN_TINT = color("colors.frozen");
 const CLUTCH_COLOR = color("colors.ok");
 const IDLE_COLOR = color("arm3d.idle_marker");
-const FONT = theme.font?.family || "system-ui, sans-serif";
 
 export class XRScene {
   /**
@@ -43,7 +43,7 @@ export class XRScene {
     this.clutchLine = this._clutchLine();
     this.root.add(this.clutchLine);
     this.panel = new StatusPanel();
-    this.panel.mesh.position.set(0.42, 1.12, -0.62);
+    this.panel.mesh.position.set(0.48, 1.12, -0.62);
     this.panel.mesh.rotation.y = -0.35; // turned toward the user
     this.root.add(this.panel.mesh);
 
@@ -222,86 +222,170 @@ export class XRScene {
   }
 }
 
-/** A canvas-textured plane with the teleop status, redrawn only when the text changes. */
-class StatusPanel {
+/* ---------- the status panel, in the hub's design (quick job 37; docs/design/DESIGN.md) ----------
+   A cut-corner box like the hub's panels: dark see-through fill, a hairline frame with a bright lead-in in
+   the state's colour. The state first, as a chip (its colour says how serious: cyan normal, green following,
+   amber waiting or warm, rust held still with a pause icon, gray offline); then Gripper and Speed, small CAPS
+   labels over numbers in the digit font; then the hint in the light font. Colours and fonts from the theme.
+   The fill stays nearly opaque so it reads over a bright room in AR as well as in VR. */
+const TC = theme.colors || {};
+const PC = {
+  bg: TC.background || "#05080b", line: TC.line || "#1f3d48", text: TC.text || "#d4eef5",
+  dim: TC.text_dim || "#6d8c96", primary: TC.primary || "#29d4ff", accent: TC.accent || "#ff9a2e",
+  offline: TC.offline || "#56636a", ok: TC.ok || "#3ee07f", frozen: TC.frozen || "#7a1d00",
+};
+const TF = theme.font || {};
+const PF = {
+  ui: TF.family || "'Chakra Petch', system-ui, sans-serif",
+  lines: TF.lines || "Inter, system-ui, sans-serif",
+  linesW: TF.lines_weight || 300,
+  digits: TF.digits || "DSEG7, monospace",
+  spacing: theme.font?.label_spacing_em ?? 0.12,
+};
+const BLANK = /DSEG/.test(PF.digits) ? "!" : " "; // a digit-wide blank, so numbers don't shift
+const W = 960, H = 450; // canvas pixels for the 0.42 × 0.197 m panel
+const LEVEL = { // state → colour, chip text colour, icon
+  normal: [PC.primary, PC.primary, null], following: [PC.ok, PC.ok, "dot"], warning: [PC.accent, PC.accent, "warn"],
+  held: [PC.frozen, PC.text, "pause"], offline: [PC.offline, PC.offline, null],
+};
+
+/** A canvas-textured plane with the teleop status, redrawn only when what it says changes. */
+export class StatusPanel {
   constructor() {
     this.canvas = document.createElement("canvas");
-    this.canvas.width = 640;
-    this.canvas.height = 300;
+    this.canvas.width = W;
+    this.canvas.height = H;
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.colorSpace = THREE.SRGBColorSpace;
+    this.texture.anisotropy = 4;
     this.mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.32, 0.15),
+      new THREE.PlaneGeometry(0.42, 0.197), // bigger text than a screen's (DESIGN.md: Quest headset)
       new THREE.MeshBasicMaterial({ map: this.texture, transparent: true }),
     );
     this.key = "";
+    this.last = null;
     this.update(null);
+    // the bundled fonts may still be loading: draw again once they're there
+    const want = [`600 40px ${PF.ui}`, `500 40px ${PF.ui}`, `${PF.linesW} 40px ${PF.lines}`, `40px ${PF.digits}`];
+    Promise.all(want.map((f) => document.fonts?.load(f).catch(() => null))).then(() => { this.key = ""; this.update(this.last); });
   }
 
   update(feed) {
-    const s = feed?.status;
-    const state = this.noController ? [this.source === "hands" ? "NO RIGHT HAND" : "NO CONTROLLER", "#e0662e"]
-      : !s ? ["CONNECTING…", "#8a8a84"]
-      : s.arm?.connected === false ? ["ARM DISCONNECTED", "#e0662e"]
-      : feed.frozen ? [s.needs_release ? `FROZEN · release ${this.source === "hands" ? "the pinch" : "grip"}` : "FROZEN", "#e0662e"]
-      : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 · SERVOS WARM, SLOWED", "#e0a52e"]
-      : s.clutch ? [s.one_to_one ? "FOLLOWING 1:1" : "FOLLOWING", "#2fbf71"]
-      : s.mode === "one_to_one" && s.hand_gap_cm != null && s.hand_gap_cm > s.capture_cm
-        ? [`REACH THE GRIPPER · ${Math.round(s.hand_gap_cm)} cm`, "#b8b8b2"]
-        : ["HOLDING", "#b8b8b2"];
-    let gripper = "—";
-    if (s && feed.joints.gripper !== undefined && s.limits?.gripper) {
-      const [lo, hi] = s.limits.gripper;
-      gripper = `${Math.round(((feed.joints.gripper - lo) / (hi - lo)) * 100)}% open`;
-    }
-    const top = s?.one_to_one_deg_per_s == null ? "max" : `${s.one_to_one_deg_per_s}°/s`;
-    const speed = !s ? "—" : s.mode === "one_to_one" ? `1:1 up to ${top}` : `${Math.round(s.speed_scale * 100)}%`;
-    const oneToOne = s?.mode === "one_to_one";
-    const key = `${state[0]}|${gripper}|${speed}|${this.noController}|${this.source}|${oneToOne}`;
+    this.last = feed;
+    const t = panelText(feed, this.noController, this.source);
+    const key = JSON.stringify(t);
     if (key === this.key) return;
     this.key = key;
-
     const g = this.canvas.getContext("2d");
-    g.clearRect(0, 0, 640, 300);
-    g.fillStyle = "rgba(20, 22, 25, 0.82)";
-    roundRect(g, 4, 4, 632, 292, 28);
-    g.fill();
-    g.strokeStyle = state[1];
-    g.lineWidth = 6;
-    g.stroke();
-    fitText(g, state[0], 36, 92, 568, "bold", 58, state[1]);
-    fitText(g, `Gripper ${gripper}   ·   Speed ${speed}`, 36, 168, 568, "", 40, "#ececea");
-    const hint = oneToOne && !this.noController
-      ? this.source === "hands"
-        ? "1:1 · Right wrist in the ball + left pinch = move"
-        : "1:1 · Hand in the ball + hold grip = move · A/X = stop"
-      : this.source === "hands"
-        ? "Hold left pinch = move · Right pinch = gripper"
-        : this.noController
-          ? "Pick up the controllers · Leave: palm up + pinch"
-          : "Hold grip = move · Trigger = gripper · A/X = stop";
-    fitText(g, hint, 36, 246, 568, "", 32, "#9a9a94");
+    const [col, chipText, ico] = LEVEL[t.level];
+    g.clearRect(0, 0, W, H);
+    // the box: cut corners top left and bottom right, a nearly opaque fill, a hairline frame
+    cutPath(g, 3, 3, W - 6, H - 6, 34);
+    g.fillStyle = rgba(PC.bg, 0.9); g.fill();
+    g.lineWidth = 2; g.strokeStyle = rgba(PC.line, 1); g.stroke();
+    // the lead-in: the frame's first stretch in the state's colour (glows only while following)
+    g.save();
+    if (t.level === "following") { g.shadowColor = PC.ok; g.shadowBlur = 12; }
+    g.strokeStyle = col; g.lineWidth = 4; g.beginPath();
+    g.moveTo(3, 3 + 34 + 70); g.lineTo(3, 3 + 34); g.lineTo(3 + 34, 3); g.lineTo(3 + 34 + 220, 3); g.stroke();
+    g.restore();
+    // the state, as a chip
+    g.textBaseline = "middle";
+    g.font = `600 52px ${PF.ui}`; spaced(g, PF.spacing);
+    const word = t.state.toUpperCase(), chipH = 92, x0 = 44, y0 = 40;
+    const iconW = ico ? 56 : 0;
+    let tw = g.measureText(word).width;
+    const maxW = W - 2 * x0 - 48 - iconW;
+    if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
+    cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
+    g.fillStyle = t.level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
+    g.lineWidth = 2; g.strokeStyle = rgba(col, t.level === "held" ? 1 : 0.7); g.stroke();
+    if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
+    g.fillStyle = chipText; g.textAlign = "left";
+    g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);
+    spaced(g, 0);
+    // gripper and speed: a small CAPS label over a number in the digit font, its unit after it
+    fact(g, 44, 176, "Gripper", t.gripper, t.gripper == null ? "" : "% open");
+    if (t.speed) fact(g, 500, 176, t.speed.label, t.speed.value, t.speed.unit);
+    else fact(g, 500, 176, "Speed", null, "");
+    // a hairline, then the hint in the light font, its parts apart (no dot separators)
+    g.strokeStyle = rgba(PC.line, 1); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(44, 352); g.lineTo(W - 44, 352); g.stroke();
+    hintLine(g, t.hint, 44, 398, W - 88);
     this.texture.needsUpdate = true;
   }
 }
 
-/** Draw text at up to `size` px, shrinking it until it fits `maxWidth`. */
-function fitText(g, text, x, y, maxWidth, weight, size, color) {
-  let px = size;
-  do {
-    g.font = `${weight} ${px}px ${FONT}`;
-    px -= 2;
-  } while (g.measureText(text).width > maxWidth && px > 12);
-  g.fillStyle = color;
-  g.fillText(text, x, y);
+/** One fact: label (small CAPS, dim), then the value (digits, padded to 3 places) and its unit. */
+function fact(g, x, y, label, value, unit) {
+  g.textAlign = "left"; g.textBaseline = "alphabetic";
+  g.font = `500 28px ${PF.ui}`; spaced(g, PF.spacing); g.fillStyle = PC.dim;
+  g.fillText(label.toUpperCase(), x, y + 24);
+  spaced(g, 0);
+  let vx = x;
+  if (value != null) {
+    const digits = String(value);
+    g.font = `76px ${PF.digits}`; g.fillStyle = PC.text;
+    const shown = BLANK.repeat(Math.max(0, 3 - digits.length)) + digits;
+    g.fillText(shown, x, y + 120);
+    vx += g.measureText(shown).width + 14;
+  } else if (!unit) {
+    g.font = `500 40px ${PF.ui}`; g.fillStyle = PC.offline;
+    g.fillText("none yet", x, y + 112);
+    return;
+  }
+  g.font = `500 34px ${PF.ui}`; g.fillStyle = PC.text;
+  g.fillText(unit, vx, y + 116);
 }
 
-function roundRect(g, x, y, w, h, r) {
+/** The hint's parts on one line, apart, shrunk to fit. */
+function hintLine(g, parts, x, y, maxW) {
+  let px = 34, gap;
+  for (;;) {
+    g.font = `${PF.linesW} ${px}px ${PF.lines}`;
+    gap = px * 1.4;
+    const w = parts.reduce((a, p) => a + g.measureText(p).width, 0) + gap * (parts.length - 1);
+    if (w <= maxW || px <= 18) break;
+    px -= 2;
+  }
+  g.textAlign = "left"; g.textBaseline = "middle"; g.fillStyle = PC.dim;
+  let cx = x;
+  parts.forEach((p, i) => {
+    g.fillText(p, cx, y);
+    cx += g.measureText(p).width;
+    if (i < parts.length - 1) { // a short vertical tick between parts
+      g.fillStyle = rgba(PC.line, 1); g.fillRect(cx + gap / 2 - 1, y - px * 0.35, 2, px * 0.7); g.fillStyle = PC.dim;
+      cx += gap;
+    }
+  });
+}
+
+/** The state's icon, line-drawn: a dot (following), a warning triangle, a pause sign (held). */
+function drawIcon(g, kind, cx, cy, color) {
+  g.save();
+  g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 4; g.lineJoin = "round"; g.lineCap = "round";
+  if (kind === "dot") { g.beginPath(); g.arc(cx, cy, 11, 0, Math.PI * 2); g.fill(); }
+  else if (kind === "warn") {
+    g.beginPath(); g.moveTo(cx, cy - 20); g.lineTo(cx + 22, cy + 18); g.lineTo(cx - 22, cy + 18); g.closePath(); g.stroke();
+    g.beginPath(); g.moveTo(cx, cy - 6); g.lineTo(cx, cy + 5); g.stroke();
+    g.beginPath(); g.arc(cx, cy + 11, 2, 0, Math.PI * 2); g.fill();
+  } else if (kind === "pause") { g.fillRect(cx - 12, cy - 16, 8, 32); g.fillRect(cx + 4, cy - 16, 8, 32); }
+  g.restore();
+}
+
+/** A box with 45° cut corners, top left and bottom right (the hub's panels). */
+function cutPath(g, x, y, w, h, c) {
   g.beginPath();
-  g.moveTo(x + r, y);
-  g.arcTo(x + w, y, x + w, y + h, r);
-  g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r);
-  g.arcTo(x, y, x + w, y, r);
+  g.moveTo(x + c, y); g.lineTo(x + w, y); g.lineTo(x + w, y + h - c);
+  g.lineTo(x + w - c, y + h); g.lineTo(x, y + h); g.lineTo(x, y + c);
   g.closePath();
+}
+
+function spaced(g, em) {
+  if ("letterSpacing" in g) g.letterSpacing = `${em}em`;
+}
+
+function rgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }

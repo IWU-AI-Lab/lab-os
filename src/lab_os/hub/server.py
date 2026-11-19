@@ -10,6 +10,9 @@ GET /training            the training launcher's page (so101-green + LeLab,
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
+GET /api/quest-view      what the Quest sees (scrcpy, quick job 36): installed, running, headsets
+POST /api/quest-view/start  {"headset"?}: open its view in a window here (the brain's computer)
+POST /api/quest-view/stop   close that window
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
@@ -72,6 +75,7 @@ from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name, welcome
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
+from lab_os.quest_view import QuestView, QuestViewError
 from lab_os.teleop.cli import teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
@@ -126,6 +130,7 @@ TOOLS_PROJECT = web.AppKey("tools_project", ProjectTools)
 MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
+QUEST_VIEW = web.AppKey("quest_view", QuestView)
 
 
 def hub_modules(theme: dict) -> list[dict]:
@@ -387,6 +392,42 @@ async def api_venue(request: web.Request) -> web.Response:
 def _visitors(venue: Venue) -> dict | None:
     """What the hub shows while visitors are here: the cards (None: not in visitors' mode)."""
     return {"cards": list(venue.cards)} if venue.visitors else None
+
+
+async def api_quest_view(request: web.Request) -> web.Response:
+    """The Quest's view (quick job 36): can it start, is it on. `here`: the asking page is on the
+    brain's computer, where the window opens (only there can start it)."""
+    status = await asyncio.to_thread(request.app[QUEST_VIEW].status)
+    return web.json_response(status | {"here": is_local(request)})
+
+
+async def api_quest_view_start(request: web.Request) -> web.Response:
+    if not is_local(request):
+        raise web.HTTPForbidden(text="The Quest's view opens on the brain's computer, from there.")
+    try:
+        body = await request.json()
+    except ValueError:
+        body = {}
+    name = (body or {}).get("headset") if isinstance(body, dict) else None
+    try:
+        headset = await asyncio.to_thread(request.app[QUEST_VIEW].start, name or None)
+    except QuestViewError as e:
+        return web.json_response({"ok": False, "message": str(e)}, status=400)
+    except OSError as e:
+        return web.json_response({"ok": False, "message": f"scrcpy didn't start: {e}"}, status=500)
+    return web.json_response({"ok": True, "headset": headset})
+
+
+async def api_quest_view_stop(request: web.Request) -> web.Response:
+    if not is_local(request):
+        raise web.HTTPForbidden(text="The Quest's view is closed on the brain's computer.")
+    stopped = await asyncio.to_thread(request.app[QUEST_VIEW].stop)
+    return web.json_response({"ok": True, "stopped": stopped})
+
+
+async def _quest_view_task(app: web.Application):
+    yield
+    app[QUEST_VIEW].stop()  # the brain stops: so does its window
 
 
 async def perf_page(request: web.Request) -> web.FileResponse:
@@ -803,6 +844,7 @@ def create_brain_app(
     drive_from: frozenset[str] = frozenset(),
     voices: Callable[[], dict[str, VoiceSetup]] | None = None,
     device_settings: DeviceSettings | None = None,
+    quest_view: QuestView | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
@@ -881,6 +923,7 @@ def create_brain_app(
     app[HUB_DEVICES] = HubDevices(
         lambda: {m["id"]: m["title"] for m in hub_modules(load_theme())}, device_settings
     )
+    app[QUEST_VIEW] = quest_view or QuestView()
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
@@ -890,6 +933,9 @@ def create_brain_app(
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
     app.router.add_post("/api/green/stop", api_green_stop)
+    app.router.add_get("/api/quest-view", api_quest_view)
+    app.router.add_post("/api/quest-view/start", api_quest_view_start)
+    app.router.add_post("/api/quest-view/stop", api_quest_view_stop)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
@@ -922,4 +968,5 @@ def create_brain_app(
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)
     app.cleanup_ctx.append(_ai_task)
+    app.cleanup_ctx.append(_quest_view_task)
     return app
