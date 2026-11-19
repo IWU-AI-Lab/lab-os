@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "aiohttp>=3.14.5",
+    "colorlog>=6.12",
     "hid>=1.0.9",
     "mcp>=2.3,<3",
     "numpy>=1.26",
@@ -16,8 +17,8 @@ dependencies = [
 ]
 
 [project.scripts]
-lab-os = "lab_os.cli:main"
-lab-os-teleop = "lab_os.teleop.cli:main"
+lab-os = "lab_os.cli:run"
+lab-os-teleop = "lab_os.teleop.cli:run"
 
 [project.optional-dependencies]
 so101 = [

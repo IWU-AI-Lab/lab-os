@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — colorlog treats an empty `NO_COLOR` as set, and checks a pipe only when it gets the stream
+**What:** quick job 40. no-color.org says that `NO_COLOR` counts only when it is not empty, but `colorlog` checks only that the name exists. `colorlog` also colours a pipe unless you give it `stream=`.
+**Fix:** `lab_os.term.use_colour` decides once (`FORCE_COLOR`, then a non-empty `NO_COLOR`, then `isatty()`) and gives `colorlog` the answer as `force_color` / `no_color`.
+
 ### 2026-11-19 — OpenAI's real cost needs an Admin key, not the key lab-os has
 **What:** quick job 41. OpenAI's usage and costs endpoints (`/v1/organization/usage/…`, `/v1/organization/costs`) refuse a normal project key (a missing `api.usage.read` scope). They need an Admin key (`sk-admin-…`), and only an Organization Owner can make one. So lab-os can't read the bill with the professor's key.
 **Fix:** none built. The AI Spend panel says "Estimated · this computer's brain only". `docs/guides/hub.md` → "AI Spend" says what the professor would have to create.

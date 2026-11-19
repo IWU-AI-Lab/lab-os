@@ -105,6 +105,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Works offline: every web library and font is in the repository | ✅ | |
 | A one-line install on a new Linux computer (`scripts/install.sh`) | ✅ | |
 | Tests and lint on every push (GitHub Actions), no hardware needed | ✅ | |
+| Colours in the terminal: each log line starts with the time, warnings are amber and errors red. There is no colour in a pipe or a log file, or when `NO_COLOR` is set. | 🧪 | Tested without hardware and in a pseudo-terminal on macOS. Lab: check F.16. |
 
 ## Training launcher (so101-green)
 | Feature | Status | Notes |

@@ -3,7 +3,6 @@
 import argparse
 import asyncio
 import contextlib
-import logging
 import shutil
 import sys
 import time
@@ -12,7 +11,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT, config
+from lab_os import REPO_ROOT, config, term
 from lab_os.devices import PortNotAllowed, load_registry, table_z_cm
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
@@ -279,7 +278,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="\n%(levelname)s %(message)s")
+    term.setup_logging()
     use_config(args)
     loop = make_loop(args)
 
@@ -303,5 +302,7 @@ def main(argv: list[str] | None = None) -> None:
     print()
 
 
+run = term.exit_in_red(main)  # the `lab-os-teleop` command; tests call main()
+
 if __name__ == "__main__":
-    main()
+    run()
