@@ -135,3 +135,34 @@ def test_glows_never_cover_the_room_in_ar():
     assert "blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor" in draw
     for f in sorted(xr.glob("*.js")):
         assert "AdditiveBlending" not in f.read_text(), f"{f.name}: use GLOW from draw.js"
+
+
+async def test_the_vr_hub_turns_off_when_the_brain_does_not_answer(aiohttp_client):
+    """Quick job 78 (lab check S.4): a Quest that missed the "brain_off" message could still
+    start the startup and open an empty hub. The hub in VR now also turns off when the brain
+    doesn't answer: when you enter VR or AR, at a press after a quiet time, and after two failed
+    status reads."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr-hub.js")).text()
+    press = hub.split("press(now, hit) {", 1)[1].split("\n  }\n", 1)[0]
+    # Exit works even when lab-os is off; nothing else does; an unsure press asks the brain first
+    assert press.index('"exit"') < press.index("if (this.off) return")
+    assert press.index("this.unsure()") < press.index('this.phase === "ignite"')
+    assert 'getJSON("/api/status")' in press and "turnOff({ lost: true })" in press
+    assert "++show.misses >= LOST_READS" in hub  # the background check, in poll()
+    assert "if (!show.facts.status) show.turnOff({ lost: true })" in hub  # entering with no brain
+    assert "AbortSignal.timeout(" in hub  # a read can't hang
+    off = await (await client.get("/hub/xr/off.js")).text()
+    assert "lab-os is not reachable" in off and "new ExitButton()" in off
+
+
+async def test_exit_is_on_every_page_of_the_vr_hub(aiohttp_client):
+    """Quick job 78: Exit leaves VR or AR; it sits on the stage (not in the hub's group, which a
+    module hides) and is a target on every page."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr-hub.js")).text()
+    assert "this.stage.add(this.exit.mesh)" in hub
+    assert "[...this.hub.targets(), this.exit.mesh]" in hub
+    assert "session.end()" in hub
+    mods = await (await client.get("/hub/xr/modules.js")).text()
+    assert "export class ExitButton" in mods and 'kind: "exit"' in mods

@@ -1,10 +1,13 @@
 // "lab-os is off" in the headset (quick job 44). The page's own cover (/web/off.js) is HTML, and a VR or AR
 // session doesn't show the page, so the hub in VR draws the same words on a card in front of you, in the
 // offline look (DESIGN.md: gray, dim, no glow). The hub around you goes away; the card follows your head.
+// Under the card, Exit leaves VR or AR (quick job 78): card.exit.mesh is what the pointer can press.
 //   const card = new OffCard(msg);  scene.add(card.mesh);  card.follow(camera, dt) every frame
-// msg: the brain_off message ({from, time_ms, restart}).
+// msg: the brain_off message ({from, time_ms, restart}), or {lost: true}: the brain stopped answering and
+// this page wasn't told why (quick job 78).
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, cutPath, icon, rgba, spaced } from "./draw.js";
+import { ExitButton } from "./modules.js";
 import { wrap } from "./panels.js";
 
 const W = 0.9, H = 0.42, DIST = 1.4; // metres
@@ -12,6 +15,15 @@ const hhmm = (ms) => new Date(ms || Date.now()).toLocaleTimeString([], { hour: "
 
 /** The words, as on the page's cover (/web/off.js). */
 export function offWords(msg = {}) {
+  if (msg.lost) {
+    return {
+      title: "lab-os is not reachable",
+      lines: [
+        "The brain does not answer. It was shut down, or the network is down.",
+        'Start it with the "Start lab-os" icon on the brain\'s computer. This view comes back by itself when it answers.',
+      ],
+    };
+  }
   const restart = !!msg.restart, who = msg.from ? ` from ${msg.from}` : "";
   return {
     title: restart ? "lab-os is restarting" : "lab-os is off",
@@ -29,6 +41,9 @@ export class OffCard {
     this.mesh.renderOrder = 10;
     this.p.mat.depthTest = false; // nothing of the hub may cover it
     this.placed = false;
+    this.exit = new ExitButton();
+    this.exit.mesh.position.set(0, -H / 2 - 0.1, 0.001);
+    this.mesh.add(this.exit.mesh);
     const words = offWords(msg);
     this.p.paint((g, w, h) => {
       const pad = w * 0.06, c = h * 0.08;
@@ -53,7 +68,9 @@ export class OffCard {
   }
 
   /** Keep the card in front of the head, level, at reading distance; it catches up gently. */
-  follow(camera, dt) {
+  follow(camera, dt, exitHover = false) {
+    this.exit.hover = exitHover;
+    this.exit.paint();
     const p = new THREE.Vector3(), q = new THREE.Quaternion();
     camera.getWorldPosition(p); camera.getWorldQuaternion(q);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
