@@ -80,7 +80,7 @@ The design's look, motion and sound, on the brain's real facts:
 
 **A slow screen** (for example Firefox on Linux, which often draws without the graphics card): the hyperspace jump removes stars until it runs at about 40 frames a second (not below about 1000 stars). The `reduced` level starts with half of the theme's `stars`.
 
-**Startup as a video** (since 2026-11-18; a test for screens where the startup stutters, lab check F.8): ⚙ → This Device → **Startup as a Video**, off by default.
+**Startup as a video** (since 2026-11-18; a test for screens where the startup stutters; in the lab 2026-11-19 it was a little smoother, but its resolution is lower and the stars do not match when it changes to the live hub, so it stays off): ⚙ → This Device → **Startup as a Video**, off by default.
 - From the start press until the core arrives (about 6.9 s), the hub plays a recording (`src/lab_os/hub/web/media/startup-full.webm` or `startup-maximal.webm`, the one that matches the device's level of detail; 1920×1080, 60 frames a second). The words and the sounds stay live above it.
 - Then the live hub fades in over half a second (the core's rings can look doubled for that moment).
 - It plays only for the hyperspace startup at `full` or `maximal` detail, on a screen with the recording's shape, with the theme that it was recorded with (the `.json` next to each video). If not, the hub draws the startup as usual, and the browser console says why.

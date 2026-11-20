@@ -33,7 +33,7 @@ The window only shows the picture. Clicks and keys in it never reach the headset
     serial: 2G97C5ZHB300FG
     mirror: ["--crop=2064:2208:0:0", "--fullscreen"]   # left eye only, full screen
 ```
-`--crop=width:height:x:y` uses the headset's own pixels. The correct numbers for the Quest 3 come from the lab test (lab-checklist F.12). For other options, read scrcpy's docs (`doc/video.md`, `doc/window.md`).
+`--crop=width:height:x:y` uses the headset's own pixels. In the lab (2026-11-19), `--crop=2064:2208:0:0` showed one eye. The picture looks like a fisheye lens: scrcpy shows the headset's own picture, before the lenses. For other options, read scrcpy's docs (`doc/video.md`, `doc/window.md`).
 
 **adb:** the download includes its own adb. But if the computer has an adb, lab-os gives scrcpy that one (`ADB=…`). Two different adb versions stop each other's server, and that would cut teleop's `adb reverse` (`docs/dev/GOTCHAS.md` 2026-11-18).
 

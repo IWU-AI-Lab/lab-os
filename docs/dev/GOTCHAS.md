@@ -4,6 +4,55 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — Lab day: the wake word stops after a settings change
+**What:** on the desktop, the wake word stopped after a change to Wake Word Sensitivity and came back only after a restart (lab check 9.7). During visitor mode it stopped too, and came back much later (F.11). On the Quest it did not answer until the builder changed Level of Detail (F.6). When it works, it is reliable.
+**Fix:** quick job 42.
+
+### 2026-11-19 — Lab day: the room decides what the microphone hears, not the sensitivity
+**What:** the desktop faces the wall, and the USB microphone is in its front port, about 60 cm from the chair. A dividing wall stands between the desk and the door. A loud fan on the roof makes noise above the desk at times. Without the fan, the wake word works about 9 times in 10 near the microphone, and from the front of the room with a raised voice. With the fan and more than a few feet away, it is unreliable. Sensitivities 5, 7 and 9 made little difference. Without "hey", "Jarvis" inside a sentence woke it 0 times in one minute.
+**Fix:** none in code. The builder keeps the sensitivity setting. A USB extension cable can put the microphone on the table, facing the room.
+
+### 2026-11-19 — Lab day: voice timing and languages
+**What:** push-to-talk took about 9 s to the first spoken word (9.3). After a wake word question, the answer started 4.2 s and 5.3 s after the question ended (the words were final after 0.5 to 0.9 s, the first text came 1.8 to 2.9 s later). After ⏻ and start, the greeting did not start at once (9.2). With Answers: English, a typed Spanish question got a Spanish answer and no voice; a typed "你好" got English (9.14). Listens: English still let other languages through ("ni hao"), and a few times "test" came out in Cyrillic. The voice sometimes changed to another person between answers. The microphone button disappeared when the microphone was unplugged and did not come back when it was plugged in again. With the lab-assistant persona, spoken questions came back as words in German, Turkish or Portuguese, with Listens on English and on Any; JARVIS was fine (2.9).
+**Fix:** quick jobs 42 (the greeting), 46, 47, 48 and 55.
+
+### 2026-11-19 — Lab day: the Newline is smooth only by HDMI at 1600×900
+**What:** in the Newline's own Chrome, the startup was not smooth at Drawing Resolution 1 or 0.5 (0.5 is also blurry). By HDMI from the desktop, Ubuntu shows 60 Hz at 1920×1080, but everything on the Newline looks like a low frame rate (the desktop's other monitors are normal). At 1600×900 it is smooth and readable from 3 m. The Newline has no "PC" or "Game" picture mode. Ubuntu and the Pi show it as "Hitevision group 32". Its USB touch cable works (the desktop's xArm cable was out from then on), but with a second monitor connected, touch did not land correctly. Its speakers play the hub's voice by HDMI. A Pi by HDMI and USB touch works the same way: smoother at 1600×900 than at 1920×1080, but less smooth than the desktop or a laptop.
+**Fix:** the route is HDMI at 1600×900 with the USB touch cable (`docs/plan/lab-jarvis-log.md`, 2026-11-19). Touch with a second monitor: quick job 54.
+
+### 2026-11-19 — Lab day: the classroom's Extron panel feeds the ceiling speakers
+**What:** the teaching station has an Extron panel: Display On and Off, inputs PC, Laptop, Wireless and Wall Plate, and a volume knob. There is an HDMI cable at the station (labelled "Laptop") and an HDMI socket in a wall plate. An XLR socket labelled "mic" is at the front of the room. A laptop on the station's HDMI plays through the ceiling speakers, and a hub page on it (the desktop's address) played the startup and the greeting clearly everywhere in the room. The same input also goes to the projector.
+**Fix:** none needed. Sound in the ceiling with the picture on the Newline: `docs/plan/ideas.md` → "Room sound and the Newline's picture at once".
+
+### 2026-11-19 — Lab day: the white arm's camera cables were in each other's sockets
+**What:** `so101-white-cam-wrist` showed the stand camera's view (F.1). The config was right (wrist = socket 7, stand = socket 8); the two USB cables were the wrong way round. The builder swapped them, and the names were correct. The stand camera's picture was blurry.
+**Fix:** the cables, not the config. The names follow the socket until the powered USB hub arrives (`docs/plan/current-focus.md` → "Hacks to clean up"). The blur: turn the stand camera's focus ring, if it has one.
+
+### 2026-11-19 — Lab day: the arm kept moving after "Shut down lab-os"
+**What:** F.9. The arm went limp, but the AI tool's move went on and the arm moved to its goal. The terminal stayed about 30 s after `shutting down: asked from…`. The page in AR did not show "lab-os is off". The checklist also asked for the "Start lab-os" icon before step 11.1 had made it, so the icon opened as a text file.
+**Fix:** quick job 44. The checklist's rules now say: a step comes after the steps that it needs.
+
+### 2026-11-19 — Lab day: STOP was not on the hub during the visitor wave
+**What:** F.11. To stop the wave, the builder had to open Monitor quickly: the designed hub had no STOP button in view. The wave itself works but does not look much like a wave.
+**Fix:** quick jobs 43 (STOP) and 52 (the wave).
+
+### 2026-11-19 — Lab day: Top Speed gave "500 Internal Server Error", then Settings was empty
+**What:** F.14. A change to Top Speed showed `500 Internal Server Error` under the field, no "✓ Saved", and the amber bar only at the top of the page. Restart Now did nothing. After ⚙ was closed and opened again, the page showed nothing. After the brain was stopped and started again, all of it worked (Saved, Restart Now, the arm connected again). Changing a number and changing it back still asked for a restart. The order arrows of Buttons Around the Core do not line up and look like lines.
+**Fix:** quick job 45.
+
+### 2026-11-19 — Lab day: smaller findings
+**What:**
+- Every move to `home` says "clipped" on AI Control, because two of home's numbers are past the soft limits (quick job 30). The arm still arrives where it should (F.3; quick job 50).
+- The table height is right: the jaw tips touched the table at z 0.0 (F.2). Farther out (x 24.5 cm) they touched the sheet at z −0.4 (3b.1): the arm sags a little at reach.
+- The cm grid saw 24 of 24 corners, worst 1.3 mm. The AI found the cube from the stand camera's picture (to about 1 cm), went above it, and picked it with `pick_at`. The jaws held the cube with their tips only (3b.5; quick job 51). The grid is a flat fit with no lens correction, so it is less exact far from the sheet (`docs/plan/ideas.md`).
+- Quest view: closing the window with its own X leaves the button lit (F.12; quick job 49). The view looks like a fisheye lens. The one-eye crop showed one eye.
+- In the headset, when you put the controllers down, the Quest changes to hand tracking, so the status panel never shows "No controller" (F.13).
+- The startup as a video is a little smoother, but its resolution is lower (even at Maximal) and the stars do not match when it changes to the live hub (F.8). It stays off.
+- Restarting `lab-os serve` by hand brings the hub back, but not full screen. A browser goes full screen only after a tap.
+- When the Newline's hub speaks, the desktop's core shows the speaking animation too.
+- A lot of content text is all lowercase ("clipped", "arrived", status words; quick job 53).
+- People who see the hub look at "JARVIS" first, although it is in two small places.
+
 ### 2026-11-19 — The pages' 3D arm takes every `arm_command`, whatever its `device`
 **What:** two arms at once (preview 3). Every `arm_command`, `arm_stop` and `arm_resume` has a `device` field, but `ArmFeed` (`teleop/web/arm/arm-feed.js`) never reads it. A second arm's commands on `/ws` would make the 3D arm jump between the two arms, and its `arm_stop` would show the right arm as frozen.
 **Fix:** the second loop sends no `arm_*` messages. Its state goes in `status.left_arm`. A 3D view of two arms must first make `ArmFeed` filter by `device`.

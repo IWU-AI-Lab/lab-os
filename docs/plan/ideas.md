@@ -46,6 +46,15 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-19)
 
+### Room sound and the Newline's picture at once
+The classroom's Extron panel sends its Laptop and Wall Plate HDMI inputs to the ceiling speakers (tried 2026-11-19), and to the projector. To have the picture on the Newline and the sound in the ceiling: a second HDMI cable from the computer that drives the Newline to the Wall Plate or Laptop input, and Ubuntu's Sound → Output set to that HDMI. A Pi has two HDMI outputs too. The projector can stay off (Display Off), if the panel still plays sound then: to check. Not needed for the demo: the Newline's own speakers are loud enough.
+
+### A flat picture of what the Quest sees
+Quest view (quick job 36) shows the headset's own picture, which looks like a fisheye lens. Meta's casting gives a flat picture, but needs Wi-Fi with internet and a Meta account (the travel router could give the Wi-Fi). Correcting scrcpy's picture ourselves is the other way.
+
+### The cm grid with lens correction
+The stand camera's cm grid is a flat fit (worst 1.3 mm on the sheet, 2026-11-19), with no correction for the lens. Far from the sheet, the error grows. The same printed sheet, photographed at a few angles, gives the lens correction (OpenCV's ChArUco calibration).
+
 ### Point and "move there" in the headset
 In the Quest, with the 3D arm lined up on the real one, point at a spot on the table and say or press "move there"; the gripper goes there. No AI. The first piece of "put that there". It was a demo preview from 2026-11-16 to 2026-11-19; the builder moved it here to make room for Tuesday's three previews (`docs/plan/current-focus.md`).
 
