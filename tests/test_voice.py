@@ -347,13 +347,15 @@ async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):
 # ---------- a whole turn over /ws/voice ----------
 
 
-async def voice_app(aiohttp_server, tmp_path, words=("It is. ", "Step seven", ": voice."), **kw):
+async def voice_app(
+    aiohttp_server, tmp_path, words=("It is. ", "Step seven", ": voice."), ai_delay=0.0, **kw
+):
     from lab_os.hub.server import create_brain_app
     from lab_os.robots.fake import FakeArm
     from lab_os.teleop.loop import InputState, TeleopLoop
     from lab_os.venues import Venue
 
-    ai = await aiohttp_server(fake_service(words=words))
+    ai = await aiohttp_server(fake_service(words=words, delay=ai_delay))
     voice = await aiohttp_server(fake_voice(**kw))
     assistant = Assistant()
     conv = conversation(setup_for(ai), tmp_path, assistant=assistant)

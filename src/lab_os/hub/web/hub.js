@@ -693,7 +693,7 @@ function wakeTurnStart() {
     voice.cancel(); // a typed question is being answered
     return;
   }
-  if (VS.voiced && !VS.turn) endVoice();
+  if (VS.voiced) endVoice(); // the brain stopped the spoken answer (quick job 57)
   if (prefs().sound !== false) voice.chime(); // "I heard you", at once
   S.asking = VS.voiced = true;
   showError(null);
@@ -797,8 +797,8 @@ async function talkStart() {
   if (voice.pressed || voice.wakeTurn) return;
   voice.unlock();
   VS.greeting = false;
-  if (VS.voiced && !VS.turn) {
-    voice.stopSpeaking(); // talking over the last answer cuts it short
+  if (VS.voiced) {
+    voice.stopSpeaking(); // talking over the last answer stops it (quick job 57)
     endVoice();
   }
   if (S.asking) return;
@@ -841,6 +841,13 @@ function onVoiceEvent(ev) {
     return;
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
+  if (ev.type === "stopped") { // a new question stopped the answer, maybe on another screen
+    if (VS.voiced && !voice.pressed && !voice.wakeTurn) {
+      endVoice();
+      setAssistant("idle", 0);
+    }
+    return;
+  }
   if (ev.type === "wake") return wakeTurnStart();
   if (ev.type === "ended") { // the brain heard the pause after the question
     VW?.cancel();

@@ -2207,7 +2207,7 @@ function renderWakeDot() {
 function wakeTurnStart() {
   VS.greeting = false;
   if (S.asking && !VS.voiced) { V.cancel(); return; }  // a typed question is being answered
-  if (VS.voiced && !VS.turn) endVoice();
+  if (VS.voiced) { cutTurn(); endVoice(); }  // the brain stopped the spoken answer (quick job 57)
   S.asking = true; VS.fromCore = true; VS.voiced = true; VS.heard = "";
   clearTimeout(replyTimer);
   const r = $("#reply");
@@ -2230,7 +2230,7 @@ async function talkStart(fromCore) {
   if (!V || V.pressed || V.wakeTurn) return;
   V.unlock();
   VS.greeting = false;
-  if (VS.voiced && !VS.turn) { V.stopSpeaking(); endVoice(); }  // talking over the last answer cuts it short
+  if (VS.voiced) { V.stopSpeaking(); cutTurn(); endVoice(); }  // talking over the last answer stops it (quick job 57)
   if (S.asking) return;
   S.asking = true; VS.fromCore = fromCore; VS.heard = ""; VS.voiced = true;
   clearTimeout(replyTimer);
@@ -2244,6 +2244,12 @@ function talkEnd() {
   micOn(false);
   V.release();
   setState("thinking");
+}
+// a new question stopped the spoken answer: show what came of it, and end that turn
+function cutTurn() {
+  const t = VS.turn;
+  VS.turn = null;
+  if (t) { t.free(); t.end(true); }
 }
 function endVoice() {
   freeText();
@@ -2302,6 +2308,7 @@ function onVoiceEvent(ev) {
     return;
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
+  if (ev.type === "stopped") { if (VS.voiced && !V.pressed && !V.wakeTurn) { cutTurn(); endVoice(); } return; }  // a new question, maybe on another screen
   if (ev.type === "wake") { wakeTurnStart(); return; }  // (its listening sound is the "I heard you")
   if (ev.type === "ended") { VW?.cancel(); VW = null; setState("thinking"); return; }  // the brain heard the pause
   if (ev.type === "mic_stalled") { renderWakeDot(); return; }
