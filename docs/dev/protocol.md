@@ -16,8 +16,9 @@ Every message has a `type`. Unknown or malformed messages are ignored (logged), 
 ### `hello`
 Sent once on connect.
 ```json
-{"type": "hello", "agent": "<browser user agent>"}
+{"type": "hello", "agent": "<browser user agent>", "device": "desk"}
 ```
+`device`: the page's device name (empty when it has none). The other pages show it as the one with control (quick job 76).
 
 ### `xr_input`
 Sent every XR frame (72–120 Hz on a Quest).
@@ -117,7 +118,7 @@ Broadcast to all clients at 10 Hz.
 - `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
-- `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
+- `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`. Also per receiving page (quick job 76): `driver`, the device name of the page that drives when `control` is `"other"` (`""` when it has none, or when no other page drives), and `may_drive`, false for a page that may only watch (a real arm served to the network, or a monitor page). A page grays its control buttons when `control` is `"other"` or `"ai"`, or when `may_drive` is false.
 - `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "frozen", "clutch", "needs_release", "mode", "one_to_one", "hand_gap_cm", "capture_cm", "joints", "limits"}`, each as above for that arm. `set_mode` sets the mode of both arms. Only pose input drives it. Every other field is the right arm's.
 
 ### `arm_command`, `arm_stop`, `arm_resume`

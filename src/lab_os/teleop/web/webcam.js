@@ -6,6 +6,8 @@
 // The browser gives the camera only to a secure page: open it on the brain's computer
 // (http://localhost:8080/webcam) until the lab has its secure address.
 import { getLink } from "./link.js";
+import { gate } from "./control-gate.js";
+import { deviceName } from "/web/device.js";
 import { FilesetResolver, HandLandmarker } from "/web/vendor/mediapipe/vision_bundle.mjs";
 import { WebcamHands, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
 import { color } from "/web/theme.js";
@@ -65,7 +67,7 @@ const CONTROL = {
 };
 link.on("open", () => {
   setPill($("conn"), "connected", "on");
-  link.send({ type: "hello", agent: `webcam teleop; ${navigator.userAgent}` });
+  link.send({ type: "hello", agent: `webcam teleop; ${navigator.userAgent}`, device: deviceName() });
 });
 link.on("close", () => setPill($("conn"), "disconnected", "off"));
 link.on("error", (m) => say(m.message));
@@ -73,7 +75,10 @@ let brain = null; // the brain's last status: its own freeze wins over the page'
 link.on("status", (s) => {
   brain = s;
   const [text, cls] = CONTROL[s.control] || ["—", "off"];
-  setPill($("control"), text, cls);
+  setPill($("control"), s.control === "other" && s.driver ? `the page on ${s.driver} (it must leave first)` : text, cls);
+  // quick job 76: Start is grey while control can't be taken (Stop, while running, always works)
+  if (!running) gate(s, [$("start")], $("control-why"));
+  else $("control-why").hidden = true;
   if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
   else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: let go of the clutch" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
@@ -137,6 +142,7 @@ async function startControl() {
     return;
   }
   $("start").disabled = true;
+  $("start").dataset.busy = "1"; // starting: the status doesn't enable it meanwhile
   try {
     await loadModel();
     const id = $("camera").value;
@@ -145,6 +151,7 @@ async function startControl() {
     });
   } catch (e) {
     $("start").disabled = false;
+    $("start").dataset.busy = "";
     say(e.name === "NotReadableError"
       ? "Another program uses this camera. Close it, or pick another camera."
       : `Couldn't start the camera: ${e.message}`);
@@ -158,6 +165,8 @@ async function startControl() {
   await listCameras(); // labels appear once the browser has the camera
   link.send({ type: "set_mode", mode: "relative" });
   $("start").disabled = false;
+  $("start").dataset.busy = "";
+  $("start").title = "";
   $("start").textContent = "Stop webcam control (Esc)";
   $("stop-key").hidden = false;
   document.activeElement?.blur(); // Space on a focused button would click it

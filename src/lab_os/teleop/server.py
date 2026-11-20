@@ -64,6 +64,7 @@ SHUTDOWN = web.AppKey("shutdown", asyncio.Event)
 OFF_TOLD = web.AppKey("off_told", dict)
 OFF_TELL_S = 0.2  # time for the broadcaster to send brain_off before the sockets close
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
+NAMES = web.AppKey("names", dict)  # page → its device name, from `hello` (quick job 76)
 DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
 LOOPBACK = ("127.0.0.1", "::1")
 
@@ -162,6 +163,8 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
             app[RECORDER].write(raw)
     elif kind == "hello":
         log.info("input page connected: %s", raw.get("agent", "?"))
+        if ws is not None:  # its device name: the other pages say who has control (quick job 76)
+            app[NAMES][ws] = str(raw.get("device") or "")[:32]
     else:
         raise ValueError(f"unknown message type {kind!r}")
     return True
@@ -208,6 +211,7 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
                 told_busy = False
     finally:
         app[CLIENTS].discard(ws)
+        app[NAMES].pop(ws, None)
         if is_input:
             app[INPUTS].discard(ws)
             _release_control(app, ws)  # dead-man: the driver's connection is gone → freeze
@@ -271,7 +275,10 @@ async def _broadcaster(app: web.Application) -> None:
                     control = "ai"
                 else:
                     control = "free" if driver is None else "you" if driver is ws else "other"
-                await ws.send_str(json.dumps(msg | {"control": control}))
+                # quick job 76: who drives (its device name), and may this page drive at all
+                who = app[NAMES].get(driver, "") if control == "other" else ""
+                mine = {"control": control, "driver": who, "may_drive": ws in app[INPUTS]}
+                await ws.send_str(json.dumps(msg | mine))
             else:
                 await ws.send_str(text)
 
@@ -308,6 +315,7 @@ def create_app(
     app[INPUTS] = set()
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
+    app[NAMES] = {}
     app[SHUTDOWN] = asyncio.Event()
     app[OFF_TOLD] = {"told": False}
     app[LOCAL_CONTROL_ONLY] = local_control_only
