@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — The wake word: not reproduced, but one screen could make every screen deaf for 2 minutes
+**What:** (quick job 42, for the lab-day entry below.) Tried on the Mac with the designed hub in headless Chrome, a fake microphone that says "hey Jarvis" every 7 s, and a stand-in for OpenAI (full spoken answers): the wake word kept working after a sensitivity change sent to the brain, after one made in ⚙ in the hub, after full answers, and the venue switch changes nothing for it (both personas have `hey_jarvis`; neither venue is public). Found in the code instead:
+- The brain ignores the phrase on **every** screen while **any** screen is busy: the chat answering, a question being heard, or a screen still playing an answer.
+- "Still playing" lasted until the page said it had played the answer, or for **120 s** after each spoken piece. A page that never says so (a second window, a tab that the browser paused, a held greeting that never played) kept every screen deaf for 2 minutes after each answer it got. A "still playing" message also added 120 s. Nothing was logged.
+This fits "came back much later" (visitor mode) and maybe the others; not proven.
+- The greeting delay after ⏻ and start (lab check 9.2): by design, the designed hub plays the greeting while it is typed under the title, about 6.5 s after the tap, on every start (measured 3 times).
+**Fix:** "still playing" now lasts the audio's own length plus 10 s (a held greeting waits for the startup), and a "still playing" message adds 3 s. When the brain ignores a heard phrase, its terminal says why, every 10 s at most ("voice: desk heard the wake word, ignored: newline hasn't said it finished playing (8 s more)"). After Back to the start screen, the next start speaks the greeting at once (0.15 s). If the wake word stops again, the terminal's lines say which one it was: lab check part V.
+
 ### 2026-11-20 — Tic-tac-toe: straight down reaches a thin ring, and `home` and `ready` sit over the board
 **What:** (preview 1, found on the fake arm's 3D model.)
 - Pointing straight down (tool angle 180), the SO-101 reaches only a ring about 17 to 22 cm from its base (from `ready`: a band about 14 to 19 cm to each side). A 3×3 grid of 6 cm cells doesn't fit in it. Tilted 15° (165), it reaches up to about 30 cm.
@@ -36,7 +44,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-19 — Lab day: the wake word stops after a settings change
 **What:** on the desktop, the wake word stopped after a change to Wake Word Sensitivity and came back only after a restart (lab check 9.7). During visitor mode it stopped too, and came back much later (F.11). On the Quest it did not answer until the builder changed Level of Detail (F.6). When it works, it is reliable.
-**Fix:** quick job 42.
+**Fix:** quick job 42 (2026-11-20, the entry "The wake word: not reproduced…" above).
 
 ### 2026-11-19 — Lab day: the room decides what the microphone hears, not the sensitivity
 **What:** the desktop faces the wall, and the USB microphone is in its front port, about 60 cm from the chair. A dividing wall stands between the desk and the door. A loud fan on the roof makes noise above the desk at times. Without the fan, the wake word works about 9 times in 10 near the microphone, and from the front of the room with a raised voice. With the fan and more than a few feet away, it is unreliable. Sensitivities 5, 7 and 9 made little difference. Without "hey", "Jarvis" inside a sentence woke it 0 times in one minute.

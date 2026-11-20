@@ -2150,10 +2150,12 @@ let VD = null;  // dictation running: {line, base, started, spoke, quietSince, f
 const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
 // after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
+// Back from the start screen (⏻ or nobody there), the startup has been seen: it's spoken at once (quick job 42).
 function spokenGreeting() {
   if (!V || !S.sound || !S.greet) return;
   const way = WAY() === "wake_word" && !S.status?.voice?.wake?.available ? "push_to_talk" : WAY();
   VS.greeting = V.greet(V.can().ok ? way : "none");
+  if (VS.greeting && S.startedBefore) V.playHeld();
 }
 
 /* the wake word: on screens that chose it (Settings → This device), while the hub is up and awake (not asleep,
@@ -3469,6 +3471,7 @@ async function checkReset() {
 }
 function toStart(why) {
   console.info(`hub: back to the start screen (${why})`);
+  S.startedBefore = true;  // the next start's greeting is spoken at once
   if (S.moduleOpen) closeModule();
   hideDevice();
   if (V) { dictateCancel(); VW?.cancel(); VW = null; V.cancel(); V.stopSpeaking(); endVoice(); VS.greeting = false; V.wake(false); renderWakeDot(); }
