@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, Q, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -179,6 +179,14 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.5** → did the arm hold the cube out to you at the hand-over pose? (yes / no) Was it easy to take? (yes / no) Say "let go". → did the gripper open? (yes / no)
 - **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
+
+## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
+Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable with `adb reverse tcp:8080 tcp:8080`, and `http://localhost:8080/xr` open in the Quest's browser.
+- **Q.1** Press **Enter AR**. Pull the trigger to start, and wait for the hub. Point at **EXIT** under the hub. Pull the trigger. → are you back on the browser page? (yes / no)
+- **Q.2** Press **Enter VR**. Start, and open **Teleop**. Point at **EXIT**. Pull the trigger. → are you back on the browser page? (yes / no)
+- **Q.3** Press **Enter VR**. Stay on the start screen. On the desktop, shut down lab-os (⏻). → does the "lab-os is off" card show in the Quest? (yes / no) Pull the trigger. → does the startup start? (yes / no: it must not)
+- **Q.4** Point at **EXIT** under the card. Pull the trigger. → are you back on the browser page? (yes / no) Start lab-os with its icon. → does the page come back by itself? (yes / no)
+- **Q.5** Press **Enter VR**. Stay on the start screen. Press Ctrl+C in the brain's terminal. Wait 5 seconds. → does a card say "lab-os is not reachable"? (yes / no) Pull the trigger. → does the startup start? (yes / no: it must not)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
