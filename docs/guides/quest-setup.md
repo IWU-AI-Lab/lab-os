@@ -186,7 +186,7 @@ What is different from one arm:
 - The page does not load → `adb reverse --list` must show `tcp:8080 tcp:8080`. The brain runs it by itself when the Quest connects. If it fails, the brain's terminal says why. With `lab-os-teleop serve`, run `adb reverse tcp:8080 tcp:8080` yourself.
 - `adb devices` shows `unauthorized` → put on the headset and accept the USB debugging question.
 - "WebXR not available" → the address must be `http://localhost:8080`, not the desktop's IP address (an IP address is not a secure address).
-- The arm shows "Frozen: let go of the grip" → release the grip fully, then press it again.
+- The headset's panel says "Stopped" and "Let go of the grip, then grab again" → release the grip fully, then press it again.
 
 To show what the headset sees on the desktop's screen, for the room: `docs/guides/quest-view.md`.
 

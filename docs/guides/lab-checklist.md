@@ -113,7 +113,7 @@ Connect the Quest by USB. The brain runs `adb reverse` by itself.
 - **T.11** Hold both grips. Pull the right trigger, then the left trigger. → did each trigger close only its own arm's gripper? (yes / no)
 - **T.12** Release both grips. On the desktop's teleop page, set **Hand → arm** to **1:1**. → does the headset show a green ball at each 3D gripper? (yes / no) Put your left hand in the left ball and hold the left grip. Move the hand slowly 5 cm up, then 5 cm forward. → does `so101-green`'s gripper stay with your hand? (yes / no; about how many cm off?)
 - **T.13** Do the same with the right hand and `so101-white`. → does its gripper stay with your hand? (yes / no; about how many cm off?) Then use both hands at once. → does it work? (yes / no) Set **Hand → arm** back to **Relative**.
-- **T.14** Hold both grips and move. Press **X** (left controller). → did both arms stop? Does the panel say "Left frozen: let go" and "Right frozen: let go"? (yes / no each) Release both grips and hold them again. → do both arms move again? (yes / no)
+- **T.14** Hold both grips and move. Press **X** (left controller). → did both arms stop? Does the panel say "Left stopped: let go" and "Right stopped: let go"? (yes / no each) Release both grips and hold them again. → do both arms move again? (yes / no)
 - **T.15** Hold both grips and move. Press **STOP** on the desktop page. → did both arms stop? (yes / no)
 - **T.16** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
 - **T.17** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
@@ -221,6 +221,8 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.4** Plug in the USB microphone. → does the mic button show next to "Ask anything" within 5 seconds? (yes / no) Unplug it. → does the button go? (yes / no) Plug it in again. Wait 5 seconds. → is the button back? (yes / no)
 - **U.5** Unplug the Quest's USB cable, then plug it in again. Do not run `adb reverse`. In the Quest's browser, open `http://localhost:8080/xr`. → does the page load? (yes / no)
 - **U.6** Quick job 76. Open Teleop on the desktop's hub and on the Newline (Open on…). On the desktop, select **Desktop control** and move the arm with a key. → on the Newline, are the Teleop buttons grey, with a line that says the page on desk has control? (yes / no) On the desktop, press the \` key to leave desktop control. → can you press the Newline's buttons again? (yes / no)
+- **U.7** Quick job 66. On the desktop's Teleop, press **Controls**. → does it show the mode and the keys? (yes / no) Select **Desktop control**. → is the button's text short ("Desktop control on")? (yes / no)
+- **U.8** In the Quest, open the hub in VR, then **Teleop**. Hold the grip, then press **A**. → does the panel say "Stopped", with "Let go of the grip, then grab again" under it? (yes / no) Let go of the grip. → does the panel change to "Holding" at once, without a new grab? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

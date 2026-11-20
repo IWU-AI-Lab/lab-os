@@ -442,6 +442,14 @@ class TeleopLoop:
             }
         )
 
+    def _needs_release(self) -> bool:
+        """Does the arm wait for the input that drives it to be let go (grip, pinch or keys)?
+        Only that input's flag counts: the keys' flag clears only with keys, so with a Quest or
+        the webcam it stayed on after the grip was let go (quick job 66, GOTCHAS 2026-11-19)."""
+        if self.input_kind == "joints":
+            return self.jog.needs_release
+        return self.mapper.needs_release
+
     def status(self) -> dict:
         """What the overlay / monitor shows (sent as a `status` message)."""
         if self.arm_connected:
@@ -452,7 +460,7 @@ class TeleopLoop:
             "connected": self.inputs.connected,
             "frozen": self.frozen,
             "clutch": self.mapper.engaged or self.jog.active,
-            "needs_release": self.mapper.needs_release or self.jog.needs_release,
+            "needs_release": self._needs_release(),
             "input_kind": self.input_kind,
             "ai_motion": self.motion_active,
             "shutting_down": self.shutting_down is not None,

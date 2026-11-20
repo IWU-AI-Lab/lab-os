@@ -9,7 +9,7 @@
 /** The left arm's state (two arms at once), from status.left_arm. */
 function leftText(l) {
   return l.connected === false ? ["Left disconnected", "offline"]
-    : l.frozen ? [l.needs_release ? "Left frozen: let go" : "Left frozen", "held"]
+    : l.frozen ? [l.needs_release ? "Left stopped: let go" : "Left stopped", "held"]
     : l.clutch ? [l.one_to_one ? "Left following 1:1" : "Left following", "following"]
     : l.mode === "one_to_one" && l.hand_gap_cm != null && l.hand_gap_cm > l.capture_cm
       ? [`Left: reach the gripper ${Math.round(l.hand_gap_cm)} cm`, "normal"]
@@ -28,7 +28,10 @@ export function panelText(feed, noController, source, moving = false, off = null
   }
   const one = oneArmText(feed, noController, source);
   const l = feed?.status?.left_arm;
-  if (!l || noController) return { ...one, left: null };
+  if (!l || noController) {
+    delete one.release;
+    return { ...one, left: null };
+  }
   const [state, level] = leftText(l);
   const hands = source === "hands";
   const oneToOne = feed.status.mode === "one_to_one";
@@ -36,10 +39,11 @@ export function panelText(feed, noController, source, moving = false, off = null
     : moving ? ["Y held: a grip moves its 3D arm", "the arms hold", "tap Y = put back"]
       : oneToOne ? ["1:1: each hand in its ball", "hold grip = move", "Y + grip = move 3D arm", "A/X = stop both"]
         : ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm", "A/X = stop both"];
-  const right = one.state.replace(/^Frozen: let go of the (grip|pinch)$/, "Frozen: let go");
+  const right = one.release ? "Stopped: let go" : one.state;
   const words = right.startsWith("Reach the gripper: ")
     ? `Right: reach the gripper ${right.slice("Reach the gripper: ".length)}`
     : `Right ${right.charAt(0).toLowerCase()}${right.slice(1)}`;
+  delete one.release;
   return { ...one, state: words, hint, left: { state, level } };
 }
 
@@ -48,7 +52,7 @@ function oneArmText(feed, noController, source) {
   const [state, level] = noController ? [hands ? "No right hand" : "No controller", "warning"]
     : !s ? ["Connecting…", "offline"]
     : s.arm?.connected === false ? ["Arm disconnected", "offline"]
-    : feed.frozen ? [s.needs_release ? `Frozen: let go of the ${hands ? "pinch" : "grip"}` : "Frozen", "held"]
+    : feed.frozen ? ["Stopped", "held"] // what happened; what to do is the hint (quick job 66)
     : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 slowed: servos warm", "warning"]
     : s.clutch ? [s.one_to_one ? "Following 1:1" : "Following", "following"]
     : s.mode === "one_to_one" && s.hand_gap_cm != null && s.hand_gap_cm > s.capture_cm
@@ -63,11 +67,15 @@ function oneArmText(feed, noController, source) {
   const speed = !s ? null
     : oneToOne ? { label: "Speed 1:1", value: s.one_to_one_deg_per_s == null ? null : Math.round(s.one_to_one_deg_per_s), unit: s.one_to_one_deg_per_s == null ? "servo max" : "°/s top" }
     : { label: "Speed", value: Math.round(s.speed_scale * 100), unit: "%" };
-  const hint = oneToOne && !noController
+  // stopped, and it waits for the grip (or the pinch) to be let go: say what to do (quick job 66; it
+  // said "frozen: release grip", which didn't say either)
+  const release = !noController && !!s && s.arm?.connected !== false && feed.frozen && !!s.needs_release;
+  const hint = release ? [hands ? "Let go of the pinch" : "Let go of the grip", hands ? "then pinch again" : "then grab again"]
+    : oneToOne && !noController
     ? hands ? ["1:1: right wrist in the ball", "left pinch = move"] : ["1:1: hand in the ball", "hold grip = move", "A/X = stop"]
     : hands ? ["Hold left pinch = move", "right pinch = gripper"]
       : noController ? ["Pick up the controllers", "leave: palm up + pinch"]
         : ["Hold grip = move", "trigger = gripper", "A/X = stop"];
-  return { state, level, gripper, speed, hint };
+  return { state, level, gripper, speed, hint, release };
 }
 
