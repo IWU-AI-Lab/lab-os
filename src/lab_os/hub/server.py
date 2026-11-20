@@ -69,7 +69,7 @@ from lab_os import REPO_ROOT, config, green, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
-from lab_os.ai.languages import clean_language
+from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
@@ -887,6 +887,11 @@ async def api_chat_post(request: web.Request) -> web.StreamResponse:
     resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
     await resp.prepare(request)
     chat = request.app[BRAIN].chat
+    log.info(  # quick job 46: the language setting with each question (not the words)
+        "chat: typed question on %s: answers %s",
+        device or "a screen",
+        LANGUAGES.get(answer_in or "", "any language"),
+    )
     async for event in chat.ask(text, pages, answer_in, local=is_local(request), device=device):
         await resp.write((json.dumps(event) + "\n").encode())
     await resp.write_eof()

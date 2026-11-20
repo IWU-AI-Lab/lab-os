@@ -93,6 +93,8 @@ def fake_voice(heard=HEARD, live_close=None, tts_status=200, seen=None, limited=
     async def transcriptions(request):
         form = await request.post()
         lang = {"language": form["language"]} if "language" in form else {}
+        if "prompt" in form:
+            seen.append({"prompt": form["prompt"]})
         seen.append(
             {"transcribe": form["model"], "auth": request.headers.get("Authorization")} | lang
         )
@@ -770,3 +772,64 @@ def test_the_pages_show_only_their_own_turn():
     hub = (SRC / "hub" / "web" / "hub.js").read_text()
     assert "st.assistant.device" in hub and "device: deviceName()" in hub
     assert "a.device" in (SRC / "hub" / "web" / "xr-hub.js").read_text()
+
+
+async def test_expects_english_is_said_twice_to_openai(aiohttp_server, key):
+    """Quick job 46: "test" came back in Cyrillic a few times. The language code and a prompt in
+    English both go to the transcriber."""
+    seen = []
+    server = await aiohttp_server(fake_voice(seen=seen))
+    async with __import__("aiohttp").ClientSession() as session:
+        h = hearing_for(session, openai_setup(server), lambda t: None, "en")
+        await h.start()
+        h.feed(SECOND)
+        await h.finish()
+    assert any("English" in e.get("prompt", "") for e in seen)
+
+
+async def test_the_answer_language_goes_with_the_question(
+    aiohttp_client, aiohttp_server, key, tmp_path, caplog
+):
+    """Quick job 46: with Answers: English, a typed Spanish question got a Spanish answer. The
+    rule now goes with the question as sent (not into the kept conversation), and each question
+    logs its language settings and transcriber."""
+    import logging
+
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    sent = []
+    import lab_os.ai.chat as chat_mod
+
+    real = chat_mod.stream_chat
+
+    def spy(session, setup, messages, reply, tools):
+        sent.append([dict(m) for m in messages])
+        return real(session, setup, messages, reply, tools)
+
+    chat_mod.stream_chat = spy
+    try:
+        await (
+            await client.post("/api/chat", json={"text": "¿Hola?", "lang": {"answer": "en"}})
+        ).read()
+        assert sent[-1][-1]["content"].startswith("¿Hola?") and "English" in sent[-1][-1]["content"]
+        assert conv.messages[-2] == {"role": "user", "content": "¿Hola?"}  # kept as asked
+        await (await client.post("/api/chat", json={"text": "Hi", "lang": {}})).read()
+        assert sent[-1][-1]["content"] == "Hi"
+    finally:
+        chat_mod.stream_chat = real
+    ws = await client.ws_connect("/ws/voice?device=desk")
+    with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
+        await ws.send_json({"type": "listen", "mode": "ask", "lang": {"hear": "en"}})
+        await until(ws, "listening", [])
+        await ws.send_bytes(SECOND)
+        await ws.send_json({"type": "end"})
+        await until(ws, "audio_end", [])
+    assert "question on desk: expects English, answers any language, heard by" in caplog.text
+    await ws.close()
+
+
+def test_expects_is_named_for_what_it_does():
+    from test_hub_server import SRC
+
+    js = (SRC / "hub" / "web" / "settings.js").read_text()
+    assert '["hear_in", "Expects"]' in js and "It still hears other languages" in js

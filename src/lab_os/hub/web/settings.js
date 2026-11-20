@@ -246,8 +246,9 @@ const LANG_NAMES = { "": "Any", en: "English" };  // the brain's codes (lab_os/a
 function languageRow() {
   const pair = document.createElement("div");
   pair.className = "pair";
-  const r = row("Assistant Language", "What it listens for (OpenAI's voice only) and what it answers in.", pair);
-  for (const [key, label] of [["hear_in", "Listens"], ["answer_in", "Answers"]]) {
+  const r = row("Assistant Language", "Expects: a hint to speech-to-text (OpenAI's voice only). It still hears other languages. Answers: the language of every answer, typed or spoken.", pair);
+  // "Expects" was "Listens", which sounded like a filter (quick job 46)
+  for (const [key, label] of [["hear_in", "Expects"], ["answer_in", "Answers"]]) {
     const f = { key, label, kind: "choice", choices: Object.values(LANG_NAMES) };
     pair.append(Object.assign(document.createElement("span"), { className: "unit", textContent: label }));
     pair.append(control(f, LANG_NAMES[screenGet()[key] || ""] || "Any", async (v) => {

@@ -34,6 +34,7 @@ CONNECT_TIMEOUT_S = 10.0
 SPEAK_TIMEOUT_S = 15.0  # a sentence takes 2–4 s; longer = that model is stuck (the next one tries)
 FINISH_TIMEOUT_S = 6.0  # after the release, the longest wait for the last words
 NO_SPEECH_WAIT_S = 1.5  # ... when the service hasn't noticed any speech at all
+HEAR_PROMPTS = {"en": "The speaker talks English to a lab assistant called Jarvis."}
 GEMINI_LIVE_PATH = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 
 
@@ -333,6 +334,10 @@ class RecordedHearing(Hearing):
         form.add_field("model", self.setup.hear)
         if self.language:
             form.add_field("language", self.language)
+            # the code alone let "test" come back in Cyrillic a few times (lab check 9.14): the
+            # prompt says it again, in the language itself
+            if self.language in HEAR_PROMPTS:
+                form.add_field("prompt", HEAR_PROMPTS[self.language])
         form.add_field(
             "file", wav_bytes(bytes(self._pcm)), filename="speech.wav", content_type="audio/wav"
         )

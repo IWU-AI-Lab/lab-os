@@ -38,6 +38,11 @@ from lab_os.personas import Persona
 log = logging.getLogger(__name__)
 
 MAX_HISTORY = 20  # messages sent along with a question (older ones are left out: cost)
+# the asking device's Answers language (quick job 33): in the system prompt and with the question
+ANSWER_IN = (
+    "Always answer in {name}, whatever language the question is in. "
+    "If the question is in another language, still answer in {name}."
+)
 MAX_TOOL_ROUNDS = 4  # look-ups per question before the model must answer
 CONFIRM_TRIES, CONFIRM_GAP_S = 2, 3.0  # a failed check while connected: ask again this often first
 
@@ -266,7 +271,7 @@ class Conversation:
         if clean_language(answer_in):
             # the asking device's "Output language" (quick job 33)
             name = LANGUAGES[clean_language(answer_in)]
-            rules = f"{rules}\n\nAlways answer in {name}, whatever language the question is in."
+            rules = f"{rules}\n\n{ANSWER_IN.format(name=name)}"
         return f"{self.personality}\n\n{rules}" if self.personality else rules
 
     def clear(self, opening: str | None = None) -> None:
@@ -332,6 +337,11 @@ class Conversation:
         self.messages.append({"role": "user", "content": text})
         system = self.system_prompt(pages, answer_in)
         sent = [{"role": "system", "content": system}, *self.messages[-MAX_HISTORY:]]
+        if clean_language(answer_in):
+            # the system prompt alone wasn't enough: a typed Spanish question got a Spanish answer
+            # (lab check 9.13). The rule also goes with the question itself (only in what's sent).
+            name = LANGUAGES[clean_language(answer_in)]
+            sent[-1] = {"role": "user", "content": f"{text}\n\n({ANSWER_IN.format(name=name)})"}
         answer, usage = "", Usage()
         tools = await self.tools.openai_tools() if self.tools else []
         if pages:
