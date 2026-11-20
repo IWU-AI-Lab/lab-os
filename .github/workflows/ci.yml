@@ -1,8 +1,10 @@
-# Lint + tests on every push and pull request. No hardware: tests use the fake arm only.
+# Lint + tests once for each push: a push to main, or a push to a branch with a pull request.
+# (A push to a branch with no pull request runs nothing.) No hardware: tests use the fake arm only.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
@@ -25,5 +27,5 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
 
-      - name: Tests
-        run: uv run pytest -q
+      - name: Tests (in parallel, one worker per CPU)
+        run: uv run pytest -q -n auto

@@ -24,6 +24,7 @@ The script installs [uv](https://docs.astral.sh/uv/) if it is missing. It makes 
 ## Run
 ```bash
 uv run pytest                                            # the tests (no hardware needed)
+uv run pytest -n auto                                    # the same, in parallel (faster)
 uv run lab-os serve                                      # the brain: the hub, the teleop pages and the fake arm
 uv run lab-os-teleop serve                               # teleop only: the headset page and the fake arm
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay a recording (no browser, no headset)
@@ -52,6 +53,6 @@ The docs are in folders by who reads them:
 - **`docs/dev/`, how to work on it:** `dev-setup.md` (branches and folders), `project-scaffold.md` (what the repository contains), `protocol.md` (messages, MCP tools and HTTP endpoints), `places.md` (config folders, devices, other places), `personas.md`, `chat.md` (AI setups, keys, spend), `GOTCHAS.md` (surprises and their fixes).
 - **`docs/design/`:** the approved hub design (`DESIGN.md`, `hub-concept.html`). **`docs/device_manuals/`:** manuals (the Newline). **`docs/archive/`:** closed focuses and other history, by date.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs the linter and the tests on every push and pull request.
+GitHub Actions (`.github/workflows/ci.yml`) runs the linter and the tests once for each push to `main` and once for each push to a pull request's branch. A branch without a pull request gets no run. The tests run in parallel (`pytest -n auto`) and take about 15 s.
 
 The repository is private. The license is not decided yet: we ask the professor first.

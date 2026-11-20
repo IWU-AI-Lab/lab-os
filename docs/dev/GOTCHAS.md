@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — A closed page could leave a Gemini Live connection open; one test waited 31 s for it
+**What:** (quick job 56, faster tests.) `test_two_screens_hear_it_one_answers` spent 31 s in its teardown. When a page's `/ws/voice` connection ends, aiohttp cancels the handler, and the cancel also stopped the handler's own cleanup in `finally` (closing the page's hearing). The hearing's Live websocket to the voice service then stayed open. Closing the client session doesn't close it: aiohttp detaches a websocket's connection from the session's pool. The fake service waited for it until its shutdown timeout. In the lab the same thing could keep a Gemini session open after a tab closed. Also: pytest tore down `aiohttp_server` (the fake services) before `aiohttp_client` (the brain), so a hearing that connected just as a test ended waited the full 3 s for a goodbye from a service that had stopped answering.
+**Fix:** the page's voice cleanup runs in its own task that the cancel can't stop, and the brain's shutdown waits for it (`voice_ws`). `tests/conftest.py` overrides `aiohttp_client` to set up after `aiohttp_server`, so the brain closes first. The tests also skip the robot tools' 0.5 s hold and 0.2 s settle (the fake arm arrives at once). The tests went from 136 s to about 44 s in one process.
+
 ### 2026-11-19 — Webcam teleop: MediaPipe's left and right, and an open hand that reads as a pinch
 **What:** (preview 2, the webcam page, tried with MediaPipe's own sample photo of two hands as Chrome's camera.)
 - MediaPipe's handedness label assumes a mirrored (selfie) picture. For a camera's plain picture it names the other hand. The labels do follow crossed arms: "the hand on the picture's left is the right hand" chose wrong on the photo, the labels chose right.
