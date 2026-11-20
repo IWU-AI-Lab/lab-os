@@ -71,10 +71,9 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 ---
 
 ## N. The travel router (45 min)
-The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). This part assumes nothing about the room's network. The router starts with **no internet**: devices on it reach each other, and the brain keeps its internet through the campus Wi-Fi. Background: `docs/guides/network-setup-checklist.md`. To undo all of it: switch the router off and remove the desktop's cable.
-- **N.0** Before Tuesday, ask the professor two questions. → may the router be used in the lab? (yes / no) May it connect to the wall Ethernet port? (yes / no / ask IT)
+The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). The professor approved the router and its use of the wall Ethernet port (2026-11-20). The router gets its internet from the wall port from the start. The brain desktop keeps its own internet on the campus Wi-Fi, and reaches the router's devices by a cable. Background: `docs/guides/network-setup-checklist.md`. To undo all of it: switch the router off and remove the desktop's cable.
 - **N.1** Read the label under the router. → write the router's admin address (for example `192.168.8.1`) and its Wi-Fi names. Do not write the Wi-Fi password in the report.
-- **N.2** Connect the router's power adapter (from the box) to a wall socket. Wait 2 minutes. → is its light on and steady? (yes / no)
+- **N.2** Connect the wall Ethernet port to the router's **WAN** port. Connect the router's power adapter (from the box) to a wall socket. Wait 2 minutes. → is its light on and steady? (yes / no)
 - **N.3** Connect an Ethernet cable from the lab desktop's Ethernet port to the router's **LAN** port (not WAN). In Ubuntu Settings → Network → the wired connection → ⚙ → IPv4, select **Use this connection only for resources on its network**, then Apply. Turn the wired connection off and on. → does a web page still open on the desktop? (yes / no) Copy the first line that `ip -4 addr | grep 192.168.8` shows.
 - **N.4** On the desktop, open the admin address from N.1. Set an admin password, and keep it in your password manager, not in the repo. → did the router's page open? (yes / no)
 - **N.5** In the router's page, open the Wi-Fi settings. Give both bands one name of your choice, a new password, and the security **WPA2-PSK** or **WPA2/WPA3**, not WPA3 alone (older Pis and the Raspbot need WPA2). Save. → which security options did it offer? (copy them)
@@ -84,7 +83,7 @@ The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). This
 - **N.9** On a Pi with a screen, run `sudo nmcli dev wifi connect "<the router's Wi-Fi name>" password "<password>"`. → did it join? (yes / no; if no, copy the error) Run `ping -c 3 <the reserved address>`. → replies? (yes / no)
 - **N.10** On the Newline, open its Wi-Fi settings and join the router. In its Chrome, open `http://<the reserved address>:8080/?device=newline`. → did it join? (yes / no) Did the hub load? (yes / no)
 - **N.11** Connect to raspbot1 by its cable (`docs/guides/network-setup-checklist.md` → Step 2). Run `sudo nmcli dev wifi connect "<the router's Wi-Fi name>" password "<password>"`. → did it join? (yes / no; if no, copy the error line)
-- **N.12** Only if N.0 allowed the wall port: connect the wall port to the router's **WAN** port. If it did not, connect your phone's hotspot (security WPA2) in the router's page → Internet → Repeater. → on your phone, on the router's Wi-Fi, does a web page open? (yes / no) Which internet source did you use? (wall / phone / none)
+- **N.12** On your phone, on the router's Wi-Fi, open a web page. → does it open? (yes / no) If no: in the router's page → Internet, copy what it says about the WAN port. Then connect your phone's hotspot (security WPA2) in the router's page → Internet → Repeater. → does a web page open now? (yes / no)
 - **N.13** On your phone, on the router's Wi-Fi, open fast.com. → the speed in Mbps.
 
 ## M. Every screen in the room (30 min)
