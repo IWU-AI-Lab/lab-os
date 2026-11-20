@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Webcam teleop</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/static/pages.css">
+  <script type="importmap">
+    { "imports": { "three": "/web/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
+  </script>
+  <style>
+    /* the camera picture big, mirrored like a mirror (the hand drawing with it); the 3D arm under it */
+    .cam-view { display: grid; grid-template-rows: minmax(0, 1fr) minmax(14rem, 38%); gap: 1rem; min-height: 0; }
+    .cam-box { position: relative; min-height: 16rem; background: #000; overflow: hidden;
+      box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 55%, transparent); }
+    .cam-box video, .cam-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
+    .cam-box canvas[data-state="frozen"] { box-shadow: inset 0 0 0 4px var(--frozen); }
+    .cam-box canvas[data-state="following"] { box-shadow: inset 0 0 0 4px var(--ok); }
+    .cam-box .empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 2rem; text-align: center;
+      font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
+    .cam-box .empty[hidden] { display: none; }
+    @media (max-width: 900px), (orientation: portrait) { .cam-view { grid-template-rows: auto auto; } .cam-box { height: 50vh; } }
+  </style>
+</head>
+<!--
+  Webcam teleop (preview 2, 2026-11-19): a bare hand in front of a webcam drives the arm, no headset.
+  Same messages as the Quest's bare hands (docs/dev/protocol.md), relative mode only.
+  Guide: docs/guides/webcam-teleop.md.
+-->
+<body class="teleop">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg><span>Webcam teleop</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
+      <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
+      <span class="chip"><b>Arm</b><span id="state" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <span id="stop-key" class="stop-key" hidden title="Webcam control is on: X on the keyboard freezes the arm"><kbd>X</kbd> = STOP</span>
+    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page; X on the keyboard)">STOP</button>
+  </header>
+
+  <main class="split">
+    <section class="cam-view">
+      <div class="card cam-box">
+        <p id="cam-empty" class="empty">The camera picture shows here. Your right hand is drawn in cyan, your left hand in amber.</p>
+        <video id="cam" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="card view"><div id="arm-panel" class="in arm3d" data-role="input"></div></div>
+    </section>
+
+    <aside class="side">
+      <section class="card"><div class="in">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
+        <div class="sources">
+          <button id="start" class="btn primary" type="button">Start webcam control</button>
+        </div>
+        <p id="msg" class="msg" aria-live="polite"></p>
+        <p><span id="hand-state" class="pill off">off</span></p>
+        <dl class="facts">
+          <dt>Clutch</dt><dd id="clutch">—</dd>
+          <dt>Gripper</dt><dd id="pinch">—</dd>
+          <dt>Hand distance</dt><dd id="dist">—</dd>
+          <dt>Frames a second</dt><dd id="fps">—</dd>
+          <dt>Speed</dt><dd id="speed">—</dd>
+        </dl>
+        <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
+        <label class="row">Camera <select id="camera" disabled></select></label>
+        <label class="row"><input id="depth" type="checkbox" checked> Move toward and away (rough, from your hand's size)</label>
+        <label class="row"><input id="swap" type="checkbox"> Swap left and right hands</label>
+        <p class="hint">Put the camera in front of you, facing you. Your <b>right hand</b> moves the gripper. Hold a <b>left pinch</b> (or <b>Space</b>) to move: the clutch. A <b>right pinch</b> closes the gripper. Let go and the arm holds still.</p>
+        <p class="hint">If your right hand leaves the picture, the arm stops and stays frozen. Let go of the clutch, then pinch again to continue. <b>X</b> = STOP. <b>Esc</b> = stop webcam control.</p>
+      </div></section>
+
+      <section class="card grow-card"><div class="in">
+        <h2>What this page sends</h2>
+        <pre id="readout">nothing yet: start webcam control</pre>
+      </div></section>
+
+      <p class="hint"><a href="/teleop">Teleop page</a> (the Quest and desktop control)</p>
+    </aside>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/static/webcam.js"></script>
+<script type="module" src="/static/arm/arm-panel.js"></script>
+</body>
+</html>

@@ -133,10 +133,12 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** quality levels (theme), "This device" settings.
 
 ### Teleop with a webcam instead of the Quest
-- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo", 2026-11-19), with the webcam or the Kinect (version still to check).
+- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo", 2026-11-19). **Built 2026-11-19 with the webcam** (`docs/guides/webcam-teleop.md`): MediaPipe's hand landmarker in the browser (vendored), the same `xr_input` as the Quest's bare hands, relative only.
+- **Left after the preview:** the wrist's turn from the hand (MediaPipe's world landmarks give the palm's direction); 1:1 (the page would need to know where the camera is relative to the arm); a one-handed clutch; per-user pinch thresholds.
+- **The Kinect** (model 1414, the first Kinect for the Xbox 360): not a webcam, so Chrome can't see it. It needs libfreenect (on Ubuntu `sudo apt install freenect` and its udev rules, so `sudo`), its own power and USB adapter, and a small bridge on the brain that sends its depth to the page (or finds the hand there). Its depth would make toward/away exact. Lab check K says whether the lab has the adapter.
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.
 - **Why:** anyone can try it at a desk; no Quest to charge, set up or put on; a fallback when the Quest is out.
-- **How:** a hand-tracking model that runs in the browser, offline, on the webcam (e.g. Google's MediaPipe hand landmarker, vendored like three.js; license to check), producing the same `xr_input` hand messages (`source: "hands"`). Or on the brain with OpenCV (`camera_snapshot` already uses it).
+- **How (as built):** Google's MediaPipe hand landmarker (Apache-2.0) runs in the browser, offline, on the webcam, producing the same `xr_input` hand messages (`source: "webcam"`).
 - **Watch out:** one webcam sees left/right/up/down well but **depth (toward/away) only roughly** (from the hand's size in the picture), so forward/back will feel worse than the Quest; a second camera from the side, or the Kinect's depth camera, could fix that. Not the arms' cameras (they look at the table, and one program per camera): use the lab's spare webcam or a laptop's. Same dead-man rule: hand out of view = freeze. The browser gives the camera only to a secure page, so the webcam page runs on the brain's own computer (`localhost`) until the secure address exists.
 - **Plugs into:** inputs slot (a new input page, same clutch mapping); cameras/vision.
 
