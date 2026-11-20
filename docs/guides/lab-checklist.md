@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then T, then the parts that the sessions add for the other previews and the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then S, then T, then the parts that the sessions add for the other previews and the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -51,6 +51,14 @@ Setup: the desktop, and the Newline's own Chrome (or a laptop instead of the New
 - **11.11** On the desk, open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
 - **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
 - **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names? (yes / no) Is the Newline's Drawing Resolution still 0.5? (yes / no)
+
+## S. Safety fixes on the real arm (25 min)
+Setup: `so101-white` with its power supply and USB cable. Claude Code on the desktop, connected to the brain's robot tools (`docs/guides/ai-control.md`). Keep one hand at STOP.
+- **S.1** (quick job 44) Click **Start lab-os**. On the desktop's hub, press ⏻ → **Shut down lab-os**. → does the first line say that so101-white goes limp? (yes / no) Does the **Shut down** button say it too? (yes / no) Press **Cancel**.
+- **S.2** (quick job 44) Connect the Quest with USB. Run `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, open `http://localhost:8080/xr` and press **Enter AR (your room)**. Pull the trigger until the hub is around you. Put the headset on the table. → did the hub open in AR? (yes / no)
+- **S.3** (quick job 44) In Claude Code, prompt: `Go to the home pose.` Wait until the arm is at home. Hold the arm. Prompt: `Go to the ready pose.` While the arm moves, press ⏻ → **Shut down lab-os** → **Shut down**. → did the arm stop at once and make no more moves? (yes / no) Did it go limp in your hand within about 2 seconds? (yes / no) Did the terminal close within about 2 seconds, after `lab-os was shut down from the hub; so101-white was let go.`? (yes / no)
+- **S.4** (quick job 44) Look at the desktop's pages. Put on the Quest. → did every page on the desktop say "lab-os is off"? (yes / no) Did the Quest show a "lab-os is off" card in front of you? (yes / no)
+- **S.5** (quick job 44) Click **Start lab-os**. → did the desktop's pages come back by themselves? (yes / no)
 
 ---
 

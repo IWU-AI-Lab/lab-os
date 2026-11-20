@@ -5,9 +5,11 @@
 //
 //   showOff(msg)   cover the page (msg: the brain_off message, for who and when)
 //   isOff()        has this page been told?
+//   offMessage()   the brain_off message it was told with, or null (the headset's panels say it too)
 //   backOn()       the brain answers again: reload (only if it was off)
 
 let off = false;
+let told = null;
 
 const css = `
 #lab-os-off { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; padding: 1rem;
@@ -24,6 +26,7 @@ const hhmm = (ms) => new Date(ms || Date.now()).toLocaleTimeString([], { hour: "
 /** Cover this page: lab-os is off. */
 export function showOff(msg = {}) {
   off = true;
+  told = msg;
   if (document.getElementById("lab-os-off")) return;
   const style = document.createElement("style");
   style.textContent = css;
@@ -45,6 +48,7 @@ export function showOff(msg = {}) {
 }
 
 export const isOff = () => off;
+export const offMessage = () => told;
 
 /** The brain answers again: start fresh (the page's own state is from before the shutdown). */
 export function backOn() {

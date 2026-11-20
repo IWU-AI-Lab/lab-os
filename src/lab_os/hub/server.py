@@ -84,7 +84,15 @@ from lab_os.quest_view import QuestView, QuestViewError
 from lab_os.teleop.cli import LEFT_FAKE, teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
-from lab_os.teleop.server import CONTROL, LOOP, OUTBOX, SHUTDOWN, create_app, is_local
+from lab_os.teleop.server import (
+    CONTROL,
+    LOOP,
+    OUTBOX,
+    SHUTDOWN,
+    close_sockets,
+    create_app,
+    is_local,
+)
 from lab_os.theme import load_theme
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
@@ -252,13 +260,18 @@ def _shutdown_check(request: web.Request) -> str | None:
     return None
 
 
-def _shutdown_warning(loop: TeleopLoop) -> str | None:
-    """What happens to the arms, when it matters: an SO-101 goes limp (its torque switches off)."""
-    limp = [
+def _limp_arms(loop: TeleopLoop) -> list[str]:
+    """The arms that go limp when lab-os lets go (an SO-101: its torque switches off)."""
+    return [
         each.arm.name
         for each in (loop, loop.left)
         if each and each.arm_connected and getattr(each.arm, "limp_on_close", False)
     ]
+
+
+def _shutdown_warning(loop: TeleopLoop) -> str | None:
+    """What happens to the arms, when it matters: an SO-101 goes limp (its torque switches off)."""
+    limp = _limp_arms(loop)
     if not limp:
         return None
     if len(limp) == 1:
@@ -273,8 +286,14 @@ def _shutdown_warning(loop: TeleopLoop) -> str | None:
 
 async def api_shutdown_get(request: web.Request) -> web.Response:
     why = _shutdown_check(request)
+    loop = request.app[LOOP]
     return web.json_response(
-        {"allowed": why is None, "why_not": why, "warning": _shutdown_warning(request.app[LOOP])}
+        {
+            "allowed": why is None,
+            "why_not": why,
+            "warning": _shutdown_warning(loop),
+            "limp": _limp_arms(loop),  # the confirmation names them on its button too
+        }
     )
 
 
@@ -303,7 +322,7 @@ async def _stop_brain(request: web.Request, restart: bool) -> web.Response:
     app = request.app
     what = "restarting" if restart else "shutting down"
     log.warning("%s: asked from the hub (%s)", what, by or "a page with no device name")
-    app[LOOP].stop(f"lab-os is {what}")
+    app[LOOP].shut_down(f"lab-os is {what}")  # and nothing moves again (quick job 44)
     app[RESTART]["asked"] = restart
     msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
     if restart:
@@ -540,6 +559,14 @@ async def api_quest_view_stop(request: web.Request) -> web.Response:
         raise web.HTTPForbidden(text="The Quest's view is closed on the brain's computer.")
     stopped = await asyncio.to_thread(request.app[QUEST_VIEW].stop)
     return web.json_response({"ok": True, "stopped": stopped})
+
+
+async def _close_hub_pages(app: web.Application) -> None:
+    """The server stops: close the hub pages' and the voice's WebSockets at once (quick job 44),
+    as the teleop server does with its own."""
+    hub = [w.ws for w in app[HUB_DEVICES].windows.values()]
+    voice = [link.ws for link in app[BRAIN].voice.links]
+    await close_sockets(hub + voice)
 
 
 async def _quest_view_task(app: web.Application):
@@ -948,7 +975,7 @@ async def _mcp_task(app: web.Application):
     task = asyncio.create_task(mcp.serve()) if mcp else None
     yield
     if task:
-        mcp.shutdown()
+        await mcp.shutdown()
         try:
             await asyncio.wait_for(task, 3)
         except (TimeoutError, asyncio.CancelledError):
@@ -1107,4 +1134,5 @@ def create_brain_app(
     app.cleanup_ctx.append(_mcp_task)
     app.cleanup_ctx.append(_ai_task)
     app.cleanup_ctx.append(_quest_view_task)
+    app.on_shutdown.append(_close_hub_pages)
     return app
