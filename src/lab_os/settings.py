@@ -374,6 +374,20 @@ def _get(data: Any, path: str) -> Any:
     return data
 
 
+def problems(venue: str | None = None) -> list[str]:
+    """A sentence for each settings file that can't be read (the file and the line), for the top
+    of the settings page (quick job 45)."""
+    out = []
+    for file in ("theme", "place", "venue"):
+        try:
+            values(file, venue)
+        except config.ConfigError as e:
+            out.append(str(e))
+        except (OSError, SettingError) as e:
+            out.append(f"{file_name(file, venue)} can't be read: {e}")
+    return out
+
+
 def read(venue: str | None = None) -> list[dict]:
     """Every section with its fields' current values (what /api/settings sends)."""
     cache: dict[str, Any] = {}
@@ -477,6 +491,7 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
         why = limits_locked_why(values("venue", venue))
         if why:
             raise SettingError(f"{f.label} can't be switched off here: {why}.")
+    values(f.file, venue)  # a layer that can't be read: ConfigError with the file and the line
     path = file_path(f.file, venue)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -485,7 +500,10 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
     rt.preserve_quotes = True
     rt.width = 4096  # never re-wrap long comment lines
     before = path.read_text()
-    loaded = rt.load(before)
+    try:
+        loaded = rt.load(before)
+    except Exception as e:  # ruamel's own errors: the same sentence as a broken layer
+        raise config.ConfigError(config.broken_yaml(path, e)) from None
     data = loaded if loaded is not None else {}
     *parents, last = f.path.split(".")
     node = data

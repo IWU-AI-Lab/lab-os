@@ -286,3 +286,51 @@ def test_a_restart_doesnt_open_the_hub_again():
 
     argv = ["serve", "--open", "desk", "--arm", "so101-white", "--open=quest", "--port", "8080"]
     assert _without_open(argv) == ["serve", "--arm", "so101-white", "--port", "8080"]
+
+
+async def test_a_setting_set_back_needs_no_restart(aiohttp_client, monkeypatch):
+    """Quick job 45: a value set back to what the brain runs with takes the amber bar away."""
+    from lab_os import settings
+
+    monkeypatch.setattr(settings, "write", lambda key, value, venue=None: value)
+    client = await aiohttp_client(make_app())
+    s = await (await client.get("/api/settings")).json()
+    running = next(
+        f["value"]
+        for sec in s["sections"]
+        for f in sec["fields"]
+        if f["key"] == "venue:max_speed_scale"
+    )
+    r = await (
+        await client.post("/api/settings", json={"key": "venue:max_speed_scale", "value": 0.3})
+    ).json()
+    assert r["restart_needed"] == ["Top Speed"] and r["restart_keys"] == ["venue:max_speed_scale"]
+    r = await (
+        await client.post("/api/settings", json={"key": "venue:max_speed_scale", "value": running})
+    ).json()
+    assert r["restart_needed"] == [] and r["restart_keys"] == []
+    assert (await (await client.get("/api/settings")).json())["restart_needed"] == []
+
+
+async def test_a_broken_config_file_is_a_sentence(aiohttp_client, monkeypatch, tmp_path):
+    """Quick job 45: a file broken by hand gave "500 Internal Server Error", no "Saved", and then
+    an empty settings page. Now: the file and the line, on the page and for a change."""
+    from lab_os import config
+
+    bad = tmp_path / "theme.yaml"
+    bad.write_text("hub:\n  look: [plain\n")
+    real = config.layers
+    monkeypatch.setattr(
+        config,
+        "layers",
+        lambda name, *a, **k: (
+            [*real(name, *a, **k), bad] if name == "theme.yaml" else real(name, *a, **k)
+        ),
+    )
+    client = await aiohttp_client(make_app())
+    s = await (await client.get("/api/settings")).json()
+    assert s["sections"] and any("line 3" in p or "line 2" in p for p in s["problems"])
+    assert "theme.yaml" in s["problems"][0]
+    res = await client.post("/api/settings", json={"key": "theme:clock", "value": "12h"})
+    got = await res.json()
+    assert res.status == 400 and not got["ok"] and "can't be read" in got["message"]

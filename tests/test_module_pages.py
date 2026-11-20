@@ -192,6 +192,8 @@ async def test_settings_change_only_from_this_computer(aiohttp_client, home, mon
         "key": "theme:clock",
         "value": "12h",
         "applies": "reload",
+        "restart_needed": [],
+        "restart_keys": [],
     }
     assert (await (await client.get("/theme.json")).json())["clock"] == "12h"
     bad = await client.post("/api/settings", json={"key": "theme:clock", "value": "25h"})

@@ -200,6 +200,8 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.9** On the other monitor, press **Window** in Monitor's bar. → is Monitor a window now? (yes / no) Close it. Open it on the other monitor again, as in I.8. → does it open as a window? (yes / no)
 - **I.10** Quick job 65. On the Newline (touch), press and hold the core for 2 seconds. Then press and hold a module button. → did a browser menu open? (yes / no) Press and hold a word in the ask line. → can you select it and paste? (yes / no)
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
+- **I.12** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
+- **I.13** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
 Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.

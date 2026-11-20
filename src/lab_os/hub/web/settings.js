@@ -96,8 +96,8 @@ function control(f, value, onSave, disabled) {
       wrap.innerHTML = `<div class="order">${[...chosen, ...rest].map((c) => {
         const i = chosen.indexOf(c);
         return `<div><input type="checkbox" ${off} ${i >= 0 ? "checked" : ""} data-v="${esc(c)}"><span>${esc(show(c))}</span>` +
-          `<button type="button" ${off || i <= 0 ? "disabled" : ""} data-up="${esc(c)}" aria-label="Earlier">↑</button>` +
-          `<button type="button" ${off || i < 0 || i === chosen.length - 1 ? "disabled" : ""} data-down="${esc(c)}" aria-label="Later">↓</button></div>`;
+          `<button type="button" ${off || i <= 0 ? "disabled" : ""} data-up="${esc(c)}" aria-label="Earlier" title="Earlier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>` +
+          `<button type="button" ${off || i < 0 || i === chosen.length - 1 ? "disabled" : ""} data-down="${esc(c)}" aria-label="Later" title="Later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button></div>`;
       }).join("")}</div>`;
       wrap.querySelectorAll("input").forEach((box) => box.addEventListener("change", () => save(box.checked ? [...chosen, box.dataset.v] : chosen.filter((c) => c !== box.dataset.v))));
       wrap.querySelectorAll("[data-up],[data-down]").forEach((b) => b.addEventListener("click", () => {
@@ -116,7 +116,7 @@ function control(f, value, onSave, disabled) {
 function row(label, help, ctl, unit = "") {
   const r = document.createElement("div");
   r.className = "row";
-  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}</div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
+  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs" hidden>Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
   if (ctl) r.querySelector(".ctl").append(ctl);
   return r;
 }
@@ -314,11 +314,15 @@ async function stopBrain(restart) {
   (await import("/web/off.js")).showOff({ from: NAME, time_ms: Date.now(), restart });
   // this page has no live link to the brain: look every 2 s, and come back once it answers again
   let gone = false;
+  const t0 = Date.now();
   const look = async () => {
     const up = await fetch("/api/status", { cache: "no-store" }).then((r) => r.ok).catch(() => false);
     if (!up) gone = true;
-    if (up && gone) location.reload();
-    else setTimeout(look, 2000);
+    if (up && gone) return location.reload();
+    // a restart that doesn't come back (quick job 45: "Restart Now did nothing"): say where to look
+    const p = document.querySelectorAll("#lab-os-off p")[1];
+    if (restart && p && Date.now() - t0 > 45_000) p.textContent = "lab-os has not started again. Look at the brain's terminal: a settings file may have a mistake (it names the file and the line).";
+    setTimeout(look, 2000);
   };
   setTimeout(look, 1000);
 }
@@ -362,17 +366,34 @@ function restartBar(labels, writable) {
   const r = { querySelector: (s) => (s === ".st" ? bar.querySelector(".st") : bar.querySelector(".err")) };
   confirmIn(r, ctl, b, "Restart lab-os now? Every screen comes back by itself.", "Restart", () => stopBrain(true));
 }
-const restartNeeded = [];
-function needsRestart(label) {
-  if (!restartNeeded.includes(label)) restartNeeded.push(label);
-  restartBar(restartNeeded, true);
+// The brain keeps the list (quick job 45): a value set back to what it runs with leaves it, and every
+// window of ⚙ shows the same. Changes save at once (GNOME and Apple settings: no OK or Cancel); the bar
+// and the row's note say what waits for a restart.
+let writableHere = false;
+function setRestart(labels = [], keys = []) {
+  restartBar(labels, writableHere);
+  document.querySelectorAll(".row[data-key]").forEach((r) => (r.querySelector(".rs").hidden = !keys.includes(r.dataset.key)));
+}
+// another window may have changed a setting: the bar and the notes again when this one shows
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") return;
+  const d = await fetch("/api/settings", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
+  if (d?.sections) setRestart(d.restart_needed, d.restart_keys);
+});
+function showProblems(list = []) {
+  const box = $("#problems");
+  box.hidden = !list.length;
+  box.querySelectorAll("p").forEach((p) => p.remove());
+  for (const text of list) box.append(Object.assign(document.createElement("p"), { textContent: text }));
 }
 
 /* ---------- start ---------- */
 async function start() {
   let data = null;
   try {
-    data = await (await fetch("/api/settings", { cache: "no-store" })).json();
+    const res = await fetch("/api/settings", { cache: "no-store" });
+    data = res.ok ? await res.json() : null;
+    if (!data) showProblems(["The brain couldn't read the settings. Its terminal has the details."]);
   } catch {
     $("#mode").textContent = "Brain not reachable";
     $("#mode").className = "pill bad";
@@ -396,8 +417,8 @@ async function start() {
   for (const f of SLOW) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
   dev.append(screensRow(), iconRow());
   if (!data) return;
-  restartNeeded.push(...(data.restart_needed || []));
-  restartBar(restartNeeded, data.writable);
+  writableHere = !!data.writable;
+  showProblems(data.problems);
   const ICON = { assistant: "i-chat", lab: "i-pin", robots: "i-hand", limits: "i-warn" };
   const offNow = new Map();  // safety limits that are off in the venue file: label → true
   const showOff = () => {
@@ -420,14 +441,15 @@ async function start() {
       r = fieldRow(field, f.value, async (value) => {
         try {
           const res = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: f.key, value }) });
-          const out = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: await res.text() };
-          if (out.ok) { tellHub(); markOff(value); if (out.applies === "restart") needsRestart(f.label); }
+          const out = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: "Not saved: the brain had a problem. Its terminal has the details." };
+          if (out.ok) { tellHub(); markOff(value); setRestart(out.restart_needed, out.restart_keys); }
           return { ok: out.ok, message: out.message };
         } catch (e) {
           return { ok: false, message: `Not saved: ${e.message}` };
         }
       }, !data.writable || !!f.locked);
       markOff(f.value);
+      r.dataset.key = f.key;
       rows.append(r);
     }
     if (s.risky) {
@@ -435,5 +457,6 @@ async function start() {
       rows.append(await shutdownRow());
     }
   }
+  setRestart(data.restart_needed, data.restart_keys);
 }
 start();
