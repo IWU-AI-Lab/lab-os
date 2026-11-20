@@ -16,7 +16,16 @@ from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import RESTART, create_brain_app
 from lab_os.personas import current_persona, load_persona
-from lab_os.teleop.cli import add_arm_args, any_real_arm, close_arms, make_loop, serve, use_config
+from lab_os.quest_view import AdbReverse
+from lab_os.teleop.cli import (
+    add_arm_args,
+    any_real_arm,
+    arm_finder,
+    close_arms,
+    make_loop,
+    serve,
+    use_config,
+)
 from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import SHUTDOWN
 from lab_os.tools.mcp_server import DEFAULT_PORT as MCP_PORT
@@ -265,6 +274,9 @@ def main(argv: list[str] | None = None) -> None:
         local_control_only=local_control_only,
         recorder=Recorder(args.record) if args.record else None,
         drive_from=drive_from,
+        # no --arm and none plugged in: take an SO-101 plugged in later (quick job 73)
+        find_arm=arm_finder() if getattr(args, "auto_arm", False) and args.arm == "fake" else None,
+        adb_reverse=AdbReverse(args.port),  # the Quest's browser reaches it by USB (quick job 73)
     )
     if args.record:
         print(f"recording teleop input to {args.record}")

@@ -326,3 +326,39 @@ def test_a_garbled_calibration_side_falls_back_to_the_default(tmp_path):
     assert limits["elbow_flex"].low == xarm.DEFAULT_LIMITS["elbow_flex"].low
     assert limits["wrist_flex"].high == 120.0  # a bit past the servo range: clamped
     assert (limits["gripper"].low, limits["gripper"].high) == (12.7, 90.0)
+
+
+def test_unplugged_and_plugged_in_again_it_comes_back(monkeypatch):
+    """Quick job 73: like the SO-101 (quick job 27), the teleop loop sees the xArm's USB go
+    (port_present), freezes and says "disconnected", lets go without writing (drop), and
+    connects again by itself when it's back."""
+    from lab_os.teleop.loop import InputState, TeleopLoop
+
+    here = {"on": True}
+
+    def find(name):
+        if not here["on"]:
+            raise LookupError(f"{name}: no USB device found")
+        return xarm_info()
+
+    monkeypatch.setattr(xarm, "find_usb_device", find)
+    arm, fake = motion_arm()
+    arm._thread = None  # the worker isn't started in these tests
+    reconnects = []
+
+    def connect():
+        reconnects.append(1)
+        arm._dev = fake
+
+    monkeypatch.setattr(arm, "connect", connect)
+    loop = TeleopLoop(arm=arm, inputs=InputState())
+    assert arm.port_present()
+    here["on"] = False
+    fake.written.clear()
+    loop.check_link(1.0, force=True)
+    assert not loop.arm_connected and "unplugged" in loop.arm_problem
+    assert arm._dev is None and fake.written == []  # nothing written to a port that's gone
+    assert loop.status()["arm"]["connected"] is False
+    here["on"] = True
+    loop.check_link(5.0)
+    assert loop.arm_connected and reconnects == [1] and loop.frozen

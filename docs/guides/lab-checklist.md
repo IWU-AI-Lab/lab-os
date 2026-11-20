@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, Q, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, Q, U, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -92,7 +92,7 @@ Then run:
 ls /dev/serial/by-id/
 uv run --extra so101 lab-os serve --arm so101-white --left-arm so101-green --speed 0.3
 ```
-In a second terminal, run `adb reverse tcp:8080 tcp:8080`.
+Connect the Quest by USB. The brain runs `adb reverse` by itself.
 
 - **T.1** Read the `ls` output. → does it show both `…5B41532410-if00` (white) and `…5B41533501-if00` (green)? (yes / no)
 - **T.2** Read the brain's terminal. → does it say `two arms: the right controller drives so101-white, the left one so101-green`? (yes / no; if no, copy the last line)
@@ -196,13 +196,21 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
-Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable with `adb reverse tcp:8080 tcp:8080`, and `http://localhost:8080/xr` open in the Quest's browser.
+Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.
 - **Q.1** Press **Enter AR**. Pull the trigger to start, and wait for the hub. Point at **EXIT** under the hub. Pull the trigger. → are you back on the browser page? (yes / no)
 - **Q.2** Press **Enter VR**. Start, and open **Teleop**. Point at **EXIT**. Pull the trigger. → are you back on the browser page? (yes / no)
 - **Q.3** Press **Enter VR**. Stay on the start screen. On the desktop, shut down lab-os (⏻). → does the "lab-os is off" card show in the Quest? (yes / no) Pull the trigger. → does the startup start? (yes / no: it must not)
 - **Q.4** Point at **EXIT** under the card. Pull the trigger. → are you back on the browser page? (yes / no) Start lab-os with its icon. → does the page come back by itself? (yes / no)
 - **Q.5** Start lab-os with its icon. On the Quest, press **Enter VR**. Stay on the start screen. Unplug the Quest's USB cable. Wait 5 seconds. → does a card say "lab-os is not reachable"? (yes / no) Pull the trigger. → does the startup start? (yes / no: it must not)
-- **Q.6** Plug the Quest's USB cable in again. Run `adb reverse tcp:8080 tcp:8080`. → does the page come back by itself? (yes / no)
+- **Q.6** Plug the Quest's USB cable in again. Do not run `adb reverse`. → does the page come back by itself? (yes / no)
+
+## U. Unplug and plug in again (25 min)
+Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microphone plugged in. Keep the brain's terminal in view.
+- **U.1** Plug in `so101-white` (its USB cable and its power supply). Wait 10 seconds. → does the hub's Arm line say `so101-white`? (yes / no) Did the terminal say "so101-white was plugged in"? (yes / no)
+- **U.2** Open Teleop on the desktop. Drive the arm a little with the keys. → does the real arm move? (yes / no)
+- **U.3** Plug in the xArm. Run `uv run lab-os serve --arm xarm1 --port 8090 --mcp-port 0` in a second terminal, and open `http://localhost:8090/monitor`. Unplug the xArm's USB. → does Monitor say "disconnected"? (yes / no) Plug it in again. Wait 5 seconds. → does Monitor show the arm again? (yes / no) Stop that brain with Ctrl+C.
+- **U.4** Plug in the USB microphone. → does the mic button show next to "Ask anything" within 5 seconds? (yes / no) Unplug it. → does the button go? (yes / no) Plug it in again. Wait 5 seconds. → is the button back? (yes / no)
+- **U.5** Unplug the Quest's USB cable, then plug it in again. Do not run `adb reverse`. In the Quest's browser, open `http://localhost:8080/xr`. → does the page load? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

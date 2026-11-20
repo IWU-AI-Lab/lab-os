@@ -27,7 +27,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/perf` | the performance test (below) |
 
 **Options** (the same as `lab-os-teleop`'s):
-- `--arm` (for example `fake`, `fake-xarm1`, `so101-white`). Without `--arm`, the brain drives the SO-101s that are plugged in when it starts: one arm, or two arms as `--arm` and `--left-arm`. It never takes the green set by itself, because LeLab or a training run may need it: name it with `--arm so101-green`. With no arm plugged in, it drives the fake arm. When a plugged-in arm cannot open (another program has its port, or it has no calibration), the brain says why and drives the fake arm. `--arm fake` always drives the fake arm.
+- `--arm` (for example `fake`, `fake-xarm1`, `so101-white`). Without `--arm`, the brain drives the SO-101s that are plugged in when it starts: one arm, or two arms as `--arm` and `--left-arm`. It never takes the green set by itself, because LeLab or a training run may need it: name it with `--arm so101-green`. With no arm plugged in, it drives the fake arm. When a plugged-in arm cannot open (another program has its port, or it has no calibration), the brain says why and drives the fake arm. When it drives the fake arm this way, it takes an SO-101 that you plug in later, with the same rules: only while nobody drives the fake arm (for 5 seconds), and the pages then show the new arm. `--arm fake` always drives the fake arm. An unplugged SO-101 or xArm freezes, every page says "disconnected", and it connects again by itself when you plug it back in.
 - `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/dev/places.md`).
 - `--mcp-port`: the robot tools for AI (`docs/guides/ai-control.md`).
 - `--persona` (`docs/dev/personas.md`).

@@ -127,6 +127,7 @@ class TeleopLoop:
     # True (pose input only).
     left: "TeleopLoop | None" = None
     is_left: bool = False
+    last_command_t: float = -1e9  # monotonic time of the last arm_command (quick job 73)
     # lab-os is shutting down or restarting (why), or None: nothing moves any more (quick job 44)
     shutting_down: str | None = None
 
@@ -135,6 +136,7 @@ class TeleopLoop:
         msg = {"seq": self.command_seq, "device": self.arm.name} | msg
         if msg["type"] == "arm_command":
             self.last_command = msg
+            self.last_command_t = time.monotonic()
         if self.on_command:
             self.on_command(msg)
 
@@ -316,6 +318,25 @@ class TeleopLoop:
         self.jog.reset(require_release=True)
         self.health = None
         log.info("%s reconnected", self.arm.name)
+
+    def adopt(self, other: "TeleopLoop") -> Arm:
+        """Drive `other`'s arm from now on, with its mapper (its floor, its kinematics) and its
+        health log: an arm plugged in after the brain started on the fake arm (quick job 73).
+        Held where it is until input starts it (after a release), as after a reconnect. Returns
+        the arm it drove before (the caller closes it)."""
+        old = self.arm
+        self._freeze("stopped")
+        self.arm, self.mapper, self.health_log = other.arm, other.mapper, other.health_log
+        self.arm_connected, self.arm_problem, self.health = True, None, None
+        self.frozen = True
+        self.input_kind = None
+        self._last_joints = {}
+        self.mapper.reset(require_release=True)
+        self.jog.reset(require_release=True)
+        log.info(
+            "now driving %s (plugged in after the start), instead of %s", self.arm.name, old.name
+        )
+        return old
 
     def _step_motion(self, dt: float) -> None:
         m = self.motion

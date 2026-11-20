@@ -185,19 +185,27 @@ class RobotTools:
         gestures: dict | None = None,
     ):
         self.loop = loop
-        self.arm = loop.arm
         self.venue = venue
         self.limits = AiLimits.from_venue(venue)
         self.control = control
+        self._poses, self._gestures = poses, gestures
+        self.use_arm(table_z_cm)
+        self.calls = calls or CallLog()
+
+    def use_arm(self, table_z_cm: float | None = None) -> None:
+        """Take the loop's arm: its height above the table, kinematics, poses and gestures. At
+        the start, and when the brain takes an arm plugged in after the start (quick job 73)."""
+        self.arm = self.loop.arm
         if table_z_cm is None:  # the arm's setting in devices.yaml (0 for the software arms)
             from lab_os.devices import table_z_cm as setting
 
             table_z_cm = setting(self.arm.name)
         self.table_z_cm = table_z_cm
         self.kin = on_table(kinematics_for(self.arm.model), table_z_cm)
-        self.poses = (load_poses() if poses is None else poses).get(self.arm.model, {})
-        self.gestures = (load_gestures() if gestures is None else gestures).get(self.arm.model, {})
-        self.calls = calls or CallLog()
+        poses = load_poses() if self._poses is None else self._poses
+        gestures = load_gestures() if self._gestures is None else self._gestures
+        self.poses = poses.get(self.arm.model, {})
+        self.gestures = gestures.get(self.arm.model, {})
         self.last_target: tuple[tuple[float, float, float], float] | None = None  # move_to's
 
     # ---------- reading ----------

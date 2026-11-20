@@ -84,7 +84,7 @@ from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
-from lab_os.quest_view import QuestView, QuestViewError
+from lab_os.quest_view import AdbReverse, QuestView, QuestViewError
 from lab_os.teleop.cli import LEFT_FAKE, teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
@@ -123,6 +123,11 @@ DEFAULT_RESET_AFTER_S = 1800.0
 MAX_COMMIT_DAYS = 90
 MAX_QUESTION_CHARS = 2000
 AI_CHECK_EVERY_S = (60.0, 20.0)  # while connected / while not
+# quick job 73: started on the fake arm with no --arm, the brain looks this often for an SO-101
+# plugged in since, and takes it once the fake arm has been still this long
+NEW_ARM_EVERY_S = 2.0
+NEW_ARM_QUIET_S = 5.0
+ADB_EVERY_S = 3.0  # quick job 73: how often the brain looks for a newly connected Quest
 
 log = logging.getLogger(__name__)
 
@@ -153,6 +158,8 @@ MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
 QUEST_VIEW = web.AppKey("quest_view", QuestView)
+ADB_REVERSE = web.AppKey("adb_reverse", object)  # quick job 73: an AdbReverse, or None
+FIND_ARM = web.AppKey("find_arm", object)  # quick job 73: lab_os.teleop.cli.arm_finder(), or None
 RESTART = web.AppKey("restart", dict)  # {"asked": bool}: start again after stopping (lab_os.cli)
 
 
@@ -998,6 +1005,69 @@ async def _ai_task(app: web.Application):
     await brain.voice.close()
 
 
+def _fake_arm_in_use(app: web.Application) -> bool:
+    """Someone drives the fake arm, or did a moment ago (a wave between two steps)."""
+    loop = app[LOOP]
+    return (
+        app[CONTROL].get("ws") is not None
+        or loop.motion_active
+        or loop.inputs.connected
+        or time.monotonic() - loop.last_command_t < NEW_ARM_QUIET_S
+    )
+
+
+async def take_new_arm(app: web.Application) -> bool:
+    """One look for an SO-101 plugged in since the start (quick job 73). Taken only while
+    nobody drives the fake arm; the pages show the new arm by its status. True: taken."""
+    loop, find = app[LOOP], app[FIND_ARM]
+    if loop.shutting_down or _fake_arm_in_use(app):
+        return False
+    new = await asyncio.to_thread(find, loop, app[BRAIN].venue)
+    if new is None:
+        return False
+    if loop.shutting_down or _fake_arm_in_use(app):  # someone started driving meanwhile
+        await asyncio.to_thread(new.arm.close)
+        return False
+    old = loop.adopt(new)
+    app[TOOLS].use_arm()
+    old.close()
+    print(f"\n{loop.arm.name} was plugged in: lab-os drives it now, instead of {old.name}.")
+    return True
+
+
+async def _new_arm_task(app: web.Application):
+    async def run():
+        while True:
+            await asyncio.sleep(NEW_ARM_EVERY_S)  # first: the start has just looked
+            try:
+                if await take_new_arm(app):
+                    return
+            except Exception:  # a failed look must not end the looking
+                log.exception("looking for an arm plugged in since the start")
+
+    task = asyncio.create_task(run()) if app[FIND_ARM] else None
+    yield
+    if task:
+        task.cancel()
+
+
+async def _adb_reverse_task(app: web.Application):
+    rev = app[ADB_REVERSE]
+
+    async def run():
+        while True:
+            try:
+                await asyncio.to_thread(rev.check)
+            except Exception:  # a failed look must not end the looking
+                log.exception("adb reverse")
+            await asyncio.sleep(ADB_EVERY_S)
+
+    task = asyncio.create_task(run()) if rev else None
+    yield
+    if task:
+        task.cancel()
+
+
 async def _internet_task(app: web.Application):
     check = app[BRAIN].internet
     task = asyncio.create_task(check.run()) if check else None
@@ -1042,6 +1112,8 @@ def create_brain_app(
     voices: Callable[[], dict[str, VoiceSetup]] | None = None,
     device_settings: DeviceSettings | None = None,
     quest_view: QuestView | None = None,
+    find_arm: Callable | None = None,
+    adb_reverse: AdbReverse | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
@@ -1049,7 +1121,9 @@ def create_brain_app(
     computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
     input (`lab-os serve --record`). `voices`: the voice setups (default: models.yaml's).
     `device_settings`: where each device's own settings are kept (default: the place's
-    local/hub-devices.yaml)."""
+    local/hub-devices.yaml). `find_arm`: started on the fake arm with no --arm, take an SO-101
+    plugged in later (`lab_os.teleop.cli.arm_finder`, quick job 73). `adb_reverse`: run `adb
+    reverse` for each Quest connected by USB, also after the cable is plugged in again."""
     app = create_app(
         loop,
         recorder,
@@ -1122,6 +1196,8 @@ def create_brain_app(
     )
     app[QUEST_VIEW] = quest_view or QuestView()
     app[RESTART] = {"asked": False}
+    app[FIND_ARM] = find_arm
+    app[ADB_REVERSE] = adb_reverse
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
@@ -1171,6 +1247,8 @@ def create_brain_app(
     app.cleanup_ctx.append(_mcp_task)
     app.cleanup_ctx.append(_ai_task)
     app.cleanup_ctx.append(_quest_view_task)
+    app.cleanup_ctx.append(_new_arm_task)
+    app.cleanup_ctx.append(_adb_reverse_task)
     app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
     app.on_shutdown.append(_close_hub_pages)
     return app

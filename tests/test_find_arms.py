@@ -123,3 +123,41 @@ def test_lab_os_teleop_still_starts_on_the_fake_arm(plugged, monkeypatch):
     with pytest.raises(ZeroDivisionError):
         teleop_cli.main(["--quiet", "serve"])
     assert seen == ["fake"]
+
+
+def test_an_arm_plugged_in_later_is_found_with_the_same_rules(plugged, monkeypatch, caplog):
+    """Quick job 73: started on the fake arm, the brain's finder takes the white arm once it's
+    plugged in, never the green one (borrowed: only when named), and says once why an arm that's
+    plugged in won't open."""
+    from lab_os.venues import load_venue
+
+    a = args()
+    loop = teleop_cli.make_loop(a)
+    assert a.auto_arm and a.arm == "fake"
+    find = teleop_cli.arm_finder()
+    venue = load_venue("lab")
+    assert find(loop, venue) is None  # nothing plugged in
+    plugged.add(GREEN)
+    assert find(loop, venue) is None  # the green set: never by itself
+    plugged.add(WHITE)
+    real = teleop_cli._make_arm
+
+    def busy(name, venue):
+        raise SystemExit(f"{name}: in use by another program")
+
+    monkeypatch.setattr(teleop_cli, "_make_arm", busy)
+    assert find(loop, venue) is None and find(loop, venue) is None
+    assert caplog.text.count("in use by another program") == 1  # said once, not every look
+    monkeypatch.setattr(
+        teleop_cli,
+        "_make_arm",
+        lambda n, v: real(n, v) if n.startswith("fake") else FakeArm(name=n),
+    )
+    new = find(loop, venue)
+    assert new.arm.name == "so101-white" and new.inputs is loop.inputs
+
+
+def test_a_named_arm_is_not_replaced(plugged):
+    a = args(arm="fake")
+    teleop_cli.make_loop(a)
+    assert not a.auto_arm  # --arm fake: the builder asked for the fake arm

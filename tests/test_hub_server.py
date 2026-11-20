@@ -160,3 +160,80 @@ async def test_status_says_in_use_while_the_ai_tools_move(aiohttp_client):
     st = await (await client.get("/api/status")).json()
     assert st["in_use"] == ["ai"] and st["arm"]["control"] == "ai"
     app[LOOP].stop()
+
+
+# ---------- quick job 73: an arm plugged in after the start ----------
+
+
+def _app_with_a_new_arm(**kw):
+    new = FakeArm(name="so101-white")
+    new.connect()
+    looks = []
+
+    def find(loop, venue):
+        looks.append(venue.name)
+        return TeleopLoop(arm=new, inputs=loop.inputs) if new.plugged else None
+
+    return make_app(find_arm=find, **kw), new, looks
+
+
+@pytest.fixture
+def no_looking_by_itself(monkeypatch):
+    """The tests call take_new_arm themselves: the brain's own looking waits."""
+    monkeypatch.setattr("lab_os.hub.server.NEW_ARM_EVERY_S", 3600)
+
+
+async def test_an_arm_plugged_in_after_the_start_is_taken(aiohttp_client, no_looking_by_itself):
+    from lab_os.hub.server import LOOP, TOOLS, take_new_arm
+
+    app, new, looks = _app_with_a_new_arm()
+    client = await aiohttp_client(app)
+    fake = app[LOOP].arm
+    assert await take_new_arm(app)
+    assert app[LOOP].arm is new and app[TOOLS].arm is new  # the AI tools drive it too
+    assert not fake.connected  # the fake arm was let go
+    assert app[LOOP].frozen  # held where it is until input starts it
+    arm = await (await client.get("/api/arm")).json()
+    assert arm["name"] == "so101-white"  # the pages show the new arm
+    assert looks
+
+
+async def test_no_new_arm_while_someone_drives_the_fake_one(aiohttp_client, no_looking_by_itself):
+    import time
+
+    from lab_os.hub.server import LOOP, take_new_arm
+    from lab_os.teleop.server import CONTROL
+
+    app, new, looks = _app_with_a_new_arm()
+    await aiohttp_client(app)
+    fake = app[LOOP].arm
+    app[CONTROL]["ws"] = object()  # a teleop page has control
+    assert not await take_new_arm(app) and app[LOOP].arm is fake and not looks
+    app[CONTROL]["ws"] = None
+    app[LOOP].last_command_t = time.monotonic()  # it moved a moment ago (a wave between steps)
+    assert not await take_new_arm(app) and app[LOOP].arm is fake
+    app[LOOP].last_command_t = -1e9
+    new.plugged = False  # nothing plugged in: nothing changes
+    assert not await take_new_arm(app) and app[LOOP].arm is fake
+
+
+def test_the_brain_looks_for_new_arms_only_when_it_chose_the_fake_arm():
+    """--arm fake (or --arm so101-white) is what the builder asked for: kept. No --arm and none
+    plugged in: it looks (lab_os.cli passes arm_finder())."""
+    src = (SRC / "cli.py").read_text()
+    assert 'arm_finder() if getattr(args, "auto_arm", False) and args.arm == "fake"' in src
+
+
+async def test_the_brain_looks_by_itself(aiohttp_client, monkeypatch):
+    import asyncio
+
+    from lab_os.hub.server import LOOP
+
+    monkeypatch.setattr("lab_os.hub.server.NEW_ARM_EVERY_S", 0.05)
+    app, new, _ = _app_with_a_new_arm()
+    await aiohttp_client(app)
+    for _ in range(100):
+        if app[LOOP].arm is new:
+            break
+        await asyncio.sleep(0.02)
+    assert app[LOOP].arm is new
