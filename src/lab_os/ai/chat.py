@@ -309,11 +309,13 @@ class Conversation:
         pages: dict | None = None,
         answer_in: str | None = None,
         local: bool = False,
+        device: str = "",
     ) -> AsyncIterator[dict]:
         """One turn. Yields events for the page: state, text (pieces of the answer), open (show
         this page), done or error. Never raises for AI trouble: an error event carries the
         sentence to show. `pages`: what the asking page can show ({id: title}); none = no
-        open_page tool. `local`: asked on the brain's own computer (visitor mode's tools)."""
+        open_page tool. `local`: asked on the brain's own computer (visitor mode's tools). `device`:
+        the screen that asked: only it shows thinking and speaking (quick job 58)."""
         text = text.strip()
         pages = clean_pages(pages)
         if not text:
@@ -340,7 +342,7 @@ class Conversation:
         welcomed = False  # visitor mode started this turn: its answer is the welcome
         error, completed, rounds = None, False, 0
         try:
-            self.assistant.set("thinking")
+            self.assistant.set("thinking", device=device)
             yield {"type": "state", "state": "thinking"}
             while True:
                 reply = Reply()

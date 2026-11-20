@@ -48,6 +48,7 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.5** Each time during the day that the wake word does not answer: copy the terminal's `voice:` lines from that minute into the report. → how many times did it stop today? (a number)
 - **V.6** Quick job 57. Ask "Hey Jarvis, tell me about the lab's robots". While it answers aloud, say "Hey Jarvis, what time is it?". → did the first answer stop at once? (yes / no) Did it answer the new question? (yes / no)
 - **V.7** Ask a question by voice. While the core thinks, hold the mic and ask "what's next?". → did it answer only the new question? (yes / no)
+- **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
 
 ---
 

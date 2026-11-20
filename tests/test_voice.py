@@ -684,9 +684,9 @@ async def test_the_device_languages_reach_the_turn(aiohttp_client, aiohttp_serve
     app, conv, _ = await voice_app(aiohttp_server, tmp_path)
     asked, real = [], conv.ask
 
-    def ask(text, pages=None, answer_in=None, local=False):
+    def ask(text, pages=None, answer_in=None, local=False, device=""):
         asked.append(answer_in)
-        return real(text, pages, answer_in, local=local)
+        return real(text, pages, answer_in, local=local, device=device)
 
     conv.ask = ask
     client = await aiohttp_client(app)
@@ -706,3 +706,54 @@ async def test_the_device_languages_reach_the_turn(aiohttp_client, aiohttp_serve
     assert asked == ["en", "en", None, None]
     assert "Always answer in English" in conv.system_prompt(None, "en")
     assert "Always answer in" not in conv.system_prompt(None, None)
+
+
+async def test_only_the_screen_that_talks_shows_it(aiohttp_client, aiohttp_server, key, tmp_path):
+    """Quick job 58: the Newline spoke, and the desk's core showed it too. The brain's state now
+    names the screen with the conversation; the pages show another screen's turn as idle."""
+    app, _, assistant = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice?device=newline")
+    await ws.send_json({"type": "listen", "mode": "ask"})
+    await until(ws, "listening", [])
+    st = (await (await client.get("/api/status")).json())["assistant"]
+    assert st["state"] == "listening" and st["device"] == "newline"
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    await until(ws, "audio_end", [])
+    await ws.send_json({"type": "played", "loudness": 0.4})
+    for _ in range(50):
+        if assistant.loudness == 0.4:
+            break
+        await asyncio.sleep(0.02)
+    assert (assistant.state, assistant.device) == ("speaking", "newline")
+    await ws.send_json({"type": "played", "done": True})
+    for _ in range(50):
+        if assistant.state != "speaking":
+            break
+        await asyncio.sleep(0.02)
+    assert assistant.device == ""  # idle belongs to every screen
+    # a typed question names its screen too
+    resp = await client.post("/api/chat", json={"text": "hi", "device": "Desk"})
+    assert resp.status == 200
+    seen = []
+    old = assistant.set
+
+    def spy(state, loudness=0.0, device=None):
+        old(state, loudness, device)
+        seen.append((state, assistant.device))
+
+    assistant.set = spy
+    await (await client.post("/api/chat", json={"text": "hi", "device": "desk"})).read()
+    assert ("thinking", "desk") in seen
+    await ws.close()
+
+
+def test_the_pages_show_only_their_own_turn():
+    from test_hub_server import SRC
+
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert "function shownState(a)" in design and "device: myName()" in design
+    hub = (SRC / "hub" / "web" / "hub.js").read_text()
+    assert "st.assistant.device" in hub and "device: deviceName()" in hub
+    assert "a.device" in (SRC / "hub" / "web" / "xr-hub.js").read_text()
