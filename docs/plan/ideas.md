@@ -44,10 +44,21 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-20)
+
+### For the builder's design review
+The builder plans one design review pass. Collected for it: the card that opens when you tap a device in the Devices panel (too much text in one paragraph, and it appears with no animation, unlike the rest); the Quest's pages from the main page (the VR and AR page looks bare and unplanned; maybe a 3D model of the Quest); wording on every page. Teleop's words are quick job 66.
+
+### Conversation mode
+Press a button or say "Hey Jarvis, start a conversation": the assistant keeps listening and answering, with no wake word, until you end it or lab-os stops, like ChatGPT's or Gemini's live voice mode. **Watch out:** it hears the room (other people, the fan); a clear sign on the screen that it listens; an end by voice and by a button.
+
+### Harder questions to a stronger model
+"Hey Jarvis, calculate …": a hard question (maths, a plan, something not about the lab) goes to a stronger, slower model, to show what it can do. The assistant could decide by itself when a question needs it, and say "let me think about that". **Watch out:** cost (the AI budget) and the wait.
+
 ## Recent ideas (2026-11-19)
 
 ### Room sound and the Newline's picture at once
-The classroom's Extron panel sends its Laptop and Wall Plate HDMI inputs to the ceiling speakers (tried 2026-11-19), and to the projector. To have the picture on the Newline and the sound in the ceiling: a second HDMI cable from the computer that drives the Newline to the Wall Plate or Laptop input, and Ubuntu's Sound → Output set to that HDMI. A Pi has two HDMI outputs too. The projector can stay off (Display Off), if the panel still plays sound then: to check. Not needed for the demo: the Newline's own speakers are loud enough.
+The classroom's Extron panel sends its Laptop and Wall Plate HDMI inputs to the ceiling speakers (tried 2026-11-19), and to the projector. To have the picture on the Newline and the sound in the ceiling: a second video output from the computer that drives the Newline, by cable to the Wall Plate or Laptop input, and Ubuntu's Sound → Output set to it. The lab desktop has only one HDMI port: a DisplayPort-to-HDMI cable (if it has DisplayPort), or a Pi, which has two HDMI outputs. The projector can stay off (Display Off), if the panel still plays sound then: to check. Not needed for the demo: the Newline's own speakers are loud enough.
 
 ### A flat picture of what the Quest sees
 Quest view (quick job 36) shows the headset's own picture, which looks like a fisheye lens. Meta's casting gives a flat picture, but needs Wi-Fi with internet and a Meta account (the travel router could give the Wi-Fi). Correcting scrcpy's picture ourselves is the other way.
