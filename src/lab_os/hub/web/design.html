@@ -3388,9 +3388,18 @@ async function sendToScreen(id, say) {
       say(`The browser didn't allow placing windows (${e.message}); dragging the new window works too.`);
     }
   }
+  const wasFull = !!document.fullscreenElement || matchMedia("(display-mode: fullscreen)").matches;
   const w = window.open(url, `lab-os-${id}`, place || "popup,width=1280,height=800");
   if (!w) return say("The browser blocked the new window: press the button again.");
-  say(place ? "Opened on the other monitor: click it there for full screen." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
+  say(place ? "Opened on the other monitor." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
+  // the browser takes this page out of full screen when it opens a window: the brain puts it back
+  // (lab-os's own window only; elsewhere the full screen button shows, quick job 74)
+  if (wasFull) setTimeout(async () => {
+    if (document.fullscreenElement || matchMedia("(display-mode: fullscreen)").matches) return;
+    const { brainWindow } = await import("/web/fullscreen.js");
+    const why = await brainWindow("fullscreen");
+    if (why) console.info(`hub: not full screen again (${why})`);
+  }, 700);
   if (place) setTimeout(closeModule, 900);  // it lives there now; the hub's copy would hold a second connection
 }
 /* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */

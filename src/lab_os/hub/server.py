@@ -18,6 +18,8 @@ POST /api/restart        {"from": device}: the same, then the brain starts again
 GET /api/quest-view      what the Quest sees (scrcpy, quick job 36): installed, running, headsets
 POST /api/quest-view/start  {"headset"?}: open its view in a window here (the brain's computer)
 POST /api/quest-view/stop   close that window
+POST /api/window-state   {"url", "state": "fullscreen" | "normal"}: a window of lab-os's own browser
+                         full screen or back to a window (quick job 74). Brain's computer only
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
@@ -72,6 +74,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import load_registry
+from lab_os.hub import launch
 from lab_os.hub.arm_desk import Actions, ArmDesk
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
@@ -575,6 +578,23 @@ async def _tell_off_on_stop(app: web.Application) -> None:
         log.warning("stopping (Ctrl+C): telling every page lab-os is off")
         await _tell_off(app, brain_off_message())
         await asyncio.sleep(OFF_TELL_S)
+
+
+async def api_window_state(request: web.Request) -> web.Response:
+    """Full screen without a press, for lab-os's own browser windows on the brain's computer: a page
+    sent to another monitor, and the hub that sent it (quick job 74). Elsewhere `ok` is false with
+    the reason, and the page asks for a press as before."""
+    if not is_local(request):
+        return web.json_response({"ok": False, "why": "Only on the brain's computer."})
+    try:
+        body = await request.json()
+        url, state = str(body["url"]), str(body.get("state", "fullscreen"))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise web.HTTPBadRequest(text='Send {"url": the page\'s address, "state"}.') from None
+    why = await launch.set_window_state(url, state)
+    if why:
+        log.info("window state %s for %s: %s", state, url, why)
+    return web.json_response({"ok": not why, "why": why})
 
 
 async def _close_hub_pages(app: web.Application) -> None:
@@ -1117,6 +1137,7 @@ def create_brain_app(
     app.router.add_get("/api/quest-view", api_quest_view)
     app.router.add_post("/api/quest-view/start", api_quest_view_start)
     app.router.add_post("/api/quest-view/stop", api_quest_view_stop)
+    app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)

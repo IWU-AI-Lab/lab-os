@@ -51,7 +51,7 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
     client = await aiohttp_client(make_app())
     kit = await (await client.get("/web/design/kit.js")).text()
     helper = await (await client.get("/web/fullscreen.js")).text()
-    assert 'from "/web/fullscreen.js"' in kit and "fullscreenButton(btn)" in kit
+    assert 'from "/web/fullscreen.js"' in kit and "fullscreenButton(btn" in kit
     assert "export function whyNot" in helper and "export function fullscreenButton" in helper
     # kit.js no longer hides the button when the browser says no: the helper explains instead
     assert "if (!embedded && document.fullscreenEnabled)" not in kit

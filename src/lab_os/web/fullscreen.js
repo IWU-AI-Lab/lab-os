@@ -7,10 +7,11 @@
 
 export const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 export const fsPossible = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
-// full screen without the Fullscreen API: kiosk mode, F11, an installed app
+// full screen without the Fullscreen API: kiosk mode, F11, the brain's DevTools (quick job 74). Not
+// "standalone": an app window (the "Start lab-os" icon's) matches it with its title bar, so the button
+// never showed there (lab check, 2026-11-20).
 export const fullByOther = () =>
   matchMedia("(display-mode: fullscreen)").matches ||
-  matchMedia("(display-mode: standalone)").matches ||
   (Math.abs(screen.width - innerWidth) <= 2 && Math.abs(screen.height - innerHeight) <= 2);
 export const isFull = () => !!fsElement() || fullByOther();
 
@@ -62,6 +63,22 @@ export async function goFullscreen(el = document.documentElement) {
     return `The browser refused full screen.${said} ${browserWay()}`;
   }
   return "";
+}
+
+// Full screen (or back to a window) without a press: the brain asks lab-os's own browser through its
+// DevTools (quick job 74). Only on the brain's computer, in the window that "Start lab-os" opened and the
+// windows it opens. Resolves to "" when done, else why not.
+export async function brainWindow(state = "fullscreen", url = location.href) {
+  try {
+    const r = await fetch("/api/window-state", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, state }),
+    });
+    if (!r.ok) return `The brain can't change windows here (${r.status}).`;
+    const got = await r.json();
+    return got.ok ? "" : got.why || "The brain didn't change the window.";
+  } catch (e) {
+    return `The brain didn't answer (${e.message}).`;
+  }
 }
 
 // Wire a button: hidden while full screen, a press goes full screen, a refusal is said out loud.

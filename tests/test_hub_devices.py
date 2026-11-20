@@ -375,3 +375,41 @@ def test_a_second_tap_brings_the_one_hub_window_to_the_front(tmp_path, monkeypat
         assert launch.close_hub_windows(8099, profile=tmp_path) == 0
     finally:
         server.shutdown()
+
+
+async def test_the_brain_puts_its_own_windows_full_screen(aiohttp_client, monkeypatch, tmp_path):
+    """Quick job 74: a page sent to another monitor, and the hub that sent it, full screen without
+    a press: the brain asks lab-os's own browser. Elsewhere it says why, and the page asks."""
+    from lab_os.hub import server as hub_server
+
+    monkeypatch.setattr(launch, "PROFILE", tmp_path)  # no lab-os browser runs
+    client = await aiohttp_client(make_app())
+    url = "http://localhost:8080/monitor?screen=1"
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert not got["ok"] and "lab-os's own browser" in got["why"]
+    assert (await client.post("/api/window-state", json={"state": "normal"})).status == 400
+    assert "Unknown" in await launch.set_window_state(url, "maximized", tmp_path)
+    asked = []
+
+    async def fake_state(u, state, profile=None):
+        asked.append((u, state))
+        return ""
+
+    monkeypatch.setattr(launch, "set_window_state", fake_state)
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert got == {"ok": True, "why": ""} and asked == [(url, "fullscreen")]
+    monkeypatch.setattr(hub_server, "is_local", lambda request: False)  # another computer
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert not got["ok"] and len(asked) == 1
+
+
+def test_pages_choose_full_screen_or_a_window():
+    """Quick job 74: an app window is not full screen (it matched "standalone", so the button never
+    showed); module pages on their own screen choose Full screen or Window."""
+    fs = (SRC / "web" / "fullscreen.js").read_text()
+    full_by_other = fs.split("export const fullByOther")[1].split(";")[0]
+    assert "standalone" not in full_by_other and "/api/window-state" in fs
+    kit = (SRC / "web" / "design" / "kit.js").read_text()
+    assert "lab-os.window:" in kit and 'brainWindow("fullscreen")' in kit and "Window`" in kit
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert "wasFull" in design and 'brainWindow("fullscreen")' in design
