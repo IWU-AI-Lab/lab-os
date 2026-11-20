@@ -35,6 +35,7 @@ import { HubView } from "./xr/hub.js";
 import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
 import { getLink } from "/static/link.js";
+import { deviceName } from "/web/device.js";
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -290,9 +291,12 @@ class Show {
     this.stars.step(dt, now, { v, trail, bright: bright * starShow, k, jump: P === "jump" || P === "boot", frozen: impact });
     this.stars.visible = starShow > 0.01;
     this.sky.step(now, tint, impact);
-    // the assistant's state: this headset's own voice turn, else the brain's (another screen's turn too)
+    // the assistant's state: this headset's own voice turn, else the brain's; another screen's turn is idle
+    // here (quick job 58: only the screen that has the conversation listens, thinks and speaks)
     const ask = this.hub.ask;
-    const state = ask.state || this.facts.status?.assistant?.state || "offline";
+    const a = this.facts.status?.assistant;
+    const other = a && ["listening", "thinking", "speaking"].includes(a.state) && (a.device || "") !== deviceName();
+    const state = ask.state || (other ? "idle" : a?.state) || "offline";
     this.core.voiceLoud = ask.state === "speaking" ? ask.loud || 0 : null;
     this.core.micLevel = ask.state === "listening" ? ask.level || 0 : null;
     this.core.state = P === "hub" || P === "boot" ? state : "idle";

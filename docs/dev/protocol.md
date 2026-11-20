@@ -190,13 +190,14 @@ Polled every 3 s by the hub.
          "paused": null, "problem": null, "busy": false},
   "voice": {"available": true, "why": null, "setup": "backup", "where": "Gemini, free key",
             "service": "gemini", "wake": {"available": true, "why": null, "phrase": "hey Jarvis"}},
-  "assistant": {"state": "idle", "loudness": 0.0},
+  "assistant": {"state": "idle", "loudness": 0.0, "device": ""},
   "arm": {"name": "fake-arm", "connected": true, "control": "free"},
   "left_arm": null,
   "in_use": [],
   "time_ms": 1794264745533
 }
 ```
+- `assistant.device` (quick job 58): the screen that has the conversation while the state is `listening`, `thinking` or `speaking` (`""` otherwise, or when that screen has no name). The pages show those three states only when it is their own name; another screen's turn shows as `idle`.
 - `visitors`: `null`, or in visitor mode (quick job 35) `{"cards": [{"say": "Ask me to wave", "ask": "Please wave hello to us"}, {"say": "Open the VR hub", "line": "Put on the headset, then say it"}]}`: the venue's "try this" cards (`ask`: what tapping the card asks; without it the card is only read).
 - `persona`: the chosen persona (`--persona`, `$LAB_OS_PERSONA`, the venue's, or `place.yaml`; `docs/dev/personas.md`), re-read every time; the designed hub draws `picture`.
 - `internet`: `true` / `false`, or `null` until the first background check (every 30 s) has finished.
@@ -289,7 +290,7 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
 
 ### Chat
 - `GET /api/chat` → `{"messages": [{"role": "user" | "assistant", "content": "…"}], "status": {…same as status.ai…}, "previous": {"questions": 2, "saved_at": <epoch seconds>} | null}`: the conversation the brain holds (one per brain; the hub's reset puts it aside) and the one put aside, if any (kept `chat_keep_minutes`, `docs/dev/chat.md`).
-- `POST /api/chat` with `{"text": "…", "pages": {"hub": "the hub", "teleop": "Teleop", "spend": "AI Spend"}, "lang": {"answer": "en"}}` (text at most 2000 characters; `pages`: what the asking page can show, id → title, optional: without it there's no `open_page` tool; `lang.answer`: the device's output language, `"en"` or `""`/missing = any, since 2026-11-18) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
+- `POST /api/chat` with `{"text": "…", "pages": {"hub": "the hub", "teleop": "Teleop", "spend": "AI Spend"}, "lang": {"answer": "en"}}` (text at most 2000 characters; `pages`: what the asking page can show, id → title, optional: without it there's no `open_page` tool; `lang.answer`: the device's output language, `"en"` or `""`/missing = any, since 2026-11-18; `device`: the asking screen's name, for `assistant.device`, since 2026-11-20) → one turn, streamed as **JSON lines** (`application/x-ndjson`), one event per line:
   ```
   {"type": "state", "state": "thinking"}
   {"type": "tool", "name": "project_status"}     (the assistant looks something up; 0–4 per turn)
