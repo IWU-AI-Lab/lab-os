@@ -125,7 +125,7 @@ async def test_move_to_on_target_says_arrived_and_how_close(rig):
 
 
 async def test_move_to_that_stops_short_says_how_far():
-    tools, task = await sagging_rig({"elbow_flex": 4.0, "wrist_flex": 2.5})
+    tools, task = await sagging_rig({"elbow_flex": 6.0, "wrist_flex": 5.5})
     try:
         start = tip(tools)
         r = await tools.call("move_to", x_cm=start["x"] - 3, y_cm=0, z_cm=start["z"])
@@ -133,9 +133,9 @@ async def test_move_to_that_stops_short_says_how_far():
         task.cancel()
     assert r["result"] == "stopped_short"
     assert r["off_by_cm"] > 0.5
-    assert r["joints_short_deg"] == {"elbow_flex": 4.0, "wrist_flex": 2.5}
+    assert r["joints_short_deg"] == {"elbow_flex": 6.0, "wrist_flex": 5.5}
     assert f"stopped {r['off_by_cm']:.1f} cm from the target" in r["message"]
-    assert "elbow_flex by 4.0°" in r["message"]
+    assert "elbow_flex by 6.0°" in r["message"]
     # the position it reports is the measured one, not where the arm was told to go
     measured = tools.arm.read_measured()
     assert r["joints_deg"]["elbow_flex"] == round(measured["elbow_flex"], 1)
@@ -149,6 +149,37 @@ async def test_a_small_sag_within_tolerance_still_arrives():
     finally:
         task.cancel()
     assert r["result"] == "arrived" and "joints_short_deg" not in r
+
+
+async def test_the_white_arms_usual_sag_still_arrives_at_a_pose():
+    """Quick job 77: so101-white's elbow ends 2.3-3.5° short nearly every move (GOTCHAS
+    2026-11-12). A pose within that says "arrived", with no warning; a bigger miss still doesn't."""
+    tools, task = await sagging_rig({"elbow_flex": 3.5, "shoulder_lift": 2.7})
+    try:
+        r = await tools.call("go_to_pose", name="ready")
+    finally:
+        task.cancel()
+    assert r["result"] == "arrived" and "message" not in r and "joints_short_deg" not in r
+    assert tools.calls.entries[-1]["outcome"] != "short"
+    tools, task = await sagging_rig({"elbow_flex": 5.0})
+    try:
+        r = await tools.call("go_to_pose", name="ready")
+    finally:
+        task.cancel()
+    assert r["result"] == "stopped_short" and r["joints_short_deg"] == {"elbow_flex": 5.0}
+
+
+async def test_move_to_still_says_when_the_sag_puts_the_gripper_point_off():
+    """The margin is for each joint only: the same 3.5° elbow sag moves the gripper point
+    ~1.5 cm, and move_to still says so (a blind AI must not grip there; GOTCHAS 2026-11-10)."""
+    tools, task = await sagging_rig({"elbow_flex": 3.5})
+    try:
+        start = tip(tools)
+        r = await tools.call("move_to", x_cm=start["x"] - 3, y_cm=0, z_cm=start["z"])
+    finally:
+        task.cancel()
+    assert r["result"] == "stopped_short" and r["off_by_cm"] > 0.5
+    assert "joints_short_deg" not in r
 
 
 async def test_a_gripper_that_closes_on_something_says_so():
