@@ -120,12 +120,33 @@ def read_yaml(path: Path) -> dict:
     try:
         data = yaml.safe_load(path.read_text())
     except yaml.YAMLError as e:
-        raise ConfigError(f"{path} is not valid YAML: {e}") from None
+        raise ConfigError(broken_yaml(path, e)) from None
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ConfigError(f"{path} must hold `name: value` lines")
+        raise ConfigError(f"{shown_path(path)} must hold `name: value` lines.")
     return data
+
+
+def shown_path(path: Path) -> str:
+    """The file's name as a person finds it: from the repo's folder when it's in there."""
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def broken_yaml(path: Path, e: Exception) -> str:
+    """A sentence for a config file that can't be read: the file, the line and what's wrong
+    (quick job 45: an edit by hand gave "500 Internal Server Error" and an empty page)."""
+    mark = getattr(e, "problem_mark", None) or getattr(e, "context_mark", None)
+    where = f", line {mark.line + 1}" if mark is not None else ""
+    what = getattr(e, "problem", None) or str(e).splitlines()[0]
+    return (
+        f"{shown_path(path)}{where} can't be read ({what}). Fix that line in a text editor, "
+        "then restart the brain. A file in config/local/ may also be deleted: the defaults "
+        "come back."
+    )
 
 
 def load_yaml(name: str, folder: Path | None = None, shared: bool = False) -> dict:

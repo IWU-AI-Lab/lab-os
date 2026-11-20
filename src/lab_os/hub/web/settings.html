@@ -98,10 +98,21 @@
     input[type="range"]:hover::-webkit-slider-thumb, input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 8px var(--c), 0 0 20px var(--c); }
     input[type="range"]:focus-visible { outline: none; }
     input[type="range"]:disabled { cursor: default; }
-    .order { display: grid; gap: 0.3rem; }
-    .order div { display: flex; align-items: center; gap: 0.5rem; font: 500 0.88rem/1 var(--f-ui); }
-    .order button { font: 0.8rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); width: 1.8rem; height: 1.6rem; cursor: pointer; }
+    /* the order arrows in one column, whatever the names' length (quick job 45) */
+    .order { display: grid; grid-template-columns: auto minmax(7rem, max-content) 2rem 2rem; gap: 0.3rem 0.5rem; align-items: center; }
+    .order div { display: contents; font: 500 0.88rem/1 var(--f-ui); }
+    .order span { font: 500 0.88rem/1 var(--f-ui); }
+    .order button { display: grid; place-items: center; padding: 0; color: var(--text-dim); background: none; border: 1px solid var(--line); width: 2rem; height: 1.8rem; cursor: pointer; }
+    .order button svg { width: 1rem; height: 1rem; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .order button:hover:not(:disabled) { color: var(--hot); border-color: var(--c); }
+    .order button:disabled { visibility: hidden; }
+    /* a setting that waits for a restart: said at the row too, not only in the bar */
+    .row .rs { margin-top: 0.25rem; font: 500 0.78rem/1.3 var(--f-ui); color: var(--accent); }
+    .row .rs[hidden] { display: none; }
+    #problems { margin: 0 0 1.2rem; padding: 0.7rem 1rem; border: 1px solid var(--danger); color: var(--text); font: var(--w-lines) 0.9rem/1.45 var(--f-lines); }
+    #problems[hidden] { display: none; }
+    #problems b { color: var(--danger); font: 600 0.92rem/1.3 var(--f-ui); display: block; margin-bottom: 0.3rem; }
+    #problems p { margin: 0.2rem 0; }
     :disabled { cursor: default !important; opacity: 0.55; }
     /* a safety limit that's off: an accent bar and "OFF" after its name, and a chip in the bar */
     .row.limit-off { box-shadow: inset 3px 0 0 var(--accent); }
@@ -129,6 +140,7 @@
       <p class="foot">Changes save at once. Only the brain's computer can change the lab, robot and safety settings.</p>
     </nav>
     <main id="list">
+      <div id="problems" role="alert" hidden><b>A settings file can't be read</b></div>
       <div id="restart-bar" role="status" hidden><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-warn"/></svg><span class="what"></span><span class="act"></span><span class="st"></span><span class="err" aria-live="polite"></span></div>
     </main>
   </div>

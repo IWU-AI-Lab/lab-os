@@ -147,7 +147,7 @@ def test_local_changes_win_in_place_yaml_and_the_venue(home):
 def test_a_broken_local_file_is_named(home):
     (home / "local").mkdir()
     (home / "local" / "place.yaml").write_text("name: [oops\n")
-    with pytest.raises(config.ConfigError, match="local/place.yaml is not valid YAML"):
+    with pytest.raises(config.ConfigError, match=r"local/place.yaml, line \d+ can.t be read"):
         config.load_place()
 
 
