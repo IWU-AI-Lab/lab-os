@@ -336,3 +336,16 @@ def test_arms_that_cant_tell_are_left_alone():
     loop.arm = del_attr()
     loop.check_link(1.0, force=True)
     assert loop.arm_connected
+
+
+def test_needs_release_clears_once_the_grip_is_let_go():
+    """Quick job 66 (GOTCHAS 2026-11-19): after a freeze, the status said "needs release" until
+    the next grab, even with the grip let go: the keys' flag (it clears only with keys) counted
+    for a Quest too. Only the input that drives now counts."""
+    loop, _ = make_loop()
+    feed(loop, msg(grip=1.0), now=0.0)
+    loop.step(1.0, DT)  # dead-man: frozen, both flags set
+    feed(loop, msg(grip=1.0), now=1.1)
+    assert loop.frozen and loop.status()["needs_release"]  # still held: let go first
+    feed(loop, msg(grip=0.0), now=1.12)
+    assert loop.frozen and not loop.status()["needs_release"]  # let go: grab again

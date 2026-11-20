@@ -41,7 +41,10 @@
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
         <div class="sources">
           <button id="enter" class="btn primary" type="button" disabled>Checking WebXR…</button>
-          <button id="desktop" class="btn" type="button">Desktop control</button>
+          <div class="pair">
+            <button id="desktop" class="btn" type="button">Desktop control</button>
+            <button id="desk-controls" class="btn" type="button" aria-controls="desk-help" aria-expanded="false">Controls</button>
+          </div>
         </div>
         <p id="xr-msg" class="msg" aria-live="polite"></p>
         <p id="control-why" class="msg" aria-live="polite" hidden></p>

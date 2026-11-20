@@ -85,7 +85,7 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 
 ### 2026-11-19 — The teleop pages say "frozen: release grip" while the grip is already released
 **What:** after any freeze (also the brain's first input), `status.needs_release` stays true until the arm moves again, even with the clutch let go: it is the mapper's flag *or* the jog's (`loop.py` `status()`), and the jog's flag clears only with keyboard jogging. So with a Quest or the webcam, the Arm chip says "frozen: release grip" (the webcam page: "frozen: let go of the clutch") until the next grab, though the release already happened. Nothing moves wrongly; only the words are off.
-**Fix:** not changed (it is in the teleop loop, which the builder reviews). The webcam page's own state shows the page's freeze, which is correct.
+**Fix:** not changed (it is in the teleop loop, which the builder reviews). The webcam page's own state shows the page's freeze, which is correct. (2026-11-20, quick job 66: fixed. `status.needs_release` is now the flag of the input that drives: the keys' flag for keys, the hand mapper's for a Quest, hands or the webcam.)
 
 ### 2026-11-19 — A teleop test that holds the grip from its first frame fails when the loop ticks first
 **What:** quick job 44's pull request. `test_stop_works_from_a_monitor` failed on GitHub, and locally only after `test_shutdown.py`. If the loop's first tick comes before the page's first frame, it freezes (no input) and then wants the grip released before it engages. The test held the grip from its first frame, so it never engaged. The race was there before; a small change in timing showed it.

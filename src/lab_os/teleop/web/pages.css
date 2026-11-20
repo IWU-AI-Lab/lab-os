@@ -53,6 +53,10 @@
 /* teleop: the ways to drive it */
 .sources { display: grid; gap: 0.6rem; }
 .sources .btn { width: 100%; min-height: 3.2rem; }
+/* Desktop control and its Controls button (the key guide) side by side (quick job 66) */
+.sources .pair { display: flex; gap: 0.6rem; }
+.sources .pair #desktop { flex: 1; }
+.sources .pair #desk-controls { width: auto; flex: none; }
 .row { display: flex; align-items: center; gap: 0.7rem; margin: 0.6rem 0 0; font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); }
 .row select { flex: 1; }
 .keys { margin-top: 0.7rem; font: var(--w-lines) 0.82rem/1.45 var(--f-lines); color: var(--text); }

@@ -222,6 +222,15 @@ export function initDesktop(link, ui) {
       ui.message(`Couldn't capture the pointer: ${e.message}`);
     }
   };
+  // Controls: shows (or hides) the key guide, the mode and the keys (quick job 66: they were in the button)
+  const guide = $("desk-help"), controls = $("desk-controls");
+  if (controls) {
+    controls.onclick = () => {
+      guide.open = !guide.open;
+      if (guide.open) guide.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
+    guide.addEventListener("toggle", () => controls.setAttribute("aria-expanded", String(guide.open)));
+  }
   document.addEventListener("pointerlockerror", () => ui.message("The browser refused to capture the pointer; click the button again."));
   document.addEventListener("pointerlockchange", () => {
     if (document.pointerLockElement === document.body) startControl();
@@ -236,8 +245,9 @@ export function initDesktop(link, ui) {
     select.disabled = true; // no switching modes mid-drive
     document.activeElement?.blur(); // a key on a focused button would click it again
     ui.setActive("desktop");
-    $("desk-help").open = true;
-    button.textContent = `Desktop control on: ${select.options[select.selectedIndex].text} (X = STOP, \` to leave)`;
+    $("desk-help").open = true; // the keys, while they're needed
+    // short: the mode, X = STOP and the way out are in the key guide (Controls; quick job 66)
+    button.textContent = "Desktop control on";
     stopKey(true);
     last = performance.now();
     // A timer, not requestAnimationFrame: input must not stall when rendering is slow. Browsers

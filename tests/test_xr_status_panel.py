@@ -58,17 +58,8 @@ def panel(
             "1:1 slowed: servos warm",
             "warning",
         ),
-        ({"frozen": True}, "Frozen", "held"),
-        (
-            {"frozen": True, "status": STATUS | {"needs_release": True}},
-            "Frozen: let go of the grip",
-            "held",
-        ),
-        (
-            {"frozen": True, "status": STATUS | {"needs_release": True}, "source": "hands"},
-            "Frozen: let go of the pinch",
-            "held",
-        ),
+        ({"frozen": True}, "Stopped", "held"),
+        ({"frozen": True, "status": STATUS | {"needs_release": True}}, "Stopped", "held"),
         ({"no_controller": True}, "No controller", "warning"),
         ({"no_controller": True, "source": "hands"}, "No right hand", "warning"),
         ({"status": None}, "Connecting…", "offline"),
@@ -113,8 +104,8 @@ TWO = STATUS | {
     [
         ({}, "Left holding", "normal"),
         ({"clutch": True}, "Left following", "following"),
-        ({"frozen": True}, "Left frozen", "held"),
-        ({"frozen": True, "needs_release": True}, "Left frozen: let go", "held"),
+        ({"frozen": True}, "Left stopped", "held"),
+        ({"frozen": True, "needs_release": True}, "Left stopped: let go", "held"),
         ({"connected": False}, "Left disconnected", "offline"),
     ],
 )
@@ -131,7 +122,7 @@ def test_two_arms_hint_and_short_frozen_words():
     assert p["hint"] == ["Grip = move its arm", "trigger = gripper", "Y + grip = move 3D arm",
                          "A/X = stop both"]  # fmt: skip
     frozen = panel(frozen=True, status=TWO | {"needs_release": True})
-    assert frozen["state"] == "Right frozen: let go"
+    assert frozen["state"] == "Right stopped: let go"
     assert panel(status=TWO, source="hands")["hint"][0] == "Two arms: controllers only"
     assert panel(status=TWO, no_controller=True)["left"] is None  # one message: pick them up
     assert panel()["left"] is None  # one arm: as before
@@ -167,3 +158,14 @@ def test_says_lab_os_is_off_in_the_headset(off, state, hint):
     t = panel(status=two, off=off)
     assert (t["state"], t["level"], t["hint"]) == (state, "offline", hint)
     assert t["gripper"] is None and t["speed"] is None and t["left"] is None
+
+
+def test_stopped_says_what_to_do():
+    """Quick job 66: "frozen: release grip" said neither what happened nor what to do. The chip
+    says what happened; the hint says what to do."""
+    held = panel(frozen=True, status=STATUS | {"needs_release": True})
+    assert held["hint"] == ["Let go of the grip", "then grab again"]
+    hands = panel(frozen=True, status=STATUS | {"needs_release": True}, source="hands")
+    assert hands["hint"] == ["Let go of the pinch", "then pinch again"]
+    assert panel(frozen=True)["hint"] == ["Hold grip = move", "trigger = gripper", "A/X = stop"]
+    assert "release" not in held
