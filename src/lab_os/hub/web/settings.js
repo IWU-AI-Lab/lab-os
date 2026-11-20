@@ -387,6 +387,20 @@ function showProblems(list = []) {
   for (const text of list) box.append(Object.assign(document.createElement("p"), { textContent: text }));
 }
 
+/* ---------- every page the brain serves (quick job 67): two taps from the hub, ⚙ then the page ---------- */
+async function pagesGroup() {
+  const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
+  if (!hub?.pages?.length) return;
+  const rows = group("pages", "All Pages", "Each opens in a window of its own.", { icon: "i-link" });
+  for (const p of hub.pages) {
+    const b = btn("Open");
+    b.addEventListener("click", () => {
+      if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
+    });
+    rows.append(row(p.title, `${p.path} · ${p.line}`, b));
+  }
+}
+
 /* ---------- start ---------- */
 async function start() {
   let data = null;
@@ -425,7 +439,9 @@ async function start() {
     $("#limits-off").hidden = offNow.size === 0;
     $("#limits-off .pill").textContent = [...offNow.keys()].join(", ");
   };
+  let pagesShown = false;
   for (const s of data.sections) {
+    if (s.risky && !pagesShown) { pagesShown = true; await pagesGroup(); }  // before the safety group
     const rows = group(s.id, s.title, s.risky ? "" : s.help, { icon: ICON[s.id] || "i-gear", risky: s.risky });
     if (s.id === "lab" && m) rows.append(visitorRow(m));
     for (const f of s.fields) {
@@ -458,5 +474,6 @@ async function start() {
     }
   }
   setRestart(data.restart_needed, data.restart_keys);
+  if (!pagesShown) await pagesGroup();
 }
 start();
