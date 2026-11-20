@@ -139,6 +139,11 @@ class TeleopLoop:
             self.on_command(msg)
 
     @property
+    def real(self) -> bool:
+        """A real arm (not a software one, `FakeArm.software`): it can hurt someone."""
+        return not getattr(self.arm, "software", False)
+
+    @property
     def motion_active(self) -> bool:
         return self.motion is not None
 
@@ -461,6 +466,7 @@ class TeleopLoop:
                 "model": getattr(self.arm, "model", "unknown"),
                 "connected": self.arm_connected,
                 "problem": self.arm_problem,
+                "real": self.real,  # the hubs show STOP while a real arm is connected (job 43)
             },
             "joints": joints,
             "last_command": self.last_command,
@@ -478,6 +484,7 @@ class TeleopLoop:
             "model": getattr(self.arm, "model", "unknown"),
             "connected": self.arm_connected,
             "problem": self.arm_problem,
+            "real": self.real,
             "frozen": self.frozen,
             "clutch": self.mapper.engaged,
             "needs_release": self.mapper.needs_release,

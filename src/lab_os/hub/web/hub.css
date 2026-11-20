@@ -174,3 +174,12 @@ button.trycard:hover, button.trycard:focus-visible { border-color: #aaa; }
   #hub { grid-template-columns: 1fr; grid-template-areas: "strip" "greet" "core" "ml" "mr" "left" "right"; }
   .mcol.l, .mcol.r { align-items: stretch; }
 }
+
+/* ---------- STOP (quick job 43, /web/hub-stop.js): top centre, above everything, while a real arm is connected */
+#hub-stop-wrap { position: fixed; top: 0.6em; left: 50%; transform: translateX(-50%); z-index: 1000; }
+#hub-stop {
+  min-width: 7em; padding: 0.5em 1.6em; border: 2px solid #ff5a5a; border-radius: 0.3em;
+  background: #c62828; color: #fff; font-weight: 700; letter-spacing: 0.15em; cursor: pointer;
+}
+#hub-stop:hover, #hub-stop:focus-visible { background: #e53935; outline: 2px solid #fff; outline-offset: 2px; }
+#hub-stop-wrap.moving #hub-stop { box-shadow: 0 0 0 0.25em rgba(255, 90, 90, 0.35); }

@@ -4,7 +4,7 @@ Short and printable. Applies to every robot, every venue, every session.
 
 ## Stop
 - **Physical:** pull the arm's power plug. Know where it is before the first motion.
-- **Software:** the STOP button (every page, any screen; A/X on the Quest) freezes the arm and holds it. `Ctrl+C` in the brain's terminal ends the program: the SO-101 then goes **limp** (torque off), so hold it or park it low first. **Shut down lab-os** in the hub (⏻ on the brain's computer, or ⚙ → Shut down) does the same, after a confirmation that warns about it; never on a public venue.
+- **Software:** the STOP button (every page, any screen; A/X on the Quest) freezes the arm and holds it. The hubs (designed, plain and VR) show it at the top centre while a real arm is connected (quick job 43). `Ctrl+C` in the brain's terminal ends the program: the SO-101 then goes **limp** (torque off), so hold it or park it low first. **Shut down lab-os** in the hub (⏻ on the brain's computer, or ⚙ → Shut down) does the same, after a confirmation that warns about it; never on a public venue.
 - **Test both stops** at the start of every session and every demo.
 
 ## Dead-man rule

@@ -2,6 +2,7 @@
 
 import math
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from lab_os.robots.base import JointLimit
 
@@ -48,6 +49,7 @@ def so101_limits() -> dict[str, JointLimit]:
 
 @dataclass
 class FakeArm:
+    software: ClassVar[bool] = True  # not a real arm: the hubs show no STOP for it (quick job 43)
     name: str = "fake-arm"
     model: str = "so101"  # which 3D model the viewer draws
     joint_names: tuple[str, ...] = SO101_JOINTS

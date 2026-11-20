@@ -52,13 +52,16 @@ Setup: the desktop, and the Newline's own Chrome (or a laptop instead of the New
 - **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
 - **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names? (yes / no) Is the Newline's Drawing Resolution still 0.5? (yes / no)
 
-## S. Safety fixes on the real arm (25 min)
+## S. Safety fixes on the real arm (35 min)
 Setup: `so101-white` with its power supply and USB cable. Claude Code on the desktop, connected to the brain's robot tools (`docs/guides/ai-control.md`). Keep one hand at STOP.
 - **S.1** (quick job 44) Click **Start lab-os**. On the desktop's hub, press ⏻ → **Shut down lab-os**. → does the first line say that so101-white goes limp? (yes / no) Does the **Shut down** button say it too? (yes / no) Press **Cancel**.
 - **S.2** (quick job 44) Connect the Quest with USB. Run `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, open `http://localhost:8080/xr` and press **Enter AR (your room)**. Pull the trigger until the hub is around you. Put the headset on the table. → did the hub open in AR? (yes / no)
 - **S.3** (quick job 44) In Claude Code, prompt: `Go to the home pose.` Wait until the arm is at home. Hold the arm. Prompt: `Go to the ready pose.` While the arm moves, press ⏻ → **Shut down lab-os** → **Shut down**. → did the arm stop at once and make no more moves? (yes / no) Did it go limp in your hand within about 2 seconds? (yes / no) Did the terminal close within about 2 seconds, after `lab-os was shut down from the hub; so101-white was let go.`? (yes / no)
 - **S.4** (quick job 44) Look at the desktop's pages. Put on the Quest. → did every page on the desktop say "lab-os is off"? (yes / no) Did the Quest show a "lab-os is off" card in front of you? (yes / no)
 - **S.5** (quick job 44) Click **Start lab-os**. → did the desktop's pages come back by themselves? (yes / no)
+- **S.6** (quick job 43) Look at the desktop's hub (`/design?device=desk`), before the start tap and after it. Open ⚙. → is STOP at the top centre each time? (yes / no) Does anything cover it? (yes / no)
+- **S.7** (quick job 43) Keep a hand at the arm. In Claude Code, prompt: `Go to the home pose.` While the arm moves, press STOP at the top of the hub. → did the arm stop at once? (yes / no) Was the glow around STOP stronger while the arm moved? (yes / no)
+- **S.8** (quick job 43) On the Quest, open `http://localhost:8080/xr` and enter the hub. Point at STOP at the top centre and pull the trigger. Open the Devices panel. → did STOP say STOPPED? (yes / no) Does the Devices page cover STOP? (yes / no)
 
 ---
 

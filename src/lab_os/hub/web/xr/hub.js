@@ -10,11 +10,15 @@
 // Pointing and pressing (xr/pointer.js): a callout opens its details page (it unfolds from the callout,
 // the core docks in its corner, Back closes it); its own controls work (7d / 14d / 30d, List all, a
 // device opens its card).
+// STOP (quick job 43): while a real arm is connected (/web/stop-state.js), a STOP button at the top centre,
+// between the place's name and the strip, drawn over everything (never covered by a page or a card). It stays
+// in a module too, except Monitor and AI Control, which have their own. A press sends {"type": "stop"} on the
+// watcher's link (`link`, set by xr-hub.js).
 // Units: metres in the stage's space (you at the origin, -z ahead).
 import * as THREE from "three";
 import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
 import { Ask } from "./ask.js";
-import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
+import { ArmHologram, ModuleButton, ModuleTab, StopButton, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 
 const R = 2.4; // the curve's radius = the core's distance
@@ -103,6 +107,21 @@ export class HubView {
     this.tab.mesh.rotation.y = 0.4;
     this.module = null; // {id, view}
     this.views = {};
+    // STOP: the stage adds it (it stays when the hub hides for a module); over everything
+    this.stop = new StopButton();
+    this.stop.solid = true;
+    onCurve(this.stop.mesh, 0, 0.9, R - 0.05);
+    this.stop.p.mat.depthTest = false;
+    this.stop.mesh.renderOrder = 9;
+    this.stop.mesh.visible = false;
+    this.stopState = { show: false, moving: false }; // from the brain's status (xr-hub.js)
+    this.link = null; // the watcher's link (xr-hub.js), for STOP
+  }
+
+  /** Is the hub's STOP up now? Not in Monitor or AI Control: they have their own. */
+  stopShown() {
+    const own = this.mode === "module" && this.module?.view?.stop;
+    return this.group.visible && this.stopState.show && !own;
   }
 
   /** The module buttons, from the hub's list (Training has no VR version). */
@@ -147,9 +166,10 @@ export class HubView {
   }
   /** What the pointer can land on. */
   targets() {
-    if (this.mode === "details") return [this.page.mesh];
-    if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
-    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh, this.ask.mesh];
+    const stop = this.stopShown() ? [this.stop.mesh] : [];
+    if (this.mode === "details") return [...stop, this.page.mesh];
+    if (this.mode === "module") return [...stop, this.tab.mesh, ...(this.module?.view.targets?.() || [])];
+    return [...stop, ...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh, this.ask.mesh];
   }
 
   /** The startup is over: everything flies to its place and the panels unfold out from the core. */
@@ -189,7 +209,11 @@ export class HubView {
     if (w.kind === "power") { this.sfx.blip(); return "power"; }
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
-    if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
+    if (w.kind === "stop") {
+      (this.module?.view.link || this.link)?.send({ type: "stop" }); this.sfx.error();
+      if (hit.obj === this.stop.mesh) { this.stop.said = true; clearTimeout(this._said); this._said = setTimeout(() => (this.stop.said = false), 1500); }
+      return null;
+    }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
     if (w.kind === "page" || w.kind === "card") return null;
     const c = hit.obj.userData.hit;
@@ -262,7 +286,13 @@ export class HubView {
   }
 
   step(dt, now, hits) {
+    this.stop.mesh.visible = this.stopShown();
     if (!this.group.visible) return;
+    if (this.stop.mesh.visible) {
+      this.stop.hover = hits.some((h) => h.obj === this.stop.mesh);
+      this.stop.moving = this.stopState.moving;
+      this.stop.paint();
+    }
     const f = this.facts, t = now - this.t0;
     // data into the callouts
     this.callouts.project.data = f.project;

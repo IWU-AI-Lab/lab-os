@@ -128,6 +128,7 @@ def test_command_messages_are_exactly_what_the_driver_got():
         "model": "so101",
         "connected": True,
         "problem": None,
+        "real": False,  # a software arm: the hubs show no STOP for it (quick job 43)
     }
 
 

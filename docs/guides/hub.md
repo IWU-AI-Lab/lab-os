@@ -37,6 +37,9 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 
 In a coding session, ask the builder before a real arm moves (`SAFETY.md`, `AGENTS.md`).
 
+## STOP on the hubs
+**While a real arm is connected, every hub shows STOP** at the top centre: the designed hub, the plain hub and the hub in VR (quick job 43). It is there on the start screen, on the hub and over an open module page, and no card or panel covers it. Press it to freeze the arm at once: it ends an AI move or the wave, and teleop must let go and grip again. It does the same as STOP on Monitor, Teleop and AI Control. After a press, it says STOPPED for a moment. While the arm moves (an AI move, the wave or teleop), its red glow is stronger. With only the fake arm, the hubs show no STOP. In the VR hub's Monitor and AI Control, the hologram's own STOP is used. In the VR hub's Teleop, A or X also stops.
+
 ## The start screen
 **The plain hub has two taps,** because browsers allow full screen and sound only after a press:
 1. **Tap 1, full screen** ("Tap for full screen"): the builder taps when leaving the hub on a screen. The page skips it when it is already full screen (kiosk mode, F11, an installed app) or when the browser cannot do it.

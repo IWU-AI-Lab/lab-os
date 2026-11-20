@@ -11,6 +11,7 @@ import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen
 import { theme } from "/web/theme.js";
 import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
 import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
+import { hubStop } from "/web/hub-stop.js";
 
 const $ = (s) => document.querySelector(s);
 const body = document.body;
@@ -331,6 +332,8 @@ $("#orb-dock").addEventListener("pointerdown", (e) => {
 for (const t of ["pointerup", "pointercancel"]) $("#orb-dock").addEventListener(t, () => talkEnd());
 
 /* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
+hubStop(); // STOP while a real arm is connected, top centre, above everything (quick job 43)
+
 const device = connectDevice({
   look: "plain",
   state: () => ({

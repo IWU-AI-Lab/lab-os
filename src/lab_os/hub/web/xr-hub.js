@@ -30,6 +30,7 @@ import { HubView } from "./xr/hub.js";
 import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
 import { getLink } from "/static/link.js";
+import { stopState } from "/web/stop-state.js";
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -79,7 +80,7 @@ class Show {
     this.hub = new HubView({ core: this.core, sfx: this.sfx, D });
     this.hub.clock = () => this.clock();
     this.hub.scene = this.scene; this.hub.ar = ar;
-    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh);
+    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh, this.hub.stop.mesh);
     this.pointer = new Pointer(this.scene);
     this.facts = { title: "Lab", greeting: "", status: null, arm: null, display: "" };
     this.phase = "ignite";
@@ -379,7 +380,11 @@ async function start(mode) {
   show.title.text = show.facts.title;
   await pollPanels(show);
   show.hub.facts.status = show.facts.status;
-  getLink("monitor").on("brain_off", (m) => show.turnOff(m)); // a watcher's link: it drives nothing
+  const link = getLink("monitor"); // a watcher's link: it drives nothing, it can STOP
+  link.on("brain_off", (m) => show.turnOff(m));
+  link.on("status", (s) => (show.hub.stopState = stopState(s))); // STOP while a real arm is connected (quick job 43)
+  link.on("close", () => (show.hub.stopState = { show: false, moving: false }));
+  show.hub.link = link;
   const timer = setInterval(() => poll(show), 1500), timer2 = setInterval(() => pollPanels(show), 20000);
   const r = makeRenderer(ar);
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 400);

@@ -96,6 +96,9 @@ export class StopButton {
     this.p = new CanvasPlane(0.32, 0.13, PX);
     this.p.mesh.userData.hit = this;
     this.hover = false;
+    this.moving = false; // the hub's STOP (quick job 43): brighter while the arm moves
+    this.said = false; // "STOPPED" for a moment after a press
+    this.solid = false; // the hub's STOP: solid red, like STOP on a screen (kit.css)
   }
   get mesh() { return this.p.mesh; }
   hit() { return { kind: "stop" }; }
@@ -103,11 +106,11 @@ export class StopButton {
     this.p.paint((g, w, h) => {
       const c = h * 0.22;
       g.beginPath(); g.moveTo(c, 0); g.lineTo(w, 0); g.lineTo(w, h - c); g.lineTo(w - c, h); g.lineTo(0, h); g.lineTo(0, c); g.closePath();
-      g.fillStyle = rgba(C.danger, this.hover ? 0.45 : 0.22); g.fill();
-      g.strokeStyle = C.danger; g.lineWidth = 3; g.stroke();
-      g.font = `700 ${h * 0.42}px ${FONT.ui}`; spaced(g, 0.2); g.fillStyle = this.hover ? C.hot : C.text; g.textAlign = "center"; g.textBaseline = "middle";
-      g.fillText("STOP", w / 2, h / 2);
-    }, this.hover);
+      g.fillStyle = rgba(C.danger, this.hover ? 0.95 : this.solid ? 0.78 : this.moving ? 0.45 : 0.22); g.fill();
+      g.strokeStyle = C.danger; g.lineWidth = this.moving ? 5 : 3; g.stroke();
+      g.font = `700 ${h * (this.said ? 0.34 : 0.42)}px ${FONT.ui}`; spaced(g, 0.2); g.fillStyle = this.hover || this.moving || this.solid ? "#fff" : C.text; g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(this.said ? "STOPPED" : "STOP", w / 2, h / 2);
+    }, `${this.hover}|${this.moving}|${this.said}|${this.solid}`);
   }
 }
 

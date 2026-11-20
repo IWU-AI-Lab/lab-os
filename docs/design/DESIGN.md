@@ -93,6 +93,8 @@ In both: **busy at the edges, calm in the middle**; how busy is `hub.density` (`
   - Under the line: `9 of 31 linked`. Settings: `hub.devices_view`, `hub.devices_graph_max`.
   - **System diagram** (2026-11-18): a square icon button (the network icon) before "List all" opens how everything connects, full screen like a details page: the brain as the core (rings and the glowing centre, nothing inside), screens left, robots right, the AI above, hexagon badges with icons, traces with 45° bends and a dot at each end, the line's style for the kind of link, pulses only on real links. Names Title Case as people say them; a short line under each. Built in the real hub only (`hub/system-diagram.js`), not in the concept.
 
+**STOP** (quick job 43): while a real arm is connected, a red STOP (kit.css's look: cut corners, Orbitron, white on red) sits at the **top centre**, in the frame's top notch, above every layer: the start screen, panels, cards, module pages. Its glow grows while the arm moves; no pulse (a pulse means an alarm). The hub in VR puts it in the same place, between the title and the strip, drawn over pages.
+
 **The core never disappears.** When a module opens, the core flies along with it instead of fading with the hub:
 - the three small markers inside the arcs shrink with them when the core contracts (listening), so the arcs never sit on top of them;
 - in **chat** it sits full size beside the conversation (left of it; above it on a portrait screen), so listening, thinking and speaking stay visible, and network pulses still flow into it;

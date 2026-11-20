@@ -728,6 +728,18 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .tool[hidden] { display: none; }  /* .tool's display: grid would otherwise beat the hidden attribute */
 .tool.fs-unavailable { opacity: 0.4; }
 /* ⏻ on the brain's own screen (quick job 6): back to the start screen, or shut lab-os down (asks first) */
+/* STOP (quick job 43, /web/hub-stop.js): top centre, above every panel, module page and the start screen,
+   while a real arm is connected; the glow (outside the cut corners) grows while the arm moves */
+#hub-stop-wrap { position: fixed; top: 1.2rem; left: 50%; transform: translateX(-50%); z-index: 45;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--danger) 45%, transparent)); transition: filter 0.3s; }
+#hub-stop-wrap[hidden] { display: none; }
+#hub-stop-wrap.moving { filter: drop-shadow(0 0 22px color-mix(in srgb, var(--danger) 80%, transparent)); }
+#hub-stop { --cut: 0.55rem; min-width: 9.5rem; min-height: 2.9rem; padding: 0.6rem 1.8rem; border: 0; cursor: pointer;
+  font: 700 1.05rem/1 var(--f-title); letter-spacing: 0.2em; color: #fff;
+  background: color-mix(in srgb, var(--danger) 78%, transparent); box-shadow: inset 0 0 0 1px var(--danger);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+#hub-stop:hover, #hub-stop:focus-visible { background: var(--danger); outline: none; }
+#hub-stop:active { transform: translateY(1px); }
 #power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
 #power-menu[hidden] { display: none; }
 #power-menu p { margin: 0.2rem 0 0.6rem; font: var(--w-lines) 0.85rem/1.45 var(--f-lines); color: var(--text-dim); }
@@ -3440,6 +3452,9 @@ function renderSent() {
     },
   });
 }
+// STOP while a real arm is connected (quick job 43): top centre, above everything (/web/hub-stop.js)
+import("/web/hub-stop.js").then((m) => m.hubStop({ onPress: () => SFX.blip() }))
+  .catch((e) => console.warn(`hub: no STOP button (${e.message})`));
 import("/web/device.js").then((m) => {
   DM = m;
   D = m.connectDevice({

@@ -100,7 +100,7 @@ Broadcast to all clients at 10 Hz.
   "max_speed_scale": 0.5,
   "mode": "one_to_one", "modes": ["relative", "one_to_one"], "one_to_one": false,
   "hand_gap_cm": 14.2, "capture_cm": 8.0,
-  "arm": {"name": "fake-arm", "model": "so101", "connected": true, "problem": null},
+  "arm": {"name": "fake-arm", "model": "so101", "connected": true, "problem": null, "real": false},
   "joints": {"shoulder_pan": -12.0, "...": 0.0},
   "limits": {"shoulder_pan": [-110.0, 110.0], "...": [0, 0]},
   "last_command": { "...": "the latest arm_command, or null" },
@@ -112,12 +112,14 @@ Broadcast to all clients at 10 Hz.
 - `speed_scale` / `max_speed_scale`: the speed now (`set_speed` changes it) and the venue's cap, the slider's end.
 - `mode` / `modes`: `"relative"` or `"one_to_one"` (`set_mode`), and which ones this arm and venue have (no kinematics, or the venue's 1:1 off: relative only). `one_to_one_deg_per_s`: 1:1's top joint speed (the venue's `one_to_one_max_deg_per_s`; null = no software cap). `servos` (real servos only, else null): `{"max_temp_c", "hot" (≥ 60 °C: 1:1 slowed), "joints": {name: {"temp_c", "load_pct", "volts"}}}`, read every 5 s. `one_to_one`: true while a 1:1 grab is following the hand. `hand_gap_cm`: in 1:1 while not holding, how far the hand is from the gripper point (null otherwise); `capture_cm`: how close it must be to grab.
 - `arm.model`: which 3D model viewers draw (`so101`, `xarm1s`; see `web/arm/arm-model.js`).
+- `arm.real`: `false` for a software arm (the fake arm, `FakeArm.software`), else `true`. The hubs show STOP while a real arm is connected (quick job 43, `web/stop-state.js`).
+- `shutting_down`: `true` from the start of a shutdown or restart until the brain stops: nothing moves (quick job 44).
 - `arm.connected`: `false` while the arm's USB is unplugged (quick job 27; drivers that can tell: the SO-101s, the fake arm); `arm.problem` says why in a sentence (unplugged, or plugged back in but not reopened, e.g. LeLab has the port). Meanwhile the arm is frozen, input is ignored and `joints` is the last reading. The brain reconnects by itself when the same `/dev/serial/by-id/` name is back; then it's still frozen until the grip is released and pressed again.
 - `joints`: what the driver currently reports (degrees). The xArm driver reports where each servo *should* be while it moves (it doesn't read the board during motion) and a real reading once idle.
 - `input_kind`: `"pose"` (xr_input), `"joints"` (joint_input) or `null`: which kind of input drives now.
 - `clutch`: pose input: grip held; joint input: something is being jogged.
 - `control`: per receiving page: `"you"` (this page drives), `"other"` (another page drives), `"free"`.
-- `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "frozen", "clutch", "needs_release", "mode", "one_to_one", "hand_gap_cm", "capture_cm", "joints", "limits"}`, each as above for that arm. `set_mode` sets the mode of both arms. Only pose input drives it. Every other field is the right arm's.
+- `left_arm`: `null`, or with two arms at once (`--left-arm`, 2026-11-19) the left controller's arm: `{"name", "model", "connected", "problem", "real", "frozen", "clutch", "needs_release", "mode", "one_to_one", "hand_gap_cm", "capture_cm", "joints", "limits"}`, each as above for that arm. `set_mode` sets the mode of both arms. Only pose input drives it. Every other field is the right arm's.
 
 ### `arm_command`, `arm_stop`, `arm_resume`
 Sent the moment the teleop loop calls the arm driver, one message per call, so viewers (3D view, later the Quest ghost arm) show **exactly what the driver received**.
