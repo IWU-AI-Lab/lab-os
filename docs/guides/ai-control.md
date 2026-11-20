@@ -57,7 +57,7 @@ An arm on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `
 | `arm_status` | read | The joints, the gripper's opening (%), the gripper's position (cm) and tool angle, the limits, who has control (`free`, `teleop`, `ai`), if it holds still, if the venue allows motion, the limits for each call |
 | `list_poses` | read | The named poses (`config/poses.yaml`). `ready`: the working pose, where teleop starts. `home`: the folded pose where the arm stays |
 | `pose_view` | read | A **picture** of the arm's 3D model in its pose now (side and top, a cm grid, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera ("Seeing the pose" below) |
-| `camera_snapshot` | read | One real picture from a camera. A camera with a table map gets the table's **cm grid** ("Table map" below) |
+| `camera_snapshot` | read | One real picture from a camera. A camera with a table map gets the table's **cm grid** ("Table map" below). With `board: true`, the tic-tac-toe board too (`docs/guides/tic-tac-toe.md`) |
 | `table_point` | read | One pixel of such a picture → x and y on the table, in cm |
 | `move_joints` | move | Some joints to angles, or by amounts (`relative: true`) |
 | `gripper` | move | 0 = closed, 100 = fully open |
@@ -154,7 +154,7 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
    uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>
    ```
    It says how many of the 24 corners it found and how far the worst corner is wrong (5 mm or less is good). It saves `config/table-maps/so101-white-cam-stand.yaml` and writes a picture with the grid to `logs/table-maps/`. Open the picture: the red dot must be on the base, and the lines must follow the squares.
-5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture).
+5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture). The tic-tac-toe board uses the same map (`docs/guides/tic-tac-toe.md`).
 
 To try it without a camera, add `--image picture.jpg` to use a saved picture.
 

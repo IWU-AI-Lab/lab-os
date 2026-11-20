@@ -143,6 +143,21 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
 - **W.14** Put the cube in front of the arm. Pick it up with the webcam: Space to move, a right pinch to close the gripper. → did it work? (yes / no; how many tries? What was difficult?)
 - **W.15** Was it easy to use? (easy / possible / too hard) Would you show it at the demo? (yes / no) Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
+## G. Tic-tac-toe (45 min)
+Preview 1: an AI tool plays tic-tac-toe with `so101-white` against you. How it works: `docs/guides/tic-tac-toe.md`. You need the stand camera's table map (made on 2026-11-19), the cube, and 5 red and 5 blue pieces (LEGO, about 3 cm tall).
+
+Before the lab day, print `models/games/tic-tac-toe-sheet-letter.pdf` at 100 % ("Actual size"). Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
+```bash
+uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+```
+- **G.1** Put the cube on the printed sheet. → is one cell as wide as two cubes? (yes / no)
+- **G.2** Set up the table as in the guide, section 1 (the sheet 12 cm in front of the base, the red pieces beside the arm). In Claude Code, type the prompt in section 4 of the guide. → are the magenta squares on the printed lines? (yes / after I moved the paper / no) Are the green rings on the red pieces? (yes / after I moved them / no)
+- **G.3** Type the prompt in section 5 of the guide. Put a blue piece in B2 and say "your turn". → did the arm take a red piece? (yes / no) Did it put it fully inside the cell it named? (yes / partly / no) Did the arm or a jaw touch any other piece? (no / yes: which)
+- **G.4** Play to the end of the game. → did the AI read the board right each time? (yes / no: which turn) Did it say the right result? (yes / no) About how many minutes did the game take?
+- **G.5** During the game, did the arm go low over the board at a time when it did not put a piece down? (no / yes: when) Clear the board. Tell the AI to go home.
+- **G.6** If Codex is on the lab desktop: connect it (the guide, section 3) and play one game with the same prompt. → did it play the whole game? (yes / no: what went wrong) Did it follow the route? (yes / no)
+- **G.7** If Gemini CLI is on the lab desktop: do G.6 with Gemini CLI. → the same two answers. Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
+
 ## Optional: the Kinect, without drivers (5 min)
 The lab's Kinect is model 1414 (the first Kinect, for the Xbox 360). lab-os does not use it yet: it needs drivers that need `sudo` (`docs/guides/webcam-teleop.md` → "Limits of the preview"). These steps install nothing.
 - **K.1** Find the Kinect's cable. → does it end in a normal USB plug, or in an orange-tipped Xbox plug? Does the lab have the Kinect's power and USB adapter? (yes / no)

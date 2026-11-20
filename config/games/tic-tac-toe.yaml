@@ -1,0 +1,36 @@
+# Tic-tac-toe (preview 1, docs/guides/tic-tac-toe.md): where the board and the robot's pieces are.
+# All positions in cm from the middle of the arm's base, as move_to takes them: x forward, y to the
+# arm's left. Measure them again if the paper or the arm moves.
+#
+# Cells: rows 1-3 go from far (largest x) to near; columns A-C from the arm's left (largest y) to
+# its right. So the stand camera's picture, taken from behind the arm, reads like a page: A1 is at
+# the top left. Checked on the fake arm (tests/test_tic_tac_toe.py): along the route below, the arm
+# picks from every start spot with pick_at (straight down: that works in a band about 14-19 cm to
+# each side of the base) and puts a piece down in every cell at place_tool_angle_deg.
+
+camera: so101-white-cam-stand   # the stand camera, with its table map (lab-os table-map)
+
+board:
+  center_cm: [24, 0]   # the middle of cell B2
+  cell_cm: 6           # one cell's side, as drawn on the paper
+  place_tool_angle_deg: 165   # tilt when putting a piece down (180 = straight down reaches less)
+
+pieces:
+  height_cm: 3.0   # a Duplo 2x2 brick, or three normal 2x2 bricks pressed together
+  robot: red       # the colour the robot plays (5 pieces)
+  person: blue     # the colour the person plays
+  release_open_pct: 60   # open this far to let go: fully open, the jaws can hit the next cell
+  # where the robot's 5 pieces stand at the start (their middle, on the table)
+  robot_start_cm:
+    - [4, 16]
+    - [10, 16]
+    - [15, 13]
+    - [10, -16]
+    - [4, -16]
+
+# The arm travels at the piece's height + 6 cm and never goes low over the board except to put a
+# piece down. The ready and home poses both put the gripper low over the board (on the fake arm's
+# model: home 19 cm out and 1.6 cm up, ready 26 cm out and 5 cm up), so the game doesn't use them.
+route:
+  park_cm: [6, 16]   # where the arm waits between moves: beside its base, out of the board's way
+  via_cm: [20, 0]    # every trip goes through this point, above the board's near edge

@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — Tic-tac-toe: straight down reaches a thin ring, and `home` and `ready` sit over the board
+**What:** (preview 1, found on the fake arm's 3D model.)
+- Pointing straight down (tool angle 180), the SO-101 reaches only a ring about 17 to 22 cm from its base (from `ready`: a band about 14 to 19 cm to each side). A 3×3 grid of 6 cm cells doesn't fit in it. Tilted 15° (165), it reaches up to about 30 cm.
+- The IK solves from the arm's pose now. From `home` (folded), no start spot was reachable straight down, though the same spots work from `ready`.
+- `home` puts the gripper point 19 cm in front of the base and 1.6 cm high; `ready` 26 cm out and 5 cm high. Both are over a board 15 to 33 cm out, so either pose knocks pieces over.
+- 12 cm above the table, straight down is out of reach at 18 cm out (the wrist would need to be about 22 cm up).
+**Fix:** the board's cells are put down at 165°; the robot's pieces wait in the straight-down band beside the base, where `pick_at` works. During a game the arm waits at a park point beside its base and travels 9 cm high through one point above the board's near edge; `ready` only at the start (board empty), `home` only at the end. All in `config/games/tic-tac-toe.yaml`, tested to every cell (`tests/test_tic_tac_toe.py`).
+
 ### 2026-11-20 — A closed page could leave a Gemini Live connection open; one test waited 31 s for it
 **What:** (quick job 56, faster tests.) `test_two_screens_hear_it_one_answers` spent 31 s in its teardown. When a page's `/ws/voice` connection ends, aiohttp cancels the handler, and the cancel also stopped the handler's own cleanup in `finally` (closing the page's hearing). The hearing's Live websocket to the voice service then stayed open. Closing the client session doesn't close it: aiohttp detaches a websocket's connection from the session's pool. The fake service waited for it until its shutdown timeout. In the lab the same thing could keep a Gemini session open after a tab closed. Also: pytest tore down `aiohttp_server` (the fake services) before `aiohttp_client` (the brain), so a hearing that connected just as a test ended waited the full 3 s for a goodbye from a service that had stopped answering.
 **Fix:** the page's voice cleanup runs in its own task that the cancel can't stop, and the brain's shutdown waits for it (`voice_ws`). `tests/conftest.py` overrides `aiohttp_client` to set up after `aiohttp_server`, so the brain closes first. The tests also skip the robot tools' 0.5 s hold and 0.2 s settle (the fake arm arrives at once). The tests went from 136 s to about 44 s in one process.

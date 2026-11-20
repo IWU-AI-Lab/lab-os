@@ -47,6 +47,9 @@ python-preference = "only-managed"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# with -n (pytest-xdist): an idle worker takes tests from a busy one, so a few slow tests at the
+# end of the list don't keep the run waiting (9 s instead of 14 s). Without -n it does nothing.
+addopts = "--dist worksteal"
 
 [tool.ruff]
 line-length = 100

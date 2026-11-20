@@ -42,7 +42,7 @@ from lab_os.robots.base import JointLimit
 from lab_os.teleop.loop import Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
 from lab_os.tools import pose_view as pv
-from lab_os.tools import table_map
+from lab_os.tools import table_map, tic_tac_toe
 from lab_os.tools.calllog import CallLog
 from lab_os.venues import Venue
 
@@ -331,26 +331,53 @@ class RobotTools:
             "image_png": png,
         }
 
-    async def camera_snapshot(self, camera: str, width_px: int = 640, grid: bool = True) -> dict:
+    async def camera_snapshot(
+        self, camera: str, width_px: int = 640, grid: bool = True, board: bool = False
+    ) -> dict:
         """One picture from a camera in devices.yaml (read tier): opens it, grabs a frame, closes
         it. A camera another program has open is refused. The JPEG is under "image_jpeg". A
         camera with a table map (`lab-os table-map`) gets the table's cm grid drawn on it unless
-        `grid` is false."""
+        `grid` is false. `board`: the tic-tac-toe board's cells and start spots drawn on it too
+        (config/games/tic-tac-toe.yaml), with their positions and the steps under "board"; those
+        come even without a picture (the fake arm has no camera), with "picture" saying why."""
         from lab_os import devices
 
         width_px = max(160, min(int(width_px), 1280))
+        m = table_map.load(camera)
+        game = None
+        if board:
+            try:
+                game = tic_tac_toe.load()
+            except tic_tac_toe.NoGame as e:
+                raise Refused(str(e)) from e
         try:
             path = devices.camera_device(camera)
-        except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed) as e:
-            raise Refused(str(e)) from e
-        jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
+            jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
+        except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed, Refused) as e:
+            if game is None and isinstance(e, Refused):
+                raise
+            if game is None:
+                raise Refused(str(e)) from e
+            return {
+                "camera": camera,
+                "picture": f"none ({e}): ask the person where the pieces are",
+                "board": game.summary(),
+            }
         out = {"camera": camera, "width_px": width_px, "image_jpeg": jpeg}
-        m = table_map.load(camera)
         if m is not None and grid:
             out["image_jpeg"] = await asyncio.to_thread(table_map.draw_grid, jpeg, m)
             out["table_grid"] = table_map.describe(m)
         elif m is None:
             out["table_grid"] = "none: this camera has no table map, so no cm grid"
+        if game is not None:
+            if m is not None:
+                out["image_jpeg"] = await asyncio.to_thread(
+                    tic_tac_toe.draw, out["image_jpeg"], m, game
+                )
+                read = tic_tac_toe.describe(game)
+            else:
+                read = f"not drawn: {camera} has no table map (use {game.camera})"
+            out["board"] = {"how_to_read": read} | game.summary()
         return out
 
     async def table_point(self, camera: str, x_px: float, y_px: float, width_px: int = 640) -> dict:
