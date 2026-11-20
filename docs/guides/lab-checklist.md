@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then S, then T and D, then the parts that the sessions add for the other previews and the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then S, then T and D, then W, then the parts that the sessions add for the other previews and the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -109,6 +109,44 @@ Setup: `so101-white` connected, the brain running (part T's command without `--l
 - **D.1** On the second device, open `http://<address>:8080/monitor`. → does Monitor show the arm and a STOP button? (yes / no)
 - **D.2** On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
 - **D.3** Say `Hey Jarvis, the visitors have left`. → nothing to report.
+
+## W. Teleop with a webcam (40 min)
+Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. Do W.1 to W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
+
+Cables to plug in, on the lab desktop:
+- The C615: a free USB socket. If no socket is free, unplug the two cameras in sockets 7 and 8. This part does not use them.
+- Put the C615 on top of the desktop's monitor, facing the chair.
+
+Then run:
+```bash
+uv run lab-os serve
+```
+
+- **W.1** Run `ls /dev/v4l/by-path/`. Unplug the C615, run it again, and plug the C615 back in. → which name went away? (copy it)
+- **W.2** On the desktop, open http://localhost:8080/webcam. Click **Start webcam control** and allow the camera. → does the picture show you, like a mirror? (yes / no) Does **Camera** show the C615? (yes / no) What does **Frames a second** show?
+- **W.3** Sit in the chair. Hold up both hands, palms to the camera. → is your right hand drawn in cyan and your left hand in amber? (yes / no; if no, select **Swap left and right hands** and write it down)
+- **W.4** Hold your left hand open and relaxed, not pinching. → what does **Clutch** show? (a number) Now pinch with your left hand. → what does **Clutch** show? Does the state say "Following your right hand"? (yes / no)
+- **W.5** Keep the left pinch. Move your right hand slowly 20 cm to the right, then up, then down. Watch the 3D view. → did the 3D arm move to the right, up and down with your hand? (yes / no each)
+- **W.6** Keep the left pinch. Move your right hand slowly 20 cm toward the camera, then back. → did the 3D arm move forward and back? (yes / no) Did it shake when your hand was still? (no / a little / a lot)
+- **W.7** Release the left pinch. Hold **Space** instead and move your right hand. → does the 3D arm follow? (yes / no) Pinch and open your right hand. → does the 3D gripper close and open? (yes / no)
+- **W.8** Keep Space held. Move your right hand out of the picture, then back in. → did the 3D arm stop, and the state say "Frozen"? (yes / no) Does it stay still when your hand comes back? (yes / no) Release Space and press it again. → does it follow again? (yes / no)
+- **W.9** Ask another person to stand behind you in the picture. Do W.5 again. → did the page follow your hand only? (yes / no; if no, what happened?) Close the webcam page. Press Ctrl+C in the brain's terminal.
+
+Now the real arm. Keep one hand near the keyboard: **X** is STOP on the webcam page. Plug in `so101-white` (its USB cable and its power supply), then run:
+```bash
+uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+```
+- **W.10** Open http://localhost:8080/webcam and click **Start webcam control**. → do the chips show "Control: this page" and "Arm: holding" (or "frozen")? (yes / no)
+- **W.11** Hold Space. Move your right hand slowly 10 cm to the right, then back. → did `so101-white` move to the right and back? (yes / no) About how long after your hand did it move? (at once / a short time / about 1 s or more)
+- **W.12** Hold Space. Move your right hand slowly up 10 cm, then 10 cm toward the camera. → did the arm move up, then forward? (yes / no each) Did it shake? (no / a little / a lot)
+- **W.13** Hold Space and move. Move your right hand out of the picture. → did the arm stop at once? (yes / no) Press **X**. → did the page's state and the Arm chip say "frozen"? (yes / no)
+- **W.14** Put the cube in front of the arm. Pick it up with the webcam: Space to move, a right pinch to close the gripper. → did it work? (yes / no; how many tries? What was difficult?)
+- **W.15** Was it easy to use? (easy / possible / too hard) Would you show it at the demo? (yes / no) Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
+
+## Optional: the Kinect, without drivers (5 min)
+The lab's Kinect is model 1414 (the first Kinect, for the Xbox 360). lab-os does not use it yet: it needs drivers that need `sudo` (`docs/guides/webcam-teleop.md` → "Limits of the preview"). These steps install nothing.
+- **K.1** Find the Kinect's cable. → does it end in a normal USB plug, or in an orange-tipped Xbox plug? Does the lab have the Kinect's power and USB adapter? (yes / no)
+- **K.2** If it has a USB plug (or the adapter), connect it and its power. Run `lsusb | grep -i 045e`. → copy the lines (none is an answer).
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

@@ -22,6 +22,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/training` | start the SO-101 training setup (green arms and LeLab) after a port check, on the brain's computer (`docs/guides/green-launcher.md`) |
 | `/teleop` | the teleop page (the Quest opens this one with `lab-os serve`; `lab-os-teleop` shows it at `/`) |
 | `/monitor` | the arm monitor |
+| `/webcam` | teleop with a webcam (preview): your bare hand in front of a webcam drives the arm, on the brain's computer (`docs/guides/webcam-teleop.md`) |
 | `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
 | `/perf` | the performance test (below) |
 
