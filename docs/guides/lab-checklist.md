@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20 (about 1 hour): 0, S, V, then H if time is left. Tuesday 2026-11-24: 0, then N and M (if the router is here), then T and D, then W, G and H, then 11, then the parts that the sessions add for the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20 (about 1 hour, no sound): 0, S, 11, then W if time is left (hub sounds off: the speakers off, or the volume at 0). Tuesday 2026-11-24: 0, then N and M (if the router is here), then V, then T and D, then W, G and H, then 11 if it is not done, then the parts that the sessions add for the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
