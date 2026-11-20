@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20 (about 1 hour, no sound): 0, A, S, 11, then W if time is left (hub sounds off: the speakers off, or the volume at 0). Tuesday 2026-11-24: 0, then N and M (if the router is here), then V, then T and D, then W, G and H, then 11 if it is not done, then the parts that the sessions add for the new quick jobs.
+**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -38,32 +38,6 @@ uv sync --extra so101
 uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
-
-## 11. Devices (25 min)
-Setup: the desktop, and the Newline's own Chrome (or a laptop instead of the Newline). Connect the Newline to the desktop with the Ethernet cable. No arm. Step 11.1 (the icon) is done.
-- **11.3** In Ubuntu's app list, click **Start lab-os**. Wait until the hub opens. Click **Start lab-os** again. → how many brain terminals are open now? (1 / 2) Copy the last line of the newest terminal.
-- **11.4** On the desktop, run `hostname -I` and use the first address. In the Newline's Chrome, open `http://<address>:8080/?device=newline`. → did the page load? (yes / no)
-- **11.6** On the Newline, select Chrome's menu → Add to Home screen. Close Chrome. Tap the new icon. Open ⚙. → does it say "This Device: newline"? (yes / no)
-- **11.7** On the Newline, open Monitor → **Open on…** → **desk**. → did Monitor open on the desk? (yes / no)
-- **11.8** Look at the Newline. → does it say "Monitor is on desk"? (yes / no)
-- **11.9** On the desk, press **Back**. → did Monitor close on the desk? (yes / no) Did the line go away on the Newline? (yes / no)
-- **11.10** On the Newline, select Monitor → Open on… → desk. Then, on the Newline, press **Bring it back**. → did Monitor come back to the Newline? (yes / no)
-- **11.11** On the desk, open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
-- **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
-- **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names? (yes / no) Is the Newline's Drawing Resolution still 0.5? (yes / no)
-
-## A. The brain finds the arm (10 min)
-Setup: `so101-white` with its power supply and USB cable. No brain runs. The "Start lab-os" icon is the one that you have now: it needs no change.
-- **A.1** (quick job 61) Click **Start lab-os**. → does the brain's terminal say "Plugged in: so101-white. Driving so101-white"? (yes / no: copy the line) Does the hub show so101-white, not the fake arm? (yes / no)
-- **A.2** (quick job 61) Hold the arm. Press Ctrl+C in the brain's terminal. Disconnect the arm's USB cable. Click **Start lab-os**. → does the terminal say "No arm plugged in: the fake arm"? (yes / no) Press Ctrl+C. Connect the USB cable again.
-
-## S. Safety fixes on the real arm (25 min)
-Setup: `so101-white` with its power supply and USB cable. Claude Code on the desktop, connected to the brain's robot tools (`docs/guides/ai-control.md`). Keep one hand at STOP.
-- **S.1** (quick job 44) Click **Start lab-os**. On the desktop's hub, press ⏻ → **Shut down lab-os**. → does the first line say that so101-white goes limp? (yes / no) Does the **Shut down** button say it too? (yes / no) Press **Cancel**.
-- **S.2** (quick job 44) Connect the Quest with USB. Run `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, open `http://localhost:8080/xr` and press **Enter AR (your room)**. Pull the trigger until the hub is around you. Put the headset on the table. → did the hub open in AR? (yes / no)
-- **S.3** (quick job 44) In Claude Code, prompt: `Go to the home pose.` Wait until the arm is at home. Hold the arm. Prompt: `Go to the ready pose.` While the arm moves, press ⏻ → **Shut down lab-os** → **Shut down**. → did the arm stop at once and make no more moves? (yes / no) Did it go limp in your hand within about 2 seconds? (yes / no) Did the terminal close within about 2 seconds, after `lab-os was shut down from the hub; so101-white was let go.`? (yes / no)
-- **S.4** (quick job 44) Look at the desktop's pages. Put on the Quest. → did every page on the desktop say "lab-os is off"? (yes / no) Did the Quest show a "lab-os is off" card in front of you? (yes / no)
-- **S.5** (quick job 44) Click **Start lab-os**. → did the desktop's pages come back by themselves? (yes / no)
 
 ## V. The wake word and the greeting (20 min)
 Quick job 42. The cause of the stops was not found on the Mac. The brain's terminal now says when it ignores "hey Jarvis", and why. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. Keep the brain's terminal in view.
@@ -205,11 +179,6 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.5** → did the arm hold the cube out to you at the hand-over pose? (yes / no) Was it easy to take? (yes / no) Say "let go". → did the gripper open? (yes / no)
 - **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
-
-## Optional: the Kinect, without drivers (5 min)
-The lab's Kinect is model 1414 (the first Kinect, for the Xbox 360). lab-os does not use it yet: it needs drivers that need `sudo` (`docs/guides/webcam-teleop.md` → "Limits of the preview"). These steps install nothing.
-- **K.1** Find the Kinect's cable. → does it end in a normal USB plug, or in an orange-tipped Xbox plug? Does the lab have the Kinect's power and USB adapter? (yes / no)
-- **K.2** If it has a USB plug (or the adapter), connect it and its power. Run `lsusb | grep -i 045e`. → copy the lines (none is an answer).
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

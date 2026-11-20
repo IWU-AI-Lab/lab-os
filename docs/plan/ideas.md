@@ -47,7 +47,7 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 ## Recent ideas (2026-11-20)
 
 ### For the builder's design review
-The builder plans one design review pass. Collected for it: the card that opens when you tap a device in the Devices panel (too much text in one paragraph, and it appears with no animation, unlike the rest); the Quest's pages from the main page (the VR and AR page looks bare and unplanned; maybe a 3D model of the Quest); wording on every page. Teleop's words are quick job 66.
+The builder plans one design review pass. Collected for it: the card that opens when you tap a device in the Devices panel (too much text in one paragraph, and it appears with no animation, unlike the rest); the Quest's pages from the main page (the VR and AR page looks bare and unplanned; maybe a 3D model of the Quest); wording on every page. Teleop's words are quick job 66. **"Bring it back"** (lab check 11.10): it is really opening and closing a page on another device from a distance. Either move it to the page it is for and give it a better name, or let a page be open on only one device at a time (the builder: only if that is not annoying).
 
 ## Recent ideas (2026-11-19)
 
