@@ -291,14 +291,17 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
 
 def test_x_stop_is_shown_where_you_look():
     """Quick job 19: while desktop control is on, "X = STOP" sits beside the STOP button, the X row
-    is the key help's first row and the on-button says it. Hidden while X doesn't stop (it only
-    works in desktop control), so the page never claims what isn't true."""
+    is the key help's first row, and the key help opens (quick job 66: the on-button said it, too
+    long; now "Desktop control on"). Hidden while X doesn't stop (it only works in desktop
+    control), so the page never claims what isn't true."""
     web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "teleop" / "web"
     js = (web / "desktop-input.js").read_text()
     start = js.split("function startControl", 1)[1].split("function stopControl")[0]
     stop = js.split("function stopControl", 1)[1].split("function tick")[0]
     assert "stopKey(true)" in start and "stopKey(false)" in stop
-    assert "(X = STOP, \\` to leave)" in js  # escaped: the text is inside a `template`
+    assert (
+        'button.textContent = "Desktop control on"' in start and '"desk-help").open = true' in start
+    )
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
     for page in ("index.html", "classic/index.html"):
         html = (web / page).read_text()
@@ -319,7 +322,6 @@ def test_backtick_leaves_desktop_control_like_esc():
     leave = keydown.split('e.code === "Escape" || e.code === "Backquote"', 1)[1].split("return;")[0]
     assert "document.exitPointerLock()" in leave
     assert js.count("Backquote") == 1  # no mode uses the key for anything else
-    assert "(X = STOP, \\` to leave)" in js  # escaped: the text is inside a `template`
     node = shutil.which("node")
     if node:  # a bare ` inside the button's template string once broke the whole script
         subprocess.run([node, "--check", str(web / "desktop-input.js")], check=True)
