@@ -8,7 +8,7 @@ The hub is the brain's start page: a start screen, then a status strip, module b
 
 ## Start it
 ```bash
-uv run lab-os serve                    # the hub, the teleop pages and the fake arm
+uv run lab-os serve                    # the hub, the teleop pages and the arm plugged in (else the fake arm)
 ```
 Then open **http://localhost:8080/** in a browser on the same computer. In VS Code: Run and Debug → "Hub: lab-os serve (fake arm)".
 
@@ -27,7 +27,8 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/perf` | the performance test (below) |
 
 **Options** (the same as `lab-os-teleop`'s):
-- `--arm` (for example `fake-xarm1`, `so101-white`), `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/dev/places.md`).
+- `--arm` (for example `fake`, `fake-xarm1`, `so101-white`). Without `--arm`, the brain drives the SO-101s that are plugged in when it starts: one arm, or two arms as `--arm` and `--left-arm`. It never takes the green set by itself, because LeLab or a training run may need it: name it with `--arm so101-green`. With no arm plugged in, it drives the fake arm. When a plugged-in arm cannot open (another program has its port, or it has no calibration), the brain says why and drives the fake arm. `--arm fake` always drives the fake arm.
+- `--venue visit-day`, `--port 8090`, `--config <folder>` (another place: `docs/dev/places.md`).
 - `--mcp-port`: the robot tools for AI (`docs/guides/ai-control.md`).
 - `--persona` (`docs/dev/personas.md`).
 - `--open desk`: open the hub on this computer as that device when the brain runs ("Devices" below).
@@ -197,9 +198,9 @@ A **device** is a computer or screen with the hub open under a name in its addre
 **One tap for each device** (nothing starts by itself):
 - **The brain's computer: "Start lab-os".** Make the icon once, in `~/lab-os`:
   ```bash
-  uv run lab-os icon --device desk                      # the fake arm
-  uv run lab-os icon --device desk -- --arm so101-white # the white arm (it moves only when asked)
+  uv run lab-os icon --device desk
   ```
+  The brain then drives the arm that is plugged in, else the fake arm ("Start it" → `--arm`). To always start with one arm, add it after `--`, for example `uv run lab-os icon --device desk -- --arm fake`.
   The icon is in Ubuntu's app list (right-click → Add to Favorites puts it in the dock). It opens a terminal that runs `lab-os serve --open desk --host 0.0.0.0 …` (the brain's log; Ctrl+C stops the brain). When the brain runs, it opens the hub in full screen as `desk` (Chrome's app window; any Chromium browser, else the default browser). If the brain already runs, the icon only opens the hub. On macOS or Windows, `lab-os icon` shows the command for a shortcut. The look that it opens: `hub.look` (⚙ → The Lab). `--host 0.0.0.0` lets the other devices connect; with a real arm, they only watch (and their STOP works).
 - **Other computers: a "Lab hub" icon.** Open the hub there once at the brain's address with the device's name (`http://<brain's IP address>:8080/?device=newline`). Then select ⚙ → This Device → **"Lab Hub" Icon**. Select the Linux icon (`.desktop`) or the Windows icon (`.bat`); it has the brain's address and the name in it. Put the Linux icon in `~/.local/share/applications/` or on the desktop, and allow launching. By hand, it is the same as this command:
   ```bash

@@ -103,9 +103,9 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
 1. Clear the table around the arm. Put the cube where you will describe it. Measure from the center of the base: cm in front, cm to the left.
 2. Start the brain with the real arm, slowly:
    ```bash
-   uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+   uv run --extra so101 lab-os serve --speed 0.3
    ```
-   It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor` (3D). On a second monitor of this computer they can stay open in full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
+   The brain finds `so101-white` when it is plugged in (the terminal says "Plugged in: so101-white"). It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor` (3D). On a second monitor of this computer they can stay open in full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
 3. In the Claude Code session, type `/mcp` → `lab-os` → reconnect (the brain restarted).
 4. Start with small steps. Claude Code does not ask before moves, so watch with STOP near:
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.

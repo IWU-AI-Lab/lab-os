@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20 (about 1 hour, no sound): 0, S, 11, then W if time is left (hub sounds off: the speakers off, or the volume at 0). Tuesday 2026-11-24: 0, then N and M (if the router is here), then V, then T and D, then W, G and H, then 11 if it is not done, then the parts that the sessions add for the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20 (about 1 hour, no sound): 0, A, S, 11, then W if time is left (hub sounds off: the speakers off, or the volume at 0). Tuesday 2026-11-24: 0, then N and M (if the router is here), then V, then T and D, then W, G and H, then 11 if it is not done, then the parts that the sessions add for the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -51,6 +51,11 @@ Setup: the desktop, and the Newline's own Chrome (or a laptop instead of the New
 - **11.11** On the desk, open Teleop → Open on… → **newline**. → did Teleop open on the Newline? (yes / no)
 - **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
 - **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names? (yes / no) Is the Newline's Drawing Resolution still 0.5? (yes / no)
+
+## A. The brain finds the arm (10 min)
+Setup: `so101-white` with its power supply and USB cable. No brain runs. The "Start lab-os" icon is the one that you have now: it needs no change.
+- **A.1** (quick job 61) Click **Start lab-os**. → does the brain's terminal say "Plugged in: so101-white. Driving so101-white"? (yes / no: copy the line) Does the hub show so101-white, not the fake arm? (yes / no)
+- **A.2** (quick job 61) Hold the arm. Press Ctrl+C in the brain's terminal. Disconnect the arm's USB cable. Click **Start lab-os**. → does the terminal say "No arm plugged in: the fake arm"? (yes / no) Press Ctrl+C. Connect the USB cable again.
 
 ## S. Safety fixes on the real arm (25 min)
 Setup: `so101-white` with its power supply and USB cable. Claude Code on the desktop, connected to the brain's robot tools (`docs/guides/ai-control.md`). Keep one hand at STOP.
@@ -164,7 +169,7 @@ uv run lab-os serve
 
 Now the real arm. Keep one hand near the keyboard: **X** is STOP on the webcam page. Plug in `so101-white` (its USB cable and its power supply), then run:
 ```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+uv run --extra so101 lab-os serve --speed 0.3
 ```
 - **W.10** Open http://localhost:8080/webcam and click **Start webcam control**. → do the chips show "Control: this page" and "Arm: holding" (or "frozen")? (yes / no)
 - **W.11** Hold Space. Move your right hand slowly 10 cm to the right, then back. → did `so101-white` move to the right and back? (yes / no) About how long after your hand did it move? (at once / a short time / about 1 s or more)
@@ -178,7 +183,7 @@ Preview 1: Claude Code plays tic-tac-toe with `so101-white` against you. How it 
 
 Before the lab day, print `models/games/tic-tac-toe-sheet-letter.pdf` at 100 % ("Actual size"). Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
 ```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+uv run --extra so101 lab-os serve --speed 0.3
 ```
 - **G.1** Put the cube on the printed sheet. → is one cell as wide as two cubes? (yes / no)
 - **G.2** Set up the table as in the guide, section 1 (the sheet 12 cm in front of the base, the red pieces beside the arm). In Claude Code, type the prompt in section 4 of the guide. → are the magenta squares on the printed lines? (yes / after I moved the paper / no) Are the green rings on the red pieces? (yes / after I moved them / no)
@@ -191,7 +196,7 @@ Preview 4: the hub's assistant moves the arm to a named pose, and hands you the 
 
 Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
 ```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --open desk
+uv run --extra so101 lab-os serve --speed 0.3 --open desk
 ```
 - **H.1** The switch is off by default. On the hub, ask "move the arm to home" (typed). → did the arm stay still? (yes / no)
 - **H.2** Select ⚙ → Robots → **The Assistant May Move the Arm**. Ask "Hey Jarvis, move the arm to ready" by voice. → did the arm go to `ready`, slowly? (yes / no) Did AI Control show the moves? (yes / no)

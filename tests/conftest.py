@@ -35,6 +35,15 @@ def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
         monkeypatch.delenv(key, raising=False)  # a key in the shell never reaches a test
 
 
+@pytest.fixture(autouse=True)
+def _no_arm_plugged_in(monkeypatch):
+    """No serial port counts as there, even when an arm is plugged in to this computer: `lab-os
+    serve` with no --arm takes the fake arm in every test (quick job 61)."""
+    from lab_os import devices
+
+    monkeypatch.setattr(devices, "port_exists", lambda path: False)
+
+
 @pytest.fixture
 def locked():
     """A registry with off-limits devices: the lab has none since step 11 (the green arms are

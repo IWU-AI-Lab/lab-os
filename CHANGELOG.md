@@ -3,6 +3,7 @@
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
 ## 2026-11-20
+- **The brain finds the arm** (quick job 61): `lab-os serve` with no `--arm` drives the SO-101 that is plugged in (two: one for each hand), so the "Start lab-os" icon needs no `--arm`. It never takes the green set by itself. With no arm plugged in, or one that another program has, it drives the fake arm and says why. Before, it always drove the fake arm unless `--arm` named one. `lab-os-teleop` still drives the fake arm.
 - **The settings page saves into `config/local/`** (`docs/dev/places.md` → "The place's own changes"): only the values that changed, in a folder git ignores. The brain merges them over the files in `config/`, so a new field there reaches every place, and the lab's changes no longer show in `git diff config/` or break the tests. Each device's settings and the table maps are in `config/local/` too.
 
 ## 2026-11-19

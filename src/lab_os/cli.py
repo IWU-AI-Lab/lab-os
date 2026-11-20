@@ -1,5 +1,6 @@
 """`uv run lab-os serve`: the brain. Serves the hub at http://localhost:8080/ with the teleop
-pages inside it, and drives the fake arm (or a real one via --arm)."""
+pages inside it, and drives the SO-101s plugged in (or the arm --arm names; the fake arm when
+none is)."""
 
 import argparse
 import asyncio
@@ -235,13 +236,15 @@ def main(argv: list[str] | None = None) -> None:
         def after_start():
             print(launch.open_hub(launch.hub_url(args.port, device)))
 
-    # a real arm on the network: other screens watch (and can STOP), only this computer drives
-    local_control_only = args.host not in LOCAL_HOSTS and any_real_arm(args)
     args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
     term.setup_logging()
     use_config(args)
     drive_from = _addresses(args.drive_from)
-    loop = make_loop(args)  # stops with a message if the venue or arm doesn't fit this place
+    # no --arm: the arms plugged in (quick job 61). Stops with a message if the venue or a named
+    # arm doesn't fit this place.
+    loop = make_loop(args)
+    # a real arm on the network: other screens watch (and can STOP), only this computer drives
+    local_control_only = args.host not in LOCAL_HOSTS and any_real_arm(args)
     venue = load_venue(args.venue)
     if args.persona:
         try:
@@ -261,15 +264,15 @@ def main(argv: list[str] | None = None) -> None:
     )
     if args.record:
         print(f"recording teleop input to {args.record}")
-    if args.mcp_port and not args.arm.startswith("fake"):
-        print(f"AI tools can move the REAL {args.arm}: each move asks first; STOP on any page.")
+    if args.mcp_port and not loop.arm.name.startswith("fake"):
+        print(f"AI tools can move the REAL {loop.arm.name}: STOP on any page.")
     if loop.left:
         print(f"AI tools drive only {loop.arm.name}; {loop.left.arm.name} is for teleop only.")
     if args.host not in LOCAL_HOSTS:
         print(f"listening on {args.host}: other computers on the network can open the hub")
     if local_control_only:
         also = f" and {', '.join(sorted(drive_from))}" if drive_from else ""
-        arms = args.arm + (f" and {args.left_arm}" if loop.left else "")
+        arms = loop.arm.name + (f" and {loop.left.arm.name}" if loop.left else "")
         print(f"Other screens are view-only for {arms} (STOP works); drive from here{also}.")
     elif drive_from and args.host in LOCAL_HOSTS:
         print("--drive-from needs --host 0.0.0.0: other computers can't reach the hub yet.")

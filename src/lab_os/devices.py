@@ -186,6 +186,26 @@ def default_device(kinds: tuple[str, ...], registry: Registry | None = None) -> 
     return names[0]
 
 
+def port_exists(path: str) -> bool:
+    """Is this serial port there now (the device plugged in)? The tests replace it."""
+    return os.path.exists(path)
+
+
+def plugged_in_arms(registry: Registry, active: list[str] | tuple[str, ...]) -> list[str]:
+    """The SO-101 followers plugged in now that `lab-os serve` may take without being told
+    (quick job 61), in devices.yaml's order: active in the venue, not off limits, and not
+    borrowed (the green set: LeLab or a training run may need it, so only when named)."""
+    return [
+        d.name
+        for d in registry.devices.values()
+        if d.kind == "so101"
+        and not d.off_limits
+        and not d.borrowed
+        and d.name in active
+        and any(port_exists(p) for p in d.ports)
+    ]
+
+
 def check_port_allowed(port: str, registry: Registry | None = None) -> None:
     """Raise PortNotAllowed unless `port` is a by-id path that doesn't belong to an off-limits arm.
 

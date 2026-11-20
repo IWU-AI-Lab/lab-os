@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — `lab-os serve` now takes the real arm by itself
+**What:** Since quick job 61, `lab-os serve` with no `--arm` opens the SO-101 that is plugged in, and switches its torque on (it holds where it is, it does not move). A coding session that starts the brain to look at a page would take the white arm too. A brain that already has the arm keeps it: the second one says the port is in use and drives the fake arm.
+**Fix:** In a coding session, start the brain with `--arm fake`. The tests never see a port (`tests/conftest.py`, `_no_arm_plugged_in`).
+
 ### 2026-11-20 — The tests failed after a change on the settings page, or with an arm plugged in
 **What:** In the lab, the settings page saves into the repo's `config/` (persona, chat keep time, the hub's look and buttons, the limits). The tests read that folder and expected the committed values, so 6 tests failed after the builder changed settings. One more test failed because so101-white was plugged in: the visitors' welcome names the robots whose `/dev/serial/by-id/…` port exists.
 **Fix:** `tests/conftest.py` gives each test run a copy of `config/` as last committed (`git archive HEAD config`) and uses it as the repo's config. Changes on the settings page do not change the tests now. A committed change can still make a test fail: then update that test. The visitor test's brain treats every port as unplugged.

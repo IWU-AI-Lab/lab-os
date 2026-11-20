@@ -22,9 +22,9 @@ The layout is in `config/games/tic-tac-toe.yaml`: where the board is, the size o
 7. If the camera or the arm moved since the last table map, make the table map again (`docs/guides/ai-control.md` → "Table map").
 
 ## 2. Start the brain
-For the real arm, run:
+Plug in the real arm, then run:
 ```bash
-uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
+uv run --extra so101 lab-os serve --speed 0.3
 ```
 Open **http://localhost:8080/ai** (AI Control) on the desktop to see each call. Keep one hand near STOP.
 

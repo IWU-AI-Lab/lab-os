@@ -25,7 +25,7 @@ The script installs [uv](https://docs.astral.sh/uv/) if it is missing. It makes 
 ```bash
 uv run pytest                                            # the tests (no hardware needed)
 uv run pytest -n auto                                    # the same, in parallel (faster)
-uv run lab-os serve                                      # the brain: the hub, the teleop pages and the fake arm
+uv run lab-os serve                                      # the brain: the hub, the teleop pages and the arm plugged in (else the fake arm)
 uv run lab-os-teleop serve                               # teleop only: the headset page and the fake arm
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay a recording (no browser, no headset)
 ```

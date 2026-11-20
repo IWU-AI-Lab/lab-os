@@ -6,7 +6,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "lab_os.cli",
-      "args": ["serve"],
+      "args": ["serve", "--arm", "fake"],
       "console": "integratedTerminal"
     },
     {
