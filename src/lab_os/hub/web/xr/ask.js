@@ -69,8 +69,7 @@ export class Ask {
     if (V.pressed || V.wakeTurn) return;
     V.unlock();
     this.greeting = false;
-    if (this.voiced && !this.turn) { V.stopSpeaking(); this._end(); }
-    if (this.voiced) return;
+    if (this.voiced) { V.stopSpeaking(); this.turn?.pacer.free(); this._end(); } // stops the answer (quick job 57)
     this.voiced = true;
     this._show("Listening…", "", now);
     this.state = "listening"; this.sfx.listen();
@@ -88,13 +87,17 @@ export class Ask {
     if (this.events.length > 30) this.events.shift();
     if (ev.type === "wake") { // the brain heard the phrase on this headset's microphone
       this.greeting = false;
-      if (this.voiced && !this.turn) this._end();
+      if (this.voiced) { this.turn?.pacer.free(); this._end(); } // the brain stopped the answer (quick job 57)
       this.voiced = true; this._show("Listening…", "", now); this.state = "listening"; this.sfx.listen();
       this.watch = this.VM.silenceWatch((spoke) => {
         this.watch = null;
         if (spoke) { this.V.finish(); this.state = "thinking"; }
         else { this.V.cancel(); this._show("I didn't hear a question.", "", now); this._end(); }
       }, { quietMs: this.VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: this.V.noiseFloor });
+      return;
+    }
+    if (ev.type === "stopped") { // a new question stopped the answer, maybe on another screen
+      if (this.voiced && !this.V.pressed && !this.V.wakeTurn) { this.turn?.pacer.free(); this._end(); }
       return;
     }
     if (ev.type === "open") { this.onOpen?.(ev.page); return; } // the assistant opened a page here

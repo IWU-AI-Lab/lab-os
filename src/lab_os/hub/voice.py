@@ -68,6 +68,9 @@ SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
 # this much (a held greeting waits for the startup), so a page that never says so blocks the wake
 # word on every screen for seconds, not minutes (quick job 42; it was a flat 120 s)
 PLAYBACK_MARGIN_S = 10.0
+# The answer says the wake word itself (the greeting's hint "say hey Jarvis"): the microphones hear
+# it from the speaker, so the phrase is ignored until that piece has played, plus this much
+SAID_PHRASE_MARGIN_S = 1.5
 PLAYING_HOLD_S = 3.0  # "still playing" from the page holds this much longer
 IGNORED_LOG_EVERY_S = 10.0  # a heard wake word that was ignored (a screen busy): logged this often
 GREET_EVERY_S = 10.0
@@ -230,6 +233,7 @@ class VoiceDesk:
     _session: aiohttp.ClientSession | None = None
     _wake_candidates: dict | None = None  # screens that heard the phrase in this window → score
     _wake_quiet_until: float = 0.0
+    _phrase_said_until: float = 0.0  # an answer says the wake word itself: ignore it until then
     _ignored_logged: float = 0.0
     _standby: Hearing | None = None  # a hearing connected ahead of time (the wake word)
     _standby_task: asyncio.Task | None = None
@@ -283,8 +287,16 @@ class VoiceDesk:
     # ---------- the wake word: several screens may hear it, one answers ----------
 
     def wake_heard(self, link: "VoiceLink", score: float) -> None:
+        """A screen heard the phrase. A spoken answer that runs or plays doesn't stop it: the new
+        question stops that answer (quick job 57). Someone asking now, or a typed answer, does."""
         now = time.monotonic()
-        busy = self.chat.busy or any(lk.active() for lk in self.links)
+        busy = self._asking_now()
+        if now < self._phrase_said_until:
+            log.info(
+                "voice: %s heard the wake word in the answer itself: ignored",
+                link.device or "a screen",
+            )
+            return
         if now < self._wake_quiet_until or busy:
             if busy and now - self._ignored_logged > IGNORED_LOG_EVERY_S:
                 self._ignored_logged = now
@@ -303,6 +315,26 @@ class VoiceDesk:
                 self._wake_pick()
                 return
         self._wake_candidates[link] = max(score, self._wake_candidates.get(link, 0.0))
+
+    def _asking_now(self) -> bool:
+        """A question is being heard, or a typed question answered (no voice turn runs): the wake
+        word waits. A spoken answer doesn't: the wake word stops it."""
+        hearing = any(lk.hearing is not None for lk in self.links)
+        typed = self.chat.busy and not any(lk.answering() for lk in self.links)
+        return hearing or typed
+
+    def said_phrase(self, text: str, ends: float) -> None:
+        """An answer's piece says the wake word ("say hey Jarvis"): every screen ignores it until
+        the piece has played."""
+        word = self.wake_phrase().split()[-1:] or [""]
+        if word[0] and word[0].lower() in text.lower():
+            self._phrase_said_until = max(self._phrase_said_until, ends + SAID_PHRASE_MARGIN_S)
+
+    async def stop_answers(self, why: str) -> None:
+        """A new question (the wake word or a mic press): stop every spoken answer that is
+        thought of or played now, on every screen (quick job 57)."""
+        for lk in list(self.links):
+            await lk.stop_answer(why)
 
     def busy_why(self) -> str:
         """What keeps the wake word from starting a question now, for the log."""
@@ -547,6 +579,7 @@ class VoiceLink:
         self.answer_in: str | None = None
         self.last_greet = 0.0
         self.started_at = 0.0
+        self._stopping = False  # stop_answer() cancels the turn: it sends nothing more
         self._out: asyncio.Queue = asyncio.Queue()
         self._writer = asyncio.create_task(self._write())
 
@@ -559,6 +592,7 @@ class VoiceLink:
         # the answer's pieces play one after the other: this one ends after the ones before it
         self._audio_ends = max(time.monotonic(), self._audio_ends) + wav_seconds(wav)
         self.playing_until = self._audio_ends + PLAYBACK_MARGIN_S
+        self.desk.said_phrase(text, self._audio_ends)
         self.send(
             {
                 "type": "audio",
@@ -582,6 +616,29 @@ class VoiceLink:
     def active(self) -> bool:
         busy = self.hearing is not None or (self.task is not None and not self.task.done())
         return busy or time.monotonic() < self.playing_until
+
+    def answering(self) -> bool:
+        """The question was heard: its words, the answer or its audio are on the way or play."""
+        running = self.hearing is None and self.task is not None and not self.task.done()
+        return running or time.monotonic() < self.playing_until
+
+    async def stop_answer(self, why: str) -> bool:
+        """Stop this screen's answer now: the turn (the words, the AI, the speech) and its audio
+        on the page ("stopped"). False when there was none."""
+        if not self.answering():
+            return False
+        task = self.task
+        if task is not None and not task.done():
+            self._stopping = True
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            self._stopping = False
+        self.playing_until = 0.0
+        self.timing = None
+        self.send({"type": "stopped"})
+        log.info("voice: %s's answer stopped: %s", self.device or "a screen", why)
+        return True
 
     def _settle(self) -> None:
         """Back to rest, unless another page's voice turn runs or this page still plays (called
@@ -629,8 +686,8 @@ class VoiceLink:
             if now - self.started_at > limit:
                 self.end()
             return
-        if not self.wake_on or self.detector is None or self.active():
-            return  # not listening for the phrase (or a turn runs, or the answer plays)
+        if not self.wake_on or self.detector is None:
+            return  # not listening for the phrase (an answer that runs or plays doesn't stop it)
         if self._last_audio and now - self._last_audio > AUDIO_GAP_S:
             log.info(
                 "voice: %s sent no audio for the wake word for %.1f s (its microphone paused?)",
@@ -698,7 +755,9 @@ class VoiceLink:
         self.send({"type": "wake_elsewhere"})
 
     async def woken(self, score: float) -> None:
-        """This screen heard the phrase best: hear the question, like a push-to-talk press."""
+        """This screen heard the phrase best: hear the question, like a push-to-talk press. A
+        spoken answer that runs stops first (its page hears "stopped" before "wake")."""
+        await self.desk.stop_answers("the wake word")
         self.send({"type": "wake", "score": round(score, 2)})  # first: the page's sound
         log.info("voice: wake word heard on %s (%.2f)", self.device or "a screen", score)
         if self.detector:
@@ -737,6 +796,8 @@ class VoiceLink:
             self.end()
 
     async def listen(self, mode: str) -> None:
+        if mode != "dictate":  # a new question stops a spoken answer (quick job 57)
+            await self.desk.stop_answers("a new question")
         if self.hearing is not None or (self.task and not self.task.done()):
             self.send({"type": "error", "message": "I'm still on the last one."})
             return
@@ -804,6 +865,10 @@ class VoiceLink:
             return  # couldn't connect: already said why
         try:
             text = await hearing.finish()
+        except asyncio.CancelledError:  # stopped for a new question: let the service go
+            with contextlib.suppress(Exception):
+                await hearing.close()
+            raise
         except VoiceError as e:
             self.send({"type": "error", "message": str(e)})
             self._settle()
@@ -837,16 +902,21 @@ class VoiceLink:
                         self.timing.mark("first_text")
                     speaker.add(ev["text"])
         finally:
-            speaker.close()
-            await speaker.task
-            self.desk.chat.take_say()  # a spoken welcome was just said: nothing left to say
-            self.send({"type": "audio_end", "count": speaker.sent})
-            self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
-            if speaker.sent:
-                self.desk.assistant.set("speaking", 0.5)
+            if self._stopping:  # a new question stopped it: say nothing more
+                speaker.stopped = True
+                speaker.task.cancel()
+                self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
             else:
-                self._timing_done()  # nothing to play: done here
-                self._settle()
+                speaker.close()
+                await speaker.task
+                self.desk.chat.take_say()  # a spoken welcome was just said: nothing left to say
+                self.send({"type": "audio_end", "count": speaker.sent})
+                self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
+                if speaker.sent:
+                    self.desk.assistant.set("speaking", 0.5)
+                else:
+                    self._timing_done()  # nothing to play: done here
+                    self._settle()
 
     async def cancel(self) -> None:
         self.from_wake = False
