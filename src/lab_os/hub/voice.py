@@ -36,6 +36,7 @@ import logging
 import os
 import re
 import time
+import unicodedata
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -47,7 +48,7 @@ from aiohttp import web
 
 from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
-from lab_os.ai.languages import clean_language
+from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.speech import Hearing, VoiceError, hearing_for, speak_any, wav_seconds
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.ai.wake import (
@@ -186,6 +187,15 @@ class TurnTiming:
             waited = self.marks["playing"] - self.marks["ended"]
             line += f" · waited {_s(waited)} after the question"
         return line
+
+
+def _script(c: str) -> str:
+    """The writing system of a letter, roughly: "Latin", "Cyrillic", "CJK", … (for the log)."""
+    try:
+        name = unicodedata.name(c)
+    except ValueError:
+        return "unknown"
+    return "CJK" if name.startswith("CJK") else name.split(" ")[0].title()
 
 
 def speakable(text: str) -> str:
@@ -875,6 +885,7 @@ class VoiceLink:
             return
         finally:
             self.desk.log_spend(setup, hearing.seconds, 0, "heard")
+        self._log_question(setup, text)
         if self.from_wake:
             self.from_wake = False
             text = strip_wake(text, self.desk.wake_phrase())
@@ -886,6 +897,20 @@ class VoiceLink:
             self._settle()
             return
         await self._turn(text, setup)
+
+    def _log_question(self, setup: VoiceSetup, text: str) -> None:
+        """Each spoken question: the device's language settings and the transcriber, so a lab
+        check can say which setting a strange result had (quick job 46). Not the words."""
+        other = sorted({_script(c) for c in text if c.isalpha()} - {"Latin"})
+        log.info(
+            "voice: question on %s: expects %s, answers %s, heard by %s (%s)%s",
+            self.device or "a screen",
+            LANGUAGES.get(self.hear_in or "", "any language"),
+            LANGUAGES.get(self.answer_in or "", "any language"),
+            setup.where,
+            setup.hear,
+            f"; letters not in English: {', '.join(other)}" if other else "",
+        )
 
     def _timing_done(self) -> None:
         timing, self.timing = self.timing, None
