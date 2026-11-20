@@ -13,8 +13,8 @@ after it closes: when the brain restarts, the pages reconnect and the list fills
   the free one (no module open); when two are free, or none, the sender is asked which.
 - **Each device's settings** ("This device": level of detail, drawing resolution, sound, full
   screen, the way in to voice) are kept by the brain under the name, in the place's
-  `hub-devices.yaml`, so every window of the device (and the next browser under that name) gets
-  them.
+  `local/hub-devices.yaml`, so every window of the device (and the next browser under that
+  name) gets them.
 
 Not here (milestone 1, "Connected lab"): robots reporting in, one brain per network.
 """
@@ -71,8 +71,8 @@ def clean_name(name: str) -> str:
 
 
 def settings_file() -> Path:
-    """The place's hub-devices.yaml (a place file: each place names its own devices)."""
-    return config.place_path(FILE_NAME)
+    """The place's local/hub-devices.yaml (each place names its own devices; not in git)."""
+    return config.local_dir() / FILE_NAME
 
 
 class DeviceSettings:

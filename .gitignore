@@ -6,6 +6,10 @@
 *.key
 secrets/
 
+# The lab's own settings (the settings page, each device's settings, table maps): config/local/
+# holds only what the lab changed; the files above it are the defaults (docs/dev/places.md)
+/config/local/
+
 # Python
 __pycache__/
 *.py[cod]

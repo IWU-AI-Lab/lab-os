@@ -4,6 +4,17 @@ lab-os keeps nothing about a particular place in its code (docs/plan/current-foc
 
 The repo's own `config/` is the **lab's** place. Another place gets its own folder, **outside the repo**, with its own `.env`.
 
+## The place's own changes: `local/`
+The files in a config folder are the **defaults**. What a place changes itself goes into its **`local/`** folder: `config/local/` in the lab, `~/my-lab-os/local/` at another place. Git ignores `config/local/`.
+- **The settings page writes there, and only the value that changed.** For example, the persona changed to Jarvis gives `local/place.yaml` with `persona: jarvis`, and the lab's speed cap switched off gives `local/venues/lab.yaml` with `limits: {speed_cap: false}`.
+- **The brain merges the files, value by value:** first the repo's `config/` (for a shared file), then the place's own file, then `local/`. The later file wins. A section (`hub:`, `limits:`) merges key by key. A single value or a list (`hub.modules`) is replaced as a whole.
+- **So a new field in the repo reaches every place.** A place that changed other values in the same file keeps its changes.
+- **To go back to the default,** delete the line in the `local/` file (or delete the file). A `local/` file keeps its comments when the page changes a value.
+- **Also in `local/`:** `hub-devices.yaml` (each device's settings, "Devices" below) and `table-maps/` (`docs/guides/ai-control.md`).
+- **To change a default for every place,** edit the file in `config/` and commit it.
+
+Since 2026-11-20. Before, the settings page wrote into the files in `config/` (the lab's changes showed in `git diff config/`), and a place got a full copy of `theme.yaml` on its first change. That copy did not get new fields. A full copy still works: it is merged like any other layer.
+
 ## Start a new place
 ```bash
 uv run lab-os new-place ~/my-lab-os                 # writes a starter (never overwrites)
@@ -23,9 +34,9 @@ The starter has:
 `place.yaml` may also say what the place is, in a few words (`about: "a lab where students build robots"`): the visitors' welcome uses it ("Welcome to the AI Comp Lab, a lab where …"; `docs/guides/hub.md` → "Visitor mode"). A venue with `visitors: true` is the one visitor mode switches to ("hey Jarvis, it's demo time", or ⚙ → Visitor mode); its `try_this:` lists the hub's cards then. A fixed move like the wave is in `gestures.yaml` (shared, like `poses.yaml`).
 
 ## Which file comes from where
-- **Place files** are only ever read from the place's own folder: `place.yaml`, `devices.yaml`, `venues/`. A home brain never borrows the lab's name, devices or venues. If one is missing, lab-os stops and says so.
-- **`hub-devices.yaml`** (since step 8) is a place file the hub writes itself: each device's own settings by name (⚙ → This device; `docs/guides/hub.md` → "Devices"). It appears on the first change; a place without one starts with every device at the defaults. In the lab it's `config/hub-devices.yaml`: changes from the Newline show up in `git status` like the settings page's.
-- **Shared files** are read from the place's folder if it has them, else from the repo's `config/`: `theme.yaml` (one design everywhere), `poses.yaml` (per arm model), `models.yaml` and `personas/`.
+- **Place files** are only ever read from the place's own folder (and its `local/`): `place.yaml`, `devices.yaml`, `venues/`. A home brain never borrows the lab's name, devices or venues. If one is missing, lab-os stops and says so.
+- **`local/hub-devices.yaml`** (since step 8) is written by the hub itself: each device's own settings by name (⚙ → This device; `docs/guides/hub.md` → "Devices"). It appears on the first change; a place without one starts with every device at the defaults.
+- **Shared files** come from the repo's `config/`. `theme.yaml` merges the place's own `theme.yaml` and `local/theme.yaml` over the repo's (above). `poses.yaml` (per arm model), `models.yaml` and `personas/`: the place's own file replaces the repo's.
 - **`.env`**: the place's own `<folder>/.env`. For the repo's `config/` it's the repo's `.env` (the top folder, next to `pyproject.toml`). Variables already set in the shell win over the file. If the file isn't there, `lab-os serve` logs `no …/.env: no API keys` with the exact path it looked for. `new-place` never copies a `.env`, so keys never spread to a new place.
 - **The lab's protected devices come along to every place:** anything `off_limits: true` in the repo's `config/devices.yaml` is refused at every place, and anything `borrowed: true` (the green arms and their cameras, since step 11) keeps its rules at every place (no motor setup or calibration, driven with a copy of the training calibration, which is only read), even if another folder's `devices.yaml` lists it differently. They're only drivable where a venue lists them in `active_devices`. Switching folders can never weaken them.
 - **Two kinds of protection in `devices.yaml`:** `off_limits: true` = never opened (refused by name, port and USB serial; an entry without a serial blocks that whole USB model). `borrowed: true` = another project's device: lab-os may drive or use it, but `so101_setup` refuses it (also by board serial), it's never a command-line default, and `training_calibration: robots/so_follower/sheep.json` names its training calibration in LeRobot's cache (read only, the source of truth): lab-os drives with its copy in `calibration/<name>/` and refuses if the two differ.

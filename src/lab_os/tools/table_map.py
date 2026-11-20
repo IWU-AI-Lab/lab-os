@@ -135,11 +135,11 @@ def calibrate(
     )
 
 
-# ---------- saving: one file per camera in the place's folder ----------
+# ---------- saving: one file per camera in the place's local/ folder (not in git) ----------
 
 
 def map_path(camera: str) -> Path:
-    return config.active_dir() / "table-maps" / f"{camera}.yaml"
+    return config.local_dir() / "table-maps" / f"{camera}.yaml"
 
 
 def save(m: TableMap) -> Path:

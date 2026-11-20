@@ -377,7 +377,7 @@ async function start() {
     $("#mode").className = "pill bad";
   }
   if (data) {
-    $("#mode").textContent = data.writable ? `Saved into the config files (venue: ${data.venue})` : data.why_not;
+    $("#mode").textContent = data.writable ? `Saved for this place (venue: ${data.venue})` : data.why_not;
     $("#mode").className = `pill ${data.writable ? "on" : "warn"}`;
   }
   const m = data?.visitor_mode;

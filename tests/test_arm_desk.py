@@ -71,7 +71,7 @@ def test_the_setup_and_the_handover_pose():
 
 def test_off_unless_place_yaml_says_so(tmp_path, monkeypatch):
     place = tmp_path / "place.yaml"
-    monkeypatch.setattr(config, "place_path", lambda name: tmp_path / name)
+    monkeypatch.setattr(config, "active_dir", lambda: tmp_path)
     place.write_text("name: x\n")
     assert config.assistant_moves_arm() is False
     place.write_text("name: x\nassistant_moves_arm: true\n")

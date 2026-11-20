@@ -2,6 +2,9 @@
 
 One line per meaningful change, newest first. Demo versions get a git tag (e.g. `demo-2026-11-15`).
 
+## 2026-11-20
+- **The settings page saves into `config/local/`** (`docs/dev/places.md` → "The place's own changes"): only the values that changed, in a folder git ignores. The brain merges them over the files in `config/`, so a new field there reaches every place, and the lab's changes no longer show in `git diff config/` or break the tests. Each device's settings and the table maps are in `config/local/` too.
+
 ## 2026-11-19
 - **Teleop with a webcam** (preview 2, `/webcam`, `docs/guides/webcam-teleop.md`): a new page where your bare hand in front of a webcam (the Logitech C615) drives the arm, no headset. Google's MediaPipe finds the hands in the browser, offline (vendored: about 22 MB). The page sends the same messages as the Quest's bare hands: the right wrist moves the gripper, a left pinch or Space is the clutch, a right pinch closes the gripper, X is STOP. If the right hand leaves the picture, the arm freezes until the clutch is let go and pressed again. Relative only; the wrist doesn't turn. The teleop page links to it. Built and tested with the fake arm; lab check part W. The Kinect waits (its drivers need `sudo`).
 - **One rules file for every AI agent**: the agent rules moved from `CLAUDE.md` to `AGENTS.md`, which Codex and other agents read. `CLAUDE.md` now only points to it. New rule: agents write to the builder in ASD-STE100 (Simplified Technical English).

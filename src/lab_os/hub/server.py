@@ -1014,7 +1014,7 @@ def create_brain_app(
     computer may drive the arm (a real arm served to the network). `recorder`: save the teleop
     input (`lab-os serve --record`). `voices`: the voice setups (default: models.yaml's).
     `device_settings`: where each device's own settings are kept (default: the place's
-    hub-devices.yaml)."""
+    local/hub-devices.yaml)."""
     app = create_app(
         loop,
         recorder,
