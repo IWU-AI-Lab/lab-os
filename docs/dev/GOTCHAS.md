@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — A settings file broken by hand gave "500 Internal Server Error" and an empty ⚙ (quick job 45)
+**What:** lab check F.14: a change to Top Speed showed `500 Internal Server Error`, no "Saved", and Restart Now did nothing; after ⚙ was opened again, the page was empty until the brain restarted. Probably a config file made invalid by hand: the settings page's writer (ruamel) raised its own error, which nothing caught, and the reader had no way to say which file.
+**Fix:** a file that can't be read gives one sentence with the file and the line (`config.broken_yaml`), at the top of ⚙ and for a change; nothing on the settings endpoints answers with a bare error number. A restart that doesn't come back in 45 s says to look at the terminal.
+
 ### 2026-11-20 — The voice changed to another person between answers (quick job 47)
 **What:** the lab heard the assistant's voice change between answers. Both personas use one voice setup (`main`, OpenAI `fable`), so the persona is not the cause. Two paths can change the sound: (1) with the free Gemini key, a TTS model over its limit hands over to the next model, and another model sounds like another person with the same voice name; the greeting's recording could also come from such a model and then play at every start. (2) With OpenAI, each sentence is its own `gpt-4o-mini-tts` request, and the model renders the style text again each time, so the accent can drift. Not confirmed which one the lab heard.
 **Fix:** an answer keeps the model that spoke its first part when it can; a greeting from a fallback model is not saved (older recordings are made again once, "v2" in the name); the terminal names the voice and model of each answer and greeting. If the log shows one model and the sound still changes, it is (2): then try `tts-1-hd` with `fable` (no style text) in `config/models.yaml`.

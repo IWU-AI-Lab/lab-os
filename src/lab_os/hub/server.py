@@ -147,8 +147,21 @@ class Brain:
     check_ai: bool = False  # check the AI service in the background (off in tests)
     visitors: VisitorDesk | None = None  # "say hello to our visitors" (quick job 35)
     started_in: str = ""  # the venue the brain started with: exiting visitor mode goes there
-    # settings changed since the start that apply on a restart (labels), for "Restart Now"
-    restart_needed: list = field(default_factory=list)
+    # settings changed since the start that apply on a restart (key → label), for "Restart Now";
+    # a value set back to what the brain runs with leaves it (quick job 45)
+    restart_needed: dict = field(default_factory=dict)
+    # what the brain runs with, per venue: each setting's value when first seen (key → value)
+    running: dict = field(default_factory=dict)
+
+    def running_values(self, venue: str) -> dict:
+        """The settings as the brain runs with them (read once per venue: at the first look)."""
+        if venue not in self.running:
+            try:
+                sections = settings.read(venue)
+            except Exception:  # a broken file: problems() says which; nothing to compare with
+                sections = []
+            self.running[venue] = {f["key"]: f["value"] for s in sections for f in s["fields"]}
+        return self.running[venue]
 
 
 BRAIN = web.AppKey("brain", Brain)
@@ -395,16 +408,26 @@ async def api_settings_get(request: web.Request) -> web.Response:
                 "visitor_mode": mode,
             }
         )
+    venue = brain.venue.name
+    problems = await asyncio.to_thread(settings.problems, venue)
+    try:
+        sections = await asyncio.to_thread(settings.read, venue)
+        await asyncio.to_thread(brain.running_values, venue)
+    except Exception as e:  # never an empty page without a reason (quick job 45)
+        log.exception("settings: couldn't read them")
+        sections, problems = [], [*problems, f"The settings couldn't be read: {e}"]
     return web.json_response(
         {
-            "sections": settings.read(brain.venue.name),
+            "sections": sections,
+            "problems": problems,  # files that can't be read: the file and the line
             "writable": is_local(request),
             "why_not": None
             if is_local(request)
             else "Settings change only on the brain's computer.",
             "venue": brain.venue.name,
             "visitor_mode": mode,
-            "restart_needed": brain.restart_needed,
+            "restart_needed": list(brain.restart_needed.values()),
+            "restart_keys": list(brain.restart_needed),
         }
     )
 
@@ -420,18 +443,37 @@ async def api_settings_post(request: web.Request) -> web.Response:
         key, value = str(body["key"]), body["value"]
     except (ValueError, KeyError, TypeError):
         raise web.HTTPBadRequest(text='send {"key": "...", "value": ...}') from None
+    brain = request.app[BRAIN]
+    venue = brain.venue.name
     try:
-        value = await asyncio.to_thread(settings.write, key, value, request.app[BRAIN].venue.name)
+        running = await asyncio.to_thread(brain.running_values, venue)  # before the change
+        value = await asyncio.to_thread(settings.write, key, value, venue)
     except settings.SettingError as e:
         return web.json_response({"ok": False, "message": str(e)}, status=400)
-    except (OSError, config.ConfigError) as e:
-        return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
+    except config.ConfigError as e:  # a file that can't be read: the file and the line
+        return web.json_response({"ok": False, "message": f"Not saved. {e}"}, status=400)
+    except Exception as e:  # never a bare "500 Internal Server Error" (quick job 45)
+        log.exception("settings: couldn't save %s", key)
+        msg = f"Not saved: {e}. The brain's terminal has the details."
+        return web.json_response({"ok": False, "message": msg}, status=500)
     field = settings.find(key)
     log.info("setting %s = %r (from the settings page)", key, value)
-    needed = request.app[BRAIN].restart_needed
-    if field.applies == "restart" and field.label not in needed:
-        needed.append(field.label)
-    return web.json_response({"ok": True, "key": key, "value": value, "applies": field.applies})
+    needed = brain.restart_needed
+    if field.applies == "restart":
+        if key in running and running[key] == value:
+            needed.pop(key, None)  # back to what the brain runs with: no restart for it
+        else:
+            needed[key] = field.label
+    return web.json_response(
+        {
+            "ok": True,
+            "key": key,
+            "value": value,
+            "applies": field.applies,
+            "restart_needed": list(needed.values()),
+            "restart_keys": list(needed),
+        }
+    )
 
 
 def switch_venue(app: web.Application, name: str | None) -> Venue:
