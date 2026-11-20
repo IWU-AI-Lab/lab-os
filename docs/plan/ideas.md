@@ -83,7 +83,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm
-- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Jarvis, hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4).
+- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Jarvis, hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4). **Built 2026-11-20:** a named pose, the cube's hand-over and "let go", off unless ⚙ → Robots → The Assistant May Move the Arm, never on a public venue, the brain's own computer only (`docs/guides/hub.md`). Still an idea: other moves ("pick up the cube" and put it somewhere).
 - **What:** someone asks the hub's assistant (typed or by voice) to move the arm ("wave", "pick up the cube"), not only a developer's AI tool (the builder, 2026-11-13).
 - **Watch out:** today the hub's chat stays in the read tier because anyone in the room can talk to it (current focus, "A public screen"). Needs: which venues allow it (never `public: true`), one controller at a time, STOP on every screen, and probably a person nearby.
 - **Plugs into:** the move tools (same safety layer), voice, the persona.

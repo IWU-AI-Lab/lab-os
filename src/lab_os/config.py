@@ -142,6 +142,7 @@ PLACE_FIELDS = {
     "persona",
     "chat_keep_minutes",
     "about",
+    "assistant_moves_arm",
 }
 
 
@@ -151,6 +152,14 @@ def ai_budget() -> float | None:
     raw = yaml.safe_load(place_path("place.yaml").read_text()) or {}
     budget = raw.get("ai_budget_usd_month")
     return float(budget) if budget is not None else None
+
+
+def assistant_moves_arm() -> bool:
+    """place.yaml's `assistant_moves_arm` as it is now (Settings changes it while the brain runs):
+    the hub's assistant may move the arm to a pose and hand over the cube (preview 4). Off when
+    left out."""
+    raw = yaml.safe_load(place_path("place.yaml").read_text()) or {}
+    return raw.get("assistant_moves_arm") is True
 
 
 def load_place(path: Path | None = None) -> Place:

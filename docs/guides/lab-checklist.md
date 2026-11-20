@@ -158,6 +158,21 @@ uv run --extra so101 lab-os serve --arm so101-white --speed 0.3
 - **G.6** If Codex is on the lab desktop: connect it (the guide, section 3) and play one game with the same prompt. → did it play the whole game? (yes / no: what went wrong) Did it follow the route? (yes / no)
 - **G.7** If Gemini CLI is on the lab desktop: do G.6 with Gemini CLI. → the same two answers. Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
+## H. "Jarvis, hand me the cube" (25 min)
+Preview 4: the hub's assistant moves the arm to a named pose, and hands you the blue cube. How it works: `docs/guides/hub.md` → "The assistant moves the arm". You need the blue cube and the stand camera's table map. Stand in front of the arm, across the table, with a hand near STOP on a second device (Monitor).
+
+Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
+```bash
+uv run --extra so101 lab-os serve --arm so101-white --speed 0.3 --open desk
+```
+- **H.1** The switch is off by default. On the hub, ask "move the arm to home" (typed). → did the arm stay still? (yes / no)
+- **H.2** Select ⚙ → Robots → **The Assistant May Move the Arm**. Ask "Hey Jarvis, move the arm to ready" by voice. → did the arm go to `ready`, slowly? (yes / no) Did AI Control show the moves? (yes / no)
+- **H.3** Ask "move the arm to the hand-over pose". → is the gripper held out toward you, at a height you can reach easily? (yes / too low / too high / not toward me)
+- **H.4** Put the cube about 20 cm straight in front of the arm. Ask "Jarvis, hand me the cube". → did the assistant say that it found the cube? (yes / no: what did it say) Did the arm pick it up? (yes / no / it missed)
+- **H.5** → did the arm hold the cube out to you at the hand-over pose? (yes / no) Was it easy to take? (yes / no) Say "let go". → did the gripper open? (yes / no)
+- **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
+- **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
+
 ## Optional: the Kinect, without drivers (5 min)
 The lab's Kinect is model 1414 (the first Kinect, for the Xbox 360). lab-os does not use it yet: it needs drivers that need `sudo` (`docs/guides/webcam-teleop.md` → "Limits of the preview"). These steps install nothing.
 - **K.1** Find the Kinect's cable. → does it end in a normal USB plug, or in an orange-tipped Xbox plug? Does the lab have the Kinect's power and USB adapter? (yes / no)

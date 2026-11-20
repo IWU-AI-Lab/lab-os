@@ -72,6 +72,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import load_registry
+from lab_os.hub.arm_desk import Actions, ArmDesk
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
@@ -1053,7 +1054,7 @@ def create_brain_app(
         facts=lambda v: _facts(app, v),
         wave=lambda: _wave(app),
     )
-    chat.actions = visitors
+    chat.actions = Actions(visitors, ArmDesk(app[TOOLS]))  # the arm's: preview 4
     voice = VoiceDesk(
         chat,
         assistant,

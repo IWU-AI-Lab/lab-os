@@ -8,8 +8,10 @@ The hub's chat reads and answers (rule 5), and opens pages on the screen that as
 2026-11-14): the page sends what it can show (`pages`), the model gets an `open_page` tool for them,
 and the turn yields an `open` event the page acts on. A round that only opens a page is answered
 right away ("Here's Teleop."), without asking the model again.
-With `actions` (the hub's visitor mode, lab_os.hub.visitors) the model also gets the tools that
-start and exit visitor mode and wave the arm, when the question comes from the brain's own computer.
+With `actions` (the hub's visitor mode, lab_os.hub.visitors; the arm, lab_os.hub.arm_desk) the
+model also gets the tools that start and exit visitor mode and wave the arm, and (when Settings
+allows it) move the arm to a pose and hand over the cube, when the question comes from the brain's
+own computer.
 With a `store` (lab_os.ai.history) the conversation is kept for a short while: saved after every
 answer, put aside by a reset, brought back with `restore()`.
 """
@@ -119,7 +121,7 @@ class Conversation:
         actions=None,
     ):
         """`actions`: more tools for this turn, `.tools(local)` → OpenAI-style tools and
-        `await .call(name, local)` → (the result for the model, events for the page).
+        `await .call(name, local, arguments)` → (the result for the model, events for the page).
         `persona`: read before every turn, so a venue or persona edit applies without a restart;
         it then sets the setup (`model`) and the personality instead of the two arguments."""
         self.assistant = assistant
@@ -390,7 +392,7 @@ class Conversation:
                             result = f"Error: not a page here (one of: {', '.join(pages)})."
                     elif call.name in action_names:
                         only_pages = False
-                        result, events = await self.actions.call(call.name, local)
+                        result, events = await self.actions.call(call.name, local, call.arguments)
                         for ev in events:
                             welcomed = welcomed or (ev["type"] == "venue" and ev.get("visitors"))
                             yield ev

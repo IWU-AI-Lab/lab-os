@@ -225,6 +225,16 @@ SECTIONS: list[Section] = [
                 applies="restart",
             ),
             Field(
+                "place",
+                "assistant_moves_arm",
+                "The Assistant May Move the Arm",
+                "bool",
+                "On: asked on this computer, it moves the arm to a named pose and hands over the "
+                "cube. In every venue.",
+                default=False,
+                applies="next",
+            ),
+            Field(
                 "venue",
                 "max_speed_scale",
                 "Top Speed",

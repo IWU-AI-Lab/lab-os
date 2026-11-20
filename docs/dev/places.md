@@ -15,7 +15,7 @@ Or set `LAB_OS_CONFIG=~/my-lab-os` in your shell and leave out `--config`.
 The starter has:
 | File | What |
 |---|---|
-| `place.yaml` | `name` (the hub's title and the startup title), `venue` (the default venue), `persona` (who the assistant is, `docs/dev/personas.md`), `ai_budget_usd_month`, `chat_keep_minutes` (`docs/dev/chat.md`), `domain` (not used yet: the secure address is deferred, `docs/plan/current-focus.md` → step 7) |
+| `place.yaml` | `name` (the hub's title and the startup title), `venue` (the default venue), `persona` (who the assistant is, `docs/dev/personas.md`), `ai_budget_usd_month`, `chat_keep_minutes` (`docs/dev/chat.md`), `assistant_moves_arm` (the hub's assistant may move the arm, off by default: `docs/guides/hub.md`), `domain` (not used yet: the secure address is deferred, `docs/plan/current-focus.md` → step 7) |
 | `devices.yaml` | the devices here; starts with the software arm only |
 | `venues/home.yaml` | how cautious to be here (speed, motion allowed, active devices) |
 | `.env.example` | copy to `.env` in the same folder (your place's folder, not lab-os's `src/lab_os/place_template/`) and put your own API keys in it |
