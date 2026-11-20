@@ -731,7 +731,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 #power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
 #power-menu[hidden] { display: none; }
 #power-menu p { margin: 0.2rem 0 0.6rem; font: var(--w-lines) 0.85rem/1.45 var(--f-lines); color: var(--text-dim); }
-#power-menu .warn { display: flex; gap: 0.6rem; align-items: flex-start; color: var(--accent); }
+#power-menu .warn { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.8rem; padding: 0.55rem 0.7rem; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 0.95rem; color: var(--accent); }
 #power-menu .warn .ico { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; }
 #power-menu .oo-row.go { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
 #power-menu .oo-row.go:hover:not(:disabled), #power-menu .oo-row.go:focus-visible { border-color: var(--danger); color: var(--hot); }
@@ -3324,14 +3324,16 @@ async function confirmShutDown() {
   if (!r?.allowed) { PM.replaceChildren(Object.assign(document.createElement("p"), { className: "oo-msg", textContent: r?.why_not || "The brain didn't answer." })); return; }
   const say = document.createElement("p");
   say.textContent = "Stops any move, lets go of the arm, closes the cameras and microphones and stops the brain. Every screen then says lab-os is off; the \"Start lab-os\" icon starts it again.";
-  const parts = [Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Shut down lab-os?" }), say];
-  if (r.warning) {
+  const parts = [Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Shut down lab-os?" })];
+  if (r.warning) { // first, before the rest (quick job 44: it was missed under the paragraph)
     const w = document.createElement("p");
     w.className = "warn";
     w.innerHTML = `<svg class="ico"><use href="#i-warn"/></svg><span></span>`;
     w.querySelector("span").textContent = r.warning;
     parts.push(w);
   }
+  parts.push(say);
+  const limp = r.limp || [];
   const msg = Object.assign(document.createElement("p"), { className: "oo-msg" });
   msg.setAttribute("aria-live", "polite");
   const go = powerRow("Shut down", "now", async () => {
@@ -3350,6 +3352,7 @@ async function confirmShutDown() {
       PM.querySelectorAll("button").forEach((b) => (b.disabled = false));
     }
   }, "go");
+  if (limp.length) go.querySelector(".oo-sub").textContent = `${limp.join(" and ")} ${limp.length > 1 ? "go" : "goes"} limp`;
   parts.push(go, powerRow("Cancel", "keep it running", closePower), msg);
   PM.replaceChildren(...parts);
   go.focus();

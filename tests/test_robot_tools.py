@@ -446,7 +446,7 @@ async def test_mcp_over_http_on_localhost(rig):
             r = await c.call_tool("arm_status", {})
             assert json.loads(r.content[0].text)["arm"] == "fake-arm"
     finally:
-        http.shutdown()
+        await http.shutdown()
         await asyncio.wait_for(task, 5)
 
 

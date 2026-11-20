@@ -24,6 +24,7 @@ from lab_os.teleop.server import SHUTDOWN, create_app
 from lab_os.venues import load_venue
 
 PRINT_HZ = 10
+STOP_WAIT_S = 1.0  # a request still running when the server stops gets this long (quick job 44)
 
 HEALTH_DIR = REPO_ROOT / "logs" / "servo-health"  # what 1:1 does to the servos (not in git)
 
@@ -246,7 +247,9 @@ async def serve(
     the hub's "Shut down lab-os"). The default host is localhost only: a secure context for
     WebXR, and nothing else on the network can connect. `after_start()` runs once it listens
     (lab-os serve --open: the browser)."""
-    runner = web.AppRunner(app, access_log=None)
+    # shutdown_timeout: a request still running when it stops (a chat answer streaming) gets
+    # this long, then it's cancelled. aiohttp's default, 60 s, kept lab-os up ~30 s (quick job 44).
+    runner = web.AppRunner(app, access_log=None, shutdown_timeout=STOP_WAIT_S)
     await runner.setup()
     try:
         await web.TCPSite(runner, host, port).start()

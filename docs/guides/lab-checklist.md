@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then T, then W, then the parts that the sessions add for the other previews and the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then S, then T and D, then W, then the parts that the sessions add for the other previews and the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -52,6 +52,14 @@ Setup: the desktop, and the Newline's own Chrome (or a laptop instead of the New
 - **11.12** Send Monitor to the desk again. Press Ctrl+C in the brain's terminal. Wait 10 seconds. Click **Start lab-os**. → did both hubs come back without a reload? (yes / no) After how many seconds?
 - **11.13** Shut down the desktop and switch off the Newline. Switch both on. Click **Start lab-os**, then tap the Newline's icon. → are both back under their names? (yes / no) Is the Newline's Drawing Resolution still 0.5? (yes / no)
 
+## S. Safety fixes on the real arm (25 min)
+Setup: `so101-white` with its power supply and USB cable. Claude Code on the desktop, connected to the brain's robot tools (`docs/guides/ai-control.md`). Keep one hand at STOP.
+- **S.1** (quick job 44) Click **Start lab-os**. On the desktop's hub, press ⏻ → **Shut down lab-os**. → does the first line say that so101-white goes limp? (yes / no) Does the **Shut down** button say it too? (yes / no) Press **Cancel**.
+- **S.2** (quick job 44) Connect the Quest with USB. Run `adb reverse tcp:8080 tcp:8080`. In the Quest's browser, open `http://localhost:8080/xr` and press **Enter AR (your room)**. Pull the trigger until the hub is around you. Put the headset on the table. → did the hub open in AR? (yes / no)
+- **S.3** (quick job 44) In Claude Code, prompt: `Go to the home pose.` Wait until the arm is at home. Hold the arm. Prompt: `Go to the ready pose.` While the arm moves, press ⏻ → **Shut down lab-os** → **Shut down**. → did the arm stop at once and make no more moves? (yes / no) Did it go limp in your hand within about 2 seconds? (yes / no) Did the terminal close within about 2 seconds, after `lab-os was shut down from the hub; so101-white was let go.`? (yes / no)
+- **S.4** (quick job 44) Look at the desktop's pages. Put on the Quest. → did every page on the desktop say "lab-os is off"? (yes / no) Did the Quest show a "lab-os is off" card in front of you? (yes / no)
+- **S.5** (quick job 44) Click **Start lab-os**. → did the desktop's pages come back by themselves? (yes / no)
+
 ---
 
 ## For Tuesday 2026-11-24: the previews
@@ -95,6 +103,12 @@ In a second terminal, run `adb reverse tcp:8080 tcp:8080`.
 - **T.16** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
 - **T.17** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
 - **T.18** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
+
+## D. STOP from another device (10 min)
+Setup: `so101-white` connected, the brain running (part T's command without `--left-arm`). A second device (a phone or a laptop) on the brain's network, or the Quest's browser.
+- **D.1** On the second device, open `http://<address>:8080/monitor`. → does Monitor show the arm and a STOP button? (yes / no)
+- **D.2** On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
+- **D.3** Say `Hey Jarvis, the visitors have left`. → nothing to report.
 
 ## W. Teleop with a webcam (40 min)
 Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. Do W.1 to W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.

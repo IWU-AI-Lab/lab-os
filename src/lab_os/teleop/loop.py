@@ -22,6 +22,10 @@ and a venue's caps and the mode (relative or 1:1) are passed on to it. The left 
 only (the Quest page measures the left hand from the left 3D arm, so 1:1 works for it too);
 jogging and the AI tools drive only this loop's arm. Its `arm_*` messages carry its own `device`
 (the pages' ArmFeed tells the two arms apart by it); its state is the `left_arm` part of `status`.
+
+Shutting down (quick job 44): `shut_down()` freezes both arms and, from then on, nothing moves
+until the program ends: no AI move starts, teleop and jogging input is ignored, and the USB is not
+checked again (a reconnect would switch the torque on). `lab-os serve`'s cleanup then lets go.
 """
 
 import asyncio
@@ -123,6 +127,8 @@ class TeleopLoop:
     # True (pose input only).
     left: "TeleopLoop | None" = None
     is_left: bool = False
+    # lab-os is shutting down or restarting (why), or None: nothing moves any more (quick job 44)
+    shutting_down: str | None = None
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -138,6 +144,8 @@ class TeleopLoop:
 
     def start_motion(self, motion: Motion) -> None:
         """Run an AI move (the caller checked that nobody else has control)."""
+        if self.shutting_down:
+            raise RuntimeError(self.shutting_down)
         if not self.arm_connected:
             raise RuntimeError(f"{self.arm.name} is disconnected")
         if self.motion is not None:
@@ -256,11 +264,21 @@ class TeleopLoop:
         if self.left:
             self.left.stop(why)
 
+    def shut_down(self, why: str) -> None:
+        """lab-os is shutting down (or restarting): freeze both arms now, and refuse every move
+        from here on, whoever asks (see the module docstring). `why`: what a running AI move and
+        any later one are told."""
+        self.shutting_down = why
+        self._freeze(why)
+        if self.left:
+            self.left.shut_down(why)
+
     def check_link(self, now: float, force: bool = False) -> None:
         """Is the arm's USB still there; is it back? (drivers with `port_present`, see above)
-        `force`: check now (a step just failed), not only every link_check_s."""
+        `force`: check now (a step just failed), not only every link_check_s. Not while shutting
+        down: a reconnect switches the torque on."""
         present = getattr(self.arm, "port_present", None)
-        if present is None:
+        if present is None or self.shutting_down:
             return
         wait = self.link_check_s if self.arm_connected else self.reconnect_s
         if not force and now - self._link_t < wait:
@@ -340,6 +358,8 @@ class TeleopLoop:
             self.motion = None  # the next tick has no input: freeze = hold here
 
     def step(self, now: float, dt: float) -> None:
+        if self.shutting_down:
+            return  # frozen by shut_down(); nothing may move again (quick job 44)
         if not self.arm_connected:
             return  # nothing to drive; check_link reconnects
         if self.motion is not None:
@@ -414,6 +434,7 @@ class TeleopLoop:
             "needs_release": self.mapper.needs_release or self.jog.needs_release,
             "input_kind": self.input_kind,
             "ai_motion": self.motion_active,
+            "shutting_down": self.shutting_down is not None,
             "speed_scale": self.speed_scale,
             "max_speed_scale": self.max_speed_scale,
             # hand → arm: "relative" or "one_to_one"; 1:1 only with kinematics (and a Quest page

@@ -22,6 +22,9 @@ and with two arms at once (`TeleopLoop.left`) it stops both arms.
 other computers are watchers, so another screen can show the hub and the arm but only STOP it.
 Control stays with this computer (and the Quest over `adb reverse`, which arrives as localhost),
 plus the addresses in `drive_from` (`lab-os serve --drive-from pi01`: the builder's own screens).
+
+When the server stops (Ctrl+C, or the hub's "Shut down lab-os"), it closes every page's WebSocket
+at once (`close_sockets`), so the program doesn't wait for open pages (quick job 44: ~30 s before).
 """
 
 import asyncio
@@ -30,7 +33,7 @@ import logging
 import time
 from pathlib import Path
 
-from aiohttp import WSMsgType, web
+from aiohttp import WSCloseCode, WSMsgType, web
 
 from lab_os import REPO_ROOT
 from lab_os.teleop.loop import TeleopLoop
@@ -42,6 +45,7 @@ WEB_DIR = Path(__file__).parent / "web"
 SHARED_WEB_DIR = Path(__file__).parents[1] / "web"
 MODELS_DIR = REPO_ROOT / "models"
 STATUS_HZ = 10
+CLOSE_WAIT_S = 1.0  # at most this long for the pages to answer the close, when the server stops
 
 log = logging.getLogger(__name__)
 
@@ -207,6 +211,23 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     return ws
 
 
+async def close_sockets(sockets) -> None:
+    """Close these WebSockets now, all together, waiting at most CLOSE_WAIT_S for the pages to
+    answer: a stopping server would otherwise wait for every open page (quick job 44). The pages
+    were told first (`brain_off`) and reconnect by themselves once the brain is back."""
+    closing = [
+        asyncio.ensure_future(ws.close(code=WSCloseCode.GOING_AWAY, message=b"lab-os is off"))
+        for ws in list(sockets)
+        if not ws.closed
+    ]
+    if closing:
+        await asyncio.wait(closing, timeout=CLOSE_WAIT_S)
+
+
+async def _close_pages(app: web.Application) -> None:
+    await close_sockets(app[CLIENTS])
+
+
 async def _broadcaster(app: web.Application) -> None:
     """The only task writing to clients: each driver command as it happens + status at 10 Hz."""
     period = 1 / STATUS_HZ
@@ -288,5 +309,6 @@ def create_app(
     app.router.add_static("/web", SHARED_WEB_DIR)
     app.router.add_static("/models", MODELS_DIR)
     app.cleanup_ctx.append(_background)
+    app.on_shutdown.append(_close_pages)
     app.on_response_prepare.append(_no_stale_files)
     return app

@@ -15,6 +15,8 @@
 // jump), B or Y closes a page. Units: metres; the stage (everything) is placed where your head is,
 // facing where you look, at the start and at each jump.
 // "Preview on this screen" runs the same scene without a headset (drag to look around, click to press).
+// "Shut down lab-os" (quick job 44): the brain says so first ("brain_off" on /ws); the hub around you goes
+// away and a "lab-os is off" card stays in front of you (xr/off.js), as every page's cover does on a screen.
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { Checks, Greeting, Title } from "./xr/boottext.js";
@@ -22,10 +24,12 @@ import { Core, RING_ORDER } from "./xr/core.js";
 import { C, arrive, clamp, loadFonts, loadIcons } from "./xr/draw.js";
 import { Ignition } from "./xr/ignition.js";
 import { Network } from "./xr/network.js";
+import { OffCard } from "./xr/off.js";
 import { Sfx } from "./xr/sfx.js";
 import { HubView } from "./xr/hub.js";
 import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
+import { getLink } from "/static/link.js";
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -109,6 +113,7 @@ class Show {
 
   /** The trigger or a pinch (or a click on a screen); `hit`: what that pointer is on. */
   press(now, hit) {
+    if (this.off) return; // lab-os is off: nothing to press
     this.sfx.unlockAudio();
     if (this.phase === "ignite") {
       this.ign.unlock(now); this.sfx.unlock();
@@ -119,6 +124,17 @@ class Show {
     else if (this.phase === "hub" && now > this.hubAt + 600) {
       if (this.hub.press(hit, now) === "power") this.toIgnite(); // ⏻: back to the start screen
     }
+  }
+  /** lab-os was shut down (or restarts): the hub goes, the microphone closes, the card stays. */
+  turnOff(msg) {
+    if (this.off) return;
+    this.off = new OffCard(msg);
+    this.scene.add(this.off.mesh);
+    this.stage.visible = false;
+    this.pointer.setTargets([]);
+    for (const k of ["left", "right", "mouse"]) this.pointer.hide(k);
+    this.hub.ask.V?.off();
+    this.sfx.close?.();
   }
   /** B or Y: back (closes an open page or module; in Teleop only B, Y is teleop's). */
   back(now, key) { if (this.phase === "hub") this.hub.back(now, key); }
@@ -204,6 +220,7 @@ class Show {
   }
 
   step(dt, now, camera) {
+    if (this.off) return this.off.follow(camera, dt);
     if (this.wantPlace) { this.placeAt(camera); this.wantPlace = typeof this.wantPlace === "number" && this.wantPlace > 1 ? this.wantPlace - 1 : false; }
     let v = V_DRIFT, trail = 0.04, bright = 0.6, k = 0, tint = 0, starShow = 1, impact = false, arriveK = 0, coreScale = BOOT_SCALE;
     const P = this.phase;
@@ -312,6 +329,7 @@ async function pollPanels(show) {
   Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
 }
 async function poll(show) {
+  if (show.off) return;
   show.hub.ask.syncWake(show.phase === "hub"); // in a module or a page too: "hey Jarvis, back to the hub"
   if (show.phase === "hub") show.hub.ask.pollChat(clockNow());
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
@@ -325,7 +343,7 @@ async function poll(show) {
 const FWD = new THREE.Vector3();
 const backWas = {};
 function xrPointers(show, frame, r, now) {
-  const ref = r.xr.getReferenceSpace(), on = show.phase === "hub";
+  const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" && !show.off;
   const teleop = on && show.hub.module?.id === "teleop";
   // Teleop open: its own session reads the controllers and drives the arm; only the right ray can
   // reach the tab (Back), with no beam in the way (its trigger or pinch only grips while the clutch is held)
@@ -361,6 +379,7 @@ async function start(mode) {
   show.title.text = show.facts.title;
   await pollPanels(show);
   show.hub.facts.status = show.facts.status;
+  getLink("monitor").on("brain_off", (m) => show.turnOff(m)); // a watcher's link: it drives nothing
   const timer = setInterval(() => poll(show), 1500), timer2 = setInterval(() => pollPanels(show), 20000);
   const r = makeRenderer(ar);
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 400);

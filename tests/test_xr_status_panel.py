@@ -25,14 +25,20 @@ STATUS = {
 
 
 def panel(
-    status=STATUS, frozen=False, gripper=42, no_controller=False, source="controllers", moving=False
+    status=STATUS,
+    frozen=False,
+    gripper=42,
+    no_controller=False,
+    source="controllers",
+    moving=False,
+    off=None,
 ):
     feed = (
         None
         if status is None
         else {"status": status, "frozen": frozen, "joints": {"gripper": gripper}}
     )
-    args = json.dumps([feed, no_controller, source, moving])
+    args = json.dumps([feed, no_controller, source, moving, off])
     script = (
         f"import({json.dumps(MODULE.as_uri())}).then(m => "
         f"console.log(JSON.stringify(m.panelText(...{args}))))"
@@ -145,3 +151,19 @@ def test_two_arms_in_1_to_1_each_arm_says_where_its_hand_is():
     assert p["hint"][0] == "1:1: each hand in its ball"
     held = left | {"clutch": True, "one_to_one": True}
     assert panel(status=s | {"left_arm": held})["left"]["state"] == "Left following 1:1"
+
+
+@pytest.mark.parametrize(
+    "off, state, hint",
+    [
+        ({"from": "desk"}, "lab-os is off", ["The arm was let go", "Start it from its icon"]),
+        ({"from": "desk", "restart": True}, "lab-os is restarting", ["It comes back by itself"]),
+    ],
+)
+def test_says_lab_os_is_off_in_the_headset(off, state, hint):
+    """Quick job 44: the page's "lab-os is off" cover isn't seen in the headset; the panel says it,
+    whatever the arm was doing (two arms too), with nothing that looks live."""
+    two = STATUS | {"clutch": True, "left_arm": {"connected": True, "frozen": False}}
+    t = panel(status=two, off=off)
+    assert (t["state"], t["level"], t["hint"]) == (state, "offline", hint)
+    assert t["gripper"] is None and t["speed"] is None and t["left"] is None
