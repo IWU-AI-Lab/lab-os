@@ -17,6 +17,10 @@
 // "Preview on this screen" runs the same scene without a headset (drag to look around, click to press).
 // "Shut down lab-os" (quick job 44): the brain says so first ("brain_off" on /ws); the hub around you goes
 // away and a "lab-os is off" card stays in front of you (xr/off.js), as every page's cover does on a screen.
+// Quick job 78: the hub in VR doesn't count on that one message. When the brain doesn't answer (when you
+// enter VR or AR, at a press on the start screen, or for ~3 s at any time), the same card says "lab-os is
+// not reachable" and nothing starts; once the brain answers again, the page reloads by itself. Exit (under the hub on every page, and under the off card) leaves VR or AR, back to the
+// browser.
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { Checks, Greeting, Title } from "./xr/boottext.js";
@@ -24,6 +28,7 @@ import { Core, RING_ORDER } from "./xr/core.js";
 import { C, arrive, clamp, loadFonts, loadIcons } from "./xr/draw.js";
 import { Ignition } from "./xr/ignition.js";
 import { Network } from "./xr/network.js";
+import { ExitButton } from "./xr/modules.js";
 import { OffCard } from "./xr/off.js";
 import { Sfx } from "./xr/sfx.js";
 import { HubView } from "./xr/hub.js";
@@ -53,6 +58,9 @@ function runTimers() {
 }
 // the hub's arrival curve for the core, cubic-bezier(0.2, 0.9, 0.25, 1), close enough
 const settle = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3.4);
+// quick job 78: the brain's status is read every 1.5 s; two reads in a row with no answer (~3 s): lab-os
+// counts as off. A press after a longer quiet time (the headset slept, so the reads stopped) asks first.
+const LOST_MS = 3500, LOST_READS = 2;
 
 class Show {
   constructor(ar) {
@@ -81,7 +89,14 @@ class Show {
     this.hub.scene = this.scene; this.hub.ar = ar;
     this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh);
     this.pointer = new Pointer(this.scene);
+    // Exit (quick job 78): under the core and the ask line, on every page of the hub (a module too)
+    this.exit = new ExitButton(0.44, 0.15);
+    this.exit.mesh.position.set(0, -1.22, -D + 0.1);
+    this.exit.mesh.visible = false;
+    this.stage.add(this.exit.mesh);
+    this.leave = () => {}; // start() sets it: end the VR or AR session, or close the preview
     this.facts = { title: "Lab", greeting: "", status: null, arm: null, display: "" };
+    this.seenAt = Date.now(); this.misses = 0; // the brain's last answer, and the failed reads since (quick job 78)
     this.phase = "ignite";
     this.t0 = 0;
     this.skip = false;
@@ -113,7 +128,20 @@ class Show {
 
   /** The trigger or a pinch (or a click on a screen); `hit`: what that pointer is on. */
   press(now, hit) {
-    if (this.off) return; // lab-os is off: nothing to press
+    if (hit?.what.kind === "exit") return this.leave(); // Exit: back to the browser, from any page
+    if (this.off) return; // lab-os is off: nothing else to press
+    if (this.asking) return; // still asking the brain (below)
+    if (this.unsure()) { // a shutdown this page didn't hear about? Ask the brain before anything starts
+      this.sfx.unlockAudio();
+      this.asking = true;
+      getJSON("/api/status").then((st) => {
+        this.asking = false;
+        if (!st) return this.turnOff({ lost: true });
+        this.heard();
+        this.press(clockNow(), hit);
+      });
+      return;
+    }
     this.sfx.unlockAudio();
     if (this.phase === "ignite") {
       this.ign.unlock(now); this.sfx.unlock();
@@ -126,12 +154,17 @@ class Show {
     }
   }
   /** lab-os was shut down (or restarts): the hub goes, the microphone closes, the card stays. */
+  /** The brain answered a status read. */
+  heard() { this.seenAt = Date.now(); this.misses = 0; }
+  /** No recent answer from the brain (a read failed, or none for a while): ask before a press acts. */
+  unsure() { return this.misses > 0 || Date.now() - this.seenAt > LOST_MS; }
   turnOff(msg) {
     if (this.off) return;
     this.off = new OffCard(msg);
+    this.off.lost = !!msg.lost;
     this.scene.add(this.off.mesh);
     this.stage.visible = false;
-    this.pointer.setTargets([]);
+    this.pointer.setTargets([this.off.exit.mesh]); // only Exit, under the card
     for (const k of ["left", "right", "mouse"]) this.pointer.hide(k);
     this.hub.ask.V?.off();
     this.sfx.close?.();
@@ -220,7 +253,7 @@ class Show {
   }
 
   step(dt, now, camera) {
-    if (this.off) return this.off.follow(camera, dt);
+    if (this.off) return this.off.follow(camera, dt, this.pointer.all().length > 0);
     if (this.wantPlace) { this.placeAt(camera); this.wantPlace = typeof this.wantPlace === "number" && this.wantPlace > 1 ? this.wantPlace - 1 : false; }
     let v = V_DRIFT, trail = 0.04, bright = 0.6, k = 0, tint = 0, starShow = 1, impact = false, arriveK = 0, coreScale = BOOT_SCALE;
     const P = this.phase;
@@ -270,7 +303,10 @@ class Show {
     this.greet.step(now);
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
-    this.pointer.setTargets(P === "hub" ? this.hub.targets() : []);
+    this.exit.mesh.visible = P === "hub";
+    this.exit.hover = this.pointer.all().some((h) => h.what.kind === "exit");
+    if (P === "hub") this.exit.paint();
+    this.pointer.setTargets(P === "hub" ? [...this.hub.targets(), this.exit.mesh] : []);
     camera.getWorldPosition(this.hub.cameraPos ||= new THREE.Vector3());
     this.stage.worldToLocal(this.hub.cameraPos);
     // teleop's own room replaces the far layer while it's open
@@ -313,7 +349,9 @@ class Show {
 
 /* ---------- the brain's facts ---------- */
 async function getJSON(url) {
-  try { const r = await fetch(url, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; }
+  // a time limit, so a read can't hang (quick job 78). Generous: a busy headset's first reads take ~2.5 s,
+  // and a brain that's gone fails at once ("connection refused"), not by this limit
+  try { const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(6000) }); return r.ok ? await r.json() : null; } catch { return null; }
 }
 async function loadFacts(show) {
   const [hub, hello, st, arm] = await Promise.all([getJSON("/api/hub"), getJSON("/api/greeting"), getJSON("/api/status"), getJSON("/api/arm")]);
@@ -321,6 +359,7 @@ async function loadFacts(show) {
   show.hub.setModules((hub?.modules || []).map((m) => m.id));
   if (hello?.text) show.facts.greeting = hello.text;
   show.facts.status = st; show.facts.arm = arm;
+  if (st) show.heard();
   if (st?.time_ms) show.facts.offset = st.time_ms - Date.now();
   show.ign.place = st?.venue || "";
 }
@@ -329,10 +368,16 @@ async function pollPanels(show) {
   Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
 }
 async function poll(show) {
-  if (show.off) return;
+  if (show.off) { // not reachable: reload once the brain answers again (after a shutdown, /web/off.js does it)
+    if (show.off.lost && (await getJSON("/api/status"))) location.reload();
+    return;
+  }
   show.hub.ask.syncWake(show.phase === "hub"); // in a module or a page too: "hey Jarvis, back to the hub"
   if (show.phase === "hub") show.hub.ask.pollChat(clockNow());
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
+  if (show.off) return;
+  if (st) show.heard();
+  else if (++show.misses >= LOST_READS) return show.turnOff({ lost: true }); // shut down, and this page missed the message
   if (st) show.facts.status = st; else if (show.facts.status) show.facts.status = { ...show.facts.status, assistant: { state: "offline" } };
   if (arm) show.facts.arm = arm;
   show.hub.facts.status = show.facts.status;
@@ -343,8 +388,8 @@ async function poll(show) {
 const FWD = new THREE.Vector3();
 const backWas = {};
 function xrPointers(show, frame, r, now) {
-  const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" && !show.off;
-  const teleop = on && show.hub.module?.id === "teleop";
+  const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" || !!show.off; // off: Exit on the card
+  const teleop = on && !show.off && show.hub.module?.id === "teleop";
   // Teleop open: its own session reads the controllers and drives the arm; only the right ray can
   // reach the tab (Back), with no beam in the way (its trigger or pinch only grips while the clutch is held)
   if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
@@ -379,7 +424,9 @@ async function start(mode) {
   show.title.text = show.facts.title;
   await pollPanels(show);
   show.hub.facts.status = show.facts.status;
-  getLink("monitor").on("brain_off", (m) => show.turnOff(m)); // a watcher's link: it drives nothing
+  const link = getLink("monitor"); // a watcher's link: it drives nothing
+  link.on("brain_off", (m) => show.turnOff(m));
+  if (!show.facts.status) show.turnOff({ lost: true }); // entered VR or AR with no brain to answer
   const timer = setInterval(() => poll(show), 1500), timer2 = setInterval(() => pollPanels(show), 20000);
   const r = makeRenderer(ar);
   const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 400);
@@ -398,6 +445,7 @@ async function start(mode) {
   if (mode === "screen") { // no headset: the same scene full window; click or a key starts / skips
     show.facts.display = `${screen.width}×${screen.height}`;
     show.screen = true;
+    show.leave = () => location.reload(); // Exit in the preview: back to the page
     camera.position.set(0, 1.6, 0);
     show.placeAt(camera);
     document.body.append(r.domElement);
@@ -441,6 +489,7 @@ async function start(mode) {
   r.xr.setReferenceSpaceType(refType);
   show.hub.refType = refType;
   await r.xr.setSession(session);
+  show.leave = () => { session.end().catch(() => {}); }; // Exit: the browser shows the page again
   const bl = session.renderState.baseLayer;
   show.facts.display = bl ? `${Math.round(bl.framebufferWidth / 2)}×${bl.framebufferHeight} per eye` : "headset";
   show.wantPlace = 30; // in front of you, at your height: for the first frames, until the headset reports where that is

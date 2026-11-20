@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — The hub in VR could miss "lab-os is off" and start anyway
+**What:** In lab check S.4, the Quest sat on the hub's start screen in VR when the desktop shut lab-os down. It never showed the off card: a press still started the startup, and the hub came up with no modules and no callouts (the brain wasn't there to give them). The hub in VR turned off only on the one "brain_off" message; why the Quest missed it is not known (its connection was perhaps reconnecting).
+**Fix:** Quick job 78: the hub in VR also turns off when the brain doesn't answer (on entering, at a press after a quiet time, after two failed status reads). Its status reads have a 6 s limit: a busy page's first reads took ~2.3 s in headless Chrome, so a short limit gave a false "not reachable". A brain that's gone fails at once ("connection refused").
+
+### 2026-11-20 — Headless Chrome on the Mac: WebGL needs ANGLE's SwiftShader
+**What:** `--use-gl=swiftshader` gives "Could not create a WebGL context" on macOS, and the VR hub's preview stops at "Couldn't start". The test looks like it ran, but no scene ever drew.
+**Fix:** Launch Chrome with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
+
 ### 2026-11-20 — An app window counts as "standalone", so the Full screen button hid
 **What:** quick job 74. The Full screen button hid in the window that "Start lab-os" opens (Chrome's `--app`). The pages counted `display-mode: standalone` as full screen, and an `--app` window matches it, with its title bar (checked in headless Chrome). Also, a browser takes a page out of full screen when that page opens a new window ("Open on…" → another monitor), and a page may go full screen again only from a press.
 **Fix:** "standalone" no longer counts as full screen (`src/lab_os/web/fullscreen.js`). In lab-os's own browser, the brain puts a window in full screen through the DevTools port (`POST /api/window-state`, `Browser.setWindowBounds`). This is the browser's full screen, as F11: Esc does not leave it, and F11 does.
@@ -14,7 +22,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-20 — Lab day: shut down, devices, the icon and the Kinect
 **What:**
-- Shut down (part S): the arm stopped at once and went limp, the terminal closed, and every page on the desktop said "lab-os is off". In the Quest, the "lab-os is off" card showed, but some ways of moving around in VR still showed the broken hub behind it. There is no clear way to leave full screen in the Quest and get back to the browser.
+- Shut down (part S): the arm stopped at once and went limp, the terminal closed, and every page on the desktop said "lab-os is off". In the Quest, the "lab-os is off" card showed, but some ways of moving around in VR still showed the broken hub behind it (what it was: the entry above, quick job 78). There is no clear way to leave full screen in the Quest and get back to the browser.
 - After the arm's USB was unplugged and plugged in again during S.3, the arm was not found again (quick job 73).
 - Each click on "Start lab-os" opens one more hub window (three clicks, three windows, one brain). The builder wants one window, and shut down closes it, like a normal program.
 - Open on… → Another monitor of this computer: the page that opened it leaves full screen, and the new page opens as a window. After that, and after F11, neither has a full screen button.

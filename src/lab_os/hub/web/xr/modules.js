@@ -8,6 +8,7 @@
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
 //     like their pages (it works from any screen).
 //   - ModuleTab: the open module's title and Back, floating at the left.
+//   - ExitButton: leaves VR or AR (quick job 78), under the hub on every page and on the off card.
 // Training (LeLab on the desktop) has no VR version, so no button in VR.
 import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
@@ -107,6 +108,32 @@ export class StopButton {
       g.strokeStyle = C.danger; g.lineWidth = 3; g.stroke();
       g.font = `700 ${h * 0.42}px ${FONT.ui}`; spaced(g, 0.2); g.fillStyle = this.hover ? C.hot : C.text; g.textAlign = "center"; g.textBaseline = "middle";
       g.fillText("STOP", w / 2, h / 2);
+    }, this.hover);
+  }
+}
+
+/* ---------- Exit (quick job 78): leaves VR or AR, back to the browser. On every page of the hub in
+   VR, and on the "lab-os is off" card ---------- */
+export class ExitButton {
+  constructor(w = 0.34, h = 0.12) {
+    this.p = new CanvasPlane(w, h, PX);
+    this.p.mesh.userData.hit = this;
+    this.p.mesh.renderOrder = 12;
+    this.p.mat.depthTest = false; // nothing may hide the way out
+    this.hover = false;
+  }
+  get mesh() { return this.p.mesh; }
+  hit() { return { kind: "exit" }; }
+  paint() {
+    this.p.paint((g, w, h) => {
+      const c = h * 0.22;
+      g.beginPath(); g.moveTo(c, 0); g.lineTo(w, 0); g.lineTo(w, h - c); g.lineTo(w - c, h); g.lineTo(0, h); g.lineTo(0, c); g.closePath();
+      g.fillStyle = rgba(C.bg, 0.92); g.fill();
+      if (this.hover) { g.fillStyle = rgba(C.primary, 0.22); g.fill(); }
+      g.strokeStyle = this.hover ? C.primary : rgba(C.primary, 0.7); g.lineWidth = 3; g.stroke();
+      icon(g, "i-headset", h * 0.62, h / 2, h * 0.5, this.hover ? C.hot : C.primary, 1.6);
+      g.font = `700 ${h * 0.4}px ${FONT.ui}`; spaced(g, 0.2); g.fillStyle = this.hover ? C.hot : C.text; g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText("EXIT", w / 2 + h * 0.3, h / 2);
     }, this.hover);
   }
 }

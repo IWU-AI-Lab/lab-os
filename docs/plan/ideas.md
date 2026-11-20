@@ -72,7 +72,13 @@ Each brain counts its own AI spend today (the laptop's and the lab desktop's), a
 ## Recent ideas (2026-11-18)
 
 ### Start the hub with a card
-Swipe a card to start the hub (the startup and greeting), and greet the person by name. The lab has a USB card reader: it types the card's number like a keyboard (a student ID gives a string of numbers; a bank card gives its usual data). The Newline also has an NFC tap reader, used for its Android profiles; it might be reusable. **Privacy:** only cards listed in config start anything; store a hash of the number, never the number; ignore and never log anything else (bank cards above all).
+**The first step is quick job 79** (2026-11-20): a swipe on the start screen starts the hub, with its own animation and sound. Later steps, still ideas:
+- **Greet the person by name.** It needs a way to register people (for example: ⚙ → Add a card → swipe → type the name). To think through first.
+- **Authorization:** some actions only after a listed card (for example, a real arm or the settings).
+- **Activating things:** a card swipe starts a mode or a device.
+- **The Newline's NFC tap reader** (used for its Android profiles) as a second reader, if it can be reused.
+
+The lab's USB card reader types the card's data like a keyboard (a student ID gives a string of numbers; a bank card gives its usual data). **Privacy:** only cards listed in config may do more than start the hub; store a hash of the number, never the number; ignore and never log anything else (bank cards above all).
 
 ### Gemini 4 Hydrogen and Google's Antigravity robotics plugin (probably not)
 Google's robotics model (Nov 2026, `gemini-4-hydrogen`, replaces Gemini Robotics ER 2) and an Antigravity plugin that brings up an SO-101, simulates in MuJoCo and runs tasks from chat (demos: sorting, packing, chess in simulation). Needs a paid Google AI plan the builder doesn't have; the plugin drives the arm with its own code, outside lab-os's STOP and limits, and calibrates arms (forbidden on the green ones). Probably not: the models will have changed by the time it matters. If ever: Hydrogen as one more model behind the brain's own tools.
