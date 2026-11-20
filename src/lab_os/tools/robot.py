@@ -19,6 +19,9 @@ refuses; it never trusts the numbers it's given:
 - **stop**: always allowed. STOP on any page also ends a move ("stopped").
 - **checked**: after a move, the motors' real position is compared with the target; further than
   `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
+  `SHORT_DEG` allows for so101-white's steady sag (2.3-3.5°, mostly the elbow), so a pose that
+  looks right says "arrived" (quick job 77); `SHORT_CM` is unchanged, so move_to still says when the
+  gripper point is off.
 
 Positions: cm from the arm's base (origin on the table under the base's turning axis), x forward
 (where the arm faces at shoulder_pan 0), y to the arm's left, z up from the table: an arm standing
@@ -58,7 +61,10 @@ MAX_WAYPOINT_JUMP_DEG = 30.0  # more than this for 1 cm of path = a flip of the 
 HOLD_S = 0.5  # after the last waypoint, keep sending it this long so trailing servos catch up
 SETTLE_S = 0.2  # after the hold and the freeze, before reading where the arm really is
 SHORT_CM = 0.5  # the gripper point ended further than this from the target: "stopped_short"
-SHORT_DEG = 2.0  # a joint ended further than this from its target: "stopped_short"
+# a joint ended further than this from its target: "stopped_short". so101-white's joints sag
+# 2.3-3.5° (elbow_flex, once shoulder_lift; GOTCHAS 2026-11-12): within this, a pose has arrived
+# (quick job 77; 2.0 before, so nearly every move warned)
+SHORT_DEG = 4.0
 PICK_ABOVE_CM = 6.0  # pick_at: the hover point is this far above the object's top
 PICK_OFF_CM = 1.5  # pick_at: a step that ends further off than this ends the pick
 PICK_HEIGHT_CM = (0.5, 8.0)  # objects pick_at takes (cm tall)
