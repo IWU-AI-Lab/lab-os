@@ -2,7 +2,7 @@ import asyncio
 
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
-from lab_os.teleop.server import create_app
+from lab_os.teleop.server import NAMES, create_app
 
 FRAME = {
     "type": "xr_input",
@@ -245,6 +245,7 @@ async def test_other_computers_only_watch_a_real_arm(aiohttp_client, monkeypatch
     assert loop.inputs.latest is None and app[srv.CONTROL]["ws"] is None
     await ws.send_json({"type": "stop"})
     assert await wait_for(lambda: loop.frozen)
+    assert (await next_of(ws, "status"))["may_drive"] is False  # its buttons are grey (job 76)
     await ws.close()
 
     monkeypatch.setattr(srv, "is_local", lambda request: True)  # this computer still drives
@@ -325,3 +326,36 @@ async def test_listed_computers_may_drive_a_real_arm(aiohttp_client, monkeypatch
     ws = await client.ws_connect("/ws")
     assert "view only" in (await next_of(ws, "error"))["message"]
     await ws.close()
+
+
+async def test_the_other_pages_learn_who_has_control(aiohttp_client):
+    """Quick job 76: each page's status says who drives (its device name from `hello`) and
+    whether this page may drive, so the other pages grey their control buttons."""
+    app, loop = make_app()
+    client = await aiohttp_client(app)
+    a = await client.ws_connect("/ws")
+    b = await client.ws_connect("/ws")
+    await a.send_json({"type": "hello", "agent": "test", "device": "desk"})
+    await a.send_json(frame_at(0.1))
+    assert await wait_for(lambda: loop.inputs.latest is not None)
+    seen = await next_of(b, "status")
+    assert (seen["control"], seen["driver"], seen["may_drive"]) == ("other", "desk", True)
+    mine = await next_of(a, "status")
+    assert (mine["control"], mine["driver"]) == ("you", "")
+    await a.close()  # its name goes with it
+    assert await wait_for(lambda: len(app[NAMES]) == 0)
+    assert (await next_of(b, "status"))["control"] == "free"
+    await b.close()
+
+
+def test_the_pages_grey_their_control_buttons():
+    from pathlib import Path
+
+    web = Path(__file__).resolve().parents[1] / "src/lab_os/teleop/web"
+    gate = (web / "control-gate.js").read_text()
+    assert "has control. It must stop first." in gate and "s.may_drive === false" in gate
+    for page, script in (("index.html", "teleop-page.js"), ("webcam.html", "webcam.js")):
+        assert 'id="control-why"' in (web / page).read_text(), page
+        js = (web / script).read_text()
+        assert 'from "./control-gate.js"' in js and "device: deviceName()" in js, script
+    assert 'id="control-why"' in (web / "classic/index.html").read_text()

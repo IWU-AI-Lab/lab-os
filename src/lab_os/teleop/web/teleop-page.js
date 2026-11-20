@@ -3,6 +3,8 @@
 import { getLink } from "./link.js";
 import { initXR } from "./xr.js";
 import { initDesktop } from "./desktop-input.js";
+import { gate } from "./control-gate.js";
+import { deviceName } from "/web/device.js";
 
 const $ = (id) => document.getElementById(id);
 const link = getLink("input");
@@ -17,7 +19,7 @@ function setPill(el, text, cls) {
 
 link.on("open", () => {
   setPill($("conn"), "connected", "on");
-  link.send({ type: "hello", agent: navigator.userAgent });
+  link.send({ type: "hello", agent: navigator.userAgent, device: deviceName() });
 });
 link.on("close", () => setPill($("conn"), "disconnected", "off"));
 link.on("error", (m) => ($("xr-msg").textContent = m.message));
@@ -32,7 +34,9 @@ const CONTROL = {
 };
 link.on("status", (s) => {
   const [text, cls] = CONTROL[s.control] || ["—", "off"];
-  setPill($("control"), text, cls);
+  setPill($("control"), s.control === "other" && s.driver ? `the page on ${s.driver} (it must leave first)` : text, cls);
+  // quick job 76: the buttons that would take control, grey while it can't be taken (not the one in use)
+  gate(s, Object.entries(sourceButtons).filter(([k]) => k !== ui.active).map(([, b]) => b), $("control-why"));
   if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
   else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (s.clutch) setPill($("state"), "following (clutch)", "on");
@@ -97,7 +101,10 @@ const ui = {
   setActive(name) {
     ui.active = name;
     for (const [key, btn] of Object.entries(sourceButtons)) btn.dataset.blocked = name && name !== key ? "1" : "";
-    for (const btn of Object.values(sourceButtons)) btn.disabled = btn.dataset.blocked === "1" || btn.dataset.unavailable === "1";
+    for (const [key, btn] of Object.entries(sourceButtons)) {
+      const taken = btn.dataset.taken === "1" && name !== key; // quick job 76: someone else has control
+      btn.disabled = btn.dataset.blocked === "1" || btn.dataset.unavailable === "1" || taken;
+    }
   },
   showHands(hands, label = "") {
     const now = performance.now();

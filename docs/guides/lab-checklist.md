@@ -219,6 +219,7 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.3** Plug in the xArm. Run `uv run lab-os serve --arm xarm1 --port 8090 --mcp-port 0` in a second terminal, and open `http://localhost:8090/monitor`. Unplug the xArm's USB. → does Monitor say "disconnected"? (yes / no) Plug it in again. Wait 5 seconds. → does Monitor show the arm again? (yes / no) Stop that brain with Ctrl+C.
 - **U.4** Plug in the USB microphone. → does the mic button show next to "Ask anything" within 5 seconds? (yes / no) Unplug it. → does the button go? (yes / no) Plug it in again. Wait 5 seconds. → is the button back? (yes / no)
 - **U.5** Unplug the Quest's USB cable, then plug it in again. Do not run `adb reverse`. In the Quest's browser, open `http://localhost:8080/xr`. → does the page load? (yes / no)
+- **U.6** Quick job 76. Open Teleop on the desktop's hub and on the Newline (Open on…). On the desktop, select **Desktop control** and move the arm with a key. → on the Newline, are the Teleop buttons grey, with a line that says the page on desk has control? (yes / no) On the desktop, press the \` key to leave desktop control. → can you press the Newline's buttons again? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
