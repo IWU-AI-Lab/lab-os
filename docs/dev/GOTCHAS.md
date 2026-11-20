@@ -5,14 +5,20 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 ---
 
 ### 2026-11-20 — The hub in VR could miss "lab-os is off" and start anyway
-**What:** In lab check S.4, the Quest sat on the hub's start screen in VR when the desktop shut lab-os down. It never showed the off card: a press still started the startup, and the hub came up with no modules and no callouts (the brain wasn't there to give them). The hub in VR turned off only on the one "brain_off" message; why the Quest missed it is not known (its connection was perhaps reconnecting). Also: Ctrl+C in the brain's terminal sends no such message.
+**What:** In lab check S.4, the Quest sat on the hub's start screen in VR when the desktop shut lab-os down. It never showed the off card: a press still started the startup, and the hub came up with no modules and no callouts (the brain wasn't there to give them). The hub in VR turned off only on the one "brain_off" message; why the Quest missed it is not known (its connection was perhaps reconnecting).
 **Fix:** Quick job 78: the hub in VR also turns off when the brain doesn't answer (on entering, at a press after a quiet time, after two failed status reads). Its status reads have a 6 s limit: a busy page's first reads took ~2.3 s in headless Chrome, so a short limit gave a false "not reachable". A brain that's gone fails at once ("connection refused").
 
 ### 2026-11-20 — Headless Chrome on the Mac: WebGL needs ANGLE's SwiftShader
 **What:** `--use-gl=swiftshader` gives "Could not create a WebGL context" on macOS, and the VR hub's preview stops at "Couldn't start". The test looks like it ran, but no scene ever drew.
 **Fix:** Launch Chrome with `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 
----
+### 2026-11-20 — An app window counts as "standalone", so the Full screen button hid
+**What:** quick job 74. The Full screen button hid in the window that "Start lab-os" opens (Chrome's `--app`). The pages counted `display-mode: standalone` as full screen, and an `--app` window matches it, with its title bar (checked in headless Chrome). Also, a browser takes a page out of full screen when that page opens a new window ("Open on…" → another monitor), and a page may go full screen again only from a press.
+**Fix:** "standalone" no longer counts as full screen (`src/lab_os/web/fullscreen.js`). In lab-os's own browser, the brain puts a window in full screen through the DevTools port (`POST /api/window-state`, `Browser.setWindowBounds`). This is the browser's full screen, as F11: Esc does not leave it, and F11 does.
+
+### 2026-11-20 — A web page can't bring its own window to the front
+**What:** quick job 59 (one hub window). A page can't raise or close a window that it didn't open itself, and the browser's `--app` flag opens one more window on each call. The window manager tools (`wmctrl`, `xdotool`) are not installed on Ubuntu and do nothing on Wayland.
+**Fix:** lab-os starts the hub in a browser of its own: its own profile folder (`~/.cache/lab-os/hub-browser`) and the browser's DevTools port on 127.0.0.1 only (`--remote-debugging-port=0`, the port is in the profile's `DevToolsActivePort`). A second tap asks that port for the hub page and activates it (`/json/activate/<id>`). Side effects: it is a separate browser, so the microphone permission and the browser's own settings start empty once. Any program on the brain's computer can control that one browser through the port. Shut down and Ctrl+C close its pages through the same port (`/json/close/<id>`, quick job 64).
 
 ### 2026-11-20 — Lab day: shut down, devices, the icon and the Kinect
 **What:**

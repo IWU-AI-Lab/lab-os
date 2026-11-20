@@ -1,7 +1,10 @@
 // "lab-os is off" (quick job 6): when the hub's "Shut down lab-os" stops the brain, it tells every page
 // first ({"type": "brain_off"} on /ws and /ws/hub-device, docs/dev/protocol.md), and each page covers itself
 // with this screen instead of "brain not reachable". Offline look (DESIGN.md: gray, dim, no glow). Once the
-// brain answers again (started from its icon), the page reloads by itself.
+// brain answers again (started from its icon), the page reloads by itself. Ctrl+C in the brain's
+// terminal tells the pages the same (quick job 64). A shut-down page also tries to close itself: the
+// browser allows it only for a window that a script opened ("Open on…" → another monitor); else the
+// screen stays. lab-os's own hub window on the brain's computer is closed by the brain.
 //
 //   showOff(msg)   cover the page (msg: the brain_off message, for who and when)
 //   isOff()        has this page been told?
@@ -45,6 +48,9 @@ export function showOff(msg = {}) {
   document.head.append(style);
   document.body.append(box);
   document.exitPointerLock?.();
+  if (!restarting) {
+    try { window.close(); } catch { /* not allowed here: "lab-os is off" stays */ }
+  }
 }
 
 export const isOff = () => off;

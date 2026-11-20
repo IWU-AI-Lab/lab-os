@@ -4,14 +4,20 @@
 Nothing starts by itself: the brain's computer gets an icon that starts the brain and opens the
 hub (`lab-os serve --open desk`); other computers get a "Lab hub" icon that only opens the hub
 (Settings → This device makes one, with the brain's address filled in).
+
+lab-os's hub window is a browser of its own (its own profile folder, `PROFILE`), with the
+browser's DevTools port on this computer only. So a second tap on the icon finds that window and
+brings it to the front instead of opening another (quick job 59).
 """
 
+import json
 import shutil
 import subprocess
 import sys
 import urllib.request
 import webbrowser
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from lab_os import REPO_ROOT
 
@@ -30,15 +36,25 @@ WINDOWS_BROWSERS = (
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
 )
 ICON_FILE = "lab-os-start.desktop"
+# lab-os's own browser profile: its windows only, so lab-os can find them again
+PROFILE = Path.home() / ".cache" / "lab-os" / "hub-browser"
 
 
 def hub_url(port: int, device: str, host: str = "localhost") -> str:
     return f"http://{host}:{port}/?device={device}"
 
 
-def browser_command(url: str) -> list[str] | None:
-    """A Chromium-family browser as an app window, full screen; None when there's none."""
-    flags = [f"--app={url}", "--start-fullscreen"]
+def browser_command(url: str, profile: Path | None = None) -> list[str] | None:
+    """A Chromium-family browser as an app window, full screen, in lab-os's own profile; None
+    when there's none. Port 0: the browser picks a free DevTools port (on 127.0.0.1 only) and
+    writes it to `DevToolsActivePort` in the profile."""
+    own = [
+        f"--user-data-dir={profile or PROFILE}",
+        "--remote-debugging-port=0",
+        "--no-first-run",
+        "--no-default-browser-check",
+    ]
+    flags = [f"--app={url}", *own, "--start-fullscreen"]
     if sys.platform == "darwin":
         for app in MAC_BROWSERS:
             if Path(f"/Applications/{app}.app").exists():
@@ -52,7 +68,7 @@ def browser_command(url: str) -> list[str] | None:
     # Linux: no --start-fullscreen. On GNOME (X11, two monitors) the browser then believed it was
     # full screen while the window kept its title bar, and the hub's start press did nothing.
     # The start press makes it full screen (docs/dev/GOTCHAS.md, 2026-11-20).
-    return [exe, f"--app={url}"] if exe else None
+    return [exe, f"--app={url}", *own] if exe else None
 
 
 def open_hub(url: str) -> str:
@@ -65,6 +81,120 @@ def open_hub(url: str) -> str:
         return f"opened {url} in {Path(cmd[0]).name if cmd[0] != 'open' else cmd[2]}"
     webbrowser.open(url)  # no Chrome-like browser: a normal tab (tap once for full screen)
     return f"opened {url} in the default browser (no Chrome found: tap once for full screen)"
+
+
+def _devtools(profile: Path | None = None) -> str | None:
+    """The address of lab-os's own browser's DevTools, if that browser runs."""
+    try:
+        port = int(((profile or PROFILE) / "DevToolsActivePort").read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+    return f"http://127.0.0.1:{port}"
+
+
+def hub_windows(device: str, port: int, profile: Path | None = None) -> list[dict]:
+    """The hub pages that lab-os's own browser shows for this brain, this device's first. Empty
+    when that browser doesn't run (a file left behind by a closed browser answers nothing)."""
+    base = _devtools(profile)
+    if base is None:
+        return []
+    try:
+        with urllib.request.urlopen(f"{base}/json/list", timeout=1.5) as r:
+            targets = json.load(r)
+    except (OSError, ValueError):
+        return []
+    pages = []
+    for t in targets if isinstance(targets, list) else []:
+        url = urlsplit(str(t.get("url", "")))
+        local = url.hostname in ("localhost", "127.0.0.1") and url.port == port
+        if t.get("type") == "page" and local:
+            pages.append(t)
+    pages.sort(key=lambda t: parse_qs(urlsplit(t["url"]).query).get("device") != [device])
+    return pages
+
+
+def bring_to_front(device: str, port: int, profile: Path | None = None) -> str | None:
+    """Bring lab-os's hub window to the front; None when there's none to bring."""
+    pages = hub_windows(device, port, profile)
+    base = _devtools(profile)
+    if not pages or base is None:
+        return None
+    try:
+        with urllib.request.urlopen(f"{base}/json/activate/{pages[0]['id']}", timeout=1.5):
+            pass
+    except OSError:
+        return None
+    return f"brought the hub window to the front ({pages[0]['url']})"
+
+
+def close_hub_windows(port: int, profile: Path | None = None) -> int:
+    """Close every page that lab-os's own browser shows for this brain (Shut down and Ctrl+C,
+    quick job 64). Returns how many it closed."""
+    base = _devtools(profile)
+    closed = 0
+    for page in hub_windows("", port, profile) if base else []:
+        try:
+            with urllib.request.urlopen(f"{base}/json/close/{page['id']}", timeout=1.5):
+                closed += 1
+        except OSError:
+            pass
+    return closed
+
+
+WINDOW_STATES = ("fullscreen", "normal")
+
+
+async def set_window_state(url: str, state: str, profile: Path | None = None) -> str:
+    """Put the window of lab-os's own browser that shows exactly `url` in full screen or back to a
+    window (quick job 74): a web page may go full screen only from a press, but the browser's
+    DevTools may. Returns "" when done, else why not (a sentence)."""
+    import asyncio
+
+    import aiohttp
+
+    if state not in WINDOW_STATES:
+        return f"Unknown window state {state!r}."
+    try:
+        lines = ((profile or PROFILE) / "DevToolsActivePort").read_text().split()
+        port, path = int(lines[0]), lines[1]
+    except (OSError, ValueError, IndexError):
+        return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
+    pages = await asyncio.to_thread(hub_windows, "", urlsplit(url).port or 80, profile)
+    page = next((p for p in pages if p.get("url") == url), None)
+    if page is None:
+        return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
+    try:
+        async with (
+            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session,
+            session.ws_connect(f"ws://127.0.0.1:{port}{path}") as ws,
+        ):
+            got = await _cdp(ws, 1, "Browser.getWindowForTarget", targetId=page["id"])
+            window = got["windowId"]
+            if state == "fullscreen" and got.get("bounds", {}).get("windowState") == "minimized":
+                await _cdp(
+                    ws,
+                    2,
+                    "Browser.setWindowBounds",
+                    windowId=window,
+                    bounds={"windowState": "normal"},
+                )
+            await _cdp(
+                ws, 3, "Browser.setWindowBounds", windowId=window, bounds={"windowState": state}
+            )
+    except (OSError, TimeoutError, aiohttp.ClientError, KeyError, RuntimeError) as e:
+        return f"The browser didn't change the window ({e or type(e).__name__})."
+    return ""
+
+
+async def _cdp(ws, n: int, method: str, **params) -> dict:
+    """One DevTools call on an open browser connection; its result (RuntimeError: its error)."""
+    await ws.send_json({"id": n, "method": method, "params": params})
+    while True:
+        msg = await ws.receive_json()
+        if msg.get("id") == n:
+            if "error" in msg:
+                raise RuntimeError(msg["error"].get("message", "error"))
+            return msg.get("result", {})
 
 
 def brain_answers(port: int) -> bool:

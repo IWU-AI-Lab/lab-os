@@ -18,6 +18,8 @@ POST /api/restart        {"from": device}: the same, then the brain starts again
 GET /api/quest-view      what the Quest sees (scrcpy, quick job 36): installed, running, headsets
 POST /api/quest-view/start  {"headset"?}: open its view in a window here (the brain's computer)
 POST /api/quest-view/stop   close that window
+POST /api/window-state   {"url", "state": "fullscreen" | "normal"}: a window of lab-os's own browser
+                         full screen or back to a window (quick job 74). Brain's computer only
 GET /settings            the settings page (also opened from the hub's gear)
 GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
@@ -72,6 +74,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import load_registry
+from lab_os.hub import launch
 from lab_os.hub.arm_desk import Actions, ArmDesk
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
@@ -88,8 +91,11 @@ from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import (
     CONTROL,
     LOOP,
+    OFF_TELL_S,
+    OFF_TOLD,
     OUTBOX,
     SHUTDOWN,
+    brain_off_message,
     close_sockets,
     create_app,
     is_local,
@@ -325,11 +331,7 @@ async def _stop_brain(request: web.Request, restart: bool) -> web.Response:
     log.warning("%s: asked from the hub (%s)", what, by or "a page with no device name")
     app[LOOP].shut_down(f"lab-os is {what}")  # and nothing moves again (quick job 44)
     app[RESTART]["asked"] = restart
-    msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
-    if restart:
-        msg["restart"] = True
-    app[OUTBOX].put_nowait(msg)  # teleop, monitor, AI Control
-    await app[HUB_DEVICES].tell_all(msg)  # the hub pages
+    await _tell_off(app, brain_off_message(by, restart))
     asyncio.get_running_loop().call_later(SHUTDOWN_DELAY_S, app[SHUTDOWN].set)
     return web.json_response({"ok": True, "message": f"lab-os is {what}."})
 
@@ -560,6 +562,39 @@ async def api_quest_view_stop(request: web.Request) -> web.Response:
         raise web.HTTPForbidden(text="The Quest's view is closed on the brain's computer.")
     stopped = await asyncio.to_thread(request.app[QUEST_VIEW].stop)
     return web.json_response({"ok": True, "stopped": stopped})
+
+
+async def _tell_off(app: web.Application, msg: dict) -> None:
+    """Tell every page lab-os is off (or restarting): teleop, monitor, AI Control and the hubs."""
+    app[OFF_TOLD]["told"] = True
+    app[OUTBOX].put_nowait(msg)
+    await app[HUB_DEVICES].tell_all(msg)
+
+
+async def _tell_off_on_stop(app: web.Application) -> None:
+    """The server stops without Shut down (Ctrl+C in the brain's terminal): the pages say "lab-os
+    is off" as for Shut down, not only a grey core (quick job 64). Runs before the sockets close."""
+    if not app[OFF_TOLD]["told"]:
+        log.warning("stopping (Ctrl+C): telling every page lab-os is off")
+        await _tell_off(app, brain_off_message())
+        await asyncio.sleep(OFF_TELL_S)
+
+
+async def api_window_state(request: web.Request) -> web.Response:
+    """Full screen without a press, for lab-os's own browser windows on the brain's computer: a page
+    sent to another monitor, and the hub that sent it (quick job 74). Elsewhere `ok` is false with
+    the reason, and the page asks for a press as before."""
+    if not is_local(request):
+        return web.json_response({"ok": False, "why": "Only on the brain's computer."})
+    try:
+        body = await request.json()
+        url, state = str(body["url"]), str(body.get("state", "fullscreen"))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise web.HTTPBadRequest(text='Send {"url": the page\'s address, "state"}.') from None
+    why = await launch.set_window_state(url, state)
+    if why:
+        log.info("window state %s for %s: %s", state, url, why)
+    return web.json_response({"ok": not why, "why": why})
 
 
 async def _close_hub_pages(app: web.Application) -> None:
@@ -1102,6 +1137,7 @@ def create_brain_app(
     app.router.add_get("/api/quest-view", api_quest_view)
     app.router.add_post("/api/quest-view/start", api_quest_view_start)
     app.router.add_post("/api/quest-view/stop", api_quest_view_stop)
+    app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
@@ -1135,5 +1171,6 @@ def create_brain_app(
     app.cleanup_ctx.append(_mcp_task)
     app.cleanup_ctx.append(_ai_task)
     app.cleanup_ctx.append(_quest_view_task)
+    app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
     app.on_shutdown.append(_close_hub_pages)
     return app

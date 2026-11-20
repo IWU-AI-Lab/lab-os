@@ -1,11 +1,13 @@
 // The module pages' shared bits (teleop, monitor, AI control, settings):
 //   - the theme's colors and fonts (/theme.json) as CSS variables, like the hub;
 //   - inside the hub (an iframe) or on its own screen: body.embedded drops the page's own frame;
-//   - on its own screen: the place's name and the clock in the bar, and full screen with one press
-//     (a page sent to another screen from the hub, `?screen=…`, asks for that press right away);
-//     where full screen isn't possible, the button says why (/web/fullscreen.js).
+//   - on its own screen: the place's name and the clock in the bar, and a choice: Full screen or
+//     Window (so that several pages fit on one monitor), kept for each page in this browser. A page
+//     sent to another screen from the hub (`?screen=…`) goes full screen by itself unless Window was
+//     chosen: on the brain's computer the brain does it, elsewhere it asks for one press (quick job 74).
+//     Where full screen isn't possible, the button says why (/web/fullscreen.js).
 //   <script type="module" src="/web/design/kit.js"></script>
-import { fullscreenButton, goFullscreen, isFull } from "/web/fullscreen.js";
+import { brainWindow, fullscreenButton, goFullscreen, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 
 const root = document.documentElement.style;
@@ -58,8 +60,30 @@ if (!embedded) {
   btn.innerHTML = `<svg class="ico"><use href="/web/design/icons.svg#i-open"/></svg>Full screen`;
   const spot = document.querySelector(".bar .clock");
   if (spot) spot.before(btn); else document.body.append(btn);  // in the bar, out of the content's way
-  const fs = fullscreenButton(btn);
-  if (params.has("screen") && !isFull()) {
+  // the choice for this page: "full" (the default) or "window"
+  const KEY = `lab-os.window:${location.pathname}`;
+  const choice = () => { try { return localStorage.getItem(KEY) || "full"; } catch { return "full"; } };
+  const choose = (v) => { try { localStorage.setItem(KEY, v); } catch { /* private window: not kept */ } };
+  const fs = fullscreenButton(btn, { onFull: () => choose("full") });
+  const win = document.createElement("button");
+  win.id = "win-btn";
+  win.type = "button";
+  win.className = "btn small";
+  win.title = "Show this page in a window, so that other pages fit beside it";
+  win.innerHTML = `<svg class="ico"><use href="/web/design/icons.svg#i-window"/></svg>Window`;
+  btn.after(win);
+  const showWin = () => (win.hidden = !isFull());
+  for (const ev of ["fullscreenchange", "webkitfullscreenchange"]) document.addEventListener(ev, showWin);
+  addEventListener("resize", showWin);  // F11 and the brain's full screen show up only as a resize
+  showWin();
+  win.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    choose("window");
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    else if (await brainWindow("normal")) fs.show("Press F11 to leave full screen.");
+    setTimeout(() => { showWin(); fs.update(); }, 300);
+  });
+  const askForPress = () => {
     const ask = document.createElement("div");
     ask.id = "fs-ask";
     ask.innerHTML = `<div>Click or tap for full screen<small>Sent to this screen from the hub. Esc leaves full screen.</small></div>`;
@@ -69,6 +93,13 @@ if (!embedded) {
       if (why) fs.show(why);
     });
     document.body.append(ask);
+  };
+  if (params.has("screen") && !isFull() && choice() !== "window") {
+    brainWindow("fullscreen").then((why) => {
+      if (!why) return;
+      console.info(`full screen: ${why}; asking for a press`);
+      askForPress();
+    });
   }
 }
 // keep the screen awake while this page shows (localhost / https only; elsewhere nothing happens)

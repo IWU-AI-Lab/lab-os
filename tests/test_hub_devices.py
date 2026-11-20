@@ -3,7 +3,9 @@ the "Start lab-os" icon. No browser: the pages are WebSocket clients here (the b
 headless pages: docs/guides/lab-checklist.md and the PR)."""
 
 import asyncio
+import http.server
 import json
+import threading
 
 import pytest
 from test_hub_server import SRC, make_app  # same folder (pytest puts it on the path)
@@ -267,6 +269,7 @@ def test_start_icon(tmp_path, monkeypatch):
 def test_serve_open_only_opens_when_a_brain_already_runs(monkeypatch, capsys):
     opened = []
     monkeypatch.setattr(launch, "brain_answers", lambda port: True)
+    monkeypatch.setattr(launch, "bring_to_front", lambda device, port: None)  # no window yet
     monkeypatch.setattr(launch, "open_hub", lambda url: opened.append(url) or f"opened {url}")
     cli.main(["serve", "--open", "Desk", "--port", "8095"])
     assert opened == ["http://localhost:8095/?device=desk"]
@@ -303,3 +306,110 @@ def test_the_assistant_languages_are_device_settings(tmp_path):
     with pytest.raises(DeviceError, match="hear_in can be"):
         s.update("desk", {"hear_in": "fr"})
     assert s.update("desk", {"hear_in": "", "answer_in": ""}) == {}  # back to any
+
+
+class _FakeDevTools(http.server.BaseHTTPRequestHandler):
+    """lab-os's own browser, as its DevTools port answers."""
+
+    targets: list = []
+    activated: list = []
+    closed: list = []
+
+    def do_GET(self):  # noqa: N802 (the http.server name)
+        if self.path == "/json/list":
+            body = json.dumps(self.targets).encode()
+        elif self.path.startswith("/json/activate/"):
+            self.activated.append(self.path.rsplit("/", 1)[1])
+            body = b"Target activated"
+        elif self.path.startswith("/json/close/"):
+            self.closed.append(self.path.rsplit("/", 1)[1])
+            body = b"Target is closing"
+        else:
+            self.send_error(404)
+            return
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
+
+
+def test_a_second_tap_brings_the_one_hub_window_to_the_front(tmp_path, monkeypatch, capsys):
+    """Quick job 59: the icon opens no second window while lab-os's own one is open."""
+    cmd = launch.browser_command("http://localhost:8080/?device=desk", profile=tmp_path)
+    if cmd:  # a Chromium browser on this computer: lab-os's own profile, DevTools on any free port
+        assert f"--user-data-dir={tmp_path}" in cmd and "--remote-debugging-port=0" in cmd
+    assert launch.bring_to_front("desk", 8080, profile=tmp_path) is None  # no browser runs
+    (tmp_path / "DevToolsActivePort").write_text("1\n/devtools/browser/x\n")  # left behind
+    assert launch.bring_to_front("desk", 8080, profile=tmp_path) is None
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _FakeDevTools)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    (tmp_path / "DevToolsActivePort").write_text(f"{server.server_port}\n/devtools/browser/x\n")
+    _FakeDevTools.targets = [
+        {"id": "other", "type": "page", "url": "https://example.com/?device=desk"},
+        {"id": "sent", "type": "page", "url": "http://localhost:8080/monitor?device=newline"},
+        {"id": "hub", "type": "page", "url": "http://localhost:8080/design?device=desk"},
+        {"id": "worker", "type": "service_worker", "url": "http://localhost:8080/sw.js"},
+    ]
+    try:
+        assert [t["id"] for t in launch.hub_windows("desk", 8080, profile=tmp_path)] == [
+            "hub",
+            "sent",
+        ]
+        assert "front" in launch.bring_to_front("desk", 8080, profile=tmp_path)
+        assert _FakeDevTools.activated == ["hub"]
+
+        opened = []
+        monkeypatch.setattr(launch, "PROFILE", tmp_path)
+        monkeypatch.setattr(launch, "brain_answers", lambda port: True)
+        monkeypatch.setattr(launch, "open_hub", lambda url: opened.append(url) or "opened")
+        cli.main(["serve", "--open", "desk", "--port", "8080"])
+        assert opened == [] and "to the front" in capsys.readouterr().out
+        assert _FakeDevTools.activated == ["hub", "hub"]
+
+        # quick job 64: Shut down and Ctrl+C close lab-os's own windows for this brain only
+        assert launch.close_hub_windows(8080, profile=tmp_path) == 2
+        assert sorted(_FakeDevTools.closed) == ["hub", "sent"]
+        assert launch.close_hub_windows(8099, profile=tmp_path) == 0
+    finally:
+        server.shutdown()
+
+
+async def test_the_brain_puts_its_own_windows_full_screen(aiohttp_client, monkeypatch, tmp_path):
+    """Quick job 74: a page sent to another monitor, and the hub that sent it, full screen without
+    a press: the brain asks lab-os's own browser. Elsewhere it says why, and the page asks."""
+    from lab_os.hub import server as hub_server
+
+    monkeypatch.setattr(launch, "PROFILE", tmp_path)  # no lab-os browser runs
+    client = await aiohttp_client(make_app())
+    url = "http://localhost:8080/monitor?screen=1"
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert not got["ok"] and "lab-os's own browser" in got["why"]
+    assert (await client.post("/api/window-state", json={"state": "normal"})).status == 400
+    assert "Unknown" in await launch.set_window_state(url, "maximized", tmp_path)
+    asked = []
+
+    async def fake_state(u, state, profile=None):
+        asked.append((u, state))
+        return ""
+
+    monkeypatch.setattr(launch, "set_window_state", fake_state)
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert got == {"ok": True, "why": ""} and asked == [(url, "fullscreen")]
+    monkeypatch.setattr(hub_server, "is_local", lambda request: False)  # another computer
+    got = await (await client.post("/api/window-state", json={"url": url})).json()
+    assert not got["ok"] and len(asked) == 1
+
+
+def test_pages_choose_full_screen_or_a_window():
+    """Quick job 74: an app window is not full screen (it matched "standalone", so the button never
+    showed); module pages on their own screen choose Full screen or Window."""
+    fs = (SRC / "web" / "fullscreen.js").read_text()
+    full_by_other = fs.split("export const fullByOther")[1].split(";")[0]
+    assert "standalone" not in full_by_other and "/api/window-state" in fs
+    kit = (SRC / "web" / "design" / "kit.js").read_text()
+    assert "lab-os.window:" in kit and 'brainWindow("fullscreen")' in kit and "Window`" in kit
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert "wasFull" in design and 'brainWindow("fullscreen")' in design
