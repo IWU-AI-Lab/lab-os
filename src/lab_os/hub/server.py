@@ -88,8 +88,11 @@ from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import (
     CONTROL,
     LOOP,
+    OFF_TELL_S,
+    OFF_TOLD,
     OUTBOX,
     SHUTDOWN,
+    brain_off_message,
     close_sockets,
     create_app,
     is_local,
@@ -325,11 +328,7 @@ async def _stop_brain(request: web.Request, restart: bool) -> web.Response:
     log.warning("%s: asked from the hub (%s)", what, by or "a page with no device name")
     app[LOOP].shut_down(f"lab-os is {what}")  # and nothing moves again (quick job 44)
     app[RESTART]["asked"] = restart
-    msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
-    if restart:
-        msg["restart"] = True
-    app[OUTBOX].put_nowait(msg)  # teleop, monitor, AI Control
-    await app[HUB_DEVICES].tell_all(msg)  # the hub pages
+    await _tell_off(app, brain_off_message(by, restart))
     asyncio.get_running_loop().call_later(SHUTDOWN_DELAY_S, app[SHUTDOWN].set)
     return web.json_response({"ok": True, "message": f"lab-os is {what}."})
 
@@ -560,6 +559,22 @@ async def api_quest_view_stop(request: web.Request) -> web.Response:
         raise web.HTTPForbidden(text="The Quest's view is closed on the brain's computer.")
     stopped = await asyncio.to_thread(request.app[QUEST_VIEW].stop)
     return web.json_response({"ok": True, "stopped": stopped})
+
+
+async def _tell_off(app: web.Application, msg: dict) -> None:
+    """Tell every page lab-os is off (or restarting): teleop, monitor, AI Control and the hubs."""
+    app[OFF_TOLD]["told"] = True
+    app[OUTBOX].put_nowait(msg)
+    await app[HUB_DEVICES].tell_all(msg)
+
+
+async def _tell_off_on_stop(app: web.Application) -> None:
+    """The server stops without Shut down (Ctrl+C in the brain's terminal): the pages say "lab-os
+    is off" as for Shut down, not only a grey core (quick job 64). Runs before the sockets close."""
+    if not app[OFF_TOLD]["told"]:
+        log.warning("stopping (Ctrl+C): telling every page lab-os is off")
+        await _tell_off(app, brain_off_message())
+        await asyncio.sleep(OFF_TELL_S)
 
 
 async def _close_hub_pages(app: web.Application) -> None:
@@ -1135,5 +1150,6 @@ def create_brain_app(
     app.cleanup_ctx.append(_mcp_task)
     app.cleanup_ctx.append(_ai_task)
     app.cleanup_ctx.append(_quest_view_task)
+    app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
     app.on_shutdown.append(_close_hub_pages)
     return app

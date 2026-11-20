@@ -6,7 +6,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-20 — A web page can't bring its own window to the front
 **What:** quick job 59 (one hub window). A page can't raise or close a window that it didn't open itself, and the browser's `--app` flag opens one more window on each call. The window manager tools (`wmctrl`, `xdotool`) are not installed on Ubuntu and do nothing on Wayland.
-**Fix:** lab-os starts the hub in a browser of its own: its own profile folder (`~/.cache/lab-os/hub-browser`) and the browser's DevTools port on 127.0.0.1 only (`--remote-debugging-port=0`, the port is in the profile's `DevToolsActivePort`). A second tap asks that port for the hub page and activates it (`/json/activate/<id>`). Side effects: it is a separate browser, so the microphone permission and the browser's own settings start empty once. Any program on the brain's computer can control that one browser through the port.
+**Fix:** lab-os starts the hub in a browser of its own: its own profile folder (`~/.cache/lab-os/hub-browser`) and the browser's DevTools port on 127.0.0.1 only (`--remote-debugging-port=0`, the port is in the profile's `DevToolsActivePort`). A second tap asks that port for the hub page and activates it (`/json/activate/<id>`). Side effects: it is a separate browser, so the microphone permission and the browser's own settings start empty once. Any program on the brain's computer can control that one browser through the port. Shut down and Ctrl+C close its pages through the same port (`/json/close/<id>`, quick job 64).
 
 ### 2026-11-20 — Lab day: shut down, devices, the icon and the Kinect
 **What:**

@@ -186,6 +186,8 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.2** Click the brain's terminal, so that it covers the hub. Tap **Start lab-os** again. → did the hub come to the front? (yes / no) Did a second hub window open? (yes / no)
 - **I.3** Minimize the hub window. Tap **Start lab-os** again. → did the hub window come back? (yes / no)
 - **I.4** Close the hub window with its X. The brain keeps running. Tap **Start lab-os** again. → did one hub window open? (yes / no)
+- **I.5** Quick job 64. Open the hub on the Newline too (Open on…). Press ⏻ → **Shut down lab-os** on the desktop. → did the desktop's hub window close? (yes / no) What does the Newline show? (closed / "lab-os is off" / other)
+- **I.6** Tap **Start lab-os**. Open Quest view (the Quest on its USB cable). Press Ctrl+C in the brain's terminal. → did the hub window and the Quest view window close? (yes / no each) Did the Newline say "lab-os is off"? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

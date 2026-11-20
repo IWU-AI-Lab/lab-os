@@ -313,6 +313,7 @@ class _FakeDevTools(http.server.BaseHTTPRequestHandler):
 
     targets: list = []
     activated: list = []
+    closed: list = []
 
     def do_GET(self):  # noqa: N802 (the http.server name)
         if self.path == "/json/list":
@@ -320,6 +321,9 @@ class _FakeDevTools(http.server.BaseHTTPRequestHandler):
         elif self.path.startswith("/json/activate/"):
             self.activated.append(self.path.rsplit("/", 1)[1])
             body = b"Target activated"
+        elif self.path.startswith("/json/close/"):
+            self.closed.append(self.path.rsplit("/", 1)[1])
+            body = b"Target is closing"
         else:
             self.send_error(404)
             return
@@ -364,5 +368,10 @@ def test_a_second_tap_brings_the_one_hub_window_to_the_front(tmp_path, monkeypat
         cli.main(["serve", "--open", "desk", "--port", "8080"])
         assert opened == [] and "to the front" in capsys.readouterr().out
         assert _FakeDevTools.activated == ["hub", "hub"]
+
+        # quick job 64: Shut down and Ctrl+C close lab-os's own windows for this brain only
+        assert launch.close_hub_windows(8080, profile=tmp_path) == 2
+        assert sorted(_FakeDevTools.closed) == ["hub", "sent"]
+        assert launch.close_hub_windows(8099, profile=tmp_path) == 0
     finally:
         server.shutdown()
