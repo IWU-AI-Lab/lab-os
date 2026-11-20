@@ -202,6 +202,7 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
 - **I.12** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
 - **I.13** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
+- **I.14** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Performance Test**. → did each open in its own window? (yes / no)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
 Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.

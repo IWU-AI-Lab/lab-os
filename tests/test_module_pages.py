@@ -349,3 +349,30 @@ def test_no_long_press_menu_on_the_hub_pages():
     for page in (SRC / "hub" / "web" / "design.html", SRC / "hub" / "web" / "hub.js"):
         assert "/web/no-menu.js" in page.read_text(), page.name
     assert 'import "/web/no-menu.js"' in (SRC / "web" / "design" / "kit.js").read_text()
+
+
+async def test_every_page_is_listed(aiohttp_client):
+    """Quick job 67: every page the brain serves is in ⚙ → All Pages (two taps from the hub), and
+    in docs/guides/hub.md."""
+    from lab_os.hub.server import PAGES
+
+    app = make_app()
+    client = await aiohttp_client(app)
+    served = set()
+    for r in app.router.routes():
+        path = r.resource.canonical if r.resource else ""
+        if r.method != "GET" or "{" in path or isinstance(r.resource, web.StaticResource):
+            continue
+        if path.startswith(("/api/", "/ws", "/static", "/web", "/models", "/hub/", "/mcp")):
+            continue
+        if path.endswith((".json", ".js", ".css", ".svg", ".png")):
+            continue
+        served.add(path)
+    listed = {p for p, _, _ in PAGES}
+    assert served <= listed, f"pages missing from PAGES: {served - listed}"
+    got = await (await client.get("/api/hub")).json()
+    assert [p["path"] for p in got["pages"]] == [p for p, _, _ in PAGES]
+    guide = (SRC.parents[1] / "docs" / "guides" / "hub.md").read_text()
+    for path, _, _ in PAGES:
+        assert f"`{path}`" in guide, path
+    assert "pagesGroup()" in (SRC / "hub" / "web" / "settings.js").read_text()

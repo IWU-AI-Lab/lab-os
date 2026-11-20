@@ -26,6 +26,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Drawing resolution for each screen (`?res=`) and levels of detail (`?quality=`) for slow screens | ✅ | The hub on the Newline: checklist part 2 (`/perf` there: 44 to 59 frames a second). |
 | A Full screen button on every page; Esc = Back without leaving full screen (Chrome, Edge) | ✅ | |
 | A card swipe on the designed hub's start screen starts it, with its own unlock and sound; only a plain number (a student ID), never stored, logged or sent (2026-11-20, quick job 79) | 🧪 | Typed card data in headless Chrome; lab check I.11. |
+| Every page opens from the hub in two taps: ⚙ → All Pages (2026-11-20, quick job 67) | 🧪 | Tested without hardware; lab check I.14. |
 | No long-press menu on the hub pages on a touch screen; the ask line keeps it (2026-11-20, quick job 65) | 🧪 | Tested with touch events in headless Chrome; lab check I.10. |
 | Back to the start screen after 30 minutes with nobody there (never while something is in use) | ✅ | |
 | A module on another monitor of the brain's computer (Open on… → Another monitor of this computer). Since 2026-11-20 (quick job 74), in lab-os's own window both pages stay full screen; module pages have a **Window** button too. | 🧪 | Uses Chrome's Window Management API; full screen without a press through the browser's DevTools (tested in headless Chrome); lab check I.7 to I.9. |
