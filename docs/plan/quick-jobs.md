@@ -9,6 +9,13 @@ Two coding sessions may run at the same time, one for each lane (the builder, 20
 
 ### Lane 1: voice and the hub pages
 - 65. **No long-press menu on the hub** (lab day 2026-11-19). On the Newline's touch screen, a long press opens the browser's menu (Inspect, Save image). Turn that menu off on the hub pages. Text in the ask line can still be selected and pasted.
+- 79. **Swipe a card to start the hub** (the builder, 2026-11-20; `docs/plan/ideas.md` → "Start the hub with a card" for later steps).
+  - The lab's USB card reader types the card's data like a keyboard, very fast, then Enter. So the hub's start screen catches it in the browser on any device that has the hub open: the brain desktop, a Pi or another computer at the front of the room. No relay program.
+  - Only on the idle start screen, for now. A swipe there starts the hub, like a tap.
+  - The start is different from a tap: a short, punchy animation that flows into the normal startup without a jump, and its own sound. In the design's style (`docs/design/DESIGN.md`, `config/theme.yaml`).
+  - Any card whose data is a plain number (a student ID) starts it. Anything else (for example a bank card's data) is ignored. lab-os never stores, logs or sends a card's data on: it only uses it to see that a card was swiped.
+  - Normal typing on the start screen must not look like a swipe (the reader types far faster than a person).
+  - No names and no list of cards yet (later steps in the idea).
 - 57. **"Hey Jarvis" stops a running answer** (the builder, 2026-11-20). While the assistant thinks or speaks, the wake word (or the mic button) stops the answer and listens to the new question at once.
 - 58. **Only the screen that talks shows the speaking core** (the builder, 2026-11-20). When the Newline's hub speaks, the desktop's core shows the speaking animation too. Only the screen that has the conversation shows listening, thinking and speaking.
 - 46. **Assistant language** (9.13, 9.14).
