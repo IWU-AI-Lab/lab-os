@@ -48,6 +48,8 @@ If the plain hub leaves full screen (a swipe, holding Esc, a reload), the start 
 
 **The designed hub has one tap:** full screen, the unlock and the startup (about 8 s; any input skips it). Leaving full screen does not bring back the start screen.
 
+**No long-press menu:** on a touch screen, a long press on a hub page does not open the browser's menu (Inspect, Save image). In the ask line, a long press still selects text, and paste works. A mouse's right click still opens the menu.
+
 **The Full screen button** is on every page (the hubs' status strips, the bar of each module page, the classic pages, `/perf`), while the page is not full screen (also after F11, and in the window that "Start lab-os" opens). It does what tap 1 does. If the browser cannot go full screen, the button stays, and when you press it, it **says why** (also in its tooltip). The reasons: no Fullscreen API; the browser switched it off (for example a kiosk or a managed policy); a permissions policy blocks it; or the browser refuses it with its own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One file does this for every page: `src/lab_os/web/fullscreen.js`.
 
 **Modules open inside the hub,** so the page stays full screen. **Back** or **Esc** closes them. In Chrome and Edge, Esc means Back without leaving full screen (Keyboard Lock; hold Esc to leave full screen). In Firefox (and Chromium browsers without the lock), Esc also leaves full screen; the next tap or key then goes full screen again. Leaving on purpose (F11, or Esc with nothing open) stays left. In teleop's desktop control, the first Esc leaves desktop control and the next one is Back.

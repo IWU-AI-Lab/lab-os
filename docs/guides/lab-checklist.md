@@ -192,6 +192,8 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.8** In the hub, open Monitor. Press **Open on…** → **Another monitor of this computer**. → is Monitor full screen on the other monitor, with no click? (yes / no) Is the hub still full screen? (yes / no)
 - **I.9** On the other monitor, press **Window** in Monitor's bar. → is Monitor a window now? (yes / no) Close it. Open it on the other monitor again, as in I.8. → does it open as a window? (yes / no)
 
+- **I.10** Quick job 65. On the Newline (touch), press and hold the core for 2 seconds. Then press and hold a module button. → did a browser menu open? (yes / no) Press and hold a word in the ask line. → can you select it and paste? (yes / no)
+
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
 - **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)

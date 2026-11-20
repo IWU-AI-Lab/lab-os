@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 from aiohttp import web
-from test_hub_server import make_app
+from test_hub_server import SRC, make_app
 
 import lab_os.hub.server as hub_server
 from lab_os import config, settings
@@ -337,3 +337,13 @@ def test_settings_scroll_down_not_off_to_the_side():
     html = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/settings.html").read_text()
     rule = html.split("#list {", 1)[1].split("}", 1)[0]
     assert "columns:" not in rule and "overflow-y: auto" in rule
+
+
+def test_no_long_press_menu_on_the_hub_pages():
+    """Quick job 65: a long press on the Newline opened the browser's menu (Inspect, Save image).
+    Every hub page loads the blocker; text fields and a mouse's right click keep the menu."""
+    menu = (SRC / "web" / "no-menu.js").read_text()
+    assert 'pointerType === "mouse"' in menu and "input, textarea" in menu
+    for page in (SRC / "hub" / "web" / "design.html", SRC / "hub" / "web" / "hub.js"):
+        assert "/web/no-menu.js" in page.read_text(), page.name
+    assert 'import "/web/no-menu.js"' in (SRC / "web" / "design" / "kit.js").read_text()

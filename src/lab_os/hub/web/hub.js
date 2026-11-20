@@ -9,6 +9,7 @@
 // `#skip` in the address jumps straight to the hub (for quick looks on a laptop).
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
+import "/web/no-menu.js";
 import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
 import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 

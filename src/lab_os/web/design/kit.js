@@ -9,6 +9,7 @@
 //   <script type="module" src="/web/design/kit.js"></script>
 import { brainWindow, fullscreenButton, goFullscreen, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
+import "/web/no-menu.js";
 
 const root = document.documentElement.style;
 const colors = theme.colors || {};
