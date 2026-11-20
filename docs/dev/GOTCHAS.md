@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — The voice changed to another person between answers (quick job 47)
+**What:** the lab heard the assistant's voice change between answers. Both personas use one voice setup (`main`, OpenAI `fable`), so the persona is not the cause. Two paths can change the sound: (1) with the free Gemini key, a TTS model over its limit hands over to the next model, and another model sounds like another person with the same voice name; the greeting's recording could also come from such a model and then play at every start. (2) With OpenAI, each sentence is its own `gpt-4o-mini-tts` request, and the model renders the style text again each time, so the accent can drift. Not confirmed which one the lab heard.
+**Fix:** an answer keeps the model that spoke its first part when it can; a greeting from a fallback model is not saved (older recordings are made again once, "v2" in the name); the terminal names the voice and model of each answer and greeting. If the log shows one model and the sound still changes, it is (2): then try `tts-1-hd` with `fable` (no style text) in `config/models.yaml`.
+
 ### 2026-11-20 — The mic button didn't come back after the USB microphone was plugged in again
 **What:** quick job 48 (lab day 2026-11-19). The button hides on "devicechange" when the microphone goes, but it stayed hidden after the microphone came back. The page counted the microphones once per "devicechange". On Linux, the browser can send that event when the USB device appears, before the sound system (PipeWire or PulseAudio) lists its microphone; then the one count finds none, and no second event comes. Likely, not proven on the lab desktop: in headless Chrome, a faked microphone listed 1 s after the event gave exactly this.
 **Fix:** quick job 73: `web/voice.js` counts again 0.5, 2 and 5 s after each change, and every 5 s while it sees none.

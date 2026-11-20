@@ -51,6 +51,7 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
 - **V.9** Quick job 46. Open ⚙ → This Device → Assistant Language. Set **Answers** to English. Type `¿Qué hora es?` and send it. Then type `Wie spät ist es?`. → were both answers in English? (yes / no)
 - **V.10** Set **Expects** to English. Say "Hey Jarvis, test" five times. → did the word "test" show in Latin letters every time? (yes / no) If no, copy the terminal's line that starts with `voice: question on`.
+- **V.11** Quick job 47. Ask 5 questions by voice, one after the other. → did the voice sound like the same person every time? (yes / no) If no, copy the terminal's lines that start with `voice: answer on`.
 
 ---
 
