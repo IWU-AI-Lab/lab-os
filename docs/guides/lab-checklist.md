@@ -180,7 +180,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
-## I. The icon: one hub window (10 min)
+## I. The icon, one hub window and full screen (20 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.
 - **I.1** Tap **Start lab-os**. If the browser asks for the microphone, allow it. → did one hub window open? (yes / no)
 - **I.2** Click the brain's terminal, so that it covers the hub. Tap **Start lab-os** again. → did the hub come to the front? (yes / no) Did a second hub window open? (yes / no)
@@ -188,6 +188,9 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.4** Close the hub window with its X. The brain keeps running. Tap **Start lab-os** again. → did one hub window open? (yes / no)
 - **I.5** Quick job 64. Open the hub on the Newline too (Open on…). Press ⏻ → **Shut down lab-os** on the desktop. → did the desktop's hub window close? (yes / no) What does the Newline show? (closed / "lab-os is off" / other)
 - **I.6** Tap **Start lab-os**. Open Quest view (the Quest on its USB cable). Press Ctrl+C in the brain's terminal. → did the hub window and the Quest view window close? (yes / no each) Did the Newline say "lab-os is off"? (yes / no)
+- **I.7** Quick job 74. Tap **Start lab-os**. Press F11 two times, so that the hub is a window. → is there a full screen button in the hub's strip? (yes / no) Press it. → is the hub full screen? (yes / no)
+- **I.8** In the hub, open Monitor. Press **Open on…** → **Another monitor of this computer**. → is Monitor full screen on the other monitor, with no click? (yes / no) Is the hub still full screen? (yes / no)
+- **I.9** On the other monitor, press **Window** in Monitor's bar. → is Monitor a window now? (yes / no) Close it. Open it on the other monitor again, as in I.8. → does it open as a window? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

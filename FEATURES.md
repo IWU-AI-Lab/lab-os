@@ -26,7 +26,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Drawing resolution for each screen (`?res=`) and levels of detail (`?quality=`) for slow screens | ✅ | The hub on the Newline: checklist part 2 (`/perf` there: 44 to 59 frames a second). |
 | A Full screen button on every page; Esc = Back without leaving full screen (Chrome, Edge) | ✅ | |
 | Back to the start screen after 30 minutes with nobody there (never while something is in use) | ✅ | |
-| A module on another monitor of the brain's computer (Open on… → Another monitor of this computer) | 🧪 | Uses Chrome's Window Management API. |
+| A module on another monitor of the brain's computer (Open on… → Another monitor of this computer). Since 2026-11-20 (quick job 74), in lab-os's own window both pages stay full screen; module pages have a **Window** button too. | 🧪 | Uses Chrome's Window Management API; full screen without a press through the browser's DevTools (tested in headless Chrome); lab check I.7 to I.9. |
 | Other computers on the network can watch; only the brain's computer drives (`--drive-from <host>` lets one more computer drive) | ✅ | Tried with `pi01`, a second lab desktop and the Newline (its STOP stopped the arm). |
 | Performance test page (`/perf`) | ✅ | The Newline's own Chrome: 44 frames a second with 3000 stars, 59 with 1000 (2026-11-13). |
 

@@ -141,6 +141,62 @@ def close_hub_windows(port: int, profile: Path | None = None) -> int:
     return closed
 
 
+WINDOW_STATES = ("fullscreen", "normal")
+
+
+async def set_window_state(url: str, state: str, profile: Path | None = None) -> str:
+    """Put the window of lab-os's own browser that shows exactly `url` in full screen or back to a
+    window (quick job 74): a web page may go full screen only from a press, but the browser's
+    DevTools may. Returns "" when done, else why not (a sentence)."""
+    import asyncio
+
+    import aiohttp
+
+    if state not in WINDOW_STATES:
+        return f"Unknown window state {state!r}."
+    try:
+        lines = ((profile or PROFILE) / "DevToolsActivePort").read_text().split()
+        port, path = int(lines[0]), lines[1]
+    except (OSError, ValueError, IndexError):
+        return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
+    pages = await asyncio.to_thread(hub_windows, "", urlsplit(url).port or 80, profile)
+    page = next((p for p in pages if p.get("url") == url), None)
+    if page is None:
+        return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
+    try:
+        async with (
+            aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=3)) as session,
+            session.ws_connect(f"ws://127.0.0.1:{port}{path}") as ws,
+        ):
+            got = await _cdp(ws, 1, "Browser.getWindowForTarget", targetId=page["id"])
+            window = got["windowId"]
+            if state == "fullscreen" and got.get("bounds", {}).get("windowState") == "minimized":
+                await _cdp(
+                    ws,
+                    2,
+                    "Browser.setWindowBounds",
+                    windowId=window,
+                    bounds={"windowState": "normal"},
+                )
+            await _cdp(
+                ws, 3, "Browser.setWindowBounds", windowId=window, bounds={"windowState": state}
+            )
+    except (OSError, TimeoutError, aiohttp.ClientError, KeyError, RuntimeError) as e:
+        return f"The browser didn't change the window ({e or type(e).__name__})."
+    return ""
+
+
+async def _cdp(ws, n: int, method: str, **params) -> dict:
+    """One DevTools call on an open browser connection; its result (RuntimeError: its error)."""
+    await ws.send_json({"id": n, "method": method, "params": params})
+    while True:
+        msg = await ws.receive_json()
+        if msg.get("id") == n:
+            if "error" in msg:
+                raise RuntimeError(msg["error"].get("message", "error"))
+            return msg.get("result", {})
+
+
 def brain_answers(port: int) -> bool:
     """Is a brain already running on this computer at that port?"""
     try:
