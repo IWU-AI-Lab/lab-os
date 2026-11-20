@@ -87,7 +87,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 ## Waiting on others
 - **The 7-port powered USB hub** (shopping list in the log): the white arm and its cameras without unplugging the green ones.
-- **The lab router:** the builder buys a GL.iNet Beryl 7 (GL-MT3600BE, about $90; 2026-11-19) and hopes to have it by Tuesday 2026-11-24. Before it stays on the lab's wall port, the professor's OK (decision 2026-10-22). Then "Up next" below.
+- **The lab router:** the builder buys a GL.iNet Beryl 7 (GL-MT3600BE, about $90; 2026-11-19) and hopes to have it by Tuesday 2026-11-24. The professor approved it, on the wall port too (2026-11-20). Lab check part N. Then "Up next" below.
 
 ## Hacks to clean up
 - `config/devices.yaml`: `so101-white-cam-stand` / `-cam-wrist` (2026-11-12; `-cam-a` / `-b` until quick job 15, 2026-11-16) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today (7 = wrist, 8 = stand on both sets; the white names were the wrong way round until quick job 29, 2026-11-18). The two cables must be in the right sockets: on 2026-11-19 they were swapped. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
