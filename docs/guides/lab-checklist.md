@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then T, then the parts that the sessions add for the other previews and the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then T and D, then the parts that the sessions add for the other previews and the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -95,6 +95,12 @@ In a second terminal, run `adb reverse tcp:8080 tcp:8080`.
 - **T.16** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
 - **T.17** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
 - **T.18** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
+
+## D. STOP from another device (10 min)
+Setup: `so101-white` connected, the brain running (part T's command without `--left-arm`). A second device (a phone or a laptop) on the brain's network, or the Quest's browser.
+- **D.1** On the second device, open `http://<address>:8080/monitor`. → does Monitor show the arm and a STOP button? (yes / no)
+- **D.2** On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
+- **D.3** Say `Hey Jarvis, the visitors have left`. → nothing to report.
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
