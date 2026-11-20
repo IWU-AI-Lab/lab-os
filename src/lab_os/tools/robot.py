@@ -7,8 +7,9 @@ refuses; it never trusts the numbers it's given:
 
 - **refused** (nothing moves, the message says why): the venue doesn't allow motion; the arm is
   disconnected (its USB was unplugged; the brain reconnects when it's back); teleop has control;
-  another move is running; an unknown arm, joint or pose; a target below the floor (`min_z_cm`)
-  or out of reach; a path that needs a sudden big joint swing.
+  another move is running; lab-os is shutting down (quick job 44); an unknown arm, joint or
+  pose; a target below the floor (`min_z_cm`) or out of reach; a path that needs a sudden big
+  joint swing.
 - **clipped** (it moves, and says so): targets past the soft limits (3° inside the real ones, like
   teleop); more than `max_joint_change_deg` per call (all joints go the same fraction of the way;
   the gripper is exempt); more than `max_move_cm` per call for move_to.
@@ -373,6 +374,8 @@ class RobotTools:
 
     def _check_can_move(self, arm: str | None) -> None:
         self._check_arm(arm)
+        if self.loop.shutting_down:  # quick job 44: from the shutdown on, nothing moves
+            raise Refused(f"{self.loop.shutting_down}: nothing moves any more")
         if not self.venue.motion_allowed:
             raise Refused(
                 f"the venue {self.venue.name!r} doesn't allow motion (motion_allowed: false)"
@@ -458,8 +461,10 @@ class RobotTools:
             return {"result": "disconnected", "clipped": notes, "problem": self._disconnected()}
         if motion.result != "arrived":
             notes.append(
-                "stopped before arriving (STOP was pressed, or the arm was frozen). Don't move "
-                "again until the user says so."
+                f"stopped before arriving: {self.loop.shutting_down}. Nothing moves now."
+                if self.loop.shutting_down
+                else "stopped before arriving (STOP was pressed, or the arm was frozen). Don't "
+                "move again until the user says so."
             )
             return {"result": "stopped", "clipped": notes} | self._where()
         await asyncio.sleep(SETTLE_S)

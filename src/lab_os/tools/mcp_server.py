@@ -24,6 +24,8 @@ log = logging.getLogger(__name__)
 
 MCP_HOST = "127.0.0.1"  # never anything else: the move tools are for this computer only
 DEFAULT_PORT = 8081
+# When the brain stops, an AI tool's open connection gets this long, then it is cut (quick job 44)
+STOP_WAIT_S = 1
 
 INSTRUCTIONS = """\
 Tools for the lab's robot arm, through the lab-os brain. Call arm_status first: it gives the joint
@@ -278,8 +280,16 @@ class McpHttp:
 
     def __init__(self, server: MCPServer, port: int = DEFAULT_PORT):
         app = server.streamable_http_app(streamable_http_path="/mcp", host=MCP_HOST)
-        config = uvicorn.Config(app, host=MCP_HOST, port=port, log_level="warning", lifespan="on")
+        config = uvicorn.Config(
+            app,
+            host=MCP_HOST,
+            port=port,
+            log_level="warning",
+            lifespan="on",
+            timeout_graceful_shutdown=STOP_WAIT_S,
+        )
         self.uvicorn = _Uvicorn(config)
+        self.sessions = server.session_manager
         self.port = port
         self.url = f"http://{MCP_HOST}:{port}/mcp"
         self.failed = False  # couldn't start (the port is taken): the brain runs on without it
@@ -295,5 +305,14 @@ class McpHttp:
                 self.port,
             )
 
-    def shutdown(self) -> None:
+    async def shutdown(self) -> None:
+        """Stop: end each AI tool's session first, so its open stream closes cleanly (uvicorn
+        would wait for it, then cut it with an error trace), then the server."""
+        # HACK: the MCP library has no public call to end every session; this reads its own list
+        # (docs/plan/current-focus.md → Hacks). If it moves, uvicorn's STOP_WAIT_S cut still works.
+        for transport in list(getattr(self.sessions, "_server_instances", {}).values()):
+            try:
+                await transport.terminate()
+            except Exception as e:  # the stop must go on
+                log.warning("AI tools (MCP): ending a session: %s", e)
         self.uvicorn.should_exit = True

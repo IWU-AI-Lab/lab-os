@@ -17,8 +17,15 @@ function leftText(l) {
 }
 
 /** From the teleop status (an ArmFeed): {state, level, gripper (% open or null), speed, hint: [parts],
- * left: {state, level} or null}. `moving`: two arms, Y held (the grips move the 3D arms). */
-export function panelText(feed, noController, source, moving = false) {
+ * left: {state, level} or null}. `moving`: two arms, Y held (the grips move the 3D arms). `off`: the
+ * brain_off message once lab-os was shut down or restarts (quick job 44: the page's cover isn't seen in
+ * the headset, so the panel says it). */
+export function panelText(feed, noController, source, moving = false, off = null) {
+  if (off) {
+    return off.restart
+      ? { state: "lab-os is restarting", level: "offline", gripper: null, speed: null, hint: ["It comes back by itself"], left: null }
+      : { state: "lab-os is off", level: "offline", gripper: null, speed: null, hint: ["The arm was let go", "Start it from its icon"], left: null };
+  }
   const one = oneArmText(feed, noController, source);
   const l = feed?.status?.left_arm;
   if (!l || noController) return { ...one, left: null };

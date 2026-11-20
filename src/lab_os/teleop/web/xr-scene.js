@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { loadArmModel } from "./arm/arm-model.js";
 import { color, theme } from "/web/theme.js";
 import { panelText } from "./status-text.js";
+import { offMessage } from "/web/off.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
@@ -154,7 +155,9 @@ export class XRScene {
     // No right controller or hand: say so, and how to leave, instead of looking broken
     // (2026-10-29: the builder got stuck in the page).
     const missing = !hands.right?.pos;
-    if (missing !== this.panel.noController || source !== this.panel.source || moving !== this.panel.moving) {
+    const off = offMessage(); // lab-os was shut down: the panel says so (quick job 44)
+    if (missing !== this.panel.noController || source !== this.panel.source || moving !== this.panel.moving || off !== this.panel.off) {
+      this.panel.off = off;
       this.panel.noController = missing;
       this.panel.source = source;
       this.panel.moving = moving;
@@ -338,7 +341,7 @@ export class StatusPanel {
 
   update(feed) {
     this.last = feed;
-    const t = panelText(feed, this.noController, this.source, this.moving);
+    const t = panelText(feed, this.noController, this.source, this.moving, this.off);
     const key = JSON.stringify(t);
     if (key === this.key) return;
     this.key = key;
