@@ -50,3 +50,22 @@ def locked():
             "xarm1": Device("xarm1", "xarm1s", usb=(UsbId(0x0483, 0x5750, "xArm", "X1"),)),
         }
     )
+
+
+@pytest.fixture
+def aiohttp_client(aiohttp_server, aiohttp_client):
+    """pytest-aiohttp's own, set up after `aiohttp_server` so that it closes first: the brain lets
+    go of the fake AI and voice services while they still answer (closed the other way round, a
+    hearing's goodbye waited 3 s for a service that had stopped answering)."""
+    return aiohttp_client
+
+
+@pytest.fixture(autouse=True)
+def _fake_arm_needs_no_settling(monkeypatch):
+    """The robot tools hold the last waypoint 0.5 s and wait 0.2 s more before reading where the
+    arm is, for real servos that trail behind. The fake arm arrives at once, so the tests keep one
+    tick of the hold (the code still runs) and skip the rest: about 0.7 s saved per move."""
+    from lab_os.tools import robot
+
+    monkeypatch.setattr(robot, "HOLD_S", 0.02)
+    monkeypatch.setattr(robot, "SETTLE_S", 0.0)

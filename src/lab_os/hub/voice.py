@@ -940,7 +940,16 @@ async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketRespon
                     await link.on_text(data)
     finally:
         desk.links.discard(link)
-        await link.close()
-        link._settle()
-        desk.warm()  # the last listening screen left: the warm hearing goes
+
+        async def let_go() -> None:
+            await link.close()
+            link._settle()
+            desk.warm()  # the last listening screen left: the warm hearing goes
+
+        # its own task, waited for at shutdown: the server cancels this handler when the page's
+        # connection drops, and a cancelled close leaves the voice service's socket open
+        task = asyncio.get_running_loop().create_task(let_go())
+        desk._closing.add(task)
+        task.add_done_callback(desk._closing.discard)
+        await asyncio.shield(task)
     return ws

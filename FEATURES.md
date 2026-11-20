@@ -106,7 +106,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Venues (lab, visit-day) set the speed limits, the persona and what the hub hides | ✅ | `config/venues/`. visit-day is the venue for visitor mode. |
 | Works offline: every web library and font is in the repository | ✅ | |
 | A one-line install on a new Linux computer (`scripts/install.sh`) | ✅ | |
-| Tests and lint on every push (GitHub Actions), no hardware needed | ✅ | |
+| Tests and lint once for each push to `main` or to a pull request (GitHub Actions), in parallel, no hardware needed | ✅ | |
 | Colours in the terminal: each log line starts with the time, warnings are amber and errors red. There is no colour in a pipe or a log file, or when `NO_COLOR` is set. | ✅ | Tested without hardware and in a pseudo-terminal on macOS. Lab: check F.16. |
 
 ## Training launcher (so101-green)

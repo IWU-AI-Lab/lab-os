@@ -28,7 +28,7 @@ What the repo should contain. Solo project → keep everything **short and usefu
 | `docs/dev/GOTCHAS.md` | Every on-the-ground surprise + its fix (the "papercuts only bite once" file). |
 | `docs/DEMO.md` | The demo runbook: kit checklist, ≤10-minute setup steps, the 30-second visitor script, what to do if X fails. |
 | `docs/decisions/` | Short decision records ("we chose X over Y because Z"), one file each, for big choices — the master log stays the summary. |
-| GitHub Actions (CI) | Runs tests + linter automatically on every push. Catches breakage before it reaches the lab. |
+| GitHub Actions (CI) | Runs tests + linter automatically on each push to `main` or to a pull request. Catches breakage before it reaches the lab. |
 | Git tags for demos | Tag a **known-good version** (e.g. `demo-2026-11-15`) after a successful rehearsal. **Always demo from a tagged version, never from untested latest code.** |
 | `CHANGELOG.md` | One line per meaningful change, grouped by date/version. Doubles as a progress record (motivating!). |
 | Issues / task board | GitHub Issues or Projects as the to-do list; link to it from the README. |
