@@ -154,6 +154,25 @@ For the cube:
 - The colour, the cube's height and the hand-over pose are in `config/handover.yaml`. The `handover` pose is in `config/poses.yaml`; it was computed on the arm's 3D model.
 - Questions from other screens never get these tools.
 
+## Every page (quick job 67)
+Each page opens from the hub in two taps: ⚙ → **All Pages** → **Open** (a window of its own). Teleop, Monitor, AI Control and Training are also buttons around the core (⚙ → The Lab → Buttons Around the Core). The list is `PAGES` in `src/lab_os/hub/server.py`: a test fails when a new page is not in it.
+
+| Address | Name | What it is |
+|---|---|---|
+| `/` | The Hub | The main address: the plain or the designed hub (⚙ → The Lab). |
+| `/design` | Designed Hub | The designed hub, whatever the main address shows. |
+| `/plain` | Plain Hub | The plain hub, whatever the main address shows. |
+| `/teleop` | Teleop | Drive the arm: the Quest, the desktop's keys or the joint sliders. |
+| `/monitor` | Monitor | The arm's joints and 3D view, with STOP; drives nothing. |
+| `/ai` | AI Control | What an AI tool does with the arm, live. |
+| `/training` | Training | Start the green arms' LeLab after a port check. |
+| `/webcam` | Webcam Teleop | Your bare hand in front of the webcam drives the arm (preview). |
+| `/xr` | VR Hub | The hub in the headset (opens only in a VR browser). |
+| `/settings` | Settings | This page: ⚙ on the hub. |
+| `/perf` | Performance Test | Drifting dots and star streaks with frames per second. |
+| `/classic/teleop` | Classic Teleop | The first teleop page, kept in case. |
+| `/classic/monitor` | Classic Monitor | The first monitor page, kept in case. |
+
 ## The module pages (Teleop, Monitor, AI Control)
 They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub, they have no frame or title of their own. On their own screen, they have both, the place's name, the clock and a choice: **Full screen** while the page is a window, **Window** while it is full screen. Select **Window** to put several pages on one monitor. The browser keeps the choice for each page. The core page (the hub) has no **Window** button: it is always full screen.
 - **Teleop** (`/teleop`): the arm in 3D on the left. On the right: how to drive it (the Quest's Enter AR or VR, Desktop control and its keys) and what the page sends. The status (brain, control, arm) and **STOP** are in the bar, always in view. While desktop control is on, "X = STOP" shows next to it (X stops in every mode). When another page drives the arm, or the AI tools do, the buttons that would take control are grey, and a line under them says who has control ("The page on desk has control. It must stop first."). A screen that may only watch says "View only". The Webcam control page does the same with its Start button.

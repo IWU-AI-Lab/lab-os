@@ -119,6 +119,24 @@ MODULES = {
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
 }
 
+# Every page the brain serves: (address, name, one line). ⚙ → All Pages lists them, so each opens
+# from the hub in two taps (quick job 67); a test checks that no page is missing here.
+PAGES = (
+    ("/", "The Hub", "The main address: the plain or the designed hub (⚙ → The Lab)."),
+    ("/design", "Designed Hub", "The designed hub, whatever the main address shows."),
+    ("/plain", "Plain Hub", "The plain hub, whatever the main address shows."),
+    ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
+    ("/monitor", "Monitor", "The arm's joints and 3D view, with STOP; drives nothing."),
+    ("/ai", "AI Control", "What an AI tool does with the arm, live."),
+    ("/training", "Training", "Start the green arms' LeLab after a port check."),
+    ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
+    ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
+    ("/settings", "Settings", "This page: ⚙ on the hub."),
+    ("/perf", "Performance Test", "Drifting dots and star streaks with frames per second."),
+    ("/classic/teleop", "Classic Teleop", "The first teleop page, kept in case."),
+    ("/classic/monitor", "Classic Monitor", "The first monitor page, kept in case."),
+)
+
 DEFAULT_RESET_AFTER_S = 1800.0
 MAX_COMMIT_DAYS = 90
 MAX_QUESTION_CHARS = 2000
@@ -877,6 +895,7 @@ async def api_hub(request: web.Request) -> web.Response:
             "title": title,
             "modules": hub_modules(theme),
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
+            "pages": [{"path": p, "title": t, "line": line} for p, t, line in PAGES],
         }
     )
 
