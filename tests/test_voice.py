@@ -833,3 +833,54 @@ def test_expects_is_named_for_what_it_does():
 
     js = (SRC / "hub" / "web" / "settings.js").read_text()
     assert '["hear_in", "Expects"]' in js and "It still hears other languages" in js
+
+
+async def test_one_answer_keeps_one_model(aiohttp_server, key):
+    """Quick job 47: another TTS model can sound like another person with the same voice name.
+    The model that spoke the answer so far is tried first, and the caller learns which spoke."""
+    import dataclasses
+
+    from lab_os.ai.speech import speak_any
+    from lab_os.hub.voice import voice_words
+
+    seen = []
+    server = await aiohttp_server(fake_voice(seen=seen))
+    setup = dataclasses.replace(gemini_setup(server), speak="tts-a", speak_more=("tts-b",))
+    used = []
+    async with __import__("aiohttp").ClientSession() as session:
+        await speak_any(session, setup, "One.", {}, prefer="tts-b", used=used)
+        await speak_any(session, setup, "Two.", {}, prefer=used[-1], used=used)
+    assert [s["model"] for s in seen if "tts" in s] == ["tts-b", "tts-b"] and used == ["tts-b"] * 2
+    assert "tts-b, voice" in voice_words(setup, used)
+    assert "two people" in voice_words(setup, ["tts-a", "tts-b"])
+
+
+async def test_a_greeting_from_a_fallback_model_isnt_kept(aiohttp_server, key, tmp_path, caplog):
+    """Quick job 47: the greeting's recording is played at every start. Spoken by a fallback model
+    (the first over its limit), it would sound like another person each time: not kept."""
+    import dataclasses
+    import logging
+
+    from lab_os.hub.voice import greeting_file
+
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, limited=("tts-a",))
+    from lab_os.hub.server import BRAIN
+
+    desk = app[BRAIN].voice
+    voices = desk.voices()
+    for name, s in voices.items():
+        voices[name] = dataclasses.replace(s, speak="tts-a", speak_more=("tts-b",))
+    desk.voices = lambda: voices
+    rec = tmp_path / "rec"
+    desk.recordings = lambda: rec
+    from aiohttp.test_utils import TestClient, TestServer
+
+    async with TestClient(TestServer(app)) as client:
+        ws = await client.ws_connect("/ws/voice")
+        with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
+            await ws.send_json({"type": "greet", "way": "push_to_talk"})
+            await until(ws, "audio_end", [])
+        await ws.close()
+    assert "greeting not saved: tts-b spoke it, not tts-a" in caplog.text
+    assert not list(rec.glob("*.wav"))
+    assert greeting_file(rec, desk.setup(), "x").name.startswith("test-")

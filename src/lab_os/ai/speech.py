@@ -391,18 +391,33 @@ def _pcm_rate(mime: str) -> int | None:
 
 
 async def speak_any(
-    session: aiohttp.ClientSession, setup: VoiceSetup, text: str, resting: dict[str, float]
+    session: aiohttp.ClientSession,
+    setup: VoiceSetup,
+    text: str,
+    resting: dict[str, float],
+    prefer: str | None = None,
+    used: list[str] | None = None,
 ) -> bytes:
     """Like `speak()`, trying the setup's TTS models in order: one over its limit (HTTP 429) rests
     until its retry time (`resting`: model → time.monotonic() it may be used again, kept by the
     caller across calls); a busy or stuck one (5xx, no answer in time) is skipped this once.
-    Gemini's free key allows 3 requests a minute and 10 a day per model (GOTCHAS)."""
+    Gemini's free key allows 3 requests a minute and 10 a day per model (GOTCHAS).
+    Another model can sound like another person with the same voice name (quick job 47), so
+    `prefer` is tried first (the model that spoke the answer so far), and `used` gets the model
+    that spoke."""
     last: VoiceError | None = None
-    for model in setup.speak_models:
+    models = list(setup.speak_models)
+    if prefer in models:
+        models.remove(prefer)
+        models.insert(0, prefer)
+    for model in models:
         if resting.get(model, 0) > time.monotonic():
             continue
         try:
-            return await speak(session, dataclasses.replace(setup, speak=model), text)
+            wav = await speak(session, dataclasses.replace(setup, speak=model), text)
+            if used is not None:
+                used.append(model)
+            return wav
         except OverLimit as e:
             log.info("%s voice: %s is over its limit for %.0f s", setup.name, model, e.retry_s)
             resting[model] = time.monotonic() + e.retry_s
