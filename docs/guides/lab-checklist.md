@@ -179,6 +179,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.5** → did the arm hold the cube out to you at the hand-over pose? (yes / no) Was it easy to take? (yes / no) Say "let go". → did the gripper open? (yes / no)
 - **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
+- **H.8** Quick job 77. Start the brain again with the command above. Open AI Control (`/ai`) on the desktop. Ask "move the arm to ready", then "move the arm to the hand-over pose". → does AI Control show each move as arrived, not "short"? (yes / no: copy the line that says short)
 
 ## I. The icon, one hub window and full screen (20 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.
