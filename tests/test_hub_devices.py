@@ -217,7 +217,10 @@ async def test_each_device_keeps_its_settings_under_its_name(aiohttp_client, tmp
 
 
 def test_tests_never_write_the_repos_device_settings():
-    assert "hub-devices" in str(hub_devices.settings_file().parent)  # conftest's temporary folder
+    from lab_os import config
+
+    assert config.DEFAULT_DIR not in hub_devices.settings_file().parents  # conftest's temporary
+    assert hub_devices.settings_file().parent == config.local_dir()
 
 
 async def test_pages_reconnect_after_the_brain_restarts(aiohttp_client):

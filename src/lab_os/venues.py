@@ -1,11 +1,10 @@
-"""Venue profiles (<place>/venues/<name>.yaml): which devices are active, how cautious to be."""
+"""Venue profiles (<place>/venues/<name>.yaml, with the place's local/venues/<name>.yaml merged over
+it): which devices are active, how cautious to be."""
 
 import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-
-import yaml
 
 from lab_os import config
 
@@ -149,10 +148,8 @@ def venue_names(config_dir: Path | None = None) -> list[str]:
 
 def visitors_venue_name(config_dir: Path | None = None) -> str | None:
     """The place's venue for visitors (`visitors: true`; the first by name), or None."""
-    folder = (config_dir or config.active_dir()) / "venues"
     for name in venue_names(config_dir):
-        raw = yaml.safe_load((folder / f"{name}.yaml").read_text()) or {}
-        if raw.get("visitors"):
+        if config.load_yaml(f"venues/{name}.yaml", config_dir).get("visitors"):
             return name
     return None
 
@@ -163,7 +160,7 @@ def default_venue_name(config_dir: Path | None = None) -> str:
         return os.environ["LAB_OS_VENUE"]
     folder = config_dir or config.active_dir()
     if (folder / "place.yaml").is_file():
-        place = config.load_place(folder / "place.yaml")
+        place = config.load_place(folder)
         if place.venue:
             return place.venue
     names = venue_names(folder)
@@ -182,7 +179,7 @@ def load_venue(name: str | None = None, config_dir: Path | None = None) -> Venue
     if not path.is_file():
         known = ", ".join(venue_names(folder)) or "none"
         raise config.ConfigError(f"no venue {name!r} in {folder / 'venues'} (there: {known})")
-    raw = yaml.safe_load(path.read_text())
+    raw = config.load_yaml(f"venues/{name}.yaml", folder)
     public, locked = bool(raw.get("public", False)), bool(raw.get("limits_locked", False))
     limits = _limits(raw, raw["name"], public or locked)
     return Venue(

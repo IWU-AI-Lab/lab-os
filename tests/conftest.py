@@ -1,53 +1,33 @@
 """Shared test setup: no test ever sees a real API key (no .env, none from the shell), each test
-starts with the repo's own config/ as the place (as committed, see `committed_config`), and nothing
-is written to the repo's logs/ (AI spend, kept chats)."""
-
-import io
-import shutil
-import subprocess
-import tarfile
+starts with the repo's own config/ as the place, without the lab's own changes (config/local/: an
+empty folder instead), and nothing is written to the repo's logs/ (AI spend, kept chats)."""
 
 import pytest
 
-import lab_os
 from lab_os import config
 
 
-@pytest.fixture(scope="session")
-def committed_config(tmp_path_factory):
-    """The repo's config/ as last committed, in a temporary folder. In the lab, the settings page
-    writes into config/ (docs/guides/hub.md → "Saved into the files"), so the working copy holds
-    the lab's own choices; the tests check the committed defaults. Without git (a source copy):
-    the working copy."""
-    folder = tmp_path_factory.mktemp("committed")
-    try:
-        tar = subprocess.run(
-            ["git", "-C", str(lab_os.REPO_ROOT), "archive", "HEAD", "config"],
-            capture_output=True,
-            check=True,
-        ).stdout
-        with tarfile.open(fileobj=io.BytesIO(tar)) as t:
-            t.extractall(folder, filter="data")
-    except (OSError, subprocess.CalledProcessError, tarfile.TarError):
-        shutil.copytree(lab_os.CONFIG_DIR, folder / "config")
-    return folder / "config"
-
-
 @pytest.fixture(autouse=True)
-def _no_env_file_and_default_place(monkeypatch, tmp_path_factory, committed_config):
+def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
     nowhere = tmp_path_factory.mktemp("no-env") / ".env"
     monkeypatch.setattr(config, "env_file", lambda: nowhere)
-    monkeypatch.setattr(config, "DEFAULT_DIR", committed_config)
-    monkeypatch.setattr(lab_os, "CONFIG_DIR", committed_config)
+    lab_local = tmp_path_factory.mktemp("lab-local")  # the settings page's changes in the lab
+    real_local_dir = config.local_dir
+
+    def local_dir(folder=None):
+        folder = folder or config.active_dir()
+        return (
+            lab_local
+            if folder.resolve() == config.DEFAULT_DIR.resolve()
+            else real_local_dir(folder)
+        )
+
+    monkeypatch.setattr(config, "local_dir", local_dir)
     monkeypatch.setattr(config, "_active", None)
     logs = tmp_path_factory.mktemp("logs")
     monkeypatch.setattr(config, "logs_dir", lambda: logs)
     recordings = tmp_path_factory.mktemp("recordings")  # the saved greetings: never into the repo
     monkeypatch.setattr(config, "recordings_dir", lambda: recordings)
-    from lab_os.hub import hub_devices  # each device's settings: never into the repo's config/
-
-    devices_file = tmp_path_factory.mktemp("hub-devices") / "hub-devices.yaml"
-    monkeypatch.setattr(hub_devices, "settings_file", lambda: devices_file)
     monkeypatch.delenv("LAB_OS_CONFIG", raising=False)
     monkeypatch.delenv("LAB_OS_VENUE", raising=False)
     monkeypatch.delenv("LAB_OS_PERSONA", raising=False)

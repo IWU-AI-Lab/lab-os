@@ -3,10 +3,10 @@
 Each setting is a `Field` (a value in one config file, a kind of input, a label); fields come in
 `Section`s. The settings page (`/settings`) draws whatever is listed here, so **adding a setting is
 adding a Field**, and a new module adds its own section with `register(Section(...))` when it's
-imported. Values are written back into the YAML files with their comments kept (ruamel.yaml).
-
-Files: `theme` (theme.yaml: the place's own copy, made from the repo's on the first change),
-`place` (place.yaml) and `venue` (the venue this brain runs, venues/<name>.yaml).
+imported. A change goes into the place's `local/` folder (not in git), and only the changed value:
+`local/theme.yaml`, `local/place.yaml` or `local/venues/<name>.yaml` (the venue this brain runs).
+The brain merges them over the files below (`config.load_yaml`), so a new field in the repo's files
+reaches every place. A local file keeps its comments when a value changes (ruamel.yaml).
 `applies` says when a change takes effect: `reload` (reload the page), `next` (the next question
 or status poll), `restart` (restart `lab-os serve`).
 """
@@ -14,7 +14,6 @@ or status poll), `restart` (restart `lab-os serve`).
 import difflib
 import io
 import re
-import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -338,19 +337,33 @@ def find(key: str) -> Field:
 # ---------- files ----------
 
 
-def file_path(file: str, venue: str | None = None, writing: bool = False) -> Path:
+def file_name(file: str, venue: str | None = None) -> str:
+    """The config file a settings file stands for, as `config.load_yaml` names it."""
     if file == "theme":
-        own = config.active_dir() / "theme.yaml"
-        if writing and not own.exists():  # the place's own copy, comments and all
-            shutil.copyfile(config.shared_path("theme.yaml"), own)
-        return own if writing else config.shared_path("theme.yaml")
+        return "theme.yaml"
     if file == "place":
-        return config.place_path("place.yaml")
+        return "place.yaml"
     if file == "venue":
         from lab_os.venues import default_venue_name
 
-        return config.active_dir() / "venues" / f"{venue or default_venue_name()}.yaml"
+        return f"venues/{venue or default_venue_name()}.yaml"
     raise SettingError(f"Unknown settings file {file!r}.")
+
+
+def file_path(file: str, venue: str | None = None) -> Path:
+    """Where a change to `file` goes: the place's local/ copy (made on the first change)."""
+    return config.local_dir() / file_name(file, venue)
+
+
+def values(file: str, venue: str | None = None) -> dict:
+    """What the brain uses: every layer of the file merged."""
+    return config.load_yaml(file_name(file, venue), shared=file == "theme")
+
+
+LOCAL_HEAD = (
+    "# This place's own settings: the settings page writes the values that changed here, and they\n"
+    "# win over {name} in the folder above. Not in git. Delete a line to go back to that value.\n"
+)
 
 
 def _get(data: Any, path: str) -> Any:
@@ -368,7 +381,7 @@ def read(venue: str | None = None) -> list[dict]:
     def data(file: str):
         if file not in cache:
             try:
-                cache[file] = yaml.safe_load(file_path(file, venue).read_text()) or {}
+                cache[file] = values(file, venue)
             except (OSError, yaml.YAMLError, config.ConfigError):
                 cache[file] = {}
         return cache[file]
@@ -456,18 +469,24 @@ def check(f: Field, value: Any) -> Any:
 
 
 def write(key: str, value: Any, venue: str | None = None) -> Any:
-    """Change one setting in its file, keeping the file's comments and layout."""
+    """Change one setting in the place's local/ copy of its file (made on the first change),
+    keeping that file's comments and layout."""
     f = find(key)
     value = check(f, value)
-    path = file_path(f.file, venue, writing=True)
     if f.safety and value is False:
-        why = limits_locked_why(yaml.safe_load(path.read_text()) or {})
+        why = limits_locked_why(values("venue", venue))
         if why:
             raise SettingError(f"{f.label} can't be switched off here: {why}.")
+    path = file_path(f.file, venue)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(LOCAL_HEAD.format(name=file_name(f.file, venue)))
     rt = YAML()
     rt.preserve_quotes = True
     rt.width = 4096  # never re-wrap long comment lines
-    data = rt.load(path.read_text()) or {}
+    before = path.read_text()
+    loaded = rt.load(before)
+    data = loaded if loaded is not None else {}
     *parents, last = f.path.split(".")
     node = data
     for part in parents:
@@ -483,10 +502,12 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
     else:
         value_out = value
     node[last] = value_out
-    before = path.read_text()
     out = io.StringIO()
     rt.dump(data, out)
-    path.write_text(_keep_untouched_lines(before, out.getvalue()))
+    if loaded is None:  # a new local file: its head comment, then the first value
+        path.write_text(before + out.getvalue())
+    else:
+        path.write_text(_keep_untouched_lines(before, out.getvalue()))
     return value
 
 

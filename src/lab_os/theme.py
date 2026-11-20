@@ -1,5 +1,6 @@
 """Design tokens (config/theme.yaml): the one place for visual style. Served as /theme.json.
-The same at every place (a place's own theme.yaml would win, but the design means one theme)."""
+A place's own theme.yaml and its local/theme.yaml (the settings page's changes) are merged over the
+repo's, value by value (`config.load_yaml`)."""
 
 from pathlib import Path
 
@@ -9,4 +10,7 @@ from lab_os import config
 
 
 def load_theme(path: Path | None = None) -> dict:
-    return yaml.safe_load((path or config.shared_path("theme.yaml")).read_text()) or {}
+    """The theme with every layer merged; `path`: that one file only."""
+    if path:
+        return yaml.safe_load(path.read_text()) or {}
+    return config.load_yaml("theme.yaml", shared=True)

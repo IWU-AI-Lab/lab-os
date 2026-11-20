@@ -9,7 +9,7 @@ import pytest
 from lab_os import cli, config
 from lab_os.devices import PortNotAllowed, default_device, load_registry, serial_port
 from lab_os.theme import load_theme
-from lab_os.venues import load_venue
+from lab_os.venues import load_venue, venue_names
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
 
@@ -102,6 +102,59 @@ def test_shared_files_fall_back_to_the_repo(home):
     assert load_theme()["colors"]["primary"]
     (home / "poses.yaml").write_text("so101: {}\n")
     assert config.shared_path("poses.yaml") == home / "poses.yaml"
+
+
+# ---------- the place's own changes: local/ ----------
+
+
+def test_merge_sections_by_key_and_replace_values_and_lists():
+    base = {"hub": {"look": "plain", "modules": ["a", "b"], "layout": "launcher"}, "clock": "24h"}
+    over = {"hub": {"look": "design", "modules": ["b"]}}
+    assert config.merge(base, over) == {
+        "hub": {"look": "design", "modules": ["b"], "layout": "launcher"},
+        "clock": "24h",
+    }
+    assert base["hub"]["look"] == "plain"  # the base is not changed
+
+
+def test_a_new_field_in_the_repo_reaches_a_place_with_its_own_changes(home, tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "theme.yaml").write_text("hub:\n  look: plain\n  layout: launcher\nclock: 24h\n")
+    monkeypatch.setattr(config, "DEFAULT_DIR", repo)
+    (home / "local").mkdir()
+    (home / "local" / "theme.yaml").write_text("hub:\n  look: design\n")
+    assert load_theme() == {"hub": {"look": "design", "layout": "launcher"}, "clock": "24h"}
+    (repo / "theme.yaml").write_text(
+        "hub:\n  look: plain\n  layout: launcher\n  new: 1\nclock: 24h\n"
+    )
+    assert load_theme()["hub"] == {"look": "design", "layout": "launcher", "new": 1}
+    (home / "theme.yaml").write_text("clock: 12h\n")  # a place's own theme.yaml: in between
+    assert load_theme()["clock"] == "12h" and load_theme()["hub"]["look"] == "design"
+
+
+def test_local_changes_win_in_place_yaml_and_the_venue(home):
+    (home / "local" / "venues").mkdir(parents=True)
+    (home / "local" / "place.yaml").write_text("chat_keep_minutes: 45\n")
+    (home / "local" / "venues" / "home.yaml").write_text("limits:\n  speed_cap: off\n")
+    place = config.load_place()
+    assert place.chat_keep_minutes == 45 and place.name == "My lab"  # the rest: the place's file
+    venue = load_venue("home")
+    assert venue.limits_off == ["speed_cap"] and venue.motion_allowed  # the rest: the venue's file
+    assert venue_names() == ["home"]  # a local file is no venue of its own
+
+
+def test_a_broken_local_file_is_named(home):
+    (home / "local").mkdir()
+    (home / "local" / "place.yaml").write_text("name: [oops\n")
+    with pytest.raises(config.ConfigError, match="local/place.yaml is not valid YAML"):
+        config.load_place()
+
+
+def test_local_is_not_in_git():
+    from lab_os import REPO_ROOT
+
+    assert "/config/local/" in (REPO_ROOT / ".gitignore").read_text().splitlines()
 
 
 def test_the_lab_borrowed_devices_stay_borrowed_at_every_place(home):

@@ -153,7 +153,7 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
    ```bash
    uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>
    ```
-   It says how many of the 24 corners it found and how far the worst corner is wrong (5 mm or less is good). It saves `config/table-maps/so101-white-cam-stand.yaml` and writes a picture with the grid to `logs/table-maps/`. Open the picture: the red dot must be on the base, and the lines must follow the squares.
+   It says how many of the 24 corners it found and how far the worst corner is wrong (5 mm or less is good). It saves `config/local/table-maps/so101-white-cam-stand.yaml` and writes a picture with the grid to `logs/table-maps/`. Open the picture: the red dot must be on the base, and the lines must follow the squares.
 5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture). The tic-tac-toe board uses the same map (`docs/guides/tic-tac-toe.md`).
 
 To try it without a camera, add `--image picture.jpg` to use a saved picture.

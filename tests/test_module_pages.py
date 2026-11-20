@@ -16,6 +16,7 @@ import lab_os.hub.server as hub_server
 from lab_os import config, settings
 from lab_os.hub.server import TOOLS, side_view_cm
 from lab_os.kinematics import so101_kinematics
+from lab_os.theme import load_theme
 from lab_os.venues import load_venue
 
 
@@ -123,16 +124,28 @@ def test_side_view_turns_with_the_pan():
 # ---------- settings ----------
 
 
-def test_a_change_keeps_every_other_line(home):
+def test_a_change_goes_into_local_with_only_the_changed_values(home):
+    repo_theme = (config.DEFAULT_DIR / "theme.yaml").read_text()
     settings.write("theme:hub.look", "design")
     settings.write("theme:hub.modules", ["monitor", "teleop"])
-    before = (config.DEFAULT_DIR / "theme.yaml").read_text().splitlines()
-    after = (home / "theme.yaml").read_text().splitlines()  # the place's own copy, made now
-    changed = [(a, b) for a, b in zip(before, after, strict=True) if a != b]
-    assert len(changed) == 2
-    assert changed[0][1].startswith("  look: design ") and "# plain | design" in changed[0][1]
-    assert changed[1][1].startswith("  modules: [monitor, teleop]")
-    assert "look: plain" in (config.DEFAULT_DIR / "theme.yaml").read_text()  # the repo's untouched
+    local = (home / "local" / "theme.yaml").read_text()
+    assert local.startswith("# This place's own settings")  # the head comment stays
+    assert "look: design" in local and "modules: [monitor, teleop]" in local
+    assert "layout" not in local and "colors" not in local  # nothing else copied
+    assert not (home / "theme.yaml").exists()  # the place's own files: untouched
+    assert (config.DEFAULT_DIR / "theme.yaml").read_text() == repo_theme
+    theme = load_theme()
+    assert theme["hub"]["look"] == "design" and theme["hub"]["modules"] == ["monitor", "teleop"]
+    assert theme["hub"]["layout"] == "launcher"  # the rest of the section: the repo's
+
+
+def test_a_local_file_keeps_its_comments(home):
+    settings.write("place:chat_keep_minutes", 45)
+    path = home / "local" / "place.yaml"
+    path.write_text(path.read_text().replace("45", "45   # long enough for a class"))
+    settings.write("place:name", "Home Lab")
+    assert "45   # long enough for a class" in path.read_text()
+    assert config.load_place().chat_keep_minutes == 45 and config.load_place().name == "Home Lab"
 
 
 def test_values_are_checked(home):
