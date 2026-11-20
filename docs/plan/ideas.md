@@ -72,7 +72,7 @@ Each brain counts its own AI spend today (the laptop's and the lab desktop's), a
 ## Recent ideas (2026-11-18)
 
 ### Start the hub with a card
-**The first step is quick job 79** (2026-11-20): a swipe on the start screen starts the hub, with its own animation and sound. Later steps, still ideas:
+**The first step is built** (quick job 79, 2026-11-20): a swipe on the designed hub's start screen starts the hub, with its own animation and sound. Later steps, still ideas:
 - **Greet the person by name.** It needs a way to register people (for example: ⚙ → Add a card → swipe → type the name). To think through first.
 - **Authorization:** some actions only after a listed card (for example, a real arm or the settings).
 - **Activating things:** a card swipe starts a mode or a device.
