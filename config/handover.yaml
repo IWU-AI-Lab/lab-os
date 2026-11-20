@@ -1,0 +1,15 @@
+# "Jarvis, hand me the cube" (preview 4, docs/guides/hub.md → "The assistant moves the arm"): how
+# the brain finds the cube in the stand camera's picture, and where the arm holds it out. The hub's
+# assistant may use it only when place.yaml has `assistant_moves_arm: true` (Settings → Robots).
+
+camera: so101-white-cam-stand   # needs its table map (lab-os table-map), for the picture → table cm
+
+cube:
+  height_cm: 2.5          # the blue cube (GOTCHAS 2026-11-12)
+  hue_deg: [195, 255]     # its colour: blue. Hue in degrees (0 red, 120 green, 240 blue)
+  min_saturation: 0.35    # 0-1: grey and white are below this
+  min_value: 0.2          # 0-1: black and dark shadows are below this
+  min_area_px: 150        # a smaller patch of that colour (in a 640-wide picture) is not the cube
+
+pose: handover           # in poses.yaml: held out to the person; the gripper keeps its grip
+release_open_pct: 100    # how far the gripper opens when the person says to let go

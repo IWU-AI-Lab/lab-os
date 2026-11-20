@@ -133,6 +133,22 @@ On the brain's own screen, tell the assistant that visitors are here, typed or b
 
 The assistant gets these tools only for a question asked on the brain's own computer (or the Quest on its USB cable). The ⚙ buttons work only there too. The brain refuses the switch if the arm that it drives is not in the visitors' venue's `active_devices`.
 
+## The assistant moves the arm: "hand me the cube" (preview, 2026-11-20)
+**It is off by default.** To turn it on, set ⚙ → Robots → **The Assistant May Move the Arm** (`assistant_moves_arm: true` in `place.yaml`). It then works in every venue, visitor mode too, but never in a venue with `public: true`. It applies from the next question, with no restart.
+
+When it is on, ask the assistant on the brain's own computer, typed or by voice, in any words:
+- **"Hey Jarvis, move the arm to home."** The arm goes to a named pose: `home` (folded), `ready` (the working pose) or `handover` (held out to a person).
+- **"Jarvis, hand me the cube."** The brain takes a picture with the stand camera and finds the blue cube by its colour. The arm picks the cube up and holds it out to you at the `handover` pose, about 28 cm in front of the base and 20 cm up. This takes about half a minute.
+- **"Let go."** (or "I have it", "open"): the gripper opens.
+
+The AI decides when to use these tools; it never chooses the motion. Each move is a robot tool call, with the same checks as an AI tool's move (`docs/guides/ai-control.md` → "Limits"), at the venue's speed. AI Control (`/ai`) shows each call. STOP on any page stops the move, and the rest of the request ends. While teleop drives the arm or another move runs, the assistant says that the arm cannot move now.
+
+For the cube:
+- Put the cube about 20 cm straight in front of the arm. The arm picks straight down, and that works only in a ring about 17 to 22 cm from its base. If the cube is out of reach, or the camera cannot see it, nothing moves and the assistant says why.
+- The stand camera needs its table map (`docs/guides/ai-control.md` → "Table map").
+- The colour, the cube's height and the hand-over pose are in `config/handover.yaml`. The `handover` pose is in `config/poses.yaml`; it was computed on the arm's 3D model.
+- Questions from other screens never get these tools.
+
 ## The module pages (Teleop, Monitor, AI Control)
 They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub, they have no frame or title of their own. On their own screen, they have both, the place's name, the clock and a **Full screen** button.
 - **Teleop** (`/teleop`): the arm in 3D on the left. On the right: how to drive it (the Quest's Enter AR or VR, Desktop control and its keys) and what the page sends. The status (brain, control, arm) and **STOP** are in the bar, always in view. While desktop control is on, "X = STOP" shows next to it (X stops in every mode).

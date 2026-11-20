@@ -95,8 +95,9 @@ class VisitorDesk:
             return [tool(EXIT), tool(WAVE)]
         return [tool(START)] if self.visitors_venue() else []
 
-    async def call(self, name: str, local: bool) -> tuple[str, list[dict]]:
-        """Run one: (the result for the AI, events for the asking page)."""
+    async def call(self, name: str, local: bool, arguments: str = "{}") -> tuple[str, list[dict]]:
+        """Run one: (the result for the AI, events for the asking page). The tools take no
+        arguments."""
         if not local or name not in TOOLS:
             return f"Error: {name} isn't a tool you have here.", []
         if name == START:
