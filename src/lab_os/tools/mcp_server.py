@@ -54,6 +54,9 @@ a few cm and look again: a held object fills much of the wrist picture and the g
 part-way open. If unsure, stop and look instead of guessing; if a pick missed, look before
 trying again. (Tips adapted from robot_MCP: docs/dev/existing-work-teleop-ai.md.)
 
+Tic-tac-toe on the paper grid: camera_snapshot of the stand camera with board true shows the board
+and gives everything else you need (docs/guides/tic-tac-toe.md).
+
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
 of guessing about the project.
@@ -101,7 +104,9 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
         return [Image(data=png, format="png"), r]
 
     @server.tool(annotations=READ)
-    async def camera_snapshot(camera: str, width_px: int = 640, grid: bool = True) -> list:
+    async def camera_snapshot(
+        camera: str, width_px: int = 640, grid: bool = True, board: bool = False
+    ) -> list:
         """One picture from a camera (names in list_devices; the white arm's two:
         so101-white-cam-stand, on a stand about 2 ft up behind the arm, and so101-white-cam-wrist,
         on the wrist looking along the jaws; the green arm's: so101-green-cam-stand and
@@ -110,10 +115,13 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
         and after you move; pose_view is drawn from the joints, this is real. A camera with a
         table map has the table's cm grid drawn on it ("table_grid" says how to read it; `grid`
         false = the plain picture): read where an object touches the table to get its x and y for
-        move_to. A camera another program is using is refused."""
-        r = await run("camera_snapshot", camera=camera, width_px=width_px, grid=grid)
-        jpeg = r.pop("image_jpeg")
-        return [Image(data=jpeg, format="jpeg"), r]
+        move_to. A camera another program is using is refused. `board` true (tic-tac-toe, on the
+        stand camera): the board's cells drawn and named (A1-C3) and the start spots of the
+        robot's pieces numbered; "board" gives their positions and how to take and put down a
+        piece, also when there's no picture (the fake arm has no camera)."""
+        r = await run("camera_snapshot", camera=camera, width_px=width_px, grid=grid, board=board)
+        jpeg = r.pop("image_jpeg", None)  # none: board true, and no picture ("picture" says why)
+        return [Image(data=jpeg, format="jpeg"), r] if jpeg else [r]
 
     @server.tool(annotations=READ)
     async def table_point(camera: str, x_px: float, y_px: float, width_px: int = 640) -> dict:
