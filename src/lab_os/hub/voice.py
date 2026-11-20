@@ -64,7 +64,12 @@ from lab_os.teleop.server import is_local
 log = logging.getLogger(__name__)
 
 SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
-PLAYBACK_GRACE_S = 120.0  # a page that never says it finished playing doesn't hold `in_use` forever
+# a page says when it has played the answer; until then the brain counts the pieces' own length plus
+# this much (a held greeting waits for the startup), so a page that never says so blocks the wake
+# word on every screen for seconds, not minutes (quick job 42; it was a flat 120 s)
+PLAYBACK_MARGIN_S = 10.0
+PLAYING_HOLD_S = 3.0  # "still playing" from the page holds this much longer
+IGNORED_LOG_EVERY_S = 10.0  # a heard wake word that was ignored (a screen busy): logged this often
 GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
 WAKE_UTTERANCE_S = 20.0  # after the wake word: the longest question
@@ -225,6 +230,7 @@ class VoiceDesk:
     _session: aiohttp.ClientSession | None = None
     _wake_candidates: dict | None = None  # screens that heard the phrase in this window → score
     _wake_quiet_until: float = 0.0
+    _ignored_logged: float = 0.0
     _standby: Hearing | None = None  # a hearing connected ahead of time (the wake word)
     _standby_task: asyncio.Task | None = None
     _standby_retry_at: float = 0.0
@@ -280,6 +286,13 @@ class VoiceDesk:
         now = time.monotonic()
         busy = self.chat.busy or any(lk.active() for lk in self.links)
         if now < self._wake_quiet_until or busy:
+            if busy and now - self._ignored_logged > IGNORED_LOG_EVERY_S:
+                self._ignored_logged = now
+                log.info(
+                    "voice: %s heard the wake word, ignored: %s",
+                    link.device or "a screen",
+                    self.busy_why(),
+                )
             return
         if self._wake_candidates is None:
             self._wake_candidates = {}
@@ -290,6 +303,21 @@ class VoiceDesk:
                 self._wake_pick()
                 return
         self._wake_candidates[link] = max(score, self._wake_candidates.get(link, 0.0))
+
+    def busy_why(self) -> str:
+        """What keeps the wake word from starting a question now, for the log."""
+        why = ["the chat is answering"] if self.chat.busy else []
+        now = time.monotonic()
+        for lk in self.links:
+            name = lk.device or "a screen"
+            if lk.hearing is not None:
+                why.append(f"{name} is hearing a question")
+            elif lk.task is not None and not lk.task.done():
+                why.append(f"{name} is answering")
+            elif now < lk.playing_until:
+                left = lk.playing_until - now
+                why.append(f"{name} hasn't said it finished playing ({left:.0f} s more)")
+        return "; ".join(why) or "nothing now"
 
     def _wake_pick(self) -> None:
         heard, self._wake_candidates = self._wake_candidates or {}, None
@@ -502,6 +530,7 @@ class VoiceLink:
         self.mode = "ask"
         self.task: asyncio.Task | None = None  # hearing's end + the turn
         self.playing_until = 0.0  # the page plays audio until it says it's done (or this time)
+        self._audio_ends = 0.0  # when the audio sent so far ends, if it plays at once
         self.wake_on = False  # this page streams its microphone for the wake word
         self.detector: WakeDetector | None = None
         self.from_wake = False  # this hearing began with the wake word
@@ -527,7 +556,9 @@ class VoiceLink:
         self._out.put_nowait(msg)
 
     def send_audio(self, seq: int, text: str, wav: bytes) -> None:
-        self.playing_until = time.monotonic() + PLAYBACK_GRACE_S
+        # the answer's pieces play one after the other: this one ends after the ones before it
+        self._audio_ends = max(time.monotonic(), self._audio_ends) + wav_seconds(wav)
+        self.playing_until = self._audio_ends + PLAYBACK_MARGIN_S
         self.send(
             {
                 "type": "audio",
@@ -835,7 +866,7 @@ class VoiceLink:
             self.playing_until = 0.0
             self._settle()
         elif not self.desk.chat.busy:
-            self.playing_until = time.monotonic() + PLAYBACK_GRACE_S
+            self.playing_until = max(self.playing_until, time.monotonic() + PLAYING_HOLD_S)
             self.desk.assistant.set("speaking", float(msg.get("loudness") or 0))
 
     def greet(self, way: str) -> None:

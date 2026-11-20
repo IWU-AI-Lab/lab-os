@@ -4,6 +4,7 @@ The recordings in fixtures/ were made with Gemini's TTS (2026-11-12): "Hey Jarvi
 you show me the arm? Thanks, Jordan." No microphone, no internet (a fake voice service)."""
 
 import asyncio
+import base64
 import json
 import wave
 from pathlib import Path
@@ -344,3 +345,57 @@ def test_the_pages_have_the_wake_word():
         text = (src / page).read_text()
         assert '"ended"' in text and "WAKE_QUIET_MS" in text and "noiseFloor" in text, page
     assert "voice.chime()" in (src / "hub/web/hub.js").read_text()
+
+
+async def test_a_screen_that_never_says_it_played_blocks_the_wake_word_briefly(
+    aiohttp_client, aiohttp_server, key, tmp_path, caplog
+):
+    """Quick job 42: one screen got a spoken answer and never said it played it (a second window, a
+    paused tab). Every screen's wake word waits for it, but only for the audio's length and a short
+    margin (it was 120 s), and the log says who the wake word waits for."""
+    import logging
+    import time
+
+    from lab_os.hub import voice as hub_voice
+    from lab_os.hub.server import BRAIN
+
+    app, _, _ = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    quiet = await client.ws_connect("/ws/voice?device=newline")
+    await quiet.send_json({"type": "listen", "mode": "ask"})
+    await events_until(quiet, {"listening"})
+    await quiet.send_bytes(SECOND)
+    await quiet.send_json({"type": "end"})
+    evs = await events_until(quiet, {"audio_end"})  # the answer came; this page never plays it
+    spoken = sum(
+        hub_voice.wav_seconds(base64.b64decode(e["data"])) for e in evs if e["type"] == "audio"
+    )
+    (link,) = [lk for lk in app[BRAIN].voice.links if lk.device == "newline"]
+    left = link.playing_until - time.monotonic()
+    assert 0 < left <= spoken + hub_voice.PLAYBACK_MARGIN_S + 0.5
+
+    desk = await client.ws_connect("/ws/voice?device=desk")
+    await desk.send_json({"type": "wake", "on": True})
+    await events_until(desk, {"wake_on"}, timeout=20)
+    with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
+        await stream(desk, pcm("hey_jarvis"))
+        with pytest.raises(TimeoutError):
+            await events_until(desk, {"wake"}, timeout=0.6)
+    assert (
+        "desk heard the wake word, ignored: newline hasn't said it finished playing" in caplog.text
+    )
+    link.playing_until = 0.0  # (the margin has passed)
+    await asyncio.sleep(hub_voice.WAKE_QUIET_S)
+    await stream(desk, pcm("hey_jarvis"))
+    await events_until(desk, {"listening"})
+    for ws in (quiet, desk):
+        await ws.close()
+
+
+def test_the_designed_hub_speaks_a_second_greeting_at_once():
+    """Quick job 42 (lab check 9.2): back from the start screen, the startup has been seen, so the
+    greeting plays when it arrives instead of after the jump (checked in headless Chrome: 0.15 s
+    after the press instead of 6.5 s)."""
+    page = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/design.html").read_text()
+    assert "if (VS.greeting && S.startedBefore) V.playHeld();" in page
+    assert "S.startedBefore = true;" in page.split("function toStart(why) {", 1)[1][:200]
