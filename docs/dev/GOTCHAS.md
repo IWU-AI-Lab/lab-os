@@ -17,7 +17,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 - Devices (part 11): Open on…, Back and Bring it back worked between the desk and the Newline's own Chrome. Monitor could also open on the Newline while it was open on the desk. After Ctrl+C, both hubs came back in about 3 s; meanwhile the core was grey, with no "lab-os is off". After both were switched off and on, both came back under their names, and the Newline kept its resolution.
 - The Newline's own Chrome has "Install" and "Create shortcut", not "Add to Home screen". "Create shortcut" works. Its Chrome is too slow to use: the teleop page keeps redrawing.
 - AI tools (mostly Sonnet 5.5) often say that the arm did not quite reach a pose, although it looks right (quick job 77).
-- The Kinect (model 1414) has an adapter with a normal USB plug and a power plug. `lsusb` shows only `045e:02b0 Xbox NUI Motor`. A Kinect for the Xbox 360 shows its camera (`045e:02ae`) and audio (`045e:02ad`) too when the adapter has power. So probably the power did not reach it.
+- The Kinect (model 1414) has an adapter with a normal USB plug and a power plug. `lsusb` showed only `045e:02b0 Xbox NUI Motor`. Its power was plugged in. The Kinect is usable: the lab has shown its picture on a display before. Why `lsusb` listed only the motor is not known; a session that uses the Kinect checks it.
 **Fix:** quick jobs 59, 64, 73, 74, 76, 77 and 78.
 
 ### 2026-11-20 — "Start lab-os" opened the hub with a title bar, and the start press did not go full screen
