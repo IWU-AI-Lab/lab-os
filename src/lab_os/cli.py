@@ -140,7 +140,8 @@ def main(argv: list[str] | None = None) -> None:
         "--open",
         metavar="DEVICE",
         help="once it runs, open the hub on this computer as that device (e.g. desk), full screen; "
-        'if a brain already runs here, only open the hub (the "Start lab-os" icon does this)',
+        "if a brain already runs here, bring its hub window to the front, else open the hub (the "
+        '"Start lab-os" icon does this)',
     )
     s.add_argument(
         "--status-line",
@@ -230,7 +231,10 @@ def main(argv: list[str] | None = None) -> None:
         except DeviceError as e:
             raise SystemExit(f"--open: {e}") from None
         if launch.brain_answers(args.port):  # already running (a second tap on the icon)
-            print(f"lab-os already runs here: {launch.open_hub(launch.hub_url(args.port, device))}")
+            said = launch.bring_to_front(device, args.port) or launch.open_hub(
+                launch.hub_url(args.port, device)
+            )
+            print(f"lab-os already runs here: {said}")
             return
 
         def after_start():
