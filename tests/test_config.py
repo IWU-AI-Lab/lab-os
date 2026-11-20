@@ -241,7 +241,6 @@ async def test_the_hub_title_is_the_place_name(aiohttp_client, home):
 
 
 def test_one_to_one_speed_per_venue():
-    from lab_os import REPO_ROOT
     from lab_os.venues import one_to_one_speed
 
     assert one_to_one_speed(180) == 180.0
@@ -250,8 +249,8 @@ def test_one_to_one_speed_per_venue():
     assert one_to_one_speed("none") == float("inf")
     with pytest.raises(config.ConfigError):
         one_to_one_speed(-5)
-    assert load_venue("lab", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0
-    assert load_venue("visit-day", REPO_ROOT / "config").one_to_one_deg_per_s == 180.0  # 2026-11-18
+    assert load_venue("lab", config.DEFAULT_DIR).one_to_one_deg_per_s == 180.0
+    assert load_venue("visit-day", config.DEFAULT_DIR).one_to_one_deg_per_s == 180.0  # 2026-11-18
 
 
 def test_a_port_in_use_stops_serve_with_a_sentence(no_run, monkeypatch):

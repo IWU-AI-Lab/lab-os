@@ -60,7 +60,7 @@ def test_all_on_by_default(home):
     assert v.limits_off == [] and not v.limits_fixed
     assert v.speed_cap_scale == 0.3 and v.one_to_one_cap == 180 and v.floor_cm == 1
     for name in ("lab", "visit-day"):  # the repo's venues: all on
-        assert load_venue(name, REPO_ROOT / "config").limits_off == []
+        assert load_venue(name, config.DEFAULT_DIR).limits_off == []
 
 
 def test_each_can_be_switched_off(home):
@@ -90,7 +90,7 @@ def test_locked_and_public_venues_refuse(home):
     with pytest.raises(config.ConfigError, match="limits.speed_cap is off"):
         load_venue("home")
     # visit-day was locked until 2026-11-18; the builder then asked for no extra restrictions
-    assert not load_venue("visit-day", REPO_ROOT / "config").limits_fixed
+    assert not load_venue("visit-day", config.DEFAULT_DIR).limits_fixed
 
 
 def test_unknown_limit_is_an_error(home):
@@ -200,9 +200,9 @@ def test_the_page_marks_a_limit_thats_off():
 def test_the_floor_is_the_same_for_the_ai_tools_and_teleop(monkeypatch):
     """Quick job 3 (decision 2026-11-13: -0.5 cm from so101-white's base, which stands on a plate),
     measured from the table since quick job 28: 1.1 cm, the same place for so101-white."""
-    monkeypatch.setattr(config, "active_dir", lambda: REPO_ROOT / "config")
+    monkeypatch.setattr(config, "active_dir", lambda: config.DEFAULT_DIR)
     for name in ("lab", "visit-day"):
-        v = load_venue(name, REPO_ROOT / "config")
+        v = load_venue(name, config.DEFAULT_DIR)
         assert v.floor_cm == 1.1 and AiLimits.from_venue(v).min_z_cm == 1.1
     loop = make_loop(loop_args(venue="lab"))  # the fake arm stands on the table
     assert loop.mapper.config.floor_m == pytest.approx(0.011)

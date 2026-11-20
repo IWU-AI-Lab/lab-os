@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — The tests failed after a change on the settings page, or with an arm plugged in
+**What:** In the lab, the settings page saves into the repo's `config/` (persona, chat keep time, the hub's look and buttons, the limits). The tests read that folder and expected the committed values, so 6 tests failed after the builder changed settings. One more test failed because so101-white was plugged in: the visitors' welcome names the robots whose `/dev/serial/by-id/…` port exists.
+**Fix:** `tests/conftest.py` gives each test run a copy of `config/` as last committed (`git archive HEAD config`) and uses it as the repo's config. Changes on the settings page do not change the tests now. A committed change can still make a test fail: then update that test. The visitor test's brain treats every port as unplugged.
+
 ### 2026-11-20 — The wake word: not reproduced, but one screen could make every screen deaf for 2 minutes
 **What:** (quick job 42, for the lab-day entry below.) Tried on the Mac with the designed hub in headless Chrome, a fake microphone that says "hey Jarvis" every 7 s, and a stand-in for OpenAI (full spoken answers): the wake word kept working after a sensitivity change sent to the brain, after one made in ⚙ in the hub, after full answers, and the venue switch changes nothing for it (both personas have `hey_jarvis`; neither venue is public). Found in the code instead:
 - The brain ignores the phrase on **every** screen while **any** screen is busy: the chat answering, a question being heard, or a screen still playing an answer.
