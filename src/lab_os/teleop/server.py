@@ -60,6 +60,9 @@ CONTROL = web.AppKey("control", dict)
 # Set to stop the server the way Ctrl+C does (the hub's "Shut down lab-os", quick job 6): `serve()`
 # returns, and the command's cleanup lets go of the arm.
 SHUTDOWN = web.AppKey("shutdown", asyncio.Event)
+# The pages were told "lab-os is off" (brain_off). Ctrl+C tells them as it stops (quick job 64).
+OFF_TOLD = web.AppKey("off_told", dict)
+OFF_TELL_S = 0.2  # time for the broadcaster to send brain_off before the sockets close
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
 DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
 LOOPBACK = ("127.0.0.1", "::1")
@@ -224,7 +227,19 @@ async def close_sockets(sockets) -> None:
         await asyncio.wait(closing, timeout=CLOSE_WAIT_S)
 
 
+def brain_off_message(by: str = "", restart: bool = False) -> dict:
+    """{"type": "brain_off"}: lab-os is off (or restarting); `by` is the device that asked."""
+    msg = {"type": "brain_off", "from": by, "time_ms": round(time.time() * 1000)}
+    if restart:
+        msg["restart"] = True
+    return msg
+
+
 async def _close_pages(app: web.Application) -> None:
+    if not app[OFF_TOLD]["told"]:  # Ctrl+C: the pages say "lab-os is off", not "not reachable"
+        app[OFF_TOLD]["told"] = True
+        app[OUTBOX].put_nowait(brain_off_message())
+        await asyncio.sleep(OFF_TELL_S)
     await close_sockets(app[CLIENTS])
 
 
@@ -294,6 +309,7 @@ def create_app(
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
     app[SHUTDOWN] = asyncio.Event()
+    app[OFF_TOLD] = {"told": False}
     app[LOCAL_CONTROL_ONLY] = local_control_only
     app[DRIVE_FROM] = frozenset(drive_from)
     if root_page:

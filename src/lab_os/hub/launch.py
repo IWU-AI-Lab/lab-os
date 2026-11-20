@@ -127,6 +127,20 @@ def bring_to_front(device: str, port: int, profile: Path | None = None) -> str |
     return f"brought the hub window to the front ({pages[0]['url']})"
 
 
+def close_hub_windows(port: int, profile: Path | None = None) -> int:
+    """Close every page that lab-os's own browser shows for this brain (Shut down and Ctrl+C,
+    quick job 64). Returns how many it closed."""
+    base = _devtools(profile)
+    closed = 0
+    for page in hub_windows("", port, profile) if base else []:
+        try:
+            with urllib.request.urlopen(f"{base}/json/close/{page['id']}", timeout=1.5):
+                closed += 1
+        except OSError:
+            pass
+    return closed
+
+
 def brain_answers(port: int) -> bool:
     """Is a brain already running on this computer at that port?"""
     try:

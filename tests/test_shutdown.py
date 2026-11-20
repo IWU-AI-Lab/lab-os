@@ -76,6 +76,40 @@ async def test_shut_down_stops_the_move_tells_every_page_then_stops(aiohttp_clie
     await monitor.close()
 
 
+async def test_ctrl_c_tells_every_page_lab_os_is_off(aiohttp_client):
+    """Quick job 64: after Ctrl+C the pages only greyed the core (lab check 11.12). The server
+    stopping without Shut down tells them, as Shut down does, before the sockets close."""
+    app = make_app()
+    client = await aiohttp_client(app)
+    hub, _ = await page(client, "desk")
+    monitor = await client.ws_connect("/ws?role=monitor")
+    stopping = asyncio.create_task(app.shutdown())  # what Ctrl+C runs, once serve() ends
+    told = await next_of(hub, "brain_off")
+    assert told["from"] == "" and "restart" not in told
+    assert (await next_of(monitor, "brain_off"))["from"] == ""
+    await asyncio.wait_for(stopping, 2)
+    await hub.close()
+    await monitor.close()
+
+
+async def test_after_shut_down_the_pages_are_told_once(aiohttp_client):
+    app = make_app()
+    client = await aiohttp_client(app)
+    hub, _ = await page(client, "desk")
+    await client.post("/api/shutdown", json={"from": "desk"})
+    assert (await next_of(hub, "brain_off"))["from"] == "desk"
+    await app.shutdown()
+    while (msg := await hub.receive(timeout=2)).type.name == "TEXT":
+        assert msg.json()["type"] != "brain_off"  # no second "lab-os is off" without a name
+    await hub.close()
+
+
+def test_a_shut_down_page_tries_to_close_itself():
+    """Other devices: the browser closes the page if it allows; else "lab-os is off" stays."""
+    off = (SRC / "web" / "off.js").read_text()
+    assert "if (!restarting)" in off and "window.close()" in off
+
+
 # ---------- no move after a shutdown starts, and a quick end (quick job 44) ----------
 
 

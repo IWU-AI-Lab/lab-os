@@ -288,6 +288,10 @@ def main(argv: list[str] | None = None) -> None:
             )
     finally:  # Ctrl+C, or "Shut down lab-os" in the hub: the same letting go
         close_arms(loop)
+        if not app[RESTART]["asked"]:  # and lab-os's own hub windows close (quick job 64)
+            closed = launch.close_hub_windows(args.port)
+            if closed:
+                print(f"\nclosed lab-os's hub window{'s' if closed > 1 else ''} ({closed})")
     print()
     if app[RESTART]["asked"]:  # Settings' "Restart Now": the same options, without --open
         print(f"lab-os is restarting ({loop.arm.name} was let go); it starts again now.")
