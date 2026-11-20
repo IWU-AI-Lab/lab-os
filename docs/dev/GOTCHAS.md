@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — "Start lab-os" opened the hub with a title bar, and the start press did not go full screen
+**What:** Brave on the lab desktop (GNOME, X11, two monitors) with `--app=… --start-fullscreen`: Brave showed "To exit full screen, press F11" at once, but the window kept its title bar. The hub's start press then did nothing, because Brave believed it was full screen already. Tested with a new profile: with the flag, the press gave no full screen; without it, the press gave full screen (2560×1440). F11 worked.
+**Fix:** on Linux, `lab-os icon` and `--open` start the browser with `--app` only. The start press makes it full screen.
+
 ### 2026-11-20 — `lab-os serve` now takes the real arm by itself
 **What:** Since quick job 61, `lab-os serve` with no `--arm` opens the SO-101 that is plugged in, and switches its torque on (it holds where it is, it does not move). A coding session that starts the brain to look at a page would take the white arm too. A brain that already has the arm keeps it: the second one says the port is in use and drives the fake arm.
 **Fix:** In a coding session, start the brain with `--arm fake`. The tests never see a port (`tests/conftest.py`, `_no_arm_plugged_in`).

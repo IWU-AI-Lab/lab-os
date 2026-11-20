@@ -49,7 +49,10 @@ def browser_command(url: str) -> list[str] | None:
         exe = shutil.which("chrome") or next(found, None)
         return [exe, *flags] if exe else None
     exe = next((shutil.which(b) for b in LINUX_BROWSERS if shutil.which(b)), None)
-    return [exe, *flags] if exe else None
+    # Linux: no --start-fullscreen. On GNOME (X11, two monitors) the browser then believed it was
+    # full screen while the window kept its title bar, and the hub's start press did nothing.
+    # The start press makes it full screen (docs/dev/GOTCHAS.md, 2026-11-20).
+    return [exe, f"--app={url}"] if exe else None
 
 
 def open_hub(url: str) -> str:
