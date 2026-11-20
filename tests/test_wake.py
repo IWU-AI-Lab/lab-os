@@ -280,16 +280,64 @@ async def test_the_sensitivity_comes_from_the_page(
     await ws.close()
 
 
-async def test_not_while_the_answer_plays(aiohttp_client, aiohttp_server, key, tmp_path):
+async def test_while_the_answer_plays_the_wake_word_stops_it(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    """Quick job 57: "Hey Jarvis" during an answer stops it ("stopped" first, so the page ends
+    that turn) and hears the new question at once. Before, it was ignored until the end."""
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     ws = await client.ws_connect("/ws/voice")
     await ws.send_json({"type": "wake", "on": True})
     await events_until(ws, {"wake_on"}, timeout=20)
-    await ws.send_json({"type": "played", "loudness": 0.5})  # its own voice in the room
+    await ws.send_json({"type": "played", "loudness": 0.5})  # its answer plays
     await stream(ws, pcm("hey_jarvis"))
+    evs = await events_until(ws, {"listening"})
+    assert [e["type"] for e in evs][-3:] == ["stopped", "wake", "listening"]
+    await ws.close()
+
+
+async def test_a_new_question_stops_the_answer_being_thought_of(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    """Quick job 57: the mic pressed (or the wake word) while the AI still writes the answer: that
+    answer stops, says nothing more, and the new question is heard. Another screen's too."""
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, ai_delay=0.4)
+    client = await aiohttp_client(app)
+    a, b = await client.ws_connect("/ws/voice"), await client.ws_connect("/ws/voice")
+    await a.send_json({"type": "listen", "mode": "ask"})
+    await events_until(a, {"listening"})
+    await a.send_bytes(b"\x01\x00" * 16000)
+    await a.send_json({"type": "end"})
+    await events_until(a, {"state"})  # the AI is thinking
+    await b.send_json({"type": "listen", "mode": "ask"})  # another screen's mic
+    assert (await events_until(b, {"listening", "error"}))[-1]["type"] == "listening"
+    evs = await events_until(a, {"stopped"})
+    assert "audio" not in [e["type"] for e in evs]
+    with pytest.raises(TimeoutError):  # nothing more from the stopped answer
+        await events_until(a, {"audio", "audio_end", "done"}, timeout=1.0)
+    assert not conv.busy
+    for ws in (a, b):
+        await ws.close()
+
+
+async def test_an_answer_that_says_the_phrase_doesnt_wake_itself(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    """The greeting's hint says "hey Jarvis": the microphones hear it from the speaker."""
+    app, _, _ = await voice_app(aiohttp_server, tmp_path, words=("Say hey Jarvis to talk.",))
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "wake", "on": True})
+    await events_until(ws, {"wake_on"}, timeout=20)
+    await ws.send_json({"type": "listen", "mode": "ask"})
+    await events_until(ws, {"listening"})
+    await ws.send_bytes(b"\x01\x00" * 16000)
+    await ws.send_json({"type": "end"})
+    await events_until(ws, {"audio_end"})
+    await stream(ws, pcm("hey_jarvis"))  # its own voice, from the speaker
     with pytest.raises(TimeoutError):
-        await events_until(ws, {"wake"}, timeout=0.6)
+        await events_until(ws, {"wake", "stopped"}, timeout=0.6)
     await ws.close()
 
 
@@ -347,13 +395,13 @@ def test_the_pages_have_the_wake_word():
     assert "voice.chime()" in (src / "hub/web/hub.js").read_text()
 
 
-async def test_a_screen_that_never_says_it_played_blocks_the_wake_word_briefly(
+async def test_a_screen_that_never_says_it_played_doesnt_block_the_wake_word(
     aiohttp_client, aiohttp_server, key, tmp_path, caplog
 ):
     """Quick job 42: one screen got a spoken answer and never said it played it (a second window, a
     paused tab). Every screen's wake word waits for it, but only for the audio's length and a short
-    margin (it was 120 s), and the log says who the wake word waits for."""
-    import logging
+    margin (it was 120 s). Since quick job 57 it waits for nothing: the wake word stops that
+    answer ("stopped" on its page) and hears the new question at once."""
     import time
 
     from lab_os.hub import voice as hub_voice
@@ -377,17 +425,10 @@ async def test_a_screen_that_never_says_it_played_blocks_the_wake_word_briefly(
     desk = await client.ws_connect("/ws/voice?device=desk")
     await desk.send_json({"type": "wake", "on": True})
     await events_until(desk, {"wake_on"}, timeout=20)
-    with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
-        await stream(desk, pcm("hey_jarvis"))
-        with pytest.raises(TimeoutError):
-            await events_until(desk, {"wake"}, timeout=0.6)
-    assert (
-        "desk heard the wake word, ignored: newline hasn't said it finished playing" in caplog.text
-    )
-    link.playing_until = 0.0  # (the margin has passed)
-    await asyncio.sleep(hub_voice.WAKE_QUIET_S)
     await stream(desk, pcm("hey_jarvis"))
-    await events_until(desk, {"listening"})
+    assert (await events_until(desk, {"wake"}))[-1]["type"] == "wake"
+    assert (await events_until(quiet, {"stopped"}))[-1]["type"] == "stopped"
+    assert link.playing_until == 0.0
     for ws in (quiet, desk):
         await ws.close()
 

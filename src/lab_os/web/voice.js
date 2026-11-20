@@ -23,7 +23,7 @@
 //   v.micStalled                the microphone gave no audio for a while (the Quest after sleeping)
 //
 // onEvent gets everything the brain sends (heard, state, text, tool, done, error, audio_end,
-// voice_error), plus {type: "playing", seq, text, duration} as each spoken piece starts (so the page
+// voice_error, stopped: a new question stopped this screen's answer, quick job 57), plus {type: "playing", seq, text, duration} as each spoken piece starts (so the page
 // can show the text as it's said: revealPacer), {type: "played"} once the last word has played and
 // {type: "mic_error", message} when the browser won't give the microphone, {type: "mic_stalled", on} when
 // the microphone stops giving audio while the wake word is on (and when it's back). onLoud(0..1): the answer's loudness while
@@ -233,7 +233,10 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       if (ev.type === "audio") play(ev);
       else if (ev.type === "wake_on") st.wakeOn = true;
       else if (ev.type === "wake_off") st.wakeOn = false;
-      else if (ev.type === "wake") {
+      else if (ev.type === "stopped") { // a new question stopped the answer (quick job 57)
+        stopSpeaking();
+        st.awaitingEnd = false;
+      } else if (ev.type === "wake") {
         stopSpeaking();
         st.wakeTurn = true;
       } else if (ev.type === "ended") { // the brain heard the pause after the question: it's over

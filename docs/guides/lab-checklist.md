@@ -46,6 +46,8 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, copy the terminal's last lines that start with `voice:`.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, copy the `ignored:` line from the terminal.
 - **V.5** Each time during the day that the wake word does not answer: copy the terminal's `voice:` lines from that minute into the report. → how many times did it stop today? (a number)
+- **V.6** Quick job 57. Ask "Hey Jarvis, tell me about the lab's robots". While it answers aloud, say "Hey Jarvis, what time is it?". → did the first answer stop at once? (yes / no) Did it answer the new question? (yes / no)
+- **V.7** Ask a question by voice. While the core thinks, hold the mic and ask "what's next?". → did it answer only the new question? (yes / no)
 
 ---
 

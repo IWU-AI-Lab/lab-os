@@ -1,6 +1,7 @@
 """Typed chat (step 5): setups, the client, the conversation manager, spend, the endpoints.
 A fake OpenAI-style server stands in for the AI service: no internet, no keys."""
 
+import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
@@ -21,8 +22,9 @@ SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
 # ---------- a fake OpenAI-style AI service ----------
 
 
-def fake_service(words=("Hello", " there", "."), status=200, usage=True, seen=None):
-    """aiohttp app answering /v1/chat/completions (streamed) and /v1/models."""
+def fake_service(words=("Hello", " there", "."), status=200, usage=True, seen=None, delay=0.0):
+    """aiohttp app answering /v1/chat/completions (streamed) and /v1/models. `delay`: seconds
+    before each word (a slow answer)."""
 
     async def completions(request):
         body = await request.json()
@@ -33,6 +35,7 @@ def fake_service(words=("Hello", " there", "."), status=200, usage=True, seen=No
         resp = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
         await resp.prepare(request)
         for w in words:
+            await asyncio.sleep(delay)
             chunk = {"choices": [{"index": 0, "delta": {"content": w}, "finish_reason": None}]}
             await resp.write(f"data: {json.dumps(chunk)}\n\n".encode())
         end = {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
