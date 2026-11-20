@@ -109,8 +109,22 @@ def greeting_file(folder: Path, setup: VoiceSetup, text: str) -> Path:
     """Where this voice's recording of `text` is kept: the name is a hash of the voice and the
     words, so a new voice or a changed line makes a new file."""
     voice = [setup.service, setup.base_url, setup.speak, setup.speaker, setup.style, setup.speed]
-    digest = hashlib.sha256(json.dumps([voice, text]).encode()).hexdigest()[:16]
+    # "v2": recordings from before quick job 47 may come from a fallback model (another person's
+    # sound): they are made again once, by the first model
+    digest = hashlib.sha256(json.dumps(["v2", voice, text]).encode()).hexdigest()[:16]
     return folder / f"{setup.name}-{digest}.wav"
+
+
+def voice_words(setup: VoiceSetup, models: list[str]) -> str:
+    """Which voice spoke, for the log (quick job 47): the setup, the service, the TTS model(s) and
+    the speaker. Two models in one answer can sound like two people."""
+    spoke = sorted(set(models), key=models.index) or setup.speak_models[:1]
+    many = " and ".join(spoke) + (
+        " (two models: it may sound like two people)" if len(spoke) > 1 else ""
+    )
+    return (
+        f"{setup.name} ({setup.where or setup.service}, {many}, voice {setup.speaker or 'default'})"
+    )
 
 
 def strip_wake(text: str, phrase: str) -> str:
@@ -508,6 +522,7 @@ class Speaker:
         self.buf, self.said_chars, self.sent, self.seconds = "", 0, 0, 0.0
         self.closed = self.stopped = False
         self.cut = False  # a drafted prompt began: the rest is for the screen
+        self.models: list[str] = []  # the TTS model of each piece (one voice: the same, if it can)
         self._wake = asyncio.Event()
         self.task = asyncio.create_task(self._run())
 
@@ -546,7 +561,14 @@ class Speaker:
     async def _say(self, text: str) -> None:
         try:
             desk = self.link.desk
-            wav = await speak_any(desk.session(), self.setup, text, desk.resting)
+            wav = await speak_any(
+                desk.session(),
+                self.setup,
+                text,
+                desk.resting,
+                self.models[-1] if self.models else None,
+                self.models,
+            )
         except VoiceError as e:
             self.stopped = True
             self.link.send({"type": "voice_error", "message": str(e)})
@@ -940,6 +962,12 @@ class VoiceLink:
                 self.send({"type": "audio_end", "count": speaker.sent})
                 self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
                 if speaker.sent:
+                    log.info(
+                        "voice: answer on %s spoken by %s",
+                        self.device or "a screen",
+                        voice_words(setup, speaker.models),
+                    )
+                if speaker.sent:
                     self.desk.assistant.set("speaking", 0.5)
                 else:
                     self._timing_done()  # nothing to play: done here
@@ -988,6 +1016,7 @@ class VoiceLink:
         saved = greeting_file(folder, setup, text) if folder else None
         if saved and saved.is_file():
             self.last_greet = time.monotonic()
+            log.info("voice: the greeting, from its recording by %s", voice_words(setup, []))
             self.send_audio(0, text, saved.read_bytes())
             self._greeted(1)
             return
@@ -1023,11 +1052,20 @@ class VoiceLink:
 
     async def _greet(self, setup: VoiceSetup, text: str, saved: Path | None) -> None:
         try:
-            wav = await speak_any(self.desk.session(), setup, text, self.desk.resting)
+            used: list[str] = []
+            wav = await speak_any(self.desk.session(), setup, text, self.desk.resting, used=used)
         except VoiceError as e:
             self.send({"type": "voice_error", "message": str(e)})
             self._greeted(0)
             return
+        log.info("voice: the greeting, spoken now by %s", voice_words(setup, used))
+        if saved and used[:1] != list(setup.speak_models[:1]):
+            # another model spoke it (the first was over its limit): it can sound like another
+            # person, so it isn't kept as this voice's recording (quick job 47)
+            log.info(
+                "voice: greeting not saved: %s spoke it, not %s", used[0], setup.speak_models[0]
+            )
+            saved = None
         if saved:
             try:
                 saved.parent.mkdir(parents=True, exist_ok=True)
