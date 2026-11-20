@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Friday 2026-11-20, if you go: 0, then 11. Tuesday 2026-11-24: 0, then S and V, then T and D, then W, G and H, then the parts that the sessions add for the other previews and the new quick jobs.
+**Order for the next lab days.** Friday 2026-11-20 (about 1 hour): 0, S, V, then H if time is left. Tuesday 2026-11-24: 0, then N and M (if the router is here), then T and D, then W, G and H, then 11, then the parts that the sessions add for the new quick jobs.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -69,6 +69,29 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.5** Each time during the day that the wake word does not answer: copy the terminal's `voice:` lines from that minute into the report. → how many times did it stop today? (a number)
 
 ---
+
+## N. The travel router (45 min)
+The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). This part assumes nothing about the room's network. The router starts with **no internet**: devices on it reach each other, and the brain keeps its internet through the campus Wi-Fi. Background: `docs/guides/network-setup-checklist.md`. To undo all of it: switch the router off and remove the desktop's cable.
+- **N.0** Before Tuesday, ask the professor two questions. → may the router be used in the lab? (yes / no) May it connect to the wall Ethernet port? (yes / no / ask IT)
+- **N.1** Read the label under the router. → write the router's admin address (for example `192.168.8.1`) and its Wi-Fi names. Do not write the Wi-Fi password in the report.
+- **N.2** Connect the router's power adapter (from the box) to a wall socket. Wait 2 minutes. → is its light on and steady? (yes / no)
+- **N.3** Connect an Ethernet cable from the lab desktop's Ethernet port to the router's **LAN** port (not WAN). In Ubuntu Settings → Network → the wired connection → ⚙ → IPv4, select **Use this connection only for resources on its network**, then Apply. Turn the wired connection off and on. → does a web page still open on the desktop? (yes / no) Copy the first line that `ip -4 addr | grep 192.168.8` shows.
+- **N.4** On the desktop, open the admin address from N.1. Set an admin password, and keep it in your password manager, not in the repo. → did the router's page open? (yes / no)
+- **N.5** In the router's page, open the Wi-Fi settings. Give both bands one name of your choice, a new password, and the security **WPA2-PSK** or **WPA2/WPA3**, not WPA3 alone (older Pis and the Raspbot need WPA2). Save. → which security options did it offer? (copy them)
+- **N.6** In the router's page, find the list of clients. Reserve the lab desktop's address, so that it does not change. → the desktop's reserved address: ___ (it starts with 192.168.8)
+- **N.7** On the desktop, run `uv run lab-os serve --host 0.0.0.0`. On your phone, join the router's Wi-Fi. Open `http://<the reserved address>:8080/design?device=phone`. → did the hub load? (yes / no)
+- **N.8** On the Quest, join the router's Wi-Fi. Without the USB cable, open `http://<the reserved address>:8080/design?device=quest-a` in its browser. → did the hub load? (yes / no) Open `chrome://flags` in the Quest's browser. → does a flags page open? (yes / no)
+- **N.9** On a Pi with a screen, run `sudo nmcli dev wifi connect "<the router's Wi-Fi name>" password "<password>"`. → did it join? (yes / no; if no, copy the error) Run `ping -c 3 <the reserved address>`. → replies? (yes / no)
+- **N.10** On the Newline, open its Wi-Fi settings and join the router. In its Chrome, open `http://<the reserved address>:8080/?device=newline`. → did it join? (yes / no) Did the hub load? (yes / no)
+- **N.11** Connect to raspbot1 by its cable (`docs/guides/network-setup-checklist.md` → Step 2). Run `sudo nmcli dev wifi connect "<the router's Wi-Fi name>" password "<password>"`. → did it join? (yes / no; if no, copy the error line)
+- **N.12** Only if N.0 allowed the wall port: connect the wall port to the router's **WAN** port. If it did not, connect your phone's hotspot (security WPA2) in the router's page → Internet → Repeater. → on your phone, on the router's Wi-Fi, does a web page open? (yes / no) Which internet source did you use? (wall / phone / none)
+- **N.13** On your phone, on the router's Wi-Fi, open fast.com. → the speed in Mbps.
+
+## M. Every screen in the room (30 min)
+After part N, or on the campus network for the computers that are already on it (the desktops and the Pis). The plan for the demo: `docs/plan/current-focus.md` → item 10. Use the brain's address on the same network as the device: `192.168.8…` on the router, or the campus address that `hostname -I` shows first.
+- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Newline), open Chrome at `http://<the brain's address>:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
+- **M.2** On each computer with a USB microphone (the 2 Windows desktops) and on the Newline: open `chrome://flags`, search for "Insecure origins treated as secure", type `http://<the brain's address>:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
+- **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
 
 ## For Tuesday 2026-11-24: the previews
 
