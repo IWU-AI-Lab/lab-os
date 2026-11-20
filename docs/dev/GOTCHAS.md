@@ -4,6 +4,18 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — Lab day: shut down, devices, the icon and the Kinect
+**What:**
+- Shut down (part S): the arm stopped at once and went limp, the terminal closed, and every page on the desktop said "lab-os is off". In the Quest, the "lab-os is off" card showed, but some ways of moving around in VR still showed the broken hub behind it. There is no clear way to leave full screen in the Quest and get back to the browser.
+- After the arm's USB was unplugged and plugged in again during S.3, the arm was not found again (quick job 73).
+- Each click on "Start lab-os" opens one more hub window (three clicks, three windows, one brain). The builder wants one window, and shut down closes it, like a normal program.
+- Open on… → Another monitor of this computer: the page that opened it leaves full screen, and the new page opens as a window. After that, and after F11, neither has a full screen button.
+- Devices (part 11): Open on…, Back and Bring it back worked between the desk and the Newline's own Chrome. Monitor could also open on the Newline while it was open on the desk. After Ctrl+C, both hubs came back in about 3 s; meanwhile the core was grey, with no "lab-os is off". After both were switched off and on, both came back under their names, and the Newline kept its resolution.
+- The Newline's own Chrome has "Install" and "Create shortcut", not "Add to Home screen". "Create shortcut" works. Its Chrome is too slow to use: the teleop page keeps redrawing.
+- AI tools (mostly Sonnet 5.5) often say that the arm did not quite reach a pose, although it looks right (quick job 77).
+- The Kinect (model 1414) has an adapter with a normal USB plug and a power plug. `lsusb` shows only `045e:02b0 Xbox NUI Motor`. A Kinect for the Xbox 360 shows its camera (`045e:02ae`) and audio (`045e:02ad`) too when the adapter has power. So probably the power did not reach it.
+**Fix:** quick jobs 59, 64, 73, 74, 76, 77 and 78.
+
 ### 2026-11-20 — "Start lab-os" opened the hub with a title bar, and the start press did not go full screen
 **What:** Brave on the lab desktop (GNOME, X11, two monitors) with `--app=… --start-fullscreen`: Brave showed "To exit full screen, press F11" at once, but the window kept its title bar. The hub's start press then did nothing, because Brave believed it was full screen already. Tested with a new profile: with the flag, the press gave no full screen; without it, the press gave full screen (2560×1440). F11 worked.
 **Fix:** on Linux, `lab-os icon` and `--open` start the browser with `--app` only. The start press makes it full screen.
