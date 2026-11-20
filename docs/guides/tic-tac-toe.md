@@ -1,14 +1,14 @@
 # Tic-tac-toe: the robot plays against you
 
-An AI tool plays tic-tac-toe with `so101-white` against a person. The board is a printed grid on letter paper, and the pieces are LEGO bricks. The AI looks at the board through the stand camera, chooses its move, and puts its piece down with the arm. It uses the brain's usual robot tools (`docs/guides/ai-control.md`), so the same limits and STOP apply. This is preview 1 of the demo (`docs/plan/current-focus.md`, item 7).
+Claude Code plays tic-tac-toe with `so101-white` against a person. The board is a printed grid on letter paper, and the pieces are LEGO bricks. The AI looks at the board through the stand camera, chooses its move, and puts its piece down with the arm. It uses the brain's usual robot tools (`docs/guides/ai-control.md`), so the same limits and STOP apply. This is preview 1 of the demo (`docs/plan/current-focus.md`, item 7).
 
-Any AI tool that connects to the brain over MCP can play: Claude Code, Codex and Gemini CLI. If one model plays badly, try another.
+The lab plays with Claude Code (decision 2026-11-20: no Codex or Gemini CLI in the lab). If one model plays badly, type `/model` and try another.
 
 ## What you need
 - The grid: print `models/games/tic-tac-toe-sheet-letter.pdf` at **100 %** ("Actual size", not "Fit to page").
 - 5 red pieces for the robot and 5 blue pieces for the person. A piece is a Duplo 2×2 brick, or three normal 2×2 bricks pressed together (about 3 cm tall).
 - `so101-white` with its stand camera, and the stand camera's table map (`docs/guides/ai-control.md` → "Table map").
-- An AI tool on the lab desktop: Claude Code, Codex or Gemini CLI.
+- Claude Code on the lab desktop.
 
 The layout is in `config/games/tic-tac-toe.yaml`: where the board is, the size of a cell, where the robot's pieces stand, the colours, and the route of the arm. The brain reads the file each time, so a change needs no restart. To print the sheet again with another cell size, change `cell_cm` and run `uv run python scripts/save_tic_tac_toe_sheet.py`.
 
@@ -30,24 +30,11 @@ Open **http://localhost:8080/ai** (AI Control) on the desktop to see each call. 
 
 To try the game without the arm, run `uv run lab-os serve` (the fake arm). The fake arm has no camera, so you tell the AI where your pieces are.
 
-## 3. Connect the AI tool (one time for each computer)
-Start the brain first. Then, in a terminal in the `lab-os` folder:
-- **Claude Code:** `docs/guides/ai-control.md`, section 2.
-- **Codex:**
-  ```bash
-  codex mcp add lab-os --url http://127.0.0.1:8081/mcp
-  ```
-- **Gemini CLI:**
-  ```bash
-  gemini mcp add --transport http lab-os http://127.0.0.1:8081/mcp
-  ```
-
-If a command is refused, see its help (`codex mcp add --help`, `gemini mcp add --help`): the options can change between versions. Start the AI tool in the `lab-os` folder.
-
-Claude Code moves the arm without asking (`docs/guides/ai-control.md`, section 3). Codex and Gemini CLI can ask before each tool call. Each tool's own settings decide. The brain's limits and STOP apply to all of them.
+## 3. Connect Claude Code (one time for each computer)
+Start the brain first. Then follow `docs/guides/ai-control.md`, section 2. Claude Code moves the arm without asking (section 3 there). The brain's limits and STOP apply.
 
 ## 4. Check the board in the picture
-Type this in the AI tool:
+Type this in Claude Code:
 > Use the lab-os tools. Take a camera_snapshot of so101-white-cam-stand with board true, and show me the picture.
 
 The picture shows the board's cells as magenta squares, each with its name (A1 at the top left), and the robot's start spots as green numbered rings.
@@ -55,7 +42,7 @@ The picture shows the board's cells as magenta squares, each with its name (A1 a
 - If a red piece is not in its green ring, move the piece.
 
 ## 5. Play
-Copy this prompt into the AI tool:
+Copy this prompt into Claude Code:
 > Let's play tic-tac-toe with the lab-os tools. You play red with the robot arm, and I play blue. Take a camera_snapshot of so101-white-cam-stand with board true. Follow the "board" part of its result exactly: the route, how to take a piece, and how to put it down. Do "at_the_start" first. I go first. When I say "your turn", look again, write the board as a 3×3 grid, choose your move, and say it in one line. Then make it. After each move, say if someone won or if it is a draw. Move slowly. I have STOP in reach.
 
 Put your blue piece in a cell, then say "your turn". On the fake arm, say the cell too ("I put mine on B2, your turn").
