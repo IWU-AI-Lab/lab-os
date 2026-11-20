@@ -708,6 +708,19 @@ async def test_the_device_languages_reach_the_turn(aiohttp_client, aiohttp_serve
     assert "Always answer in" not in conv.system_prompt(None, None)
 
 
+def test_the_mic_button_comes_back_when_the_microphone_is_plugged_in_again():
+    """Quick job 73 (was 48): one count at the browser's "devicechange" can come before the sound
+    system lists the microphone, so the page counts again a few times after each change, and every
+    few seconds while it sees none."""
+    from pathlib import Path
+
+    js = (Path(__file__).resolve().parents[1] / "src/lab_os/web/voice.js").read_text()
+    assert 'addEventListener?.("devicechange", micsChanged)' in js
+    changed = js.split("function micsChanged() {", 1)[1].split("\n  }", 1)[0]
+    assert "setTimeout(countMics" in changed
+    assert "if (!st.mics) countMics();" in js
+
+
 async def test_only_the_screen_that_talks_shows_it(aiohttp_client, aiohttp_server, key, tmp_path):
     """Quick job 58: the Newline spoke, and the desk's core showed it too. The brain's state now
     names the screen with the conversation; the pages show another screen's turn as idle."""

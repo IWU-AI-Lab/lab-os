@@ -3,9 +3,11 @@
 import argparse
 import asyncio
 import contextlib
+import logging
 import shutil
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -21,7 +23,9 @@ from lab_os.teleop.mapping import MODES, ClutchMapper, MappingConfig
 from lab_os.teleop.messages import JointFrame, parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder, replay
 from lab_os.teleop.server import SHUTDOWN, create_app
-from lab_os.venues import load_venue
+from lab_os.venues import Venue, load_venue
+
+log = logging.getLogger(__name__)
 
 PRINT_HZ = 10
 STOP_WAIT_S = 1.0  # a request still running when the server stops gets this long (quick job 44)
@@ -186,7 +190,10 @@ def make_loop(args) -> TeleopLoop:
         venue = load_venue(args.venue)
     except config.ConfigError as e:
         raise SystemExit(str(e)) from None
-    found = _find_arms(args, venue) if args.arm is None else set()
+    args.auto_arm = (
+        args.arm is None
+    )  # no --arm: an arm plugged in later is taken too (quick job 73)
+    found = _find_arms(args, venue) if args.auto_arm else set()
     left_name = getattr(args, "left_arm", None)
     if left_name and left_name == args.arm and not args.arm.startswith("fake"):
         raise SystemExit(f"--left-arm {left_name}: that's --arm too. Choose another arm.")
@@ -227,6 +234,34 @@ def make_loop(args) -> TeleopLoop:
         loop.left = _arm_loop(left, venue, speed, inputs, hand="left")
         loop.left.is_left = True
     return loop
+
+
+def arm_finder() -> Callable[[TeleopLoop, Venue], TeleopLoop | None]:
+    """An SO-101 plugged in after the brain started on the fake arm (quick job 73): the same
+    rules as at the start (`plugged_in_arms`: never a borrowed arm, the green set). The finder
+    returns a loop for the first one that opens (the brain then `adopt`s it), or None. A plugged-in
+    arm that won't open (LeLab has it, no calibration) is said once per reason."""
+    said: dict[str, str] = {}
+
+    def find(loop: TeleopLoop, venue: Venue) -> TeleopLoop | None:
+        try:
+            here = plugged_in_arms(load_registry(), venue.active_devices)
+        except config.ConfigError:
+            return None
+        for name in set(said) - set(here):
+            del said[name]  # unplugged again: say it again next time
+        for name in here:
+            try:
+                arm = _open_arm("--arm", name, venue)
+            except SystemExit as e:
+                if said.get(name) != str(e):
+                    said[name] = str(e)
+                    log.warning("%s is plugged in, but %s", name, e)
+                continue
+            return _arm_loop(arm, venue, loop.speed_scale, loop.inputs, hand="right")
+        return None
+
+    return find
 
 
 def _find_arms(args, venue) -> set[str]:

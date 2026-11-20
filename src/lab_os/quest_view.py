@@ -19,7 +19,7 @@ import tarfile
 import urllib.request
 import zipfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from lab_os import REPO_ROOT
@@ -134,6 +134,54 @@ def adb_devices(adb: str) -> list[str]:
         return []
     lines = [line.split() for line in out.splitlines()[1:]]
     return [p[0] for p in lines if len(p) >= 2 and p[1] == "device"]
+
+
+@dataclass
+class AdbReverse:
+    """`adb reverse` by itself (quick job 73): the Quest's browser opens `http://localhost:<port>`
+    through its USB cable, and a new connection of the cable forgets the reverse (GOTCHAS
+    2026-10-24). The brain calls `check()` every few seconds: each device that adb sees ready and
+    that wasn't there at the last look gets `adb reverse tcp:<port> tcp:<port>`. The system's adb
+    (`find_adb`), so a second adb version can't stop the server."""
+
+    port: int
+    find: Callable[[], str | None] = lambda: find_adb(find_scrcpy())
+    devices: Callable[[str], list[str]] = adb_devices
+    run: Callable = subprocess.run
+    done: set[str] = field(default_factory=set)  # reversed, and still connected
+    failed: dict[str, str] = field(default_factory=dict)  # serial → why (said once, tried again)
+
+    def check(self) -> list[str]:
+        """Reverse the port for each newly connected device; returns their serials."""
+        adb = self.find()
+        if adb is None:
+            return []
+        here = set(self.devices(adb))
+        self.done &= here  # gone: reversed again when it's back
+        new = []
+        for serial in sorted(here - self.done):
+            port = f"tcp:{self.port}"
+            cmd = [adb, "-s", serial, "reverse", port, port]
+            try:
+                r = self.run(cmd, capture_output=True, text=True, timeout=10)
+                why = None if r.returncode == 0 else (r.stderr or r.stdout).strip()
+            except (OSError, subprocess.TimeoutExpired) as e:
+                why = str(e)
+            if why:
+                if self.failed.get(serial) != why:
+                    log.warning("adb reverse for %s failed: %s", serial, why)
+                self.failed[serial] = why
+                continue
+            self.failed.pop(serial, None)
+            self.done.add(serial)
+            new.append(serial)
+            log.info(
+                "%s connected: adb reverse %s %s (its browser reaches this brain)",
+                serial,
+                port,
+                port,
+            )
+        return new
 
 
 @dataclass

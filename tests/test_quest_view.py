@@ -188,3 +188,34 @@ async def test_only_from_the_brains_computer(aiohttp_client, scrcpy, monkeypatch
     assert (await client.post("/api/quest-view/start", json={})).status == 403
     assert (await client.post("/api/quest-view/stop")).status == 403
     assert started == []
+
+
+def test_adb_reverse_runs_for_each_new_connection():
+    """Quick job 73: after each new USB connection the Quest needs `adb reverse` again; the brain
+    runs it by itself, once per connection, and says a failure once."""
+    from types import SimpleNamespace
+
+    from lab_os.quest_view import AdbReverse
+
+    here: list[str] = []
+    ran: list[list[str]] = []
+    fail = {"on": False}
+
+    def run(cmd, **kw):
+        ran.append(cmd)
+        return SimpleNamespace(returncode=1 if fail["on"] else 0, stdout="", stderr="no device")
+
+    rev = AdbReverse(8080, find=lambda: "/usr/bin/adb", devices=lambda adb: list(here), run=run)
+    assert rev.check() == [] and ran == []  # no headset
+    here.append("2G0YC5ZG")
+    assert rev.check() == ["2G0YC5ZG"]
+    assert ran == [["/usr/bin/adb", "-s", "2G0YC5ZG", "reverse", "tcp:8080", "tcp:8080"]]
+    assert rev.check() == [] and len(ran) == 1  # still connected: not again
+    here.clear()
+    rev.check()
+    here.append("2G0YC5ZG")  # the cable plugged in again
+    assert rev.check() == ["2G0YC5ZG"] and len(ran) == 2
+    here.append("PHONE1")
+    fail["on"] = True
+    assert rev.check() == [] and rev.failed == {"PHONE1": "no device"}
+    assert AdbReverse(8080, find=lambda: None).check() == []  # no adb: nothing

@@ -94,13 +94,13 @@ Do this one time:
 Do this in each session:
 ```bash
 uv run lab-os serve                    # the brain, with the fake arm
-adb reverse tcp:8080 tcp:8080          # again after each new connection of the cable
 ```
+The brain runs `adb reverse tcp:8080 tcp:8080` by itself each time the Quest connects by USB (it looks every 3 seconds). `lab-os-teleop serve` does not: with it, run that command yourself, again after each new connection of the cable.
 In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor` must follow. If the page has a problem in the Quest's browser, use the old page: `http://localhost:8080/classic/teleop`.
 
 Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
 
-**The real SO-101:** plug it in, then run `uv run --extra so101 lab-os serve --speed 0.2`, then the same `adb reverse` and page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
+**The real SO-101:** plug it in, then run `uv run --extra so101 lab-os serve --speed 0.2`, then open the same page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
 
 ### The relative mode (the default)
 10 cm of hand moves the gripper 10 cm (since 2026-11-16; before, 5 cm). The arm follows at the 1:1 follow speed, scaled by the Speed slider: at the top of the slider (the venue's `max_speed_scale`), it follows at `one_to_one_max_deg_per_s` (180°/s); at half, at half that speed. Before 2026-11-16 it was 45°/s at most, and the arm was far behind the hand (`docs/dev/existing-work-teleop-ai.md`). Where 1:1 is off, the relative mode uses the old, slower speed. Hot servos (60 °C) also slow it down. With `--speed 0.2` in the lab, it is 72°/s: push the right thumbstick up for more.
@@ -183,7 +183,7 @@ What is different from one arm:
 **The green arm:** `--left-arm so101-green` has the same checks as `--arm so101-green` (`docs/guides/ai-control.md` → "The green arm"). It must be in the venue's `active_devices`. The brain refuses it while LeLab or a training run has its port open. The brain drives it with its copy of the training calibration and never changes the arm.
 
 ## Troubleshooting
-- The page does not load → `adb reverse --list` must show `tcp:8080 tcp:8080`. Run `adb reverse` again after you connect the cable again.
+- The page does not load → `adb reverse --list` must show `tcp:8080 tcp:8080`. The brain runs it by itself when the Quest connects. If it fails, the brain's terminal says why. With `lab-os-teleop serve`, run `adb reverse tcp:8080 tcp:8080` yourself.
 - `adb devices` shows `unauthorized` → put on the headset and accept the USB debugging question.
 - "WebXR not available" → the address must be `http://localhost:8080`, not the desktop's IP address (an IP address is not a secure address).
 - The arm shows "Frozen: let go of the grip" → release the grip fully, then press it again.

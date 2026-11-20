@@ -225,6 +225,30 @@ class XArm:
             self._thread = threading.Thread(target=self._run, name=f"{self.name}-io", daemon=True)
             self._thread.start()
 
+    def port_present(self) -> bool:
+        """Is its USB there (quick job 73)? The teleop loop asks every half second, freezes and
+        says "disconnected" when it's gone, and connects again by itself when it's back."""
+        try:
+            find_usb_device(self.device_name)
+        except LookupError:
+            return False
+        return True
+
+    def drop(self) -> None:
+        """Let go after the USB went: the worker stops and nothing more is written."""
+        if self._thread:
+            self._quit.set()
+            self._thread.join(timeout=1.0)
+            self._thread = None
+        if self._dev is not None:
+            try:
+                self._dev.close()
+            except Exception as e:  # the device is gone already
+                log.debug("%s: closing a device that's gone: %s", self.name, e)
+            self._dev = None
+        with self._lock:  # a reconnect starts from a fresh reading, not the old goal
+            self._goal, self._hold, self._seg = {}, False, {}
+
     def close(self) -> None:
         if self._thread:
             self.stop()

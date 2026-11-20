@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — The mic button didn't come back after the USB microphone was plugged in again
+**What:** quick job 48 (lab day 2026-11-19). The button hides on "devicechange" when the microphone goes, but it stayed hidden after the microphone came back. The page counted the microphones once per "devicechange". On Linux, the browser can send that event when the USB device appears, before the sound system (PipeWire or PulseAudio) lists its microphone; then the one count finds none, and no second event comes. Likely, not proven on the lab desktop: in headless Chrome, a faked microphone listed 1 s after the event gave exactly this.
+**Fix:** quick job 73: `web/voice.js` counts again 0.5, 2 and 5 s after each change, and every 5 s while it sees none.
+
 ### 2026-11-20 — The hub in VR could miss "lab-os is off" and start anyway
 **What:** In lab check S.4, the Quest sat on the hub's start screen in VR when the desktop shut lab-os down. It never showed the off card: a press still started the startup, and the hub came up with no modules and no callouts (the brain wasn't there to give them). The hub in VR turned off only on the one "brain_off" message; why the Quest missed it is not known (its connection was perhaps reconnecting).
 **Fix:** Quick job 78: the hub in VR also turns off when the brain doesn't answer (on entering, at a press after a quiet time, after two failed status reads). Its status reads have a 6 s limit: a busy page's first reads took ~2.3 s in headless Chrome, so a short limit gave a false "not reachable". A brain that's gone fails at once ("connection refused").
@@ -642,7 +646,7 @@ Then unplug and re-plug the xArm's USB.
 
 ### 2026-10-24 — WebXR needs a secure context: use `localhost`, not an IP
 **What:** Browsers only allow WebXR on `https://` or `http://localhost`. Opening the page via the desktop's IP address shows "WebXR not available".
-**Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/guides/quest-setup.md). Re-run `adb reverse` after every re-plug.
+**Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/guides/quest-setup.md). Re-run `adb reverse` after every re-plug. (Since 2026-11-20, quick job 73: `lab-os serve` runs it by itself when the Quest connects.)
 
 ### 2026-10-24 — Never open so101-green's serial ports
 **What:** The lab desktop has so101-green's leader + follower plugged in. Both show up as CH343 adapters (`1a86:55d3`, "USB Single Serial"), exactly what so101-white will look like.

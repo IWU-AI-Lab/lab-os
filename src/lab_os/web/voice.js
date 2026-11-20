@@ -192,9 +192,18 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     }
     onChange();
   }
-  if (st.api) {
-    navigator.mediaDevices.addEventListener?.("devicechange", countMics);
+  // Quick job 73 (was 48): plugged in again, the button didn't come back. The browser says "devicechange"
+  // as the USB device arrives, but the sound system may list its microphone a moment later, so one count
+  // can still see none. Count again a few times after each change, and every few seconds while none is
+  // there (some systems send no event at all).
+  function micsChanged() {
     countMics();
+    for (const ms of [500, 2000, 5000]) setTimeout(countMics, ms);
+  }
+  if (st.api) {
+    navigator.mediaDevices.addEventListener?.("devicechange", micsChanged);
+    countMics();
+    setInterval(() => { if (!st.mics) countMics(); }, 5000);
   }
 
   function can() {
