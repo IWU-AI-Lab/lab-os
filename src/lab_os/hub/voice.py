@@ -826,7 +826,7 @@ class VoiceLink:
             self.timing = TurnTiming(how, self.device)
         self.timing.warm = warm
         self.timing.mark("listening")
-        self.desk.assistant.set("listening")
+        self.desk.assistant.set("listening", device=self.device or "")
         self.send({"type": "listening", "mode": self.mode})
         if warm:
             self.timing.mark("connected")
@@ -895,7 +895,9 @@ class VoiceLink:
     async def _turn(self, text: str, setup: VoiceSetup) -> None:
         speaker = Speaker(self, setup)
         try:
-            async for ev in self.desk.chat.ask(text, self.pages, self.answer_in, local=self.local):
+            async for ev in self.desk.chat.ask(
+                text, self.pages, self.answer_in, local=self.local, device=self.device or ""
+            ):
                 self.send(ev)
                 if ev["type"] == "text":
                     if self.timing:
@@ -937,7 +939,9 @@ class VoiceLink:
             self._settle()
         elif not self.desk.chat.busy:
             self.playing_until = max(self.playing_until, time.monotonic() + PLAYING_HOLD_S)
-            self.desk.assistant.set("speaking", float(msg.get("loudness") or 0))
+            self.desk.assistant.set(
+                "speaking", float(msg.get("loudness") or 0), device=self.device or ""
+            )
 
     def greet(self, way: str) -> None:
         """The spoken greeting after the jump: the time of day and a hint how to talk, from its

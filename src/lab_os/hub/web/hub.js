@@ -10,7 +10,7 @@
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 import "/web/no-menu.js";
-import { connectDevice, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
+import { connectDevice, deviceName, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
 import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
@@ -476,7 +476,10 @@ function renderStatus(st) {
   showPaused(st.ai.paused);
   voice.setStatus(st.voice);
   syncWake();
-  if (!S.asking) setAssistant(st.assistant.state, st.assistant.loudness);
+  // listening, thinking and speaking: only on the screen that has the conversation (quick job 58)
+  const talk = ["listening", "thinking", "speaking"].includes(st.assistant.state);
+  const other = talk && (st.assistant.device || "") !== deviceName();
+  if (!S.asking) setAssistant(other ? "idle" : st.assistant.state, other ? 0 : st.assistant.loudness);
   checkStillFull();
 }
 
@@ -587,7 +590,7 @@ async function ask(text) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, pages: pagesHere(), lang: assistantLanguage() }),
+      body: JSON.stringify({ text, pages: pagesHere(), lang: assistantLanguage(), device: deviceName() }),
     });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader();

@@ -5,7 +5,7 @@ The hub's assistant hears you and answers aloud (focus step 7). **Typing always 
 ## Try it (push-to-talk)
 1. Put a key in `.env` in the repository's top folder. The lab uses `OPENAI_API_KEY` (the professor's key). `GEMINI_API_KEY` (the free key) is enough to try. After you change `.env`, restart the brain.
 2. Run `uv run lab-os serve`. Open **http://localhost:8080/** (or `/design`) **on the brain's own computer**, and start the hub.
-3. A **mic button** shows next to "Ask anything". **Hold it (or hold Space) and talk. Then release it.** The answer shows under the core and is spoken. The core shows `listening` while you hold, then `thinking`, then `speaking`, and it moves with the real loudness of the voice.
+3. A **mic button** shows next to "Ask anything". **Hold it (or hold Space) and talk. Then release it.** The answer shows under the core and is spoken. The core shows `listening` while you hold, then `thinking`, then `speaking`, and it moves with the real loudness of the voice. Only the screen that has the conversation shows these three. The other screens stay idle (since 2026-11-20, quick job 58).
 4. Press Esc while it listens: nothing is asked. Press Esc (or hold the mic again) while it speaks: it stops.
 
 The first press asks the browser for the microphone. Allow it once. The microphone stays open for one minute after the last press, so that the next question's first word is not lost. Then the browser's recording sign goes away.

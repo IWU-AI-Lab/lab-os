@@ -626,7 +626,11 @@ async def api_status(request: web.Request) -> web.Response:
             "internet": brain.internet.online if brain.internet else None,  # None = not known
             "ai": brain.chat.status(),
             "voice": brain.voice.status(),
-            "assistant": {"state": brain.assistant.state, "loudness": brain.assistant.loudness},
+            "assistant": {  # device: the screen that has the conversation (quick job 58)
+                "state": brain.assistant.state,
+                "loudness": brain.assistant.loudness,
+                "device": brain.assistant.device,
+            },
             "arm": {
                 "name": loop.arm.name,
                 "connected": loop.arm_connected,  # False: its USB was unplugged (quick job 27)
@@ -866,12 +870,17 @@ async def api_chat_post(request: web.Request) -> web.StreamResponse:
         text = str(body.get("text", ""))[:MAX_QUESTION_CHARS]
         pages = body.get("pages")
         answer_in = clean_language((body.get("lang") or {}).get("answer"))
+        device = str(body.get("device") or "")
     except (ValueError, AttributeError):
         raise web.HTTPBadRequest(text='send {"text": "..."}') from None
+    try:
+        device = clean_name(device) if device else ""
+    except DeviceError:
+        device = ""
     resp = web.StreamResponse(headers={"Content-Type": "application/x-ndjson"})
     await resp.prepare(request)
     chat = request.app[BRAIN].chat
-    async for event in chat.ask(text, pages, answer_in, local=is_local(request)):
+    async for event in chat.ask(text, pages, answer_in, local=is_local(request), device=device):
         await resp.write((json.dumps(event) + "\n").encode())
     await resp.write_eof()
     return resp

@@ -2145,7 +2145,7 @@ async function ask(q, fromCore) {
   if (!q || S.asking) return;
   const { onEvent, end } = beginTurn(q, fromCore);
   try {
-    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q, pages: pagesHere(), lang: { answer: screenPrefs().answer_in || "" } }) });
+    const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: q, pages: pagesHere(), lang: { answer: screenPrefs().answer_in || "" }, device: myName() }) });
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const reader = res.body.getReader(), decoder = new TextDecoder();
     let buf = "";
@@ -3231,9 +3231,17 @@ async function pollStatus() {
   if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {
     // the brain's error is a standing one (e.g. a refused key), not an unanswered question
     if (st.assistant.state === "error") errBox("AI not connected", st.ai.problem);
-    if (S.state !== st.assistant.state) setState(st.assistant.state);
+    const shown = shownState(st.assistant);
+    if (S.state !== shown) setState(shown);
   }
   return st;
+}
+// Listening, thinking and speaking show only on the screen that has the conversation (quick job 58): another
+// screen's turn is idle here.
+const myName = () => (D?.name || params.get("device") || "").trim().toLowerCase();
+function shownState(a) {
+  const talk = ["listening", "thinking", "speaking"].includes(a.state);
+  return talk && (a.device || "") !== myName() ? "idle" : a.state;
 }
 // visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
 function renderTry(visitors) {
