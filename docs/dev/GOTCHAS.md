@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-19 — A teleop test that holds the grip from its first frame fails when the loop ticks first
+**What:** quick job 44's pull request. `test_stop_works_from_a_monitor` failed on GitHub, and locally only after `test_shutdown.py`. If the loop's first tick comes before the page's first frame, it freezes (no input) and then wants the grip released before it engages. The test held the grip from its first frame, so it never engaged. The race was there before; a small change in timing showed it.
+**Fix:** the test (and the two-arms test like it) sends a released frame first, as a real controller does.
+
 ### 2026-11-19 — A stopping aiohttp server waits up to 60 s for open pages; the AI tools keep working meanwhile
 **What:** quick job 44. `AppRunner.cleanup()` waits for every running handler (`shutdown_timeout`, 60 s by default). An open WebSocket is a running handler, and aiohttp doesn't close WebSockets by itself, so with pages open the brain stayed up about 30 s after "Shut down" (31.4 s measured). The teleop loop and the MCP server ran the whole time, so an AI tool's next small move started and the arm moved to its goal. uvicorn (the MCP server) waits the same way for an AI tool's open stream, and cutting it prints an error trace.
 **Fix:** `TeleopLoop.shut_down()` refuses every move from the start of a shutdown. `on_shutdown` closes every page's WebSocket (`close_sockets`), `shutdown_timeout` is 1 s, and the MCP server ends each session before it stops (a `# HACK:`, current-focus.md). A new long-lived connection (a stream, a socket) must be closed there too.

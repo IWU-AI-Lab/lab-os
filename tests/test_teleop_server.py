@@ -189,8 +189,9 @@ async def test_stop_works_from_a_monitor(aiohttp_client):
     client = await aiohttp_client(app)
     driver = await client.ws_connect("/ws")
     monitor = await client.ws_connect("/ws?role=monitor")
-    for x in (0.0, 0.01, 0.02):
-        await driver.send_json(frame_at(x, grip=1.0))
+    # released first: if the loop ticked before the first frame, it froze and wants a release
+    for x, grip in ((0.0, 0.0), (0.0, 1.0), (0.01, 1.0), (0.02, 1.0)):
+        await driver.send_json(frame_at(x, grip=grip))
         await asyncio.sleep(0.03)
     assert await wait_for(lambda: loop.mapper.engaged)
     await monitor.send_json({"type": "stop"})

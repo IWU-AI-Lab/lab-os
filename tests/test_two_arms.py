@@ -246,7 +246,8 @@ async def test_one_page_drives_both_and_stop_from_a_monitor_stops_both(aiohttp_c
     listener = asyncio.create_task(listen())
     for i in range(40):
         x = min(i * 0.005, 0.1)
-        await page.send_json(frame(controller(x=x, grip=1.0), controller(x=-x, grip=1.0)))
+        grip = 0.0 if i == 0 else 1.0  # released first: a tick before the first frame wants it
+        await page.send_json(frame(controller(x=x, grip=grip), controller(x=-x, grip=grip)))
         await asyncio.sleep(0.02)
     assert await wait_for(lambda: pan(right) > 2 and pan(left) < -2)
     await monitor.send_json({"type": "stop"})
