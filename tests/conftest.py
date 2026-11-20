@@ -1,16 +1,44 @@
 """Shared test setup: no test ever sees a real API key (no .env, none from the shell), each test
-starts with the repo's own config/ as the place, and nothing is written to the repo's logs/ (AI
-spend, kept chats)."""
+starts with the repo's own config/ as the place (as committed, see `committed_config`), and nothing
+is written to the repo's logs/ (AI spend, kept chats)."""
+
+import io
+import shutil
+import subprocess
+import tarfile
 
 import pytest
 
+import lab_os
 from lab_os import config
 
 
+@pytest.fixture(scope="session")
+def committed_config(tmp_path_factory):
+    """The repo's config/ as last committed, in a temporary folder. In the lab, the settings page
+    writes into config/ (docs/guides/hub.md → "Saved into the files"), so the working copy holds
+    the lab's own choices; the tests check the committed defaults. Without git (a source copy):
+    the working copy."""
+    folder = tmp_path_factory.mktemp("committed")
+    try:
+        tar = subprocess.run(
+            ["git", "-C", str(lab_os.REPO_ROOT), "archive", "HEAD", "config"],
+            capture_output=True,
+            check=True,
+        ).stdout
+        with tarfile.open(fileobj=io.BytesIO(tar)) as t:
+            t.extractall(folder, filter="data")
+    except (OSError, subprocess.CalledProcessError, tarfile.TarError):
+        shutil.copytree(lab_os.CONFIG_DIR, folder / "config")
+    return folder / "config"
+
+
 @pytest.fixture(autouse=True)
-def _no_env_file_and_default_place(monkeypatch, tmp_path_factory):
+def _no_env_file_and_default_place(monkeypatch, tmp_path_factory, committed_config):
     nowhere = tmp_path_factory.mktemp("no-env") / ".env"
     monkeypatch.setattr(config, "env_file", lambda: nowhere)
+    monkeypatch.setattr(config, "DEFAULT_DIR", committed_config)
+    monkeypatch.setattr(lab_os, "CONFIG_DIR", committed_config)
     monkeypatch.setattr(config, "_active", None)
     logs = tmp_path_factory.mktemp("logs")
     monkeypatch.setattr(config, "logs_dir", lambda: logs)

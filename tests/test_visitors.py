@@ -180,9 +180,13 @@ def ai_service(script: deque, seen: list):
 
 
 @pytest.fixture
-async def hub(aiohttp_server, aiohttp_client, tmp_path, key):  # noqa: F811
+async def hub(aiohttp_server, aiohttp_client, tmp_path, key, monkeypatch):  # noqa: F811
     """The brain on the fake arm, its chat answered by the stand-in. Returns (app, client, script,
-    seen): put the AI's next replies in `script`; `seen` has every request the chat sent."""
+    seen): put the AI's next replies in `script`; `seen` has every request the chat sent. No arm
+    counts as plugged in, even if one is plugged in to this computer."""
+    monkeypatch.setattr(
+        hub_server, "robots_here", lambda reg, *a: robots_here(reg, *a, exists=lambda p: False)
+    )
     script, seen = deque(), []
     setup = setup_for(await aiohttp_server(ai_service(script, seen)))
     chat = Conversation(Assistant(), SpendLog(tmp_path / "spend"), setups=lambda: {"main": setup})
