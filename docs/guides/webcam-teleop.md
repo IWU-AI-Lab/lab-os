@@ -10,7 +10,7 @@ The page finds your hands in each camera picture with Google's MediaPipe hand la
    ```bash
    uv run lab-os serve
    ```
-   It drives the fake arm. For a real arm, add `--arm so101-white` (in a coding session, ask the builder first: `AGENTS.md`).
+   It drives the SO-101 that is plugged in, else the fake arm. To keep the fake arm, add `--arm fake` (in a coding session, ask the builder before a real arm moves: `AGENTS.md`).
 3. On the brain's computer, open **http://localhost:8080/webcam**. The teleop page also has a link to it.
 4. Click **Start webcam control**. The first time, allow the camera.
 

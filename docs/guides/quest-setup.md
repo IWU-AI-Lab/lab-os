@@ -1,6 +1,6 @@
 # Teleop with the Quest: at home (no headset) and on the real Quest (USB)
 
-The teleop program shows a WebXR page and gets the controller data over a WebSocket. It drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
+The teleop program shows a WebXR page and gets the controller data over a WebSocket. `lab-os-teleop` drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). `lab-os serve` drives the SO-101 that is plugged in, else the fake arm (`docs/guides/hub.md` → "Start it"). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
 
 ```bash
 uv run lab-os-teleop serve                         # the headset page and the fake arm
@@ -100,7 +100,7 @@ In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **
 
 Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
 
-**The real SO-101:** run `uv run --extra so101 lab-os serve --arm so101-white --speed 0.2`, then the same `adb reverse` and page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
+**The real SO-101:** plug it in, then run `uv run --extra so101 lab-os serve --speed 0.2`, then the same `adb reverse` and page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
 
 ### The relative mode (the default)
 10 cm of hand moves the gripper 10 cm (since 2026-11-16; before, 5 cm). The arm follows at the 1:1 follow speed, scaled by the Speed slider: at the top of the slider (the venue's `max_speed_scale`), it follows at `one_to_one_max_deg_per_s` (180°/s); at half, at half that speed. Before 2026-11-16 it was 45°/s at most, and the arm was far behind the hand (`docs/dev/existing-work-teleop-ai.md`). Where 1:1 is off, the relative mode uses the old, slower speed. Hot servos (60 °C) also slow it down. With `--speed 0.2` in the lab, it is 72°/s: push the right thumbstick up for more.

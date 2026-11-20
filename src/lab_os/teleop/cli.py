@@ -12,7 +12,7 @@ from pathlib import Path
 from aiohttp import web
 
 from lab_os import REPO_ROOT, config, term
-from lab_os.devices import PortNotAllowed, load_registry, table_z_cm
+from lab_os.devices import PortNotAllowed, load_registry, plugged_in_arms, table_z_cm
 from lab_os.kinematics import kinematics_for
 from lab_os.robots.base import Arm
 from lab_os.robots.fake import FakeArm
@@ -186,17 +186,29 @@ def make_loop(args) -> TeleopLoop:
         venue = load_venue(args.venue)
     except config.ConfigError as e:
         raise SystemExit(str(e)) from None
+    found = _find_arms(args, venue) if args.arm is None else set()
     left_name = getattr(args, "left_arm", None)
     if left_name and left_name == args.arm and not args.arm.startswith("fake"):
         raise SystemExit(f"--left-arm {left_name}: that's --arm too. Choose another arm.")
     # the venue's top speed is where it starts; with the speed cap off, --speed may go higher
     speed = min(args.speed, venue.speed_cap_scale) if args.speed else venue.max_speed_scale
-    arm = _open_arm("--arm", args.arm, venue)
+    try:
+        arm = _open_arm("--arm", args.arm, venue)
+    except SystemExit as e:
+        if args.arm not in found:
+            raise
+        print(f"{e} The fake arm instead.")  # found, but busy or not set up: the brain still starts
+        args.arm = "fake"
+        arm = _open_arm("--arm", args.arm, venue)
     try:
         left = _open_arm("--left-arm", left_name, venue) if left_name else None
-    except SystemExit:
-        arm.close()  # the first arm is open already: let go of it before stopping
-        raise
+    except SystemExit as e:
+        if left_name in found:
+            print(f"{e} One arm only.")
+            args.left_arm = left = None
+        else:
+            arm.close()  # the first arm is open already: let go of it before stopping
+            raise
     print(
         f"venue {venue.name}: speed scale {speed}, arm: {arm.name} "
         f"(joints: {', '.join(arm.joint_names)})"
@@ -215,6 +227,31 @@ def make_loop(args) -> TeleopLoop:
         loop.left = _arm_loop(left, venue, speed, inputs, hand="left")
         loop.left.is_left = True
     return loop
+
+
+def _find_arms(args, venue) -> set[str]:
+    """No --arm (quick job 61): the SO-101s plugged in now. One becomes --arm, a second one
+    --left-arm (unless --left-arm names one); none: the fake arm. Borrowed arms (the green set)
+    only when named. Sets args.arm (and args.left_arm) and returns the names it found."""
+    left = getattr(args, "left_arm", None)
+    try:
+        here = plugged_in_arms(load_registry(), venue.active_devices)
+    except config.ConfigError as e:
+        print(f"No arm looked for ({e}): the fake arm.")
+        here = []
+    here = [n for n in here if n != left]
+    if not here:
+        print("No arm plugged in: the fake arm (--arm names one).")
+        args.arm = "fake"
+        return set()
+    args.arm = here[0]
+    if len(here) > 1 and not left:
+        args.left_arm = here[1]
+    used = [args.arm] + ([args.left_arm] if len(here) > 1 and not left else [])
+    print(
+        f"Plugged in: {', '.join(here)}. Driving {' and '.join(used)} (--arm fake: the fake arm)."
+    )
+    return set(used)
 
 
 def close_arms(loop: TeleopLoop) -> None:
@@ -303,9 +340,10 @@ def add_arm_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--quiet", action="store_true", help="don't print the live status line")
     parser.add_argument(
         "--arm",
-        default="fake",
         help="which arm to drive: fake (software SO-101), fake-xarm1 (software xArm), or a real "
-        "arm's name from devices.yaml (an SO-101 needs `uv sync --extra so101` and a calibration)",
+        "arm's name from devices.yaml (an SO-101 needs `uv sync --extra so101` and a calibration). "
+        "Default: lab-os serve drives the SO-101s plugged in (not the borrowed green set), else "
+        "the fake arm; lab-os-teleop the fake arm",
     )
     parser.add_argument(
         "--left-arm",
@@ -321,6 +359,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="lab-os-teleop", description=__doc__)
     parser.add_argument("--port", type=int, default=8080)
     add_arm_args(parser)
+    parser.set_defaults(arm="fake")  # only `lab-os serve` finds the arms plugged in (quick job 61)
     sub = parser.add_subparsers(dest="command", required=True)
 
     serve_cmd = sub.add_parser("serve", help="serve the XR page and drive the fake arm live")
