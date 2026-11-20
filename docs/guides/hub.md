@@ -48,6 +48,8 @@ If the plain hub leaves full screen (a swipe, holding Esc, a reload), the start 
 
 **The designed hub has one tap:** full screen, the unlock and the startup (about 8 s; any input skips it). Leaving full screen does not bring back the start screen.
 
+**A card swipe starts it too** (quick job 79). Plug the lab's USB card reader into the computer that shows the hub, and swipe a student ID on the start screen. The hub starts with its own, faster unlock and sound ("Card read"), then the normal startup. Only a card whose data is a plain number starts it. Other cards (for example a bank card) do nothing. The hub uses the card's data only to see that a card was swiped. It never keeps, logs or sends it. A key that a person presses still starts the hub as before.
+
 **No long-press menu:** on a touch screen, a long press on a hub page does not open the browser's menu (Inspect, Save image). In the ask line, a long press still selects text, and paste works. A mouse's right click still opens the menu.
 
 **The Full screen button** is on every page (the hubs' status strips, the bar of each module page, the classic pages, `/perf`), while the page is not full screen (also after F11, and in the window that "Start lab-os" opens). It does what tap 1 does. If the browser cannot go full screen, the button stays, and when you press it, it **says why** (also in its tooltip). The reasons: no Fullscreen API; the browser switched it off (for example a kiosk or a managed policy); a permissions policy blocks it; or the browser refuses it with its own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One file does this for every page: `src/lab_os/web/fullscreen.js`.

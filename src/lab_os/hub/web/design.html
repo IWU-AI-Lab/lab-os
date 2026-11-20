@@ -640,6 +640,20 @@ body.waiting #hub, body.waiting #frame, body.waiting #verses, body.waiting #edge
 #ign-orb .burst { fill: none; stroke: var(--hot); opacity: 0; }
 #ignite.unlock #ign-orb .burst { animation: burst 0.8s ease-out 1.2s both; }
 @keyframes burst { from { opacity: 1; scale: 1; stroke-width: 3; } to { opacity: 0; scale: 6; stroke-width: 0.4; } }
+/* a card swipe (quick job 79): the same unlock, faster and harder (~0.9 s). A scan line reads down the core,
+   all the bolts snap back at once, the ring spins open, and the core bursts into the jump. */
+#ign-orb .scan { opacity: 0; }
+#ign-orb .scan rect { fill: var(--hot); filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 10px var(--primary)); }
+#ignite.card #ign-orb { animation: punch 0.95s cubic-bezier(0.3, 0, 0.2, 1) both; }
+@keyframes punch { 0% { scale: 1; } 28% { scale: 0.86; } 42% { scale: 1.08; } 100% { scale: 1.04; } }
+#ignite.card #ign-orb .scan { animation: scan 0.3s cubic-bezier(0.5, 0, 0.5, 1) both; }
+@keyframes scan { 0% { opacity: 1; translate: 0 -62px; } 85% { opacity: 1; } 100% { opacity: 0; translate: 0 62px; } }
+#ignite.card #ign-orb .bolt { transition: translate 0.16s cubic-bezier(0.7, 0, 0.3, 1) 0.26s, opacity 0.2s 0.32s; translate: 26px 0; }
+#ignite.card #ign-orb .turn { transition: rotate 0.4s cubic-bezier(0.6, 0, 0.2, 1) 0.32s, scale 0.3s cubic-bezier(0.7, 0, 0.84, 0) 0.62s, opacity 0.25s 0.68s; rotate: 220deg; }
+#ignite.card #ign-orb .shut { transition: scale 0.25s cubic-bezier(0.7, 0, 0.84, 0) 0.5s, opacity 0.2s 0.6s; }
+#ignite.card #ign-orb .core-g { transition: scale 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.62s, opacity 0.3s 0.72s; }
+#ignite.card #ign-orb .burst { animation: burst 0.6s ease-out 0.66s both; }
+#ignite.card #ign-what { transition-delay: 0.3s; }
 #ignite .stack > *, #ignite .ign-foot { transition: opacity 0.35s, translate 0.5s cubic-bezier(0.7, 0, 0.84, 0); }
 #ignite.unlock .stack > *, #ignite.unlock .ign-foot { opacity: 0; translate: 0 14px; }
 #ignite.unlock #ign-icons { transition-delay: 0.05s; } #ignite.unlock .safe { transition-delay: 0.1s; }
@@ -960,6 +974,7 @@ body[data-mod="page"] #module .send { display: flex; }
       <g class="bolts"><g transform="rotate(22.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:0"/></g><g transform="rotate(67.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:1"/></g><g transform="rotate(112.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:2"/></g><g transform="rotate(157.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:3"/></g><g transform="rotate(202.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:4"/></g><g transform="rotate(247.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:5"/></g><g transform="rotate(292.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:6"/></g><g transform="rotate(337.5)"><rect class="bolt" x="29" y="-2.2" width="12" height="4.4" fill="currentColor" style="--i:7"/></g></g>
       <g class="core-g"><g class="pulse"><circle r="12" fill="currentColor" opacity="0.9"/><circle r="22" fill="none" stroke="currentColor" stroke-width="1" opacity="0.5"/></g></g>
       <circle class="burst" r="14"/>
+      <g class="scan"><rect x="-66" y="-1" width="132" height="2"/></g>
     </svg>
   <div class="stack">
     <p id="ign-what">Press any key to start</p>
@@ -1047,6 +1062,15 @@ const SFX = {
     tone({ f: 140, f2: 420, type: "sawtooth", dur: 0.75, vol: 0.035, attack: 0.2, lp: 1100, delay: 0.58 });
     whoosh({ dur: 0.12, vol: 0.12, from: 2600, to: 900, attack: 0.004, delay: 1.15 }); tone({ f: 220, f2: 160, type: "triangle", dur: 0.25, vol: 0.08, delay: 1.15 });
     tone({ f: 1319, type: "triangle", dur: 0.8, vol: 0.035, delay: 1.22 }); tone({ f: 1976, type: "triangle", dur: 0.9, vol: 0.025, delay: 1.28 });
+  },
+  card() {
+    // a card swipe (quick job 79): the reader's quick data chirp, a bright "accepted" note, the bolts' single
+    // hard snap, the ring's short spin, then the chime with the burst
+    for (let i = 0; i < 7; i++) tone({ f: 1800 + i * 260, type: "square", dur: 0.018, vol: 0.02, lp: 5000, delay: i * 0.028 });
+    tone({ f: 1568, type: "triangle", dur: 0.12, vol: 0.06, delay: 0.2 }); tone({ f: 2349, type: "triangle", dur: 0.22, vol: 0.05, delay: 0.25 });
+    tone({ f: 110, f2: 36, dur: 0.5, vol: 0.45, attack: 0.004, delay: 0.27 }); whoosh({ dur: 0.08, vol: 0.14, from: 5000, to: 1500, attack: 0.002, delay: 0.27 });
+    tone({ f: 200, f2: 900, type: "sawtooth", dur: 0.35, vol: 0.03, attack: 0.05, lp: 1800, delay: 0.32 });
+    tone({ f: 1319, type: "triangle", dur: 0.7, vol: 0.035, delay: 0.66 }); tone({ f: 1976, type: "triangle", dur: 0.8, vol: 0.025, delay: 0.7 });
   },
   sweep() { tone({ f: 160, f2: 1300, type: "triangle", dur: 0.9, vol: 0.06, attack: 0.35, lp: 2600 }); },
   shock() { tone({ f: 90, f2: 40, dur: 1.1, vol: 0.3, attack: 0.01 }); whoosh({ dur: 1.2, vol: 0.08, from: 3000, to: 200, attack: 0.02 }); },
@@ -2961,12 +2985,15 @@ function ignitionText() {
 }
 ignitionText();
 addEventListener("gamepadconnected", () => { hasPad = true; ignitionText(); });
-const UNLOCK_MS = 1350;  // the unlock finishes before the startup begins
-function ignite() {
+const UNLOCK_MS_TAP = 1350;  // the unlock finishes before the startup begins
+const CARD_MS = 900;     // a card swipe's faster unlock (quick job 79)
+function ignite(how = "tap") {
   const ig = $("#ignite");
   if (!ig || ig.classList.contains("unlock") || performance.now() < S.startGuardUntil) return;
+  const card = how === "card", UNLOCK_MS = card ? CARD_MS : UNLOCK_MS_TAP;
   goFull();
-  audio(); SFX.unlock(); V?.unlock();
+  audio(); (card ? SFX.card : SFX.unlock)(); V?.unlock();
+  if (card) { ig.classList.add("card"); $("#ign-what").textContent = "Card read"; }
   startVideo();
   S.greetP = startChat();
   S.greetP.then(spokenGreeting);
@@ -2978,7 +3005,35 @@ function ignite() {
   PAD = padChar(); setMoney();
   setTimeout(boot, S.quality === "minimal" ? 0 : UNLOCK_MS);
 }
-$("#ignite").addEventListener("click", ignite);
+$("#ignite").addEventListener("click", () => ignite());
+// A card swipe (quick job 79): the lab's USB card reader types the card's data like a keyboard, a few ms per
+// key, then Enter. On the start screen a key waits SWIPE.gap ms for the next one: a person's key then starts
+// the hub as before, and a fast run of keys ending with Enter is a swipe. Only a plain number (a student ID,
+// with or without the stripe's ; and ? marks) starts it; anything else (a bank card's data has ^ or =) does
+// nothing. The data is only tested here: never stored, logged or sent.
+const SWIPE = { gap: 50, min: 4 };
+const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph"]);
+let burst = null;
+const plainNumber = (data) => new RegExp(`^;?\\d{${SWIPE.min},}\\??$`).test(data);
+function startKey(e) {
+  e.preventDefault();
+  if (MODIFIERS.has(e.key)) return;  // the reader holds Shift for ? and %
+  const t = performance.now();
+  if (burst && t - burst.last > SWIPE.gap) { clearTimeout(burst.timer); burst = null; ignite(); return; }
+  if (!burst) burst = { data: "", n: 0, last: t, timer: 0 };
+  clearTimeout(burst.timer);
+  if (e.key === "Enter") {
+    const swipe = burst.n >= SWIPE.min, ok = swipe && plainNumber(burst.data);
+    burst = null;
+    if (!swipe) ignite();
+    else if (ok) ignite("card");
+    else console.info("hub: a card swipe that isn't a plain number was ignored");
+    return;
+  }
+  burst.data += e.key.length === 1 ? e.key : "\u0000";
+  burst.n += 1; burst.last = t;
+  burst.timer = setTimeout(() => { burst = null; ignite(); }, SWIPE.gap + 10);  // a person's key
+}
 function pollPads() {
   if (!$("#ignite") || !navigator.getGamepads) return;
   for (const p of navigator.getGamepads()) if (p && p.buttons.some((b) => b.pressed)) { ignite(); return; }
@@ -2988,7 +3043,7 @@ function pollPads() {
 addEventListener("keydown", (e) => {
   S.lastInput = performance.now();
   if (S.sleeping) wake();
-  if ($("#ignite")) { e.preventDefault(); ignite(); return; }
+  if ($("#ignite")) { startKey(e); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
   if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
   if (e.key === "Escape" && V && (V.pressed || V.wakeTurn || V.speaking())) { if (V.pressed || V.wakeTurn) { VW?.cancel(); VW = null; V.cancel(); endVoice(); } else V.stopSpeaking(); return; }

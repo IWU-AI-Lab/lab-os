@@ -166,3 +166,17 @@ async def test_the_startup_video_is_served_and_off_by_default(aiohttp_client, tm
         s.update("desk", {"startup_video": "yes"})
     page = DESIGN.read_text()
     assert "screenPrefs().startup_video === true" in page and "#startup-video" in page
+
+
+def test_a_card_swipe_starts_the_hub_its_own_way():
+    """Quick job 79: the card reader types fast, then Enter. Only a plain number starts the hub,
+    with its own unlock and sound; a person's key still starts it as before. The card's data is
+    never sent, stored or logged (tried in headless Chrome: a student card, a bank card, one key,
+    slow typing, Enter alone)."""
+    page = DESIGN.read_text()
+    detector = page.split("function startKey(e)")[1].split("\n}\n")[0]
+    assert 'ignite("card")' in detector and "SWIPE.gap" in detector
+    assert "fetch(" not in detector and "localStorage" not in detector
+    assert "console" not in detector.replace('console.info("hub: a card swipe that', "")
+    assert 'if ($("#ignite")) { startKey(e); return; }' in page
+    assert "card() {" in page and "#ignite.card" in page and "CARD_MS" in page
