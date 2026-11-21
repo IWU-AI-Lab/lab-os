@@ -110,6 +110,8 @@ def test_a_shut_down_page_tries_to_close_itself():
     assert "if (!restarting)" in off and "window.close()" in off
     # the builder, 2026-11-21: nobody stuck in full screen; a big Close button where it can't close
     assert "leaveFullScreen()" in off and ">Close</button>" in off and "Cmd+W" in off
+    # only a window a script opened closes itself (VS Code's browser kept an empty view)
+    assert "const closable = () => !!window.opener && window.top === window;" in off
     assert "comes back by itself when lab-os runs again" in off
 
 
