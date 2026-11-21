@@ -66,17 +66,23 @@ def test_the_white_arm_plugged_in_is_driven(plugged, capsys):
     assert "Plugged in: so101-white" in capsys.readouterr().out
 
 
-def test_the_green_arm_is_taken_only_when_named(plugged):
+def test_the_green_arm_is_taken_only_as_the_left_arm(plugged):
+    """Alone it's never taken unasked (the AI tools drive --arm); beside another arm it becomes
+    the left arm (the builder, 2026-11-21: two arms without naming them)."""
     plugged.update({GREEN})
     assert teleop_cli.make_loop(args()).arm.name == "fake-arm"
     plugged.add(WHITE)
     loop = teleop_cli.make_loop(args())
-    assert loop.arm.name == "so101-white" and loop.left is None  # not the green as the left arm
+    assert loop.arm.name == "so101-white" and loop.left.arm.name == "so101-green"
     assert teleop_cli.make_loop(args(arm="so101-green")).arm.name == "so101-green"
 
 
 def test_two_arms_plugged_in_become_both_hands(plugged, monkeypatch):
-    monkeypatch.setattr(teleop_cli, "plugged_in_arms", lambda reg, active: ["one", "two"])
+    monkeypatch.setattr(
+        teleop_cli,
+        "plugged_in_arms",
+        lambda reg, active, borrowed=False: [] if borrowed else ["one", "two"],
+    )
     loop = teleop_cli.make_loop(args())
     assert loop.arm.name == "one" and loop.left.arm.name == "two"
     # --left-arm named: the plugged-in arm that isn't it becomes --arm

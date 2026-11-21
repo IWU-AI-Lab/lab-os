@@ -191,16 +191,19 @@ def port_exists(path: str) -> bool:
     return os.path.exists(path)
 
 
-def plugged_in_arms(registry: Registry, active: list[str] | tuple[str, ...]) -> list[str]:
+def plugged_in_arms(
+    registry: Registry, active: list[str] | tuple[str, ...], borrowed: bool = False
+) -> list[str]:
     """The SO-101 followers plugged in now that `lab-os serve` may take without being told
     (quick job 61), in devices.yaml's order: active in the venue, not off limits, and not
-    borrowed (the green set: LeLab or a training run may need it, so only when named)."""
+    borrowed (the green set). `borrowed=True`: only the borrowed ones (the green set as the
+    left arm beside another one, the builder 2026-11-21; never alone)."""
     return [
         d.name
         for d in registry.devices.values()
         if d.kind == "so101"
         and not d.off_limits
-        and not d.borrowed
+        and d.borrowed == borrowed
         and d.name in active
         and any(port_exists(p) for p in d.ports)
     ]
