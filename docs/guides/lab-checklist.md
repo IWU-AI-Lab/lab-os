@@ -56,6 +56,7 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.13** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
 - **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
 - **V.15** Quick job 69. Say "Hey Jarvis, calculate 37 times 48, then add 199". → did it say "Let me think about that" first? (yes / no) Was the answer 1975? (yes / no) Open the AI Spend details. → is there a line for "strong"? (yes / no)
+- **V.16** Quick job 55. Set ⚙ → Assistant → Who It Is to **Lab Assistant**, and This Device → Assistant Language to Any and Any. Ask 5 short questions by voice ("Hi", "What's next?", "Thanks"). → were all the answers in English? (yes / no) If no, copy the terminal's lines that start with `voice: question on`.
 
 ---
 
