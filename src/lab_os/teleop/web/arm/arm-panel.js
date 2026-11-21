@@ -32,7 +32,7 @@ $("arm-panel").innerHTML = `
   </div>
   <div class="arm3d-body">
     <div id="arm-view"></div>
-    <div class="arm-readout" aria-label="Joints"><div id="arm-joints" class="arm-joints"></div></div>
+    <div class="arm-readout" aria-label="Joints"><div id="arm-joints" class="arm-joints"></div><div id="arm-cams" class="arm-cams" hidden></div></div>
   </div>
   <p id="arm-source" class="hint">Connecting…</p>
   <p id="arm-error" class="hint warn-text"></p>`;

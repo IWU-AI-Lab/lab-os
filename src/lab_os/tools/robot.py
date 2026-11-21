@@ -364,9 +364,15 @@ class RobotTools:
                 game = tic_tac_toe.load()
             except tic_tac_toe.NoGame as e:
                 raise Refused(str(e)) from e
+        from lab_os.camera_feed import FEEDS
+
         try:
-            path = devices.camera_device(camera)
-            jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
+            live = FEEDS.frame(camera)  # open for the teleop page: its newest frame (quick job 63)
+            if live is not None:
+                jpeg = await asyncio.to_thread(_frame_jpeg, live, width_px)
+            else:
+                path = devices.camera_device(camera)
+                jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
         except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed, Refused) as e:
             if game is None and isinstance(e, Refused):
                 raise
@@ -878,9 +884,13 @@ def _brief(r: dict) -> dict:
 def _grab_jpeg(path: str, width_px: int) -> bytes:
     """Open the camera at `path`, take one frame (the first few are dark while it adjusts), close
     it, and return it as a JPEG `width_px` wide."""
+    return _frame_jpeg(grab_frame(path), width_px)
+
+
+def _frame_jpeg(frame, width_px: int) -> bytes:
+    """A frame as a JPEG `width_px` wide (at most its own width)."""
     import cv2  # headless OpenCV, imported late
 
-    frame = grab_frame(path)
     h, w = frame.shape[:2]
     if w > width_px:
         frame = cv2.resize(frame, (width_px, round(h * width_px / w)), interpolation=cv2.INTER_AREA)
