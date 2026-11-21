@@ -17,6 +17,9 @@
 //                               this device's sensitivity); on "wake", the brain hears the question:
 //                               v.finish() when it's said (silenceWatch), v.cancel() to drop it; the
 //                               brain may end it first ("ended": it heard a pause after the question)
+//   v.converse(on)              conversation mode (quick job 68): the brain listens again after each
+//                               answer ("wake" with conversation: true), until "that's all", the same
+//                               button, or voice stops; {type: "converse", on, why} says when it changes
 //   v.chime()                   the short, quiet "I heard you" sound (the plain hub; the designed hub
 //                               and VR play their own listening sound)
 //   v.noiseFloor                the room's level while listening for the phrase (for silenceWatch)
@@ -169,6 +172,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     holding: false, // the greeting: keep its audio until playHeld()
     held: [],
     wakeWanted: false, // the page wants the wake word on (the brain may say no: wake_off)
+    converse: false, // conversation mode is on (the brain says so: "converse")
     wakeOn: false, // the brain listens for it
     wakeTurn: false, // the brain heard it and hears the question
     wakeSens: 0, // the sensitivity last sent
@@ -242,7 +246,11 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
       if (ev.type === "audio") play(ev);
       else if (ev.type === "wake_on") st.wakeOn = true;
       else if (ev.type === "wake_off") st.wakeOn = false;
-      else if (ev.type === "stopped") { // a new question stopped the answer (quick job 57)
+      else if (ev.type === "converse") { // conversation mode on or off (quick job 68)
+        st.converse = !!ev.on;
+        if (st.converse) openMic().catch((e) => { send({ type: "converse", on: false }); onEvent({ type: "mic_error", message: micWhy(e) }); });
+        else if (!st.wakeWanted && !st.pressed && !st.wakeTurn) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+      } else if (ev.type === "stopped") { // a new question stopped the answer (quick job 57)
         stopSpeaking();
         st.awaitingEnd = false;
       } else if (ev.type === "wake") {
@@ -453,7 +461,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     st.pressed = st.sending = false;
     st.awaitingEnd = true;
     send({ type: "end" });
-    if (!st.wakeWanted) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+    if (!st.wakeWanted && !st.converse) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
   }
   function cancel() {
     if (st.wakeTurn) {
@@ -464,7 +472,21 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     if (!st.pressed) return;
     st.pressed = st.sending = false;
     send({ type: "cancel" });
-    if (!st.wakeWanted) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+    if (!st.wakeWanted && !st.converse) st.closeTimer = setTimeout(closeMic, MIC_KEEP_MS);
+  }
+  // conversation mode (quick job 68): the brain answers "converse" (on, or off with why)
+  async function converse(on) {
+    if (on && !can().ok) return false;
+    if (on) {
+      try {
+        await openMic();
+      } catch (e) {
+        onEvent({ type: "mic_error", message: micWhy(e) });
+        return false;
+      }
+    }
+    send({ type: "converse", on: !!on, pages: pages(), lang: assistantLanguage() });
+    return true;
   }
 
   // ---------- playing the answer ----------
@@ -571,7 +593,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   // the brain is back)
   function off() {
     st.off = true;
-    st.wakeWanted = st.wakeOn = st.wakeTurn = st.pressed = st.sending = false;
+    st.wakeWanted = st.wakeOn = st.wakeTurn = st.pressed = st.sending = st.converse = false;
     clearInterval(st.watchTimer);
     stopSpeaking();
     closeMic();
@@ -592,6 +614,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     stopSpeaking,
     speaking,
     wake,
+    converse,
     finish,
     chime: () => chimeOn(st.ctx),
     get noiseFloor() {
@@ -605,6 +628,9 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     },
     get wakeTurn() {
       return st.wakeTurn;
+    },
+    get conversing() {
+      return st.converse;
     },
     get pressed() {
       return st.pressed;

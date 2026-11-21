@@ -690,7 +690,7 @@ function renderWakeDot() {
     ? "Not hearing the microphone (the browser paused it): press the mic once to wake it"
     : `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
 }
-function wakeTurnStart() {
+function wakeTurnStart(ev = {}) {
   VS.greeting = false;
   if (S.asking && !VS.voiced) {
     voice.cancel(); // a typed question is being answered
@@ -700,7 +700,8 @@ function wakeTurnStart() {
   if (prefs().sound !== false) voice.chime(); // "I heard you", at once
   S.asking = VS.voiced = true;
   showError(null);
-  $("#reply .q").textContent = "Listening…";
+  const talk = !!ev.conversation; // a conversation's next question (quick job 68): no "didn't hear"
+  $("#reply .q").textContent = talk ? "In a conversation: listening… (say \"that's all\" to end)" : "Listening…";
   $("#reply .a").textContent = "";
   setAssistant("listening", 0);
   VW = silenceWatch(
@@ -711,12 +712,12 @@ function wakeTurnStart() {
         setAssistant("thinking", 0);
       } else {
         voice.cancel();
-        $("#reply .q").textContent = "I didn't hear a question.";
+        if (!talk) $("#reply .q").textContent = "I didn't hear a question.";
         endVoice();
         setAssistant("idle", 0);
       }
     },
-    { quietMs: WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: voice.noiseFloor },
+    { quietMs: WAKE_QUIET_MS, idleMs: talk ? 15_000 : 6000, maxMs: talk ? 30_000 : 20_000, floor: voice.noiseFloor },
   );
 }
 document.addEventListener("visibilitychange", syncWake);
@@ -727,6 +728,23 @@ function renderMic() {
     b.textContent = dict ? "Dictate" : "Talk";
     b.title = dict ? "Tap to dictate (or tap Space): the words go into the ask line" : "Hold to talk (or hold Space)";
   });
+  $("#conv-btn").hidden = !voice.can().ok;
+}
+// conversation mode (quick job 68): the same button starts and ends it; the brain says when it changes
+$("#conv-btn").addEventListener("click", () => {
+  voice.unlock();
+  voice.converse(!voice.conversing);
+});
+function showConverse(ev) {
+  const b = $("#conv-btn");
+  b.setAttribute("aria-pressed", String(!!ev.on));
+  b.textContent = ev.on ? "End conversation" : "Conversation";
+  if (ev.on) return;
+  VW?.cancel();
+  VW = null;
+  if (voice.wakeTurn) voice.cancel();
+  if (VS.voiced && !VS.turn) endVoice();
+  if (ev.why && !/button/.test(ev.why)) showError(`The conversation ended: ${ev.why}.`);
 }
 addEventListener("storage", (e) => isPrefsKey(e.key) && renderMic());
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && renderMic());
@@ -851,7 +869,8 @@ function onVoiceEvent(ev) {
     }
     return;
   }
-  if (ev.type === "wake") return wakeTurnStart();
+  if (ev.type === "converse") return showConverse(ev);
+  if (ev.type === "wake") return wakeTurnStart(ev);
   if (ev.type === "ended") { // the brain heard the pause after the question
     VW?.cancel();
     VW = null;
