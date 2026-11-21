@@ -248,11 +248,8 @@ async def test_go_to_pose_far_away_goes_part_of_the_way(rig):
     assert "of the way" in r["clipped"][-1]
     for _ in range(5):
         r = await rig.call("go_to_pose", name="home")
-    # the real folded pose is past two soft limits: clipped there, and it says so (quick job 30)
-    assert r["clipped"] == [
-        "shoulder_lift: -103.3° → -97.0° (joint limit)",
-        "elbow_flex: 97.4° → 93.8° (joint limit)",
-    ]
+    # home sits at the soft limits (quick job 50): it arrives, and nothing says "clipped"
+    assert r["clipped"] == []
     assert r["result"] == "arrived"
     j = r["joints_deg"]
     assert (j["shoulder_lift"], j["elbow_flex"], j["wrist_flex"]) == (-97.0, 93.8, 55.0)
