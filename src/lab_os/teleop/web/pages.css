@@ -27,6 +27,11 @@
 #arm-error { margin: 0; color: var(--accent); }
 #arm-error:empty { display: none; }
 .arm-readout { min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+/* the arm's camera pictures under the joint angles (teleop page, quick job 63) */
+.arm-cams { display: grid; gap: 0.6rem; margin-top: 0.8rem; }
+.arm-cams figure { margin: 0; }
+.arm-cams img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: var(--surface, #0b161c); border: 1px solid var(--line, #1f3d48); }
+.arm-cams figcaption { font-size: 0.75rem; color: var(--text-dim, #6d8c96); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.12em; }
 /* one joint: name and degrees on a line, its note (clamped, outside the limits) on a line of its own,
    always there (empty when fine) and cut with … when long: every row the same height */
 .jrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 1.35rem 1.05rem; column-gap: 0.6rem;

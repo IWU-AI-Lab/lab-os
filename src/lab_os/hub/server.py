@@ -50,6 +50,9 @@ POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on a
 POST /api/hub-devices/close  {"device", "window"}: close it there ("bring it back")
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
+GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
+GET /api/camera-feed/{name}   that camera's newest picture (JPEG); opened while asked for, closed
+                         5 s after (lab_os/camera_feed.py)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
@@ -65,7 +68,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT, config, green, settings
+from lab_os import REPO_ROOT, camera_feed, config, green, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
@@ -189,6 +192,7 @@ MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
 QUEST_VIEW = web.AppKey("quest_view", QuestView)
+FEEDS = web.AppKey("feeds", camera_feed.CameraFeeds)  # quick job 63: the cameras open for pages
 ADB_REVERSE = web.AppKey("adb_reverse", object)  # quick job 73: an AdbReverse, or None
 FIND_ARM = web.AppKey("find_arm", object)  # quick job 73: lab_os.teleop.cli.arm_finder(), or None
 RESTART = web.AppKey("restart", dict)  # {"asked": bool}: start again after stopping (lab_os.cli)
@@ -825,6 +829,37 @@ async def api_pose_view(request: web.Request) -> web.Response:
     )
 
 
+async def api_arm_cameras(request: web.Request) -> web.Response:
+    """The cameras of the arms being driven, for the teleop page's pictures (quick job 63)."""
+    loop: TeleopLoop = request.app[LOOP]
+    out = []
+    for each, side in ((loop, ""), (loop.left, "Left arm: ")):
+        if each is None:
+            continue
+        try:
+            names = await asyncio.to_thread(camera_feed.arm_cameras, each.arm.name)
+        except config.ConfigError:
+            names = []
+        out += [{"name": n, "label": side + n.rsplit("-cam-", 1)[-1].title()} for n in names]
+    return web.json_response({"arm": loop.arm.name, "cameras": out})
+
+
+async def api_camera_feed(request: web.Request) -> web.Response:
+    """One camera's newest picture (quick job 63). The camera opens on the first request and
+    closes IDLE_S after the last; a camera another program has open is refused (409)."""
+    name = request.match_info["name"]
+    try:
+        jpeg = await asyncio.to_thread(request.app[FEEDS].jpeg, name)
+    except camera_feed.CameraError as e:
+        return web.Response(status=409, text=f"{e}")
+    return web.Response(body=jpeg, content_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+async def _camera_feeds_task(app: web.Application):
+    yield
+    await asyncio.to_thread(app[FEEDS].close_all)  # the brain stops: so do the cameras
+
+
 async def api_arm(request: web.Request) -> web.Response:
     """The arm's joints for the hub's readouts (the driver rate-limits real reads)."""
     app = request.app
@@ -1272,6 +1307,7 @@ def create_brain_app(
     app[QUEST_VIEW] = quest_view or QuestView()
     app[RESTART] = {"asked": False}
     app[FIND_ARM] = find_arm
+    app[FEEDS] = camera_feed.FEEDS
     app[ADB_REVERSE] = adb_reverse
     app.router.add_get("/", hub_page)
     app.router.add_get("/plain", plain_page)
@@ -1295,6 +1331,8 @@ def create_brain_app(
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/arm", api_arm)
+    app.router.add_get("/api/arm-cameras", api_arm_cameras)
+    app.router.add_get("/api/camera-feed/{name}", api_camera_feed)
     app.router.add_get("/api/pose-view.png", api_pose_view)
     app.router.add_get("/api/devices", api_devices)
     app.router.add_get("/api/ai-calls", api_ai_calls)
@@ -1324,6 +1362,7 @@ def create_brain_app(
     app.cleanup_ctx.append(_quest_view_task)
     app.cleanup_ctx.append(_new_arm_task)
     app.cleanup_ctx.append(_adb_reverse_task)
+    app.cleanup_ctx.append(_camera_feeds_task)
     app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
     app.on_shutdown.append(_close_hub_pages)
     return app

@@ -4,6 +4,7 @@ import { getLink } from "./link.js";
 import { initXR } from "./xr.js";
 import { initDesktop } from "./desktop-input.js";
 import { gate } from "./control-gate.js";
+import { initCams } from "./cams.js";
 import { deviceName } from "/web/device.js";
 
 const $ = (id) => document.getElementById(id);
@@ -120,4 +121,5 @@ const ui = {
 };
 
 initXR(link, ui);
+initCams(link); // the arm's camera pictures, under the joint angles (quick job 63)
 initDesktop(link, ui);
