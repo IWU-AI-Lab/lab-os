@@ -440,3 +440,42 @@ def test_the_designed_hub_speaks_a_second_greeting_at_once():
     page = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/design.html").read_text()
     assert "if (VS.greeting && S.startedBefore) V.playHeld();" in page
     assert "S.startedBefore = true;" in page.split("function toStart(why) {", 1)[1][:200]
+
+
+def test_the_nearest_microphone_wins_a_tie():
+    """Quick job 70: clear speech scores near 1.0 on every screen, so close scores are a tie and
+    the microphone that heard it loudest above its own room noise answers."""
+    from lab_os.hub.voice import WAKE_WINDOW_S, pcm_rms, pick_nearest
+
+    assert WAKE_WINDOW_S == 0.3
+    assert pick_nearest({"desk": (0.99, 8.0), "newline": (0.97, 20.0)}) == "newline"
+    assert pick_nearest({"desk": (0.99, 8.0), "newline": (0.60, 30.0)}) == "desk"  # not close
+    assert pcm_rms(b"") == 0.0 and round(pcm_rms(b"\x10\x00" * 10)) == 16
+
+
+async def test_two_screens_the_nearer_one_answers_and_it_is_logged(
+    aiohttp_client, aiohttp_server, key, tmp_path, caplog
+):
+    import logging
+
+    app, _, _ = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    near = await client.ws_connect("/ws/voice?device=near")
+    far = await client.ws_connect("/ws/voice?device=far")
+    for ws in (near, far):
+        await ws.send_json({"type": "wake", "on": True})
+        await events_until(ws, {"wake_on"}, timeout=20)
+    quiet_room = b"\x00\x00" * 16000
+    await asyncio.gather(stream(near, quiet_room), stream(far, noisy("not_jarvis", 0.0, 900, 1)))
+    with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
+        await asyncio.gather(
+            stream(near, pcm("hey_jarvis")), stream(far, noisy("hey_jarvis", 0.6, 900, 2))
+        )
+        got = await asyncio.gather(
+            events_until(near, {"wake", "wake_elsewhere"}),
+            events_until(far, {"wake", "wake_elsewhere"}),
+        )
+    assert [g[-1]["type"] for g in got] == ["wake", "wake_elsewhere"]
+    assert "heard the wake word: " in caplog.text and "near answers" in caplog.text
+    for ws in (near, far):
+        await ws.close()
