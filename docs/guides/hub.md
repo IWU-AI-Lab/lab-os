@@ -257,6 +257,34 @@ A page can go full screen only after a press (the browsers' rule, also on `http:
   - **With a real arm** (`--arm so101-white`), other screens **only watch.** They show the hub, the arm and the monitor, and their **STOP works**. But the brain ignores their teleop input ("view only: the arm is driven from the brain's computer"). Only this computer drives: its own browser, the AI tools (MCP, this computer only), and the Quest over `adb reverse` (it arrives as this computer).
   - **Not a secure page** (`http://` and an address): Esc leaves full screen (no Keyboard Lock), the screen can sleep (no Wake Lock), and Copy and voice do not work. Full screen itself works. The ways around it (Chrome's flag, `adb reverse`): `docs/guides/voice.md` → "Secure pages".
 
+### The Newline's touch with a second monitor (quick job 54)
+With the Newline on HDMI, its USB touch cable, and another monitor, a touch can land on the wrong screen. The system spreads the touch over all the monitors, or puts it on the first one. Tell it which monitor the touch belongs to. None of these steps needs `sudo`. The Newline's touch shows as "Hitevision group 32".
+
+First, find out which session the desktop runs. Run this command:
+```bash
+echo $XDG_SESSION_TYPE
+```
+It says `x11` or `wayland`. (The lab desktop said X11 on 2026-11-20.)
+
+**On X11:**
+1. Find the touch device. Run `xinput list | grep -i hitevision`. Write down each `id=` number (there can be two lines: touch and pen).
+2. Find the Newline's output. Run `xrandr --listmonitors`. The Newline is the 1600×900 output, for example `HDMI-1`.
+3. Map the touch to it. For each id from step 1, run `xinput map-to-output <id> HDMI-1` (use your output's name).
+4. Touch the four corners of the Newline. Each touch must land under your finger.
+
+This lasts until the cable is unplugged or you log out. To make it come back by itself, put the commands in a startup program: GNOME's "Startup Applications" (`gnome-session-properties`), with this command: `sh -c 'sleep 5; for i in $(xinput list --id-only "Hitevision group 32"); do xinput map-to-output $i HDMI-1; done'`.
+
+**On Wayland:** `xinput` does nothing there. GNOME keeps the mapping in a setting for each touch device:
+1. Find the Newline's USB id. Run `lsusb | grep -i hitevision`. Write down the two parts after `ID`, for example `1ff7:0f0b`.
+2. Find the monitor's names. Open `~/.config/monitors.xml` (it exists after you arranged the monitors once in Settings → Displays). For the Newline, write down `<vendor>`, `<product>` and `<serial>`.
+3. Set the mapping (with your values; the letters of the USB id in lowercase):
+   ```bash
+   gsettings set org.gnome.desktop.peripherals.touchscreen:/org/gnome/desktop/peripherals/touchscreens/1ff7:0f0b/ output "['NWL', 'Newline TV', '0x00000001']"
+   ```
+4. Unplug the touch cable and plug it in again. Touch the four corners.
+
+To undo it: on X11, unplug the cable; on Wayland, run the same `gsettings` command with `reset` instead of `set … output "[…]"`.
+
 ## Performance test (`/perf`)
 It draws moving dots that link when they are near, and star streaks that speed up from the middle, in the same way as the design's network and hyperspace, in plain gray. It shows the frames per second (the last second, the average over 10 s, the slowest frame) and the canvas size. The settings (what to draw, dots per million pixels, stars, resolution) are in the address, for example `/perf?draw=net&density=90&stars=3000&res=2`, so that you can bookmark each screen's test. Run it in full screen on each screen for a minute and write down the average. 55 to 60 frames a second can carry `full`; lower numbers need `reduced` or `minimal` (DESIGN.md → "Quality levels").
 
