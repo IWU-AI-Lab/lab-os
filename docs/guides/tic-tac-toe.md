@@ -5,7 +5,7 @@ Claude Code plays tic-tac-toe with `so101-white` against a person. The board is 
 The lab plays with Claude Code (decision 2026-11-20: no Codex or Gemini CLI in the lab). If one model plays badly, type `/model` and try another.
 
 ## What you need
-- The grid: print `models/games/tic-tac-toe-sheet-letter.pdf` at **100 %** ("Actual size", not "Fit to page").
+- Print the [tic-tac-toe sheet](../../models/games/tic-tac-toe-sheet-letter.pdf) on US Letter paper. Select **Actual size (100%)**, not **Fit to page**.
 - 5 red pieces for the robot and 5 blue pieces for the person. A piece is a Duplo 2×2 brick, or three normal 2×2 bricks pressed together (about 3 cm tall).
 - `so101-white` with its stand camera, and the stand camera's table map (`docs/guides/ai-control.md` → "Table map").
 - Claude Code on the lab desktop.
