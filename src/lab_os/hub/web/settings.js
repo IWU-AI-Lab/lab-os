@@ -320,7 +320,7 @@ async function stopBrain(restart) {
     if (!up) gone = true;
     if (up && gone) return location.reload();
     // a restart that doesn't come back (quick job 45: "Restart Now did nothing"): say where to look
-    const p = document.querySelectorAll("#lab-os-off p")[1];
+    const p = document.querySelector("#lab-os-off .back");
     if (restart && p && Date.now() - t0 > 45_000) p.textContent = "lab-os has not started again. Look at the brain's terminal: a settings file may have a mistake (it names the file and the line).";
     setTimeout(look, 2000);
   };
