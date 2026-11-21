@@ -554,3 +554,14 @@ async def test_no_stronger_tool_without_a_stronger_setup(aiohttp_server, tmp_pat
 def test_models_yaml_has_a_strong_setup():
     s = load_setups()["strong"]
     assert s.options.get("reasoning_effort") == "high" and s.fallback == "backup"
+
+
+def test_answers_any_has_a_default_language(tmp_path):
+    """Quick job 55: with Answers: Any, the plain persona answered short, misheard questions in
+    German, Turkish or Portuguese. Every persona now gets one rule: English unless the whole
+    question is clearly in another language."""
+    from lab_os.ai.chat import ANY_LANGUAGE
+
+    conv = conversation(Setup("main", "http://x", "m", None), tmp_path)
+    assert ANY_LANGUAGE in conv.system_prompt(None, None)
+    assert ANY_LANGUAGE not in conv.system_prompt(None, "en")  # Answers: English has its own rule

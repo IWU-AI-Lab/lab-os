@@ -79,6 +79,15 @@ THINK_SYSTEM = (
     "that can be spoken aloud: no tables, no markdown, no LaTeX; numbers written plainly."
 )
 THINK_SAY = "Let me think about that. "
+# Answers: Any (quick job 55): the plain persona's prompt names no language, and short or misheard
+# spoken questions (speech-to-text guesses, sometimes in another language) got answers in German,
+# Turkish or Portuguese; JARVIS's English-sounding prompt kept it in English. One rule for every
+# persona now:
+ANY_LANGUAGE = (
+    "Answer in English. Answer in another language only when the whole question is clearly "
+    "in that language. A short, unclear or mixed question gets an English answer: spoken "
+    "questions come from speech-to-text, which sometimes guesses words in another language."
+)
 
 OPEN_PAGE = "open_page"
 PAGE_RULES = """\
@@ -336,6 +345,8 @@ class Conversation:
             # the asking device's "Output language" (quick job 33)
             name = LANGUAGES[clean_language(answer_in)]
             rules = f"{rules}\n\n{ANSWER_IN.format(name=name)}"
+        else:
+            rules = f"{rules}\n\n{ANY_LANGUAGE}"
         return f"{self.personality}\n\n{rules}" if self.personality else rules
 
     def clear(self, opening: str | None = None) -> None:
