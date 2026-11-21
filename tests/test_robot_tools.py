@@ -248,11 +248,8 @@ async def test_go_to_pose_far_away_goes_part_of_the_way(rig):
     assert "of the way" in r["clipped"][-1]
     for _ in range(5):
         r = await rig.call("go_to_pose", name="home")
-    # the real folded pose is past two soft limits: clipped there, and it says so (quick job 30)
-    assert r["clipped"] == [
-        "shoulder_lift: -103.3° → -97.0° (joint limit)",
-        "elbow_flex: 97.4° → 93.8° (joint limit)",
-    ]
+    # home sits at the soft limits (quick job 50): it arrives, and nothing says "clipped"
+    assert r["clipped"] == []
     assert r["result"] == "arrived"
     j = r["joints_deg"]
     assert (j["shoulder_lift"], j["elbow_flex"], j["wrist_flex"]) == (-97.0, 93.8, 55.0)
@@ -392,8 +389,9 @@ async def test_every_call_is_logged_to_a_file(rig, tmp_path):
 
 
 # Poses with a joint past its soft limit, and by how much (degrees): the move clips them to the
-# limit (quick job 30: the real folded pose; the limits aren't widened without the builder).
-PAST_SOFT_LIMIT = {("so101", "home", "shoulder_lift"): 6.3, ("so101", "home", "elbow_flex"): 3.6}
+# limit. None since quick job 50 (home was 6.3° and 3.6° past, and every move to it said
+# "clipped"); the limits aren't widened without the builder.
+PAST_SOFT_LIMIT: dict[tuple[str, str, str], float] = {}
 
 
 def test_every_named_pose_is_inside_the_limits_and_above_the_floor():
