@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, Q, U, then the parts that the sessions add for the new quick jobs. Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 6 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -39,7 +39,7 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 
-## V. The wake word and the greeting (20 min)
+## V. The wake word and the greeting (40 min)
 Quick job 42. The cause of the stops was not found on the Mac. The brain's terminal now says when it ignores "hey Jarvis", and why. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. Keep the brain's terminal in view.
 - **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
@@ -125,6 +125,8 @@ Connect the Quest by USB. The brain runs `adb reverse` by itself.
 - **T.16** Put the cube in front of `so101-white`. Pick it up with the right arm, then give it to the left arm. → did it work? (yes / no; how many tries? What was difficult?)
 - **T.17** Hold both arms. Press Ctrl+C in the brain's terminal. → did both arms go limp? (yes / no)
 - **T.18** Run `ls -l --time-style=full-iso ~/.cache/huggingface/lerobot/calibration/robots/so_follower/sheep.json`. → is the date before today? (yes / no; it must be: lab-os only reads this file)
+- **T.19** Run `uv run --extra so101 lab-os serve --speed 0.3`, with no arm names. → does the terminal say `two arms: the right controller drives so101-white, the left one so101-green`? (yes / no) Press Ctrl+C. Hold the arms first if they are lifted.
+- **T.20** Run `uv run lab-os green` and wait for LeLab. In a second terminal, run the command from T.19 again. → does the terminal say why it does not use the green arm, and drive `so101-white` only? (yes / no) Press Ctrl+C in both terminals.
 
 ## D. STOP from another device (10 min)
 Setup: `so101-white` connected, the brain running (part T's command without `--left-arm`). A second device (a phone or a laptop) on the brain's network, or the Quest's browser.
@@ -194,7 +196,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 - **H.8** Quick job 77. Start the brain again with the command above. Open AI Control (`/ai`) on the desktop. Ask "move the arm to ready", then "move the arm to the hand-over pose". → does AI Control show each move as arrived, not "short"? (yes / no: copy the line that says short)
 
-## I. The icon, one hub window and full screen (20 min)
+## I. The icon, one hub window and full screen (40 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.
 - **I.1** Tap **Start lab-os**. If the browser asks for the microphone, allow it. → did one hub window open? (yes / no)
 - **I.2** Click the brain's terminal, so that it covers the hub. Tap **Start lab-os** again. → did the hub come to the front? (yes / no) Did a second hub window open? (yes / no)
@@ -209,7 +211,7 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
 - **I.12** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
 - **I.13** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
-- **I.14** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Performance Test**. → did each open in its own window? (yes / no)
+- **I.14** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Monitor**. → did each open in its own window? (yes / no)
 - **I.15** Quick job 54. Connect the Newline by HDMI and its USB touch cable, and the other monitor too. Follow `docs/guides/hub.md` → "The Newline's touch with a second monitor". → what did `echo $XDG_SESSION_TYPE` say? (x11 / wayland) Did each touch in the four corners land under your finger? (yes / no)
 - **I.16** On the Mac (or any computer), run `uv run lab-os serve --arm fake` and open `http://localhost:8080/` in your normal browser. Tap to start, so that it is full screen. Press Ctrl+C in the terminal. → did the page leave full screen? (yes / no) Did it close, or show a card with a **Close** button? (closed / card) If a card: press Close. → what happened? (closed / it said Cmd+W)
 
@@ -222,7 +224,7 @@ Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --a
 - **Q.5** Start lab-os with its icon. On the Quest, press **Enter VR**. Stay on the start screen. Unplug the Quest's USB cable. Wait 5 seconds. → does a card say "lab-os is not reachable"? (yes / no) Pull the trigger. → does the startup start? (yes / no: it must not)
 - **Q.6** Plug the Quest's USB cable in again. Do not run `adb reverse`. → does the page come back by itself? (yes / no)
 
-## U. Unplug and plug in again (25 min)
+## U. Unplug and plug in again (50 min)
 Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microphone plugged in. Keep the brain's terminal in view.
 - **U.1** Plug in `so101-white` (its USB cable and its power supply). Wait 10 seconds. → does the hub's Arm line say `so101-white`? (yes / no) Did the terminal say "so101-white was plugged in"? (yes / no)
 - **U.2** Open Teleop on the desktop. Drive the arm a little with the keys. → does the real arm move? (yes / no)
