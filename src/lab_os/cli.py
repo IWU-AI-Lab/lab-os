@@ -205,7 +205,15 @@ def main(argv: list[str] | None = None) -> None:
     )
     qv.add_argument("--install", action="store_true", help="download scrcpy (no sudo)")
     qv.add_argument("--remove", action="store_true", help="delete the downloaded scrcpy")
+    rm = sub.add_parser(
+        "room",
+        help="set up the room: open each page of room.yaml on its device (the running brain does "
+        'it, as "Open on…"; docs/guides/hub.md → Devices)',
+    )
+    rm.add_argument("--port", type=int, default=8080, help="the brain's port (default 8080)")
     args = parser.parse_args(argv)
+    if args.command == "room":
+        return _room(args.port)
     if args.command == "quest-view":
         from lab_os import quest_view
 
@@ -310,6 +318,22 @@ def main(argv: list[str] | None = None) -> None:
         os.execv(sys.executable, [sys.executable, "-m", "lab_os.cli", *_without_open(sys.argv[1:])])
     if app[SHUTDOWN].is_set():
         print(f"lab-os was shut down from the hub; {loop.arm.name} was let go.")
+
+
+def _room(port: int) -> None:
+    """`lab-os room` (quick job 71): the running brain sets up the room; say what it did."""
+    import json
+    import urllib.request
+
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/room/setup", data=b"{}", method="POST"
+    )
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            print(json.load(r)["message"])
+    except OSError as e:
+        raise SystemExit(f"The brain didn't answer on port {port} ({e}): start it first.") from None
 
 
 def _without_open(argv: list[str]) -> list[str]:

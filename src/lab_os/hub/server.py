@@ -48,6 +48,7 @@ GET /ws/hub-device       one hub page of a device (?device=desk): the brain's li
 GET /api/hub-devices     the devices with the hub open now, their windows, what each shows
 POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on another device
 POST /api/hub-devices/close  {"device", "window"}: close it there ("bring it back")
+POST /api/room/setup     open each page of the room's layout on its device (room.yaml, quick job 71)
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
@@ -84,6 +85,8 @@ from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
+from lab_os.hub.room import RoomDesk
+from lab_os.hub.room import set_up as set_up_room
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
@@ -1055,6 +1058,12 @@ async def api_hub_devices_open(request: web.Request) -> web.Response:
     return web.json_response(r)
 
 
+async def api_room_setup(request: web.Request) -> web.Response:
+    """Set up the room (quick job 71): each page of `room.yaml` on its device, as "Open on…"
+    does; any page may ask (it only changes what the screens show)."""
+    return web.json_response(await set_up_room(request.app[HUB_DEVICES]))
+
+
 async def api_hub_devices_close(request: web.Request) -> web.Response:
     b = await _body(request)
     try:
@@ -1273,7 +1282,8 @@ def create_brain_app(
         facts=lambda v: _facts(app, v),
         wave=lambda: _wave(app),
     )
-    chat.actions = Actions(visitors, ArmDesk(app[TOOLS]))  # the arm's: preview 4
+    # the arm's: preview 4; the room's layout: quick job 71
+    chat.actions = Actions(visitors, ArmDesk(app[TOOLS]), RoomDesk(lambda: app[HUB_DEVICES]))
     voice = VoiceDesk(
         chat,
         assistant,
@@ -1353,6 +1363,7 @@ def create_brain_app(
     app.router.add_get("/api/hub-devices", api_hub_devices)
     app.router.add_post("/api/hub-devices/open", api_hub_devices_open)
     app.router.add_post("/api/hub-devices/close", api_hub_devices_close)
+    app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
     app.router.add_static("/hub", HUB_WEB_DIR)
