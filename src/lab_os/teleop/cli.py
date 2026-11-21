@@ -284,10 +284,8 @@ def _find_arms(args, venue) -> set[str]:
         # two arms without naming them (the builder, 2026-11-21): the green set as the left arm
         # beside another arm, never alone (so the AI tools never drive it unasked). Its port is
         # checked when it opens: another program using it (LeLab, a run) means one arm only.
-        try:
+        with contextlib.suppress(config.ConfigError):
             here += plugged_in_arms(load_registry(), venue.active_devices, borrowed=True)[:1]
-        except config.ConfigError:
-            pass
     if len(here) > 1 and not left:
         args.left_arm = here[1]
     used = [args.arm] + ([args.left_arm] if len(here) > 1 and not left else [])
