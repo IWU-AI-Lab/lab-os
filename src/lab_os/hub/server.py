@@ -2,7 +2,7 @@
 
 GET /                    the hub: start screen, status strip, module buttons, assistant, panels
                          (plain, or the designed one when the theme says hub.look: design)
-GET /plain, /design      each look by name (the design = the reveal, docs/design/DESIGN.md)
+GET /design              the designed hub, whatever `hub.look` says (docs/design/DESIGN.md)
 GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
 GET /xr                  the hub in VR/AR for the Quest (watch-only)
 GET /training            the training launcher's page (so101-green + LeLab,
@@ -21,7 +21,6 @@ POST /api/quest-view/stop   close that window
 POST /api/window-state   {"url", "state": "fullscreen" | "normal"}: a window of lab-os's own browser
                          full screen or back to a window (quick job 74). Brain's computer only
 GET /settings            the settings page (also opened from the hub's gear)
-GET /perf                performance test page (drifting dots, links, star streaks + frames/s)
 GET /hub/...             the hub's own files (src/lab_os/hub/web/)
 GET /api/status          venue, internet, AI, assistant state, the brain's clock, what's in use
 GET /api/project         the Current Project panel (docs/plan/current-focus.md → Steps)
@@ -130,7 +129,6 @@ MODULES = {
 PAGES = (
     ("/", "The Hub", "The main address: the plain or the designed hub (⚙ → The Lab)."),
     ("/design", "Designed Hub", "The designed hub, whatever the main address shows."),
-    ("/plain", "Plain Hub", "The plain hub, whatever the main address shows."),
     ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
     ("/monitor", "Monitor", "The arm's joints and 3D view, with STOP; drives nothing."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
@@ -138,9 +136,6 @@ PAGES = (
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
     ("/settings", "Settings", "This page: ⚙ on the hub."),
-    ("/perf", "Performance Test", "Drifting dots and star streaks with frames per second."),
-    ("/classic/teleop", "Classic Teleop", "The first teleop page, kept in case."),
-    ("/classic/monitor", "Classic Monitor", "The first monitor page, kept in case."),
 )
 
 DEFAULT_RESET_AFTER_S = 1800.0
@@ -246,10 +241,6 @@ async def hub_page(request: web.Request) -> web.FileResponse:
         log.warning("theme hub.look: %r isn't one of %s; showing plain", look, ", ".join(LOOKS))
         look = "plain"
     return await _file(request, LOOKS[look])
-
-
-async def plain_page(request: web.Request) -> web.FileResponse:
-    return await _file(request, LOOKS["plain"])
 
 
 async def design_page(request: web.Request) -> web.FileResponse:
@@ -682,10 +673,6 @@ async def _close_hub_pages(app: web.Application) -> None:
 async def _quest_view_task(app: web.Application):
     yield
     app[QUEST_VIEW].stop()  # the brain stops: so does its window
-
-
-async def perf_page(request: web.Request) -> web.FileResponse:
-    return await _file(request, "perf.html")
 
 
 async def api_status(request: web.Request) -> web.Response:
@@ -1320,7 +1307,6 @@ def create_brain_app(
     app[FEEDS] = camera_feed.FEEDS
     app[ADB_REVERSE] = adb_reverse
     app.router.add_get("/", hub_page)
-    app.router.add_get("/plain", plain_page)
     app.router.add_get("/design", design_page)
     app.router.add_get("/ai", ai_page)
     app.router.add_get("/training", training_page)
@@ -1336,7 +1322,6 @@ def create_brain_app(
     app.router.add_post("/api/quest-view/stop", api_quest_view_stop)
     app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
-    app.router.add_get("/perf", perf_page)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)

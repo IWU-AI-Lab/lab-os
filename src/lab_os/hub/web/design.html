@@ -1158,7 +1158,7 @@ const pointer = { x: -1e4, y: -1e4 };
 const NET = { link: 140, push: 170 };
 // The drawing resolution (Settings → This device, or ?res= in the address, which wins): canvas pixels per CSS
 // pixel. "auto" = the device's, up to 2×. Lower draws fewer pixels and the screen scales them up: softer, but
-// far cheaper on a 4K panel driven by a phone-class chip (the Newline). Same scale as /perf?res=.
+// far cheaper on a 4K panel driven by a phone-class chip (the Newline).
 function drawRes() {
   const want = params.get("res") ?? screenPrefs().res ?? "auto", n = Number(want);
   const dev = Math.min(devicePixelRatio || 1, 2);

@@ -194,9 +194,9 @@ async def test_power_opens_a_menu_with_exit_on_every_page(aiohttp_client):
     it."""
     client = await aiohttp_client(make_app())
     hub = await (await client.get("/hub/xr/hub.js")).text()
-    assert 'if (this.menu.mesh.visible) return [this.menu.mesh]' in hub
-    assert 'return [this.page.mesh, this.power.mesh]' in hub
-    assert 'return [this.settings.mesh, this.power.mesh]' in hub
+    assert "if (this.menu.mesh.visible) return [this.menu.mesh]" in hub
+    assert "return [this.page.mesh, this.power.mesh]" in hub
+    assert "return [this.settings.mesh, this.power.mesh]" in hub
     assert 'if (w.kind === "power") { this.sfx.blip(); this.openMenu(hit.obj)' in hub
     assert "if (this.menu.mesh.visible) return this.closeMenu();" in hub  # B
     mods = await (await client.get("/hub/xr/modules.js")).text()

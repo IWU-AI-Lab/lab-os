@@ -1,6 +1,6 @@
-"""The module pages in the hub's design (teleop, monitor, AI control, settings), the plain pages
-kept at /classic/…, the settings (src/lab_os/settings.py) and what keeps the brain up when a port is
-taken. No hardware, no internet; settings are only ever written into a temporary place."""
+"""The module pages in the hub's design (teleop, monitor, AI control, settings), the settings
+(src/lab_os/settings.py) and what keeps the brain up when a port is taken. No hardware, no
+internet; settings are only ever written into a temporary place."""
 
 import asyncio
 import shutil
@@ -32,8 +32,6 @@ async def test_the_pages(aiohttp_client):
     pages = {
         "/teleop": ['id="enter"', 'id="desk-mode"', "/web/design/kit.css"],
         "/monitor": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
-        "/classic/teleop": ['id="enter"', "/static/classic/style.css"],
-        "/classic/monitor": ['id="joints"', "/static/classic/style.css"],
         "/ai": ["/hub/ai.js", 'id="calls"'],
         "/settings": ["/hub/settings.js", 'id="list"'],
     }
@@ -62,17 +60,14 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
         "/settings": "/web/design/kit.js",
         "/training": "/web/design/kit.js",
         "/xr": "/web/design/kit.js",
-        "/plain": 'id="fs-btn"',
+        "/": 'id="fs-btn"',
         "/design": 'id="fs-btn"',
-        "/classic/teleop": 'import { fullscreenButton } from "/web/fullscreen.js"',
-        "/classic/monitor": 'import { fullscreenButton } from "/web/fullscreen.js"',
-        "/perf": 'id="full"',
     }
     for path, part in pages.items():
         text = await (await client.get(path)).text()
         assert part in text, (path, part)
     assert 'import("/web/fullscreen.js")' in await (await client.get("/design")).text()
-    for script in ("/hub/hub.js", "/hub/perf.js"):
+    for script in ("/hub/hub.js",):
         text = await (await client.get(script)).text()
         assert 'from "/web/fullscreen.js"' in text and "fullscreenButton(" in text, script
 
@@ -305,7 +300,7 @@ def test_x_stop_is_shown_where_you_look():
         'button.textContent = "Desktop control on"' in start and '"desk-help").open = true' in start
     )
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
-    for page in ("index.html", "classic/index.html"):
+    for page in ("index.html",):
         html = (web / page).read_text()
         key = html.index('id="stop-key"')
         assert 'id="stop-key" class="stop-key" hidden' in html, page
@@ -327,7 +322,7 @@ def test_backtick_leaves_desktop_control_like_esc():
     node = shutil.which("node")
     if node:  # a bare ` inside the button's template string once broke the whole script
         subprocess.run([node, "--check", str(web / "desktop-input.js")], check=True)
-    for page in ("index.html", "classic/index.html"):
+    for page in ("index.html",):
         table = (web / page).read_text().split('<table class="keys">', 1)[1].split("</table>")[0]
         assert "<kbd>`</kbd> or <kbd>Esc</kbd>" in table, page
 
@@ -378,3 +373,12 @@ async def test_every_page_is_listed(aiohttp_client):
     for path, _, _ in PAGES:
         assert f"`{path}`" in guide, path
     assert "pagesGroup()" in (SRC / "hub" / "web" / "settings.js").read_text()
+
+
+async def test_the_unused_pages_are_gone(aiohttp_client):
+    """The builder, 2026-11-20: /classic/teleop, /classic/monitor, /plain and /perf go (git keeps
+    them). The plain hub stays at / (hub.look: plain)."""
+    client = await aiohttp_client(make_app())
+    for path in ("/classic/teleop", "/classic/monitor", "/plain", "/perf"):
+        assert (await client.get(path)).status == 404, path
+    assert "hub.js" in await (await client.get("/")).text()

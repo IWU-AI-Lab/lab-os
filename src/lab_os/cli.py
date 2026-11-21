@@ -41,7 +41,6 @@ def _banner(port: int, host: str, mcp_port: int) -> str:
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Webcam:   http://localhost:{port}/webcam   (preview; docs/guides/webcam-teleop.md)",
-        f"Perf:     http://localhost:{port}/perf",
     ]
     if mcp_port:
         lines.append(

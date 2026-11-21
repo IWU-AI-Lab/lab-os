@@ -47,7 +47,7 @@ function show(s) {
   armState($("state"), { ...s, connected: s.arm?.connected });
   bars(s.joints, s.limits, "joints");
   const l = s.left_arm;
-  if (!$("left-card")) return; // the classic page (/classic/monitor) has no left-arm chip or card
+  if (!$("left-card")) return; // a page without the left-arm chip or card
   $("left-chip").hidden = $("left-card").hidden = !l;
   $("arm-label").textContent = l ? "Right arm" : "Arm";
   $("joints-title").textContent = l ? "Right arm" : "Joints";

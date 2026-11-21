@@ -3,7 +3,7 @@
 // "This device" in Settings (kept by the brain under the device's name: /web/device.js), then "auto" = the
 // screen's own, up to 2×. Lower draws fewer
 // pixels and the screen scales them up: softer, but far lighter on a 4K panel with a phone-class chip.
-// Same scale as /perf?res=. The designed hub (design.html) has the same rule inline.
+// The designed hub (design.html) has the same rule inline.
 import { prefs } from "/web/device.js";
 
 function wanted() {
