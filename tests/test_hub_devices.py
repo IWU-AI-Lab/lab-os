@@ -467,3 +467,11 @@ def test_the_room_layout_file_and_the_ways_in():
     assert "roomRow()" in (SRC / "hub" / "web" / "settings.js").read_text()
     with pytest.raises(SystemExit, match="didn't answer on port 1"):
         cli.main(["room", "--port", "1"])
+
+
+def test_device_settings_save_without_a_local_folder(tmp_path):
+    """Quick job 60 found it: in a fresh copy of lab-os there's no config/local/ yet, and the first
+    device setting failed ("No such file or directory"). The folder is made on the first save."""
+    store = DeviceSettings(lambda: tmp_path / "local" / "hub-devices.yaml")
+    store.update("quest-a", {"sound": False})
+    assert (tmp_path / "local" / "hub-devices.yaml").exists()

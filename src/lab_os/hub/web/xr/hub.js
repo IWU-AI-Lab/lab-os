@@ -1,7 +1,7 @@
 // The hub in VR after the startup, laid out like the designed hub's launcher (design.html), on a gentle
 // curve around you so everything faces you: the core in the middle; the callouts on the far sides
 // (Current Project and AI Spend left, Commits and Devices right); the place's name top left, the status
-// strip top right with ⏻ (back to the start screen: the jump plays again from there); the typed log
+// strip top right with ⚙ (Settings: xr/settings.js) and ⏻ (back to the start screen: the jump plays again); the typed log
 // bottom left; the screen frame (cut corners, tabs, notches) around it all; thin traces from the core
 // up to the strip and down to the log. Module buttons (xr/modules.js) between the core and the
 // callouts, alternating left and right in the theme's order (hub.modules), traces running to them:
@@ -16,11 +16,15 @@ import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced
 import { Ask } from "./ask.js";
 import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
+import { SettingsPage } from "./settings.js";
 
 const R = 2.4; // the curve's radius = the core's distance
 const AZ_COL = 39; // degrees: the callout columns' centres (all of the hub fits the Quest's view)
 const DEG = Math.PI / 180;
 const CALLOUT_GAP = 1.9 * REM_M;
+// The whole hub ~15 % larger (quick job 60): easier to read and to point at. Scaled about your head and
+// moved back toward you so the core stays at its distance: the panels grow and spread a little wider.
+export const HUB_SCALE = 1.15;
 
 /** Put `obj` on the curve at azimuth `az` (degrees, + = right), height y, facing you. */
 export function onCurve(obj, az, y, r = R) {
@@ -34,6 +38,8 @@ export class HubView {
     this.core = core; this.sfx = sfx; this.D = D;
     this.group = new THREE.Group();
     this.group.visible = false;
+    this.group.scale.setScalar(HUB_SCALE);
+    this.group.position.z = D * (HUB_SCALE - 1); // the core's place stays D ahead
     this.facts = { title: "", status: null, project: null, spend: null, commits: null, devices: null };
     this.mode = "hub"; // hub | details
     this.t0 = -1e9; // the arrival
@@ -65,9 +71,12 @@ export class HubView {
     this.strip = new CanvasPlane(1.75, 0.12, 1100);
     this.power = new CanvasPlane(0.11, 0.11, 1100);
     this.power.mesh.userData.hit = { hit: () => ({ kind: "power" }) };
-    const stripHolder = new THREE.Group(); onCurve(stripHolder, AZ_COL, 0.9); stripHolder.add(this.strip.mesh, this.power.mesh);
+    this.gear = new CanvasPlane(0.11, 0.11, 1100); // ⚙ Settings, like the screens' (quick job 60)
+    this.gear.mesh.userData.hit = { hit: () => ({ kind: "settings" }) };
+    const stripHolder = new THREE.Group(); onCurve(stripHolder, AZ_COL, 0.9); stripHolder.add(this.strip.mesh, this.gear.mesh, this.power.mesh);
     this.power.mesh.position.x = edge - 0.055;
-    this.strip.mesh.position.x = edge - 0.13 - 1.75 / 2;
+    this.gear.mesh.position.x = edge - 0.055 - 0.13;
+    this.strip.mesh.position.x = edge - 0.26 - 1.75 / 2;
     this.group.add(stripHolder);
     // the typed log, bottom left
     this.log = new CanvasPlane(1.9, 0.28, 1000);
@@ -94,6 +103,12 @@ export class HubView {
     this.group.add(this.page.mesh);
     this.pageFrom = new THREE.Vector3();
     this.pageAt = -1e9; this.pageClosing = false;
+    // Settings (quick job 60): unfolds from ⚙ where the details pages open
+    this.settings = new SettingsPage(2.7, 1.6);
+    this.settings.mesh.visible = false;
+    this.group.add(this.settings.mesh);
+    this.setFrom = new THREE.Vector3();
+    this.setAt = -1e9; this.setClosing = false;
     this.hovered = [];
     // module buttons: the ones with a VR version, in the theme's order (/api/hub)
     this.buttons = [];
@@ -138,18 +153,20 @@ export class HubView {
   }
   /** The assistant opened a page ("pull up teleop", "go back to the hub"): like pointing at it. */
   showPage(id, now) {
-    const shown = this.mode === "module" ? this.module?.id : this.mode === "details" ? this.page.id : "hub";
+    const shown = this.mode === "module" ? this.module?.id : this.mode === "details" ? this.page.id : this.mode;
     if (shown === id) return;
     if (this.mode === "module") this.closeModule(now);
     else if (this.mode === "details") this.closeDetails(now);
+    else if (this.mode === "settings") this.closeSettings(now);
     if (this.buttons.some((b) => b.id === id)) this.openModule(id, now);
     else if (this.callouts[id]) this.openDetails(this.callouts[id], now);
   }
   /** What the pointer can land on. */
   targets() {
     if (this.mode === "details") return [this.page.mesh];
+    if (this.mode === "settings") return [this.settings.mesh];
     if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
-    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.card.mesh, this.ask.mesh];
+    return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.gear.mesh, this.card.mesh, this.ask.mesh];
   }
 
   /** The startup is over: everything flies to its place and the panels unfold out from the core. */
@@ -158,11 +175,12 @@ export class HubView {
     this.t0 = instant ? now - 5000 : now;
     this.mode = "hub";
     this.page.mesh.visible = false;
+    this.settings.mesh.visible = false;
     this.card.show(null);
     this.nextLog = now + 1500;
     this.logRows = [];
   }
-  hide() { this.closeModule(); this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; }
+  hide() { this.closeModule(); this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; this.settings.mesh.visible = false; }
 
   /** Lay the callout columns out from their drawn heights (centred around the core's height). */
   _layout() {
@@ -187,7 +205,9 @@ export class HubView {
     if (!hit) return null;
     const w = hit.what;
     if (w.kind === "power") { this.sfx.blip(); return "power"; }
-    if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else this.closeDetails(now); return null; }
+    if (w.kind === "settings") { this.openSettings(now); return null; }
+    if (w.kind === "set") { this.sfx.blip(); this.settings.press(w); return null; }
+    if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
@@ -208,6 +228,22 @@ export class HubView {
     this.page.mesh.visible = true;
     this.pageAt = now; this.pageClosing = false;
     this.sfx.blip(); this.sfx.open();
+  }
+  openSettings(now) {
+    this.mode = "settings";
+    this.card.show(null);
+    this.gear.mesh.getWorldPosition(this.setFrom);
+    this.group.worldToLocal(this.setFrom);
+    this.settings.mesh.visible = true;
+    this.setAt = now; this.setClosing = false;
+    this.settings.load();
+    this.sfx.blip(); this.sfx.open();
+  }
+  closeSettings(now) {
+    if (this.mode !== "settings") return;
+    this.setClosing = true; this.setAt = now;
+    this.mode = "hub";
+    this.sfx.close();
   }
   closeDetails(now) {
     if (this.mode !== "details") return;
@@ -252,13 +288,19 @@ export class HubView {
   /** B (or Y, but not while teleop uses Y) closes what's open. */
   back(now, key) {
     if (this.mode === "module") { if (!(this.module.id === "teleop" && key === "left")) this.closeModule(now); }
+    else if (this.mode === "settings") this.closeSettings(now);
     else this.closeDetails(now);
   }
 
   /** Where the core should be: in the middle, docked in the open page's corner, or small beside a module. */
   coreTarget() {
     if (this.mode === "module") return { pos: new THREE.Vector3(0.62, -0.42, -1.3), scale: 0.13 };
-    return this.page.mesh.visible && !this.pageClosing ? { pos: new THREE.Vector3(1.18, -0.66, -2.17), scale: 0.26 } : { pos: new THREE.Vector3(0, 0, -this.D), scale: 1 };
+    const open = (this.page.mesh.visible && !this.pageClosing) || (this.settings.mesh.visible && !this.setClosing);
+    const t = open ? { pos: new THREE.Vector3(1.18, -0.66, -2.17), scale: 0.26 } : { pos: new THREE.Vector3(0, 0, -this.D), scale: 1 };
+    // in the hub's own space, which is HUB_SCALE larger (quick job 60): the same place on the page
+    t.pos.multiplyScalar(HUB_SCALE); t.pos.z += this.D * (HUB_SCALE - 1);
+    t.scale *= HUB_SCALE;
+    return t;
   }
 
   step(dt, now, hits) {
@@ -273,12 +315,15 @@ export class HubView {
     for (const c of Object.values(this.callouts)) c.hover = null;
     this.page.hover = null;
     this.tab.hover = null;
+    this.settings.hover = null;
     for (const b of this.buttons) b.hover = false;
-    let powerHover = false, askHover = false;
+    let powerHover = false, askHover = false, gearHover = false;
     for (const h of hits) {
       const o = h.obj.userData.hit;
       if (o instanceof Callout) o.hover = h.what;
       else if (o === this.page) this.page.hover = h.what;
+      else if (o === this.settings) this.settings.hover = h.what;
+      else if (h.what.kind === "settings") gearHover = true;
       else if (o === this.tab) this.tab.hover = h.what;
       else if (h.what.kind === "module") o.hover = true;
       else if (h.what.kind === "power") powerHover = true;
@@ -296,13 +341,13 @@ export class HubView {
       this.group.visible = true;
       return;
     }
-    for (const o of this.group.children) if (o !== this.page.mesh) o.visible = true;
+    for (const o of this.group.children) if (o !== this.page.mesh && o !== this.settings.mesh) o.visible = true;
     const hoverKey = hits.map((h) => `${h.obj.id}:${h.what.kind}:${h.what.id || ""}`).join("|");
     if (hoverKey !== this._hoverKey) { if (hoverKey) this.sfx.hover(); this._hoverKey = hoverKey; }
     for (const c of Object.values(this.callouts)) c.paint(now);
     this._layout();
     // the panels unfold one after another, spreading out from the core (their delay grows with distance)
-    const dim = this.mode === "details" || (this.page.mesh.visible && !this.pageClosing) ? 0.12 : 1;
+    const dim = this.mode === "details" || this.mode === "settings" || (this.page.mesh.visible && !this.pageClosing) || (this.settings.mesh.visible && !this.setClosing) ? 0.12 : 1;
     this._dim = (this._dim ?? 1) + (dim - (this._dim ?? 1)) * Math.min(1, dt * 8);
     for (const c of Object.values(this.callouts)) {
       const delay = 450 + (c === this.callouts.project || c === this.callouts.commits ? 380 : 470);
@@ -320,6 +365,7 @@ export class HubView {
     this.paintBrand(); this.brand.opacity = clamp((t - 900) / 300, 0, 1) * this._dim;
     this.paintStrip(now); this.strip.opacity = early;
     this.paintPower(powerHover); this.power.opacity = early;
+    this.paintGear(gearHover); this.gear.opacity = early;
     this.stepLog(now); this.log.opacity = early;
     this.ask.step(now, askHover);
     this.ask.line.opacity = clamp((t - 700) / 400, 0, 1) * this._dim;
@@ -336,6 +382,15 @@ export class HubView {
       this.page.p.opacity = this.pageClosing ? k : clamp(k * 1.6, 0, 1);
       this.page.paint(this.page.id, { ...f, devices: devicesFrom(f.devices?.devices) }, this.page.title || "", now);
       if (this.pageClosing && k <= 0) { this.page.mesh.visible = false; this.pageClosing = false; }
+    }
+    // Settings: the same unfolding, from ⚙
+    if (this.settings.mesh.visible) {
+      const k = this.setClosing ? 1 - clamp((now - this.setAt) / 250, 0, 1) : arrive((now - this.setAt) / 600);
+      this.settings.mesh.position.lerpVectors(this.setFrom, new THREE.Vector3(0, 0.02, -2.2), k);
+      this.settings.mesh.scale.setScalar(Math.max(0.01, 0.2 + 0.8 * k));
+      this.settings.p.opacity = this.setClosing ? k : clamp(k * 1.6, 0, 1);
+      this.settings.paint(now);
+      if (this.setClosing && k <= 0) { this.settings.mesh.visible = false; this.setClosing = false; }
     }
   }
 
@@ -375,6 +430,12 @@ export class HubView {
         x -= tw + h * 0.45 + h * 0.62;
       }
     }, key);
+  }
+  paintGear(hover) {
+    this.gear.paint((g, w, h) => {
+      if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(0, 0, w, h); g.strokeStyle = C.primary; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3); }
+      icon(g, "i-gear", w / 2, h / 2, w * 0.5, hover ? C.hot : C.dim, 1.8);
+    }, hover);
   }
   paintPower(hover) {
     this.power.paint((g, w, h) => {

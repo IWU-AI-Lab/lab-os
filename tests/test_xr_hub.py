@@ -166,3 +166,21 @@ async def test_exit_is_on_every_page_of_the_vr_hub(aiohttp_client):
     assert "session.end()" in hub
     mods = await (await client.get("/hub/xr/modules.js")).text()
     assert "export class ExitButton" in mods and 'kind: "exit"' in mods
+
+
+async def test_settings_in_vr_and_a_larger_hub(aiohttp_client):
+    """Quick job 60: ⚙ in the strip opens Settings in VR, with the screens' groups (This Device
+    first, then the brain's sections from /api/settings), saved through the same APIs; Back or B
+    closes it. The whole hub is ~15 % larger, with the core at its distance."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr/hub.js")).text()
+    assert "export const HUB_SCALE = 1.15" in hub and "this.group.scale.setScalar(HUB_SCALE)" in hub
+    assert 'kind: "settings"' in hub and "this.openSettings(now)" in hub
+    assert 'if (this.mode === "settings") return [this.settings.mesh]' in hub
+    assert 'else if (this.mode === "settings") this.closeSettings(now)' in hub  # B
+    graph = await _module_graph(client, "/hub/xr-hub.js")
+    assert "/hub/xr/settings.js" in graph
+    page = graph["/hub/xr/settings.js"]
+    assert 'fetch("/api/settings"' in page and "setPref(" in page  # the brain's, this device's
+    assert '{ id: "device", title: "This Device"' in page
+    assert "Change it on a screen" in page  # text, colours and lists: no keyboard in VR
