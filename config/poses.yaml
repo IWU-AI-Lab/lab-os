@@ -16,15 +16,16 @@ so101:
   home:   # folded, where the arm is left (quick job 30, 2026-11-18): the green follower as the builder
           # leaves it (lab check 8.16), hovering just above where it rests: gripper ~14 cm out, its
           # lowest point ~1.8 cm above the table (on so101-white's plate ~3.4 cm).
-          # - shoulder_lift and elbow_flex are the real numbers, past the soft limits (-97.0 / 93.8)
-          #   by 6.3° and 3.6° (and the URDF's -100 / 96.8 by 3.3° and 0.6°): the move clips them and
-          #   says so; the limits aren't widened.
+          # - shoulder_lift and elbow_flex are at the soft limits (-97.0 / 93.8). The real numbers
+          #   were -103.3 and 97.4, past them by 6.3° and 3.6°: every move to home was clipped there
+          #   and said "clipped" (lab check F.3). Since quick job 50 (2026-11-20) the pose is where
+          #   the arm really goes, so "clipped" shows only when a move is really cut short.
           # - wrist_flex 55, not the real 75.9: with 75.9 the model puts the gripper point ~1 cm
           #   below the table (the height reads 1-2 cm low there), so the floor refused the move
           #   (the builder's choice, 2026-11-18). Let go of the arm and it settles into the real rest.
     shoulder_pan: -2.2
-    shoulder_lift: -103.3
-    elbow_flex: 97.4
+    shoulder_lift: -97.0
+    elbow_flex: 93.8
     wrist_flex: 55
     wrist_roll: 87.4
     gripper: 16.5
