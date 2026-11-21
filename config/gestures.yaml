@@ -5,41 +5,15 @@
 # (tests/test_visitors.py). The arm goes to the start pose first, wherever it is.
 
 so101:
-  wave:   # "wave" while visitors are here: the shoulder turns a little, the wrist nods
+  wave:   # "wave" while visitors are here (quick job 52, the builder's pick, 2026-11-20): the arm
+          # turns 70° so it bends across your view, raises the hand (~50 cm up, jaws a little open),
+          # and the forearm and the wrist swing side to side, about 25 cm at the hand; then back to
+          # `ready`. Was: the shoulder turned a little and the wrist nodded, low (F.11).
     from: ready
     steps:
-      - {shoulder_pan: 8, wrist_flex: -15}
-      - {shoulder_pan: -8, wrist_flex: 15}
-      - {shoulder_pan: 8, wrist_flex: -15}
-      - {shoulder_pan: -8, wrist_flex: 15}
-
-  # Candidates for a better wave (quick job 52, 2026-11-20): the builder picks one, it becomes `wave`
-  # above, and the other two are deleted. Nothing plays these yet. Each starts at `ready`, raises the
-  # arm (the gripper 44-52 cm up, pointing up), waves, and comes back. Pictures: the job's pull request.
-  wave-hand-up:   # A: leaning toward you, hand up, jaws open; the arm turns so the hand swings side to side, the wrist twisting
-    from: ready
-    steps:
-      - {shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, gripper: 60}
-      - {shoulder_pan: 30, shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, wrist_roll: 25, gripper: 60}
-      - {shoulder_pan: -30, shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, wrist_roll: -25, gripper: 60}
-      - {shoulder_pan: 30, shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, wrist_roll: 25, gripper: 60}
-      - {shoulder_pan: -30, shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, wrist_roll: -25, gripper: 60}
-      - {shoulder_lift: 20, elbow_flex: -60, wrist_flex: -110, gripper: 60}
-  wave-side:      # B: turned 70° so it bends across your view; the forearm and the wrist swing side to side
-    from: ready
-    steps:
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -95, wrist_flex: -45, gripper: 60}
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -75, wrist_flex: -15, gripper: 60}
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -110, wrist_flex: -75, gripper: 60}
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -75, wrist_flex: -15, gripper: 60}
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -110, wrist_flex: -75, gripper: 60}
-      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -95, wrist_flex: -45, gripper: 60}
-  wave-jaws:      # C: facing you, hand up; the wrist nods and the jaws open and close ("hello")
-    from: ready
-    steps:
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -45, gripper: 60}
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -25, gripper: -25}
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -65, gripper: 60}
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -25, gripper: -25}
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -65, gripper: 60}
-      - {shoulder_lift: 5, elbow_flex: -112, wrist_flex: -45, gripper: 60}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -95, wrist_flex: -45, gripper: 45}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -75, wrist_flex: -15, gripper: 45}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -110, wrist_flex: -75, gripper: 45}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -75, wrist_flex: -15, gripper: 45}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -110, wrist_flex: -75, gripper: 45}
+      - {shoulder_pan: 70, shoulder_lift: 5, elbow_flex: -95, wrist_flex: -45, gripper: 45}

@@ -137,7 +137,7 @@ Give the recording to Claude to find where the problem is ("at 0:40 the elbow st
 ## 5. The hub in VR
 In the Quest's browser, open `http://localhost:8080/xr` and select **Enter VR** (or Enter AR). The startup plays around you, as on the designed hub. Pull the trigger (or pinch) to start; do it again to skip the startup. Then the hub is around you:
 - Point at a panel with a controller (or your hand) and pull the trigger (or pinch) to open its details. 7d, 14d, 30d, List all and a device's card also work.
-- **B** or **Y** closes a page. ⏻ (top right) goes back to the start screen.
+- **B** or **Y** closes a page. **⏻** (top right; on a module, beside ← on its tab) opens a small menu: **Back to the start screen** or **Exit** (leaves VR or AR). B closes the menu.
 - **⚙** (beside ⏻) opens Settings, with the same groups as ⚙ on the screens. **This Device** is the Quest. Point at a switch, a choice or − / + and pull the trigger: it saves at once, and the line at the bottom says "Saved" or why not. Change names, colours and lists on a screen (VR has no keyboard). The brain's settings change only when the Quest is connected by USB (it then counts as the brain's computer).
 - **Teleop** (left of the core) opens the arm scene without leaving VR. All of the controls above work the same. To go back, press **B**, or point the right controller at ← on the TELEOP tab (top left) and pull the trigger. In Teleop, the left hand's pinch and Y stay teleop's.
 - **Asking:** point at the ask line under the core and hold the trigger (or a pinch) while you talk. The wake word and the microphone permission: `docs/guides/voice.md` → "In VR".
