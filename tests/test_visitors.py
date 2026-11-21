@@ -91,11 +91,13 @@ async def test_the_wave_plays_its_poses_and_ends_at_ready(rig):
     rig.loop.on_command = lambda m: seen.append(dict(m.get("joints") or {}))
     r = await rig.call("wave")
     assert r["result"] == "arrived"
-    pans = [j["shoulder_pan"] for j in seen if "shoulder_pan" in j]
-    wrists = [j["wrist_flex"] for j in seen if "wrist_flex" in j]
-    assert min(pans) == pytest.approx(ready["shoulder_pan"] - 8, abs=3)  # within one tick (3°)
-    assert max(wrists) == pytest.approx(ready["wrist_flex"] + 15, abs=3)  # within one tick (3°)
-    assert min(wrists) == pytest.approx(ready["wrist_flex"] - 15, abs=3)  # within one tick (3°)
+    # every joint reaches the furthest the wave's steps send it, both ways (gestures.yaml)
+    steps = load_gestures()["so101"]["wave"]["steps"]
+    for j in ("shoulder_pan", "elbow_flex", "wrist_flex"):
+        got = [c[j] for c in seen if j in c]
+        deltas = [s.get(j, 0) for s in steps] + [0]
+        assert max(got) == pytest.approx(ready[j] + max(deltas), abs=3), j  # within a tick (3°)
+        assert min(got) == pytest.approx(ready[j] + min(deltas), abs=3), j
     end = rig.arm.read_joints()
     assert all(abs(end[j] - ready[j]) < 1 for j in ready)
     assert rig.calls.entries[-1]["tool"] == "wave"  # on the AI Control page like a tool call

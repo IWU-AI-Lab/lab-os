@@ -75,7 +75,8 @@ async def test_the_trigger_presses_what_you_point_at(aiohttp_client):
     client = await aiohttp_client(make_app())
     hub = await (await client.get("/hub/xr-hub.js")).text()
     press = hub.split("press(now, hit) {", 1)[1].split("\n  }", 1)[0]
-    assert 'this.hub.press(hit, now) === "power"' in press
+    assert 'r === "power") this.toIgnite()' in press  # ⏻'s menu → "Back to the start screen"
+    assert 'r === "exit") this.leave()' in press  # ⏻'s menu → Exit
     assert press.count("this.toIgnite()") == 1
     assert "e.inputSource.handedness" in hub  # each controller presses what its own ray is on
 
@@ -176,7 +177,7 @@ async def test_settings_in_vr_and_a_larger_hub(aiohttp_client):
     hub = await (await client.get("/hub/xr/hub.js")).text()
     assert "export const HUB_SCALE = 1.15" in hub and "this.group.scale.setScalar(HUB_SCALE)" in hub
     assert 'kind: "settings"' in hub and "this.openSettings(now)" in hub
-    assert 'if (this.mode === "settings") return [this.settings.mesh]' in hub
+    assert 'if (this.mode === "settings") return [this.settings.mesh, this.power.mesh]' in hub
     assert 'else if (this.mode === "settings") this.closeSettings(now)' in hub  # B
     graph = await _module_graph(client, "/hub/xr-hub.js")
     assert "/hub/xr/settings.js" in graph
@@ -184,3 +185,20 @@ async def test_settings_in_vr_and_a_larger_hub(aiohttp_client):
     assert 'fetch("/api/settings"' in page and "setPref(" in page  # the brain's, this device's
     assert '{ id: "device", title: "This Device"' in page
     assert "Change it on a screen" in page  # text, colours and lists: no keyboard in VR
+
+
+async def test_power_opens_a_menu_with_exit_on_every_page(aiohttp_client):
+    """The builder, 2026-11-20: ⏻ on every page of the hub in VR opens a menu with Exit. The
+    strip's ⏻ stays pressable on the details pages and Settings; a module's tab has its own ⏻
+    (the hub hides while a module is open); the open menu is the only thing to press; B closes
+    it."""
+    client = await aiohttp_client(make_app())
+    hub = await (await client.get("/hub/xr/hub.js")).text()
+    assert "if (this.menu.mesh.visible) return [this.menu.mesh]" in hub
+    assert "return [this.page.mesh, this.power.mesh]" in hub
+    assert "return [this.settings.mesh, this.power.mesh]" in hub
+    assert 'if (w.kind === "power") { this.sfx.blip(); this.openMenu(hit.obj)' in hub
+    assert "if (this.menu.mesh.visible) return this.closeMenu();" in hub  # B
+    mods = await (await client.get("/hub/xr/modules.js")).text()
+    assert "export class PowerMenu" in mods and '["exit", "i-headset", "Exit"]' in mods
+    assert '{ kind: "power" }' in mods.split("class ModuleTab", 1)[1].split("class ", 1)[0]
