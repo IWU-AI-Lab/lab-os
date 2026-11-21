@@ -219,3 +219,17 @@ def test_adb_reverse_runs_for_each_new_connection():
     fail["on"] = True
     assert rev.check() == [] and rev.failed == {"PHONE1": "no device"}
     assert AdbReverse(8080, find=lambda: None).check() == []  # no adb: nothing
+
+
+def test_the_button_follows_the_window():
+    """Quick job 49 (F.12): closed with its own X, the window stayed lit on the hub for up to 5 s,
+    and a press then only turned the light off. Both hubs ask again on focus, every second while
+    it's open, and before acting on a press."""
+    from test_hub_server import SRC
+
+    for page in ("hub.js", "design.html"):
+        src = (SRC / "hub" / "web" / page).read_text()
+        assert 'addEventListener("focus", pollQuestView)' in src, page
+        assert "q?.running ? 1000 : 5000" in src, page
+        click = src.split('$("#qv-btn").addEventListener("click"', 1)[1].split("});", 1)[0]
+        assert "await pollQuestView()" in click and "q.running" in click, page
