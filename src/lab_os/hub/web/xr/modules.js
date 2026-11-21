@@ -1,8 +1,8 @@
 // The hub's modules in VR (decision 2026-11-12, the builder):
 //   - ModuleButton: the designed hub's module button (cut-corner box, the icon in a turning dotted ring,
 //     the name in caps, corner brackets that open when pointed at), left and right of the core.
-//   - TeleopModule: Teleop without leaving VR: the teleop page's own session (TeleopSession, /static/xr.js:
-//     the arm on its table, controllers or hands, the same messages to the brain) inside the hub's session.
+//   - Teleop has no module here since 2026-11-21 (the builder): its button leaves VR and opens the teleop
+//     page (relative or 1:1, then the page's own Enter VR or AR; xr-hub.js openTeleop).
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
@@ -354,22 +354,6 @@ function floorGrid() {
   g.add(scan);
   g.userData.step = (now) => { const k = (now / 3500) % 1; scan.scale.setScalar(0.05 + 0.6 * k); scan.material.opacity = 0.35 * (1 - k); };
   return g;
-}
-
-/* ---------- Teleop, inside the hub's session ---------- */
-export class TeleopModule {
-  constructor({ ar, refType }) {
-    this.ar = ar; this.refType = refType;
-    this.tele = null;
-  }
-  async open() {
-    const { TeleopSession } = await import("/static/xr.js");
-    const style = new URLSearchParams(location.search).get("xrarm") || undefined;
-    this.tele = new TeleopSession(getLink("input"), { ar: this.ar, style, refType: this.refType });
-    return this.tele.scene;
-  }
-  frame(t, xrFrame, refSpace) { return this.tele?.frame(t, xrFrame, refSpace); }
-  close() { this.tele?.end(); this.tele = null; }
 }
 
 export { clamp };

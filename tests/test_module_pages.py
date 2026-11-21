@@ -362,7 +362,7 @@ async def test_every_page_is_listed(aiohttp_client):
             continue
         if path.startswith(("/api/", "/ws", "/static", "/web", "/models", "/hub/", "/mcp")):
             continue
-        if path.endswith((".json", ".js", ".css", ".svg", ".png")):
+        if path.endswith((".json", ".js", ".css", ".svg", ".png", ".webmanifest")):
             continue
         served.add(path)
     listed = {p for p, _, _ in PAGES}

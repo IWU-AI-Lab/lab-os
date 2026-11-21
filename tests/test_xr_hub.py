@@ -50,7 +50,7 @@ async def test_the_vr_hub_loads_only_its_own_files(aiohttp_client):
     graph = await _module_graph(client, "/hub/xr-hub.js")
     ours = ("stars", "core", "hub", "panels", "pointer", "modules", "ask")
     parts = {f"/hub/xr/{m}.js" for m in ours}
-    parts |= {"/static/xr.js", "/static/arm/arm-model.js", "/web/voice.js"}  # teleop, arm, voice
+    parts |= {"/static/arm/arm-model.js", "/web/voice.js"}  # the holograms' arm, voice
     assert parts <= set(graph)
     for url, src in [("/xr", page), *graph.items()]:  # works offline: no internet-loaded code
         assert not re.search(r"""["'](https?:)?//""", src), f"{url} loads from the internet"
@@ -93,22 +93,25 @@ async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client)
 
 
 async def test_the_vr_modules(aiohttp_client):
-    """Teleop runs the teleop page's own XR session code inside the hub's session (one copy of the
-    controller handling); Monitor and AI Control are watch-only holograms with STOP; Training
-    (LeLab on the desktop) has no VR version, so no button (decision 2026-11-12, the builder)."""
+    """Monitor and AI Control are watch-only holograms with STOP; Training (LeLab on the desktop)
+    has no VR version (decision 2026-11-12). Teleop leaves VR for the teleop page: relative or 1:1
+    and the rest, then its own Enter VR or AR; Back returns to the hub (the builder, 2026-11-21)."""
     client = await aiohttp_client(make_app())
-    teleop = await (await client.get("/static/xr.js")).text()
-    assert "export class TeleopSession" in teleop and "new TeleopSession(link" in teleop
     mods = await (await client.get("/hub/xr/modules.js")).text()
-    assert 'import("/static/xr.js")' in mods and 'new TeleopSession(getLink("input")' in mods
+    assert "TeleopModule" not in mods.split("//   - Teleop has no module", 1)[1]
     vr_list = mods.split("export const VR_MODULES = {", 1)[1].split("};", 1)[0]
     assert "teleop" in vr_list and "monitor" in vr_list and "ai:" in vr_list
     assert "training" not in vr_list
-    assert 'getLink("monitor")' in mods and '{ type: "stop" }' in (
-        await (await client.get("/hub/xr/hub.js")).text()
-    )
+    hub = await (await client.get("/hub/xr/hub.js")).text()
+    assert 'if (id === "teleop") { this.sfx.blip(); this.onTeleop?.(); return; }' in hub
+    assert 'getLink("monitor")' in mods and '{ type: "stop" }' in hub
     page = await (await client.get("/xr")).text()
     assert '"three/examples/jsm/"' in page  # the arm's URDF loader needs it
+    assert 'id="teleop"' in page and 'id="teleop-back"' in page
+    main = await (await client.get("/hub/xr-hub.js")).text()
+    opener = main.split("function openTeleop(show, mode) {", 1)[1].split("\n}\n", 1)[0]
+    assert "getSession()?.end()" in opener and 'frame.allow = "xr-spatial-tracking' in opener
+    assert "start(mode, { atHub: true })" in opener
 
 
 async def test_asking_in_vr(aiohttp_client):
@@ -202,3 +205,54 @@ async def test_power_opens_a_menu_with_exit_on_every_page(aiohttp_client):
     mods = await (await client.get("/hub/xr/modules.js")).text()
     assert "export class PowerMenu" in mods and '["exit", "i-headset", "Exit"]' in mods
     assert '{ kind: "power" }' in mods.split("class ModuleTab", 1)[1].split("class ", 1)[0]
+
+
+QUEST_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64; Quest 3) AppleWebKit/537.36 OculusBrowser/38.0 Chrome/130"
+)
+
+
+async def test_a_quest_gets_the_start_page_first(aiohttp_client):
+    """The builder, 2026-11-21: a Quest opening the hub gets three choices in the middle (Enter VR,
+    Enter AR, the hub in the browser), not the idle page. ?flat=1 is the hub in the browser."""
+    client = await aiohttp_client(make_app())
+    for path in ("/", "/design"):
+        page = await (await client.get(path, headers={"User-Agent": QUEST_UA})).text()
+        assert 'id="vr"' in page and 'id="ar"' in page and 'id="flat"' in page, path
+        flat = await (await client.get(f"{path}?flat=1", headers={"User-Agent": QUEST_UA})).text()
+        assert 'id="vr"' not in flat, path
+    desk = await (await client.get("/design")).text()  # a computer: the hub, as before
+    assert 'id="vr"' not in desk
+    main = await (await client.get("/hub/xr-hub.js")).text()
+    assert "Insecure origins treated as secure" in main  # over Wi-Fi: how to make VR possible
+
+
+async def test_the_hub_installs_as_an_app(aiohttp_client):
+    """The builder, 2026-11-21: a bookmark or an app icon instead of typing in the headset."""
+    client = await aiohttp_client(make_app())
+    res = await client.get("/manifest.webmanifest")
+    assert res.status == 200 and res.content_type == "application/manifest+json"
+    m = await res.json()
+    assert m["start_url"] == "/" and m["display"] == "standalone"
+    for icon in m["icons"]:
+        assert (await client.get(icon["src"])).status == 200
+    for path in ("/", "/design", "/xr"):
+        assert 'rel="manifest"' in await (await client.get(path)).text(), path
+
+
+def test_the_teleop_page_has_the_headset_options():
+    """The builder, 2026-11-21: Teleop opens the teleop page on every hub version; there you choose
+    relative or 1:1 and the rest, then Enter VR or Enter AR, each doing what it says. Desktop
+    control can't be chosen in a headset."""
+    from test_hub_server import SRC
+
+    web = SRC / "teleop" / "web"
+    page = (web / "index.html").read_text()
+    for el in ('id="enter"', 'id="enter-ar"', 'id="mode-set"', 'id="speed-set"', 'id="xr-style"',
+               'id="xr-place-reset"'):  # fmt: skip
+        assert el in page, el
+    xr = (web / "xr.js").read_text()
+    assert 'start("immersive-ar", link, ui)' in xr and 'start("immersive-vr", link, ui)' in xr
+    assert "STYLE_KEY" in xr and "localStorage.removeItem(PLACE_KEY)" in xr
+    tp = (web / "teleop-page.js").read_text()
+    assert "/OculusBrowser/.test(navigator.userAgent)" in tp and 'd.dataset.unavailable = "1"' in tp

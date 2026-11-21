@@ -240,6 +240,8 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.14** Quick job 51. Keep a hand at STOP. Put the cube about 20 cm straight in front of `so101-white`. Ask the hub's assistant "Jarvis, hand me the cube". → when the jaws closed, did they hold the cube with most of their length, not only the tips? (yes / no) Did the gripper touch the table? (yes / no)
 - **U.15** Quick job 52. Keep a hand at STOP. Clear the space to the right of `so101-white` and above it. On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. → does it look like a wave from where the visitors stand? (yes / no) Did the arm touch anything? (yes / no) Say `Hey Jarvis, the visitors have left`.
 - **U.16** In the hub in VR, point at ⏻ (top right) and pull the trigger. → does a menu open with "Back to the start screen" and "Exit"? (yes / no) Open **Teleop**, then press ⏻ beside ← on its tab, then **Exit**. → are you back on the browser page? (yes / no)
+- **U.17** In the Quest's browser, open the hub's address. → do you see three choices in the middle (Enter VR, Enter AR, the hub in the browser)? (yes / no) Press **Enter AR**, start, then **Teleop**. → does the Teleop page open, with Desktop control grey? (yes / no)
+- **U.18** On the Teleop page, select 1:1, then **Enter AR**. Drive the fake arm. → does it work? (yes / no) Leave AR, then press **Back to the hub in AR**. → are you back at the hub in AR? (yes / no) In the browser's menu, is there an Install choice? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.

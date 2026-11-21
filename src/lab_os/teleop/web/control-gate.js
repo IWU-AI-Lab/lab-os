@@ -22,7 +22,8 @@ export function gate(s, buttons, line) {
     if (!b) continue;
     b.dataset.taken = why ? "1" : "";
     b.disabled = !!why || b.dataset.blocked === "1" || b.dataset.unavailable === "1" || b.dataset.busy === "1";
-    b.title = why || "";
+    if (b.dataset.ownTitle === undefined) b.dataset.ownTitle = b.title; // its own hint comes back after
+    b.title = why || b.dataset.ownTitle;
   }
   if (line) {
     line.textContent = why || "";
