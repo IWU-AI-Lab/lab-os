@@ -137,6 +137,7 @@ class DeviceSettings:
         )
         body = yaml.safe_dump({"devices": devices}, sort_keys=True, allow_unicode=True)
         tmp = p.with_suffix(".tmp")
+        p.parent.mkdir(parents=True, exist_ok=True)  # a fresh copy has no local/ folder yet
         tmp.write_text(head + body)
         tmp.replace(p)
 
