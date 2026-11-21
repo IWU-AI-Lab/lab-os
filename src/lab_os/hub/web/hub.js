@@ -83,17 +83,24 @@ fullscreenButton($("#fs-btn"), {
 
 // what the Quest sees (quick job 36): scrcpy in a window on the brain's computer. Only there, and only
 // once it's installed (lab-os quest-view --install)
+// The button follows the window (quick job 49): closed with its own X, the window is gone at once, so the
+// page asks again when it gets the focus back, every second while the window is open, and before a press.
+let qvTimer = 0;
 async function pollQuestView() {
   const q = await getJSON("/api/quest-view");
   const b = $("#qv-btn");
+  clearTimeout(qvTimer);
+  qvTimer = setTimeout(pollQuestView, q?.running ? 1000 : 5000);
   b.hidden = !q?.here || !q.installed;
-  if (b.hidden) return;
+  if (b.hidden) return q;
   b.setAttribute("aria-pressed", q.running);
   b.textContent = q.running ? "Close Quest view" : "Quest view";
   b.title = q.running ? `The view of ${q.headset} is open` : q.why_not || "Show what the Quest sees, in a window here";
+  return q;
 }
 $("#qv-btn").addEventListener("click", async () => {
-  const on = $("#qv-btn").getAttribute("aria-pressed") === "true";
+  const q = await pollQuestView(); // the window may have been closed with its own X just now
+  const on = q ? !!q.running : $("#qv-btn").getAttribute("aria-pressed") === "true";
   try {
     const res = await fetch(`/api/quest-view/${on ? "stop" : "start"}`, { method: "POST", body: "{}" });
     const r = await res.json();
@@ -104,7 +111,7 @@ $("#qv-btn").addEventListener("click", async () => {
   pollQuestView();
 });
 pollQuestView();
-setInterval(pollQuestView, 5000);
+addEventListener("focus", pollQuestView);
 
 function onFullscreenChange() {
   if (fsElement()) lockEsc();

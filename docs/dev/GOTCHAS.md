@@ -140,7 +140,7 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 - Every move to `home` says "clipped" on AI Control, because two of home's numbers are past the soft limits (quick job 30). The arm still arrives where it should (F.3; quick job 50).
 - The table height is right: the jaw tips touched the table at z 0.0 (F.2). Farther out (x 24.5 cm) they touched the sheet at z −0.4 (3b.1): the arm sags a little at reach.
 - The cm grid saw 24 of 24 corners, worst 1.3 mm. The AI found the cube from the stand camera's picture (to about 1 cm), went above it, and picked it with `pick_at`. The jaws held the cube with their tips only (3b.5; quick job 51). The grid is a flat fit with no lens correction, so it is less exact far from the sheet (`docs/plan/ideas.md`).
-- Quest view: closing the window with its own X leaves the button lit (F.12; quick job 49). The view looks like a fisheye lens. The one-eye crop showed one eye.
+- Quest view: closing the window with its own X leaves the button lit (F.12; quick job 49). (2026-11-20: the hubs asked only every 5 s, and a press acted on that old state; now they ask on focus, every second while it's open, and before a press.) The view looks like a fisheye lens. The one-eye crop showed one eye.
 - In the headset, when you put the controllers down, the Quest changes to hand tracking, so the status panel never shows "No controller" (F.13).
 - The startup as a video is a little smoother, but its resolution is lower (even at Maximal) and the stars do not match when it changes to the live hub (F.8). It stays off.
 - Restarting `lab-os serve` by hand brings the hub back, but not full screen. A browser goes full screen only after a tap.
