@@ -33,8 +33,10 @@ import contextlib
 import hashlib
 import json
 import logging
+import math
 import os
 import re
+import struct
 import time
 import unicodedata
 from collections import deque
@@ -77,7 +79,11 @@ IGNORED_LOG_EVERY_S = 10.0  # a heard wake word that was ignored (a screen busy)
 GREET_EVERY_S = 10.0
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
 WAKE_UTTERANCE_S = 20.0  # after the wake word: the longest question
-WAKE_WINDOW_S = 0.15  # several screens listen: wait this long for the others, best one answers
+WAKE_WINDOW_S = 0.3  # several screens listen: wait this long for the others, best one answers
+# Wake scores of clear speech are all near 1.0, so scores this close count as a tie, and the screen
+# whose microphone heard the phrase loudest above its own room noise answers (quick job 70; smart
+# speakers decide by signal energy too)
+WAKE_SCORE_TIE = 0.05
 WAKE_QUIET_S = 2.0  # after a wake, ignore the phrase for this long (the same words, other screens)
 WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from before the phrase was detected goes to the hearing
 WAKE_RING_BYTES = 32_000  # 1 s of the latest audio kept while listening for the phrase
@@ -203,6 +209,23 @@ class TurnTiming:
         return line
 
 
+def pick_nearest(heard: dict) -> object:
+    """The screen that answers: the best wake score; among scores within WAKE_SCORE_TIE of it, the
+    loudest above its own room noise (`heard`: screen → (score, dB above its noise))."""
+    best = max(s for s, _ in heard.values())
+    close = {k: v for k, v in heard.items() if v[0] >= best - WAKE_SCORE_TIE}
+    return max(close, key=lambda k: (close[k][1], close[k][0]))
+
+
+def pcm_rms(pcm: bytes) -> float:
+    """The loudness of 16-bit mono PCM (0 to 32768)."""
+    n = len(pcm) // 2
+    if not n:
+        return 0.0
+    samples = struct.unpack(f"<{n}h", pcm[: n * 2])
+    return math.sqrt(sum(x * x for x in samples) / n)
+
+
 def _script(c: str) -> str:
     """The writing system of a letter, roughly: "Latin", "Cyrillic", "CJK", … (for the log)."""
     try:
@@ -310,7 +333,7 @@ class VoiceDesk:
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 
-    def wake_heard(self, link: "VoiceLink", score: float) -> None:
+    def wake_heard(self, link: "VoiceLink", score: float, snr_db: float = 0.0) -> None:
         """A screen heard the phrase. A spoken answer that runs or plays doesn't stop it: the new
         question stops that answer (quick job 57). Someone asking now, or a typed answer, does."""
         now = time.monotonic()
@@ -335,10 +358,12 @@ class VoiceDesk:
             if sum(lk.wake_on for lk in self.links) > 1:  # others may have heard it too
                 asyncio.get_running_loop().call_later(WAKE_WINDOW_S, self._wake_pick)
             else:  # the only screen listening: no one to wait for
-                self._wake_candidates[link] = score
+                self._wake_candidates[link] = (score, snr_db)
                 self._wake_pick()
                 return
-        self._wake_candidates[link] = max(score, self._wake_candidates.get(link, 0.0))
+        before = self._wake_candidates.get(link)
+        if before is None or score > before[0]:
+            self._wake_candidates[link] = (score, snr_db)
 
     def _asking_now(self) -> bool:
         """A question is being heard, or a typed question answered (no voice turn runs): the wake
@@ -380,12 +405,21 @@ class VoiceDesk:
         heard = {lk: s for lk, s in heard.items() if lk in self.links and lk.wake_on}
         if not heard:
             return
-        winner = max(heard, key=heard.get)
+        winner = pick_nearest(heard)
+        if len(heard) > 1:
+            log.info(
+                "voice: %s heard the wake word: %s answers",
+                ", ".join(
+                    f"{lk.device or 'a screen'} ({s:.2f}, {snr:.0f} dB)"
+                    for lk, (s, snr) in sorted(heard.items(), key=lambda kv: -kv[1][0])
+                ),
+                winner.device or "a screen",
+            )
         self._wake_quiet_until = time.monotonic() + WAKE_QUIET_S
         for lk in self.links:
             if lk is not winner and lk.wake_on:
                 lk.wake_elsewhere()
-        asyncio.get_running_loop().create_task(winner.woken(heard[winner]))
+        asyncio.get_running_loop().create_task(winner.woken(heard[winner][0]))
 
     # ---------- warm connections: no waiting for the voice service after the phrase ----------
 
@@ -602,6 +636,7 @@ class VoiceLink:
         self._ring: deque[tuple[int, bytes]] = deque()  # the latest audio: (its offset, PCM)
         self._ring_total = 0  # bytes of wake audio received so far
         self._detected_at: tuple[float, int] | None = None  # when, and the audio offset
+        self._floor = 0.0  # this microphone's room noise (loudness, slowly followed)
         self._last_audio = 0.0
         self._next_warm = 0.0
         self._near_logged = 0.0
@@ -735,10 +770,12 @@ class VoiceLink:
         while self._ring and self._ring[0][0] + WAKE_RING_BYTES < self._ring_total:
             self._ring.popleft()
         score = self.detector.feed(pcm)
+        if not self.detector.fired:
+            self._follow_floor(pcm_rms(pcm))
         if self.detector.fired:
             if self._detected_at is None or now - self._detected_at[0] > 1.0:
                 self._detected_at = (now, self._ring_total)
-            self.desk.wake_heard(self, score)
+            self.desk.wake_heard(self, score, self._snr_db())
         elif score >= NEAR_MISS and now - self._near_logged > NEAR_MISS_EVERY_S:
             self._near_logged = now
             log.info(
@@ -749,6 +786,19 @@ class VoiceLink:
                 self.detector.threshold,
                 self.detector.sensitivity,
             )
+
+    def _follow_floor(self, rms: float) -> None:
+        """The room's noise at this microphone: down fast, up slowly (speech doesn't count much)."""
+        if self._floor == 0.0:
+            self._floor = rms
+        else:
+            k = 0.1 if rms < self._floor else 0.005
+            self._floor += k * (rms - self._floor)
+
+    def _snr_db(self) -> float:
+        """How loud the last second (the phrase) was above this microphone's room noise, in dB."""
+        level = pcm_rms(b"".join(p for _, p in self._ring))
+        return 20 * math.log10(max(level, 1.0) / max(self._floor, 1.0))
 
     # ---------- the wake word ----------
 
