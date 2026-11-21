@@ -387,6 +387,23 @@ function showProblems(list = []) {
   for (const text of list) box.append(Object.assign(document.createElement("p"), { textContent: text }));
 }
 
+/* ---------- the room's layout (quick job 71): each page of room.yaml opens on its device ---------- */
+function roomRow() {
+  const b = btn("Set Up the Room");
+  const wrap = document.createElement("div");
+  wrap.append(b);
+  const r = row("Set Up the Room", "Opens each page on its device, as room.yaml in the place's config says. Or say \"Hey Jarvis, set up the room\".", wrap);
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    const out = await fetch("/api/room/setup", { method: "POST" }).then((x) => x.json()).catch((e) => ({ ok: false, message: `The brain didn't answer (${e.message}).` }));
+    b.disabled = false;
+    const err = r.querySelector(".err");
+    err.style.color = out.ok ? "var(--text)" : "";
+    err.textContent = out.message;
+  });
+  return r;
+}
+
 /* ---------- every page the brain serves (quick job 67): two taps from the hub, ⚙ then the page ---------- */
 async function pagesGroup() {
   const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
@@ -444,6 +461,7 @@ async function start() {
     if (s.risky && !pagesShown) { pagesShown = true; await pagesGroup(); }  // before the safety group
     const rows = group(s.id, s.title, s.risky ? "" : s.help, { icon: ICON[s.id] || "i-gear", risky: s.risky });
     if (s.id === "lab" && m) rows.append(visitorRow(m));
+    if (s.id === "lab") rows.append(roomRow());
     for (const f of s.fields) {
       // a safety limit: marked when off; locked (a public venue or limits_locked: true) = can't be switched
       const field = f.locked ? { ...f, help: `${f.help} Locked: ${f.locked}.` } : f;

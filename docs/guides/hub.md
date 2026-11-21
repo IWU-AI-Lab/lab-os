@@ -233,6 +233,14 @@ A **device** is a computer or screen with the hub open under a name in its addre
   (`chromium` on a Pi.) The brain's address is the desktop's IP address for now: when it changes, make the icon again.
 - **The Newline (Android) or a tablet:** in Chrome, open `http://<brain's IP address>:8080/?device=newline`, then ⋮ → **Add to Home screen**. On `http://` it opens as a normal tab: tap once for full screen.
 
+### Set up the room (quick job 71)
+`room.yaml` in the place's config says which device shows which page (the recommended layout of `docs/plan/current-focus.md` → item 10). Each line is a device's name and a page: `core` (the hub itself) or a module (`teleop`, `monitor`, `ai`, `training`). Three ways open each page on its device, as "Open on…" does:
+- Say "Hey Jarvis, set up the room".
+- Press ⚙ → The Lab → **Set Up the Room**.
+- Run `uv run lab-os room` while the brain runs.
+
+A device that does not have the hub open is skipped, and the answer names it. To change the layout, edit `config/room.yaml` (or the place's `local/room.yaml`), then set up the room again.
+
 ## Full screen without a tap (kiosk)
 A page can go full screen only after a press (the browsers' rule, also on `http://`). To skip even that, open the browser already in full screen:
 - **A Linux or Windows desktop (Chrome, Chromium):** an app window in full screen that closes like any window:

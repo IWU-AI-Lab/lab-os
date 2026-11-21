@@ -1,0 +1,19 @@
+# The room's layout (quick job 71): which device shows which page. Say "Hey Jarvis, set up the
+# room", press ⚙ → The Lab → Set Up the Room, or run `uv run lab-os room`, and each page opens on
+# its device, as with "Open on…". A device that doesn't have the hub open is skipped and named.
+#
+# Each line: a device's name (the ?device= in its hub's address) and a page:
+#   core      the hub itself (whatever it shows closes)
+#   teleop, monitor, ai, training   a module (the buttons around the core: ⚙ → The Lab)
+# Change it here (or in local/room.yaml, the place's own copy), then set up the room again.
+#
+# The recommended layout (docs/plan/current-focus.md → item 10; the names from lab check M.1):
+layout:
+  newline: core     # the place to talk
+  win-1: core       # voice stations on the other side of the room
+  win-2: core
+  pi-1: teleop      # with STOP
+  pi-2: monitor
+  pi-3: ai
+# Not yet pages that open on a device: the system diagram (the projector), the cameras, the webcam
+# teleop, Commits, AI Spend. The Quest opens the VR hub itself (/xr).

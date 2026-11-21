@@ -413,3 +413,57 @@ def test_pages_choose_full_screen_or_a_window():
     assert "lab-os.window:" in kit and 'brainWindow("fullscreen")' in kit and "Window`" in kit
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert "wasFull" in design and 'brainWindow("fullscreen")' in design
+
+
+async def test_set_up_the_room(aiohttp_client, monkeypatch, tmp_path):
+    """Quick job 71: room.yaml says which device shows which page; one call opens each on its
+    device, as "Open on…" does, and skips and names a device that isn't connected."""
+    from lab_os import config
+    from lab_os.hub import room
+
+    layout = tmp_path / "room.yaml"
+    layout.write_text(
+        "layout:\n  newline: core\n  pi-1: monitor\n  pi-2: teleop\n  win-1: nonsense\n"
+    )
+    real = config.layers
+    monkeypatch.setattr(
+        config,
+        "layers",
+        lambda name, *a, **k: [layout] if name == "room.yaml" else real(name, *a, **k),
+    )
+    client = await aiohttp_client(make_app())
+    newline, _ = await page(client, "newline", showing="teleop")
+    pi1, _ = await page(client, "pi-1")
+    win1, _ = await page(client, "win-1")
+    got = await (await client.post("/api/room/setup")).json()
+    assert [o["device"] for o in got["opened"]] == ["newline", "pi-1"]
+    assert {s["device"]: s["why"] for s in got["skipped"]} == {
+        "pi-2": "not connected (its hub isn't open)",
+        "win-1": "'nonsense' isn't a page that opens on a device",
+    }
+    assert "Monitor on pi-1" in got["message"] and "Skipped: pi-2" in got["message"]
+    assert (await next_of(pi1, "open"))["module"] == "monitor"
+    assert (await next_of(newline, "close"))["type"] == "close"  # the core: nothing opened
+    # the assistant's tool does the same
+    desk = room.RoomDesk(lambda: client.app[hub_devices_key()])
+    assert desk.tools(False)[0]["function"]["name"] == "set_up_room"
+    said, _ = await desk.call("set_up_room", False)
+    assert "Set up the room" in said
+    for ws in (newline, pi1, win1):
+        await ws.close()
+
+
+def hub_devices_key():
+    from lab_os.hub.server import HUB_DEVICES
+
+    return HUB_DEVICES
+
+
+def test_the_room_layout_file_and_the_ways_in():
+    from lab_os.hub import room
+
+    pairs = room.load_layout()  # the repo's config/room.yaml: the recommended layout
+    assert ("newline", "core") in pairs and all(p for _, p in pairs)
+    assert "roomRow()" in (SRC / "hub" / "web" / "settings.js").read_text()
+    with pytest.raises(SystemExit, match="didn't answer on port 1"):
+        cli.main(["room", "--port", "1"])
