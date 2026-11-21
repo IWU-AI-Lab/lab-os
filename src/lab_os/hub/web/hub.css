@@ -174,3 +174,7 @@ button.trycard:hover, button.trycard:focus-visible { border-color: #aaa; }
   #hub { grid-template-columns: 1fr; grid-template-areas: "strip" "greet" "core" "ml" "mr" "left" "right"; }
   .mcol.l, .mcol.r { align-items: stretch; }
 }
+/* conversation mode (quick job 68): lit while it keeps listening */
+#conv-btn { min-height: 2.4em; padding: 0 0.8em; cursor: pointer; background: none; border: 1px solid #555; border-radius: 6px; color: inherit; }
+#conv-btn[hidden] { display: none; }
+#conv-btn[aria-pressed="true"] { border-color: #29d4ff; background: rgba(41, 212, 255, 0.15); }

@@ -53,6 +53,8 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.10** Set **Expects** to English. Say "Hey Jarvis, test" five times. → did the word "test" show in Latin letters every time? (yes / no) If no, copy the terminal's line that starts with `voice: question on`.
 - **V.11** Quick job 47. Ask 5 questions by voice, one after the other. → did the voice sound like the same person every time? (yes / no) If no, copy the terminal's lines that start with `voice: answer on`.
 - **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Copy the terminal's line that ends with `answers`.
+- **V.13** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
+- **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
 
 ---
 

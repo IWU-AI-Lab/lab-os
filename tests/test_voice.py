@@ -884,3 +884,85 @@ async def test_a_greeting_from_a_fallback_model_isnt_kept(aiohttp_server, key, t
     assert "greeting not saved: tts-b spoke it, not tts-a" in caplog.text
     assert not list(rec.glob("*.wav"))
     assert greeting_file(rec, desk.setup(), "x").name.startswith("test-")
+
+
+def test_conversation_phrases():
+    from lab_os.hub.voice import CONVERSE_END, CONVERSE_START, said_any
+
+    assert said_any("That's all, thanks!", CONVERSE_END)
+    assert said_any("Hey Jarvis, start a conversation.", CONVERSE_START)
+    assert not said_any(
+        "Is that all the robots we have in the lab right now, Jarvis?", CONVERSE_END
+    )
+    assert not said_any("What time is it?", CONVERSE_END)
+
+
+async def test_conversation_mode_listens_again_after_each_answer(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    """Quick job 68: the button starts it; after the answer has played the brain listens again by
+    itself (a "wake" with conversation: true), with no wake word."""
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice?device=desk")
+    await ws.send_json({"type": "converse", "on": True})
+    evs = []
+    await until(ws, "listening", evs)
+    assert {"type": "converse", "on": True} in evs
+    assert {"type": "wake", "conversation": True} in evs
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    await until(ws, "audio_end", [])
+    await ws.send_json({"type": "played", "done": True})  # the answer has played
+    evs = []
+    await until(ws, "listening", evs)  # the next question, with no wake word
+    assert {"type": "wake", "conversation": True} in evs
+    await ws.send_json({"type": "converse", "on": False})  # the same button ends it
+    off = await until(ws, "converse", [])
+    assert off["on"] is False and "button" in off["why"]
+    await ws.close()
+
+
+async def test_that_s_all_ends_it_and_a_phrase_starts_it(
+    aiohttp_client, aiohttp_server, key, tmp_path
+):
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, heard="Start a conversation.")
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "listen", "mode": "ask"})
+    await until(ws, "listening", [])
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    on = await until(ws, "converse", [])
+    assert on["on"] is True
+    evs = []
+    await until(ws, "listening", evs)
+    assert {"type": "wake", "conversation": True} in evs
+    await ws.close()
+
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, heard="That's all, thanks.")
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice")
+    await ws.send_json({"type": "converse", "on": True})
+    await until(ws, "listening", [])
+    await ws.send_bytes(SECOND)
+    await ws.send_json({"type": "end"})
+    off = await until(ws, "converse", [], timeout=5)
+    while off["on"]:
+        off = await until(ws, "converse", [])
+    assert "that's all" in off["why"].lower()
+    assert conv.messages == [] or conv.messages[-1]["content"] != "That's all, thanks."
+    await ws.close()
+
+
+def test_the_hubs_have_the_conversation_button():
+    from test_hub_server import SRC
+
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert 'id="conv-btn"' in design and 'id="conv-sign"' in design and "V.converse(" in design
+    hub = (SRC / "hub" / "web" / "hub.js").read_text()
+    assert (
+        "voice.converse(" in hub
+        and 'id="conv-btn"' in (SRC / "hub" / "web" / "index.html").read_text()
+    )
+    assert "async function converse(on)" in (SRC / "web" / "voice.js").read_text()

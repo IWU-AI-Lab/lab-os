@@ -200,6 +200,13 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 /* the latest answer, under the core: typed out, then fades after a while; tap it to see the whole conversation */
 #reply { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(34rem, 80vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s; }
 #reply.on { opacity: 1; pointer-events: auto; cursor: pointer; }
+/* conversation mode (quick job 68): a clear, calm sign above the core while it keeps listening */
+#conv-sign { position: absolute; bottom: calc(50% + min(var(--orb), 100%) / 2 + 1.6rem); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0.9rem;
+  border: 1px solid var(--c); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--hot); font: 500 0.82rem/1.2 var(--f-ui); letter-spacing: 0.04em; white-space: nowrap;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent); }
+#conv-sign[hidden] { display: none; }
+#conv-sign i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); animation: wdot 2.4s ease-in-out infinite; }
+#conv-btn[aria-pressed="true"] { color: var(--hot); background: color-mix(in srgb, var(--c) 18%, transparent); }
 #reply .q { font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); margin-bottom: 0.35rem; }
 #reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
@@ -793,6 +800,7 @@ body[data-mod="page"] #module .send { display: flex; }
     <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12"/><path d="M9 20h6M12 16.5V20M6.5 13l3.5-3.5 3 3 4.5-4.5"/></symbol>
     <symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 20h9M8.5 20v-3.5l4-7.5 6 3"/><circle cx="8.5" cy="16.5" r="1.4"/><circle cx="12.5" cy="9" r="1.4"/><path d="M18.5 12l1.5-2.2M18.5 12l2.4.6"/></symbol>
     <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
+    <symbol id="i-talk" viewBox="0 0 24 24"><path d="M3.5 5h11v7.5H8l-3 2.5v-2.5H3.5z"/><path d="M17 9h3.5v7.5H19v2.5l-3-2.5h-5V15"/></symbol>
     <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-4 3.5V16H4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
     <symbol id="i-hex" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z"/><circle cx="12" cy="12" r="2"/></symbol>
     <symbol id="i-test" viewBox="0 0 24 24"><path d="M12 3.5 19.4 7.75v8.5L12 20.5 4.6 16.25v-8.5z" stroke-dasharray="2.5 2.5"/></symbol>
@@ -884,10 +892,12 @@ body[data-mod="page"] #module .send { display: flex; }
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
       <button id="mic" class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button>
+      <button id="conv-btn" class="mic" type="button" hidden aria-pressed="false" aria-label="Conversation" title="Conversation: it keeps listening and answering, no wake word. Say &quot;that's all&quot; or press again to end."><svg class="ico"><use href="#i-talk"/></svg></button>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation"><svg class="ico"><use href="#i-hist"/></svg><b id="chat-n"></b></button>
       <button id="restore-chat" type="button" hidden><svg class="ico"><use href="#i-undo"/></svg></button>
     </div></div></div>
     <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
+    <div id="conv-sign" role="status" hidden><i aria-hidden="true"></i>In a conversation · say "that's all" to end</div>
     <div id="toast" class="alertable" role="status"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div class="msg-t" id="toast-msg"></div></div></div></div>
     <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>No answer</b><span></span></div></div></div></div>
   </section>
@@ -2204,7 +2214,7 @@ function renderWakeDot() {
   if (on) f.title = V.micStalled ? "Not hearing the microphone (the browser paused it): press the mic once to wake it"
     : `Listening for "${S.status?.voice?.wake?.phrase || "the wake word"}"`;
 }
-function wakeTurnStart() {
+function wakeTurnStart(ev = {}) {
   VS.greeting = false;
   if (S.asking && !VS.voiced) { V.cancel(); return; }  // a typed question is being answered
   if (VS.voiced) { cutTurn(); endVoice(); }  // the brain stopped the spoken answer (quick job 57)
@@ -2213,19 +2223,23 @@ function wakeTurnStart() {
   const r = $("#reply");
   r.querySelector(".q").textContent = "Listening…"; r.querySelector(".q").classList.add("heard"); r.querySelector(".a").innerHTML = ""; r.classList.add("on");
   setState("listening");
+  // a conversation's next question: no "didn't hear" while nobody talks; the brain listens again
+  const talk = !!ev.conversation;
+  if (talk) r.querySelector(".q").textContent = "Listening… (say \"that's all\" to end)";
   VW = VM.silenceWatch((spoke) => {
     VW = null;
     if (spoke) { V.finish(); setState("thinking"); }
-    else { V.cancel(); r.querySelector(".q").textContent = "I didn't hear a question."; endVoice(); }
-  }, { quietMs: VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: V.noiseFloor });
+    else { V.cancel(); if (!talk) r.querySelector(".q").textContent = "I didn't hear a question."; endVoice(); }
+  }, { quietMs: VM.WAKE_QUIET_MS, idleMs: talk ? 15_000 : 6000, maxMs: talk ? 30_000 : 20_000, floor: V.noiseFloor });
 }
 function renderMic() {
   const ok = !!V?.can().ok, dict = WAY() === "dictation", phrase = S.status?.voice?.wake?.phrase;
   const title = dict ? "Tap to dictate (or tap Space): the words go into the ask line"
     : WAY() === "wake_word" && phrase ? `Hold to talk (or hold Space), or say "${phrase}"` : "Hold to talk (or hold Space)";
-  document.querySelectorAll(".mic").forEach((b) => { b.hidden = !ok; b.title = title; b.setAttribute("aria-label", dict ? "Dictate" : "Hold to talk"); });
+  document.querySelectorAll(".mic:not(#conv-btn)").forEach((b) => { b.hidden = !ok; b.title = title; b.setAttribute("aria-label", dict ? "Dictate" : "Hold to talk"); });
+  $("#conv-btn").hidden = !ok;
 }
-function micOn(on) { document.querySelectorAll(".mic").forEach((b) => b.classList.toggle("on", on)); }
+function micOn(on) { document.querySelectorAll(".mic:not(#conv-btn)").forEach((b) => b.classList.toggle("on", on)); }
 async function talkStart(fromCore) {
   if (!V || V.pressed || V.wakeTurn) return;
   V.unlock();
@@ -2309,7 +2323,8 @@ function onVoiceEvent(ev) {
   }
   if (VD && (ev.type === "error" || ev.type === "mic_error")) dictateDone();
   if (ev.type === "stopped") { if (VS.voiced && !V.pressed && !V.wakeTurn) { cutTurn(); endVoice(); } return; }  // a new question, maybe on another screen
-  if (ev.type === "wake") { wakeTurnStart(); return; }  // (its listening sound is the "I heard you")
+  if (ev.type === "converse") { showConverse(ev); return; }
+  if (ev.type === "wake") { wakeTurnStart(ev); return; }  // (its listening sound is the "I heard you")
   if (ev.type === "ended") { VW?.cancel(); VW = null; setState("thinking"); return; }  // the brain heard the pause
   if (ev.type === "mic_stalled") { renderWakeDot(); return; }
   if (ev.type === "wake_on" || ev.type === "wake_off") { renderWakeDot(); if (ev.type === "wake_off" && WAY() === "wake_word") voiceNote(ev.why); return; }
@@ -2352,7 +2367,19 @@ import("/web/voice.js").then((m) => {
   } });
   if (S.status) V.setStatus(S.status.voice);
 }).catch((e) => console.warn(`hub: no voice (${e.message})`));
-document.querySelectorAll(".mic").forEach((b) => {
+// conversation mode (quick job 68): the same button starts and ends it; the brain says when it changes
+$("#conv-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!V) return; V.unlock(); SFX.blip(); V.converse(!V.conversing); });
+function showConverse(ev) {
+  const on = !!ev.on;
+  $("#conv-btn").setAttribute("aria-pressed", String(on));
+  $("#conv-sign").hidden = !on;
+  if (on) return;
+  if (VW) { VW.cancel(); VW = null; }
+  if (V?.wakeTurn) V.cancel();
+  if (VS.voiced && !VS.turn) endVoice();
+  if (ev.why && !/button/.test(ev.why)) voiceNote(`The conversation ended: ${ev.why}.`);
+}
+document.querySelectorAll(".mic:not(#conv-btn)").forEach((b) => {
   b.addEventListener("pointerdown", (e) => {
     e.preventDefault(); e.stopPropagation();
     if (WAY() === "dictation") { if (VD) dictateStop(false); else dictateStart(b.id === "mic"); return; }  // a tap
@@ -3053,6 +3080,7 @@ addEventListener("keydown", (e) => {
   if ($("#ignite")) { startKey(e); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
   if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
+  if (e.key === "Escape" && V?.conversing) { V.converse(false); }  // Esc ends a conversation too
   if (e.key === "Escape" && V && (V.pressed || V.wakeTurn || V.speaking())) { if (V.pressed || V.wakeTurn) { VW?.cancel(); VW = null; V.cancel(); endVoice(); } else V.stopSpeaking(); return; }
   // hold Space to talk (where there's a mic button), unless you're typing something
   const ae = document.activeElement, emptyLine = (ae.id === "quick" || ae.id === "ask") && !ae.value;
