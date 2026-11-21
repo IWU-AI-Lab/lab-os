@@ -52,6 +52,34 @@ You answer questions. Your tools are what you can do now: you can't move the rob
 except with a tool made for it.
 Answer in plain text without markdown, in one to four short sentences unless asked for more."""
 
+# Harder questions to a stronger model (quick job 69): the quick model calls this tool, the brain
+# asks the `strong` setup of models.yaml, and the quick model says the result
+THINK = "think_hard"
+STRONG_SETUP = "strong"
+THINK_QUIET_S = 120.0  # the strong model thinks before it writes: no data for this long is fine
+THINK_TOOL = {
+    "type": "function",
+    "function": {
+        "name": THINK,
+        "description": (
+            "Ask a stronger, slower model. Use it for a hard question only: maths or a "
+            "calculation, a plan with several steps, or a hard question not about the lab. Never "
+            "for a simple or lab question. Give the whole problem, with every number. Then say "
+            "its answer in your own words, briefly, for speaking aloud."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"problem": {"type": "string", "description": "the whole problem"}},
+            "required": ["problem"],
+        },
+    },
+}
+THINK_SYSTEM = (
+    "Solve the problem carefully. Then give the answer first, in at most 4 short sentences "
+    "that can be spoken aloud: no tables, no markdown, no LaTeX; numbers written plainly."
+)
+THINK_SAY = "Let me think about that. "
+
 OPEN_PAGE = "open_page"
 PAGE_RULES = """\
 You can open pages on this screen, the one the person is talking to (open_page): {pages}.
@@ -163,6 +191,42 @@ class Conversation:
         """The setup that would answer now (follows `fallback` when a key is missing)."""
         self._refresh()
         return pick(self.setup_name, self._setups())
+
+    def strong_setup(self) -> Setup | None:
+        """The stronger model for hard questions (models.yaml → `strong`), if it's set up here and
+        isn't the setup that answers anyway."""
+        try:
+            strong = pick(STRONG_SETUP, self._setups())
+            quick = self.setup()
+        except NoSetup:
+            return None
+        same = (strong.base_url, strong.model, strong.options)
+        return None if same == (quick.base_url, quick.model, quick.options) else strong
+
+    async def _think_hard(self, strong: Setup, arguments: str) -> str:
+        """Ask the stronger model; its answer for the quick model to say. Its cost goes in the
+        spend log under its own setup (quick job 69)."""
+        try:
+            problem = str(json.loads(arguments or "{}").get("problem") or "").strip()
+        except (ValueError, AttributeError):
+            problem = ""
+        if not problem:
+            return "Error: give the whole problem in `problem`."
+        sent = [{"role": "system", "content": THINK_SYSTEM}, {"role": "user", "content": problem}]
+        reply, text = Reply(), ""
+        try:
+            async for piece in stream_chat(
+                self._session_(), strong, sent, reply, None, quiet_s=THINK_QUIET_S
+            ):
+                text += piece
+        except AiError as e:
+            return f"Error: the stronger model didn't answer ({e}). Answer as well as you can."
+        finally:
+            usage = reply.usage if reply.usage.tokens_in else estimate(sent, text)
+            cost = strong.cost(usage.tokens_in, usage.tokens_out, usage.tokens_cached)
+            self.spend.write(strong.name, strong.model, usage, cost)
+            log.info("chat: think_hard by %s/%s = $%.5f", strong.name, strong.model, cost)
+        return f"The stronger model's answer: {text.strip()}\nSay it in your own words, briefly."
 
     def paused(self) -> str | None:
         """Why the chat can't answer right now (a full sentence), or None."""
@@ -344,6 +408,9 @@ class Conversation:
             sent[-1] = {"role": "user", "content": f"{text}\n\n({ANSWER_IN.format(name=name)})"}
         answer, usage = "", Usage()
         tools = await self.tools.openai_tools() if self.tools else []
+        strong = self.strong_setup()
+        if strong:
+            tools = [*tools, THINK_TOOL]
         if pages:
             tools = [*tools, page_tool(pages)]
         actions = self.actions.tools(local) if self.actions else []
@@ -393,7 +460,13 @@ class Conversation:
                 only_pages = True
                 for call in reply.tool_calls:
                     yield {"type": "tool", "name": call.name}
-                    if call.name == OPEN_PAGE and pages:
+                    if call.name == THINK and strong:
+                        only_pages = False
+                        if not answer:  # said at once, while the stronger model thinks
+                            answer += THINK_SAY
+                            yield {"type": "text", "text": THINK_SAY}
+                        result = await self._think_hard(strong, call.arguments)
+                    elif call.name == OPEN_PAGE and pages:
                         page = _page_arg(call.arguments, pages)
                         if page:
                             yield {"type": "open", "page": page, "title": pages[page]}
