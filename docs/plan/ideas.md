@@ -44,6 +44,13 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-21)
+
+### Faster AI arm control (fewer, bigger model calls)
+- **What:** the AI's arm moves are slow because each small move is one round trip to a frontier model (seconds each; on 2026-11-12 it took 10 moves to reach the cube). Recent work (2026) splits the slow model from a fast local loop: the model decides only at decision points and calls bigger skills ([ChunkAct](https://arxiv.org/abs/2610.18874): 2.9× fewer model calls, in simulation); prompt caching cuts the wait before the first word ([CSR](https://arxiv.org/abs/2605.07325)); a small trained policy (VLA, for example SmolVLA) runs the motion itself with the model as the planner. **Recommended first step:** a `run_plan` tool that takes several steps at once (poses, `move_to`, the gripper, `pick_at`) and runs them in the brain without asking the model between steps, plus prompt caching for the hub's assistant. The VLA way later, with the recording and training page.
+- **Why:** smoother, faster arm control from the AI (the builder, 2026-11-21).
+- **Plugs into:** the robot tools (`lab_os.tools`), the hub's assistant.
+
 ## Recent ideas (2026-11-20)
 
 ### For the builder's design review

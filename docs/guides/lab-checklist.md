@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order for the next lab days.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 6 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order.** This weekend, on your laptop: part L. Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -30,6 +30,35 @@ You need no ruler. Measure with these:
 
 ---
 
+## L. On your laptop, at home (60 min)
+These steps need no lab: the fake arm, the laptop's own microphone and camera, and the OpenAI key in the laptop's `.env`. Use Chrome. Do them before the lab days; then the lab days are shorter.
+```bash
+cd ~/lab-os
+git switch main && git pull
+uv sync
+uv run pytest -q
+uv run lab-os serve --arm fake
+```
+Open http://localhost:8080/design in Chrome and allow the microphone. "The desktop" in a step means the laptop here.
+- **L.1** Read the last line that `pytest` shows. → copy the line.
+- **L.2** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
+- **L.3** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
+- **L.4** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Monitor**. → did each open in its own window? (yes / no)
+- **L.5** Quick job 66. On the desktop's Teleop, press **Controls**. → does it show the mode and the keys? (yes / no) Select **Desktop control**. → is the button's text short ("Desktop control on")? (yes / no)
+- **L.6** Quick job 46. Open ⚙ → This Device → Assistant Language. Set **Answers** to English. Type `¿Qué hora es?` and send it. Then type `Wie spät ist es?`. → were both answers in English? (yes / no)
+- **L.7** Set **Expects** to English. Say "Hey Jarvis, test" five times. → did the word "test" show in Latin letters every time? (yes / no) If no, copy the terminal's line that starts with `voice: question on`.
+- **L.8** Quick job 57. Ask "Hey Jarvis, tell me about the lab's robots". While it answers aloud, say "Hey Jarvis, what time is it?". → did the first answer stop at once? (yes / no) Did it answer the new question? (yes / no)
+- **L.9** Ask a question by voice. While the core thinks, hold the mic and ask "what's next?". → did it answer only the new question? (yes / no)
+- **L.10** Quick job 47. Ask 5 questions by voice, one after the other. → did the voice sound like the same person every time? (yes / no) If no, copy the terminal's lines that start with `voice: answer on`.
+- **L.11** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
+- **L.12** Quick job 69. Say "Hey Jarvis, calculate 37 times 48, then add 199". → did it say "Let me think about that" first? (yes / no) Was the answer 1975? (yes / no) Open the AI Spend details. → is there a line for "strong"? (yes / no)
+- **L.13** Quick job 55. Set ⚙ → Assistant → Who It Is to **Lab Assistant**, and This Device → Assistant Language to Any and Any. Ask 5 short questions by voice ("Hi", "What's next?", "Thanks"). → were all the answers in English? (yes / no) If no, copy the terminal's lines that start with `voice: question on`. Set Who It Is back to **JARVIS**.
+- **L.14** Open `http://localhost:8080/` in a normal Chrome tab. Tap to start, so that it is full screen. Press Ctrl+C in the terminal. → did the page leave full screen? (yes / no) Did it close, or show a card with a **Close** button? (closed / card) If a card: press Close. → what happened? (closed / it said Cmd+W)
+
+Also on the laptop, if you like: part W, steps W.2 to W.9, with the laptop's camera instead of the C615 (skip W.9 if you are alone). Then do only W.1 and W.10 to W.15 in the lab.
+
+---
+
 ## 0. Update (5 min)
 ```bash
 cd ~/lab-os
@@ -39,24 +68,16 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 
-## V. The wake word and the greeting (40 min)
+## V. The wake word and the greeting (25 min)
 Quick job 42. The cause of the stops was not found on the Mac. The brain's terminal now says when it ignores "hey Jarvis", and why. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. Keep the brain's terminal in view.
 - **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, copy the terminal's last lines that start with `voice:`.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, copy the `ignored:` line from the terminal.
 - **V.5** Each time during the day that the wake word does not answer: copy the terminal's `voice:` lines from that minute into the report. → how many times did it stop today? (a number)
-- **V.6** Quick job 57. Ask "Hey Jarvis, tell me about the lab's robots". While it answers aloud, say "Hey Jarvis, what time is it?". → did the first answer stop at once? (yes / no) Did it answer the new question? (yes / no)
-- **V.7** Ask a question by voice. While the core thinks, hold the mic and ask "what's next?". → did it answer only the new question? (yes / no)
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
-- **V.9** Quick job 46. Open ⚙ → This Device → Assistant Language. Set **Answers** to English. Type `¿Qué hora es?` and send it. Then type `Wie spät ist es?`. → were both answers in English? (yes / no)
-- **V.10** Set **Expects** to English. Say "Hey Jarvis, test" five times. → did the word "test" show in Latin letters every time? (yes / no) If no, copy the terminal's line that starts with `voice: question on`.
-- **V.11** Quick job 47. Ask 5 questions by voice, one after the other. → did the voice sound like the same person every time? (yes / no) If no, copy the terminal's lines that start with `voice: answer on`.
 - **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Copy the terminal's line that ends with `answers`.
-- **V.13** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
 - **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
-- **V.15** Quick job 69. Say "Hey Jarvis, calculate 37 times 48, then add 199". → did it say "Let me think about that" first? (yes / no) Was the answer 1975? (yes / no) Open the AI Spend details. → is there a line for "strong"? (yes / no)
-- **V.16** Quick job 55. Set ⚙ → Assistant → Who It Is to **Lab Assistant**, and This Device → Assistant Language to Any and Any. Ask 5 short questions by voice ("Hi", "What's next?", "Thanks"). → were all the answers in English? (yes / no) If no, copy the terminal's lines that start with `voice: question on`.
 
 ---
 
@@ -196,7 +217,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 - **H.8** Quick job 77. Start the brain again with the command above. Open AI Control (`/ai`) on the desktop. Ask "move the arm to ready", then "move the arm to the hand-over pose". → does AI Control show each move as arrived, not "short"? (yes / no: copy the line that says short)
 
-## I. The icon, one hub window and full screen (40 min)
+## I. The icon, one hub window and full screen (30 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.
 - **I.1** Tap **Start lab-os**. If the browser asks for the microphone, allow it. → did one hub window open? (yes / no)
 - **I.2** Click the brain's terminal, so that it covers the hub. Tap **Start lab-os** again. → did the hub come to the front? (yes / no) Did a second hub window open? (yes / no)
@@ -209,11 +230,7 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.9** On the other monitor, press **Window** in Monitor's bar. → is Monitor a window now? (yes / no) Close it. Open it on the other monitor again, as in I.8. → does it open as a window? (yes / no)
 - **I.10** Quick job 65. On the Newline (touch), press and hold the core for 2 seconds. Then press and hold a module button. → did a browser menu open? (yes / no) Press and hold a word in the ask line. → can you select it and paste? (yes / no)
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
-- **I.12** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
-- **I.13** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
-- **I.14** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Monitor**. → did each open in its own window? (yes / no)
 - **I.15** Quick job 54. Connect the Newline by HDMI and its USB touch cable, and the other monitor too. Follow `docs/guides/hub.md` → "The Newline's touch with a second monitor". → what did `echo $XDG_SESSION_TYPE` say? (x11 / wayland) Did each touch in the four corners land under your finger? (yes / no)
-- **I.16** On the Mac (or any computer), run `uv run lab-os serve --arm fake` and open `http://localhost:8080/` in your normal browser. Tap to start, so that it is full screen. Press Ctrl+C in the terminal. → did the page leave full screen? (yes / no) Did it close, or show a card with a **Close** button? (closed / card) If a card: press Close. → what happened? (closed / it said Cmd+W)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
 Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.
@@ -232,7 +249,6 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.4** Plug in the USB microphone. → does the mic button show next to "Ask anything" within 5 seconds? (yes / no) Unplug it. → does the button go? (yes / no) Plug it in again. Wait 5 seconds. → is the button back? (yes / no)
 - **U.5** Unplug the Quest's USB cable, then plug it in again. Do not run `adb reverse`. In the Quest's browser, open `http://localhost:8080/xr`. → does the page load? (yes / no)
 - **U.6** Quick job 76. Open Teleop on the desktop's hub and on the Newline (Open on…). On the desktop, select **Desktop control** and move the arm with a key. → on the Newline, are the Teleop buttons grey, with a line that says the page on desk has control? (yes / no) On the desktop, press the \` key to leave desktop control. → can you press the Newline's buttons again? (yes / no)
-- **U.7** Quick job 66. On the desktop's Teleop, press **Controls**. → does it show the mode and the keys? (yes / no) Select **Desktop control**. → is the button's text short ("Desktop control on")? (yes / no)
 - **U.8** In the Quest, open the hub in VR, then **Teleop**. Hold the grip, then press **A**. → does the panel say "Stopped", with "Let go of the grip, then grab again" under it? (yes / no) Let go of the grip. → does the panel change to "Holding" at once, without a new grab? (yes / no)
 - **U.9** Quick job 60. Open the hub in VR (the Quest on its USB cable). → is the hub easy to read, and does all of it still fit when you turn your head a little? (yes / no) Point at ⚙ (beside ⏻) and pull the trigger. → does Settings open, with This Device first? (yes / no)
 - **U.10** In Settings → This Device, switch **Sound** off, then on again. → does the line at the bottom say "Saved"? (yes / no) Press **B**. → does Settings close? (yes / no)
