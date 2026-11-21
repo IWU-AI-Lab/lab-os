@@ -210,6 +210,7 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.13** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
 - **I.14** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Performance Test**. → did each open in its own window? (yes / no)
 - **I.15** Quick job 54. Connect the Newline by HDMI and its USB touch cable, and the other monitor too. Follow `docs/guides/hub.md` → "The Newline's touch with a second monitor". → what did `echo $XDG_SESSION_TYPE` say? (x11 / wayland) Did each touch in the four corners land under your finger? (yes / no)
+- **I.16** On the Mac (or any computer), run `uv run lab-os serve --arm fake` and open `http://localhost:8080/` in your normal browser. Tap to start, so that it is full screen. Press Ctrl+C in the terminal. → did the page leave full screen? (yes / no) Did it close, or show a card with a **Close** button? (closed / card) If a card: press Close. → what happened? (closed / it said Cmd+W)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
 Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.

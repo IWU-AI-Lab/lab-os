@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-21 — Shut down didn't close the hub on the Mac (`uv run lab-os serve`)
+**What:** the builder opened the hub in a normal browser tab on the Mac and shut down: the window stayed, full screen, with "lab-os is off". A browser lets a page close only a window that a script opened (Chrome also a tab with one page in its history, as a tab that a command line opened). lab-os can close its own app window ("Start lab-os"), but no tab that a person opened, on any device.
+**Fix:** every page now leaves full screen at once (a page may do that without a press) and tries to close; a page that is still open shows only a small card with a big Close button, which says Cmd+W / Ctrl+W when the browser keeps the tab. Checked in headless Chrome: a script-opened window and a one-page tab closed; a tab with history showed the card.
+
 ### 2026-11-20 — A fresh copy of lab-os couldn't save a device's settings
 **What:** quick job 60 (in a new `git worktree`): the first "This Device" setting failed with "No such file or directory: …/config/local/hub-devices.tmp". `config/local/` is not in git, and the brain wrote the file without making the folder. The lab desktop has the folder, so nobody saw it there.
 **Fix:** `hub_devices.DeviceSettings` makes the folder on the first save.
