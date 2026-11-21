@@ -762,7 +762,8 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .fs-why[hidden] { display: none; }
 /* a module page can go to another monitor of this computer */
 #module .send { position: absolute; right: 4.2rem; top: 0.8rem; display: none; align-items: center; gap: 0.5rem; height: 2.6rem; padding: 0 0.9rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
-body[data-mod="page"] #module .send { display: flex; }
+/* "Open on…" for every view (2026-11-21): a page, a details page, the conversation */
+body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body[data-mod="chat"] #module .send { display: flex; }
 #module .send:hover, #module .send:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 #module .send[aria-expanded="true"] { border-color: var(--c); color: var(--hot); }
 /* "open on…" (step 8): the other devices with the hub open. On the left: the module pages keep STOP at the
@@ -3181,6 +3182,24 @@ function setQuality(q) {
   if (q === "minimal") drawStillGrid();
   if (q !== "maximal") $("#verses").innerHTML = "";
 }
+// Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
+// (webcam teleop, a module that isn't a button) opens in the module frame like the others
+const VIEW_ICONS = { webcam: "i-cam", settings: "i-gear" };
+function setViews(views) {
+  for (const v of views) {
+    if (!v.page || v.id === "xr" || S.page[v.id]) continue;
+    S.page[v.id] = v.page;
+    MODULES[v.id] ||= [v.title, VIEW_ICONS[v.id] || "i-test", "page"];
+  }
+}
+// the button or callout that opens a view, or (none on this screen) a stand-in in the middle to unfold from
+function viewEl(id) {
+  const el = document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`)
+    || (id === "system" ? $("#devsys") : null);
+  if (el && el.offsetParent) return el;
+  const box = { left: innerWidth / 2 - 60, right: innerWidth / 2 + 60, top: innerHeight / 2 - 30, bottom: innerHeight / 2 + 30 };
+  return { dataset: DETAILS[id] ? { detail: id } : { module: id }, getBoundingClientRect: () => box };
+}
 // the buttons: the theme's hub.modules, in order; a page module only if the brain has its page (/api/hub)
 function setModules(themeIds, pages) {
   S.page.settings = "/settings";
@@ -3199,6 +3218,7 @@ async function init() {
   $("#brand").textContent = S.title; $("#boot-title").textContent = S.title;
   if (hub?.reset_after_s) S.resetAfterMs = hub.reset_after_s * 1000;
   setModules(t?.hub?.modules, hub?.modules || []);
+  setViews(hub?.views || []);
   await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
 }
 // a setting changed (the settings page inside the hub, or another window): apply it without a reload
@@ -3511,18 +3531,18 @@ async function sendToScreen(id, say) {
 /* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
 function closeOpenOn() { $("#open-on").hidden = true; $("#mod-send").setAttribute("aria-expanded", "false"); }
 function fillMenu() {
-  const id = S.moduleId;
+  const id = S.showing;  // any view: a page, a details page, the conversation (2026-11-21)
   DM.fillOpenOn($("#open-on"), D, id, {
-    title: MODULES[id]?.[0],
-    onSent: () => setTimeout(() => S.moduleId === id && closeModule(), 900),  // it lives there now
-    extra: [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }],
+    title: (MODULES[id] || DETAILS[id] || (id === "chat" ? ["The Conversation"] : [id]))[0],
+    onSent: () => setTimeout(() => S.showing === id && closeModule(), 900),  // it lives there now
+    extra: S.page[id] ? [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }] : [],
   });
 }
 $("#mod-send").addEventListener("click", (e) => {
   e.stopPropagation();
-  if (!S.moduleId || !S.page[S.moduleId]) return;
+  if (!S.showing) return;
   if (!$("#open-on").hidden) return closeOpenOn();
-  if (!D) return sendToScreen(S.moduleId, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
+  if (!D) return S.page[S.showing] && sendToScreen(S.showing, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
   SFX.blip(); fillMenu();
   $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
 });
@@ -3530,7 +3550,12 @@ $("#open-on").addEventListener("click", (e) => e.stopPropagation());
 // a module sent from another device: shown at once, even from the start screen (that device has the hub open,
 // so it's there for this; no startup, no new conversation); a module already open here gives way
 function openHere(id, sentFrom) {
-  if (!S.page[id] || id === "settings") return D?.update();
+  if (id === "xr") {  // only a headset's browser shows the VR hub
+    if (!$("#xr-btn").hidden) location.href = "/xr";
+    else voiceNote("This screen can't show the VR hub: it needs a VR headset's browser.");
+    return D?.update();
+  }
+  if (!(S.page[id] && MODULES[id]) && !DETAILS[id] && id !== "chat") return D?.update();
   if (!S.booted) {
     $("#ignite")?.remove(); body.classList.remove("waiting"); S.igniteAt = S.igniteAt || 1; S.reveal = 1e9;
     document.querySelectorAll(".panel").forEach((p) => p.classList.add("hold"));
@@ -3541,8 +3566,7 @@ function openHere(id, sentFrom) {
   const go = () => {
     if (S.moduleOpen) return setTimeout(go, 120);
     S.sentFrom = sentFrom; hideDevice();
-    const btn = document.querySelector(`#mods [data-module="${id}"]`);
-    if (btn) openModule(btn);
+    if (id === "chat") openChat(); else openModule(viewEl(id));
     S.lastInput = performance.now();  // someone wants this on screen: no reset right away
   };
   if (S.moduleOpen) closeModule();
@@ -3563,11 +3587,11 @@ import("/web/device.js").then((m) => {
     look: "design",
     state: () => ({
       stage: S.booted ? "hub" : "start",
-      showing: S.moduleOpen === "page" && !S.closing ? S.moduleId : null,
+      showing: S.moduleOpen && !S.closing ? S.showing : null,  // a page, a details page or the conversation
       from: S.sentFrom?.from || "", from_window: S.sentFrom?.from_window || "",
     }),
     onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
-    onClose: () => { if (S.moduleOpen === "page") closeModule(); },
+    onClose: () => { if (S.moduleOpen) closeModule(); },
     onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),

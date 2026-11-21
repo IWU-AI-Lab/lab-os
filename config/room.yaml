@@ -2,9 +2,17 @@
 # room", press ⚙ → The Lab → Set Up the Room, or run `uv run lab-os room`, and each page opens on
 # its device, as with "Open on…". A device that doesn't have the hub open is skipped and named.
 #
-# Each line: a device's name (the ?device= in its hub's address) and a page:
-#   core      the hub itself (whatever it shows closes)
-#   teleop, monitor, ai, training   a module (the buttons around the core: ⚙ → The Lab)
+# Each line: a device's name (the ?device= in its hub's address) and a page (since 2026-11-21 every
+# view opens on a device):
+#   core                              the hub itself (whatever it shows closes)
+#   teleop, monitor, ai, training     the module pages
+#   webcam                            webcam teleop
+#   project, spend, commits, devices  a panel's details page (Current Project, AI Spend, …)
+#   system                            the system diagram
+#   chat                              the conversation
+#   settings                          the settings (they change only on the brain's computer)
+#   xr                                the VR hub (only on a headset's browser)
+# The details pages, the system diagram and the conversation need the designed hub on that device.
 # Change it here (or in local/room.yaml, the place's own copy), then set up the room again.
 #
 # The recommended layout (docs/plan/current-focus.md → item 10; the names from lab check M.1):
@@ -15,5 +23,5 @@ layout:
   pi-1: teleop      # with STOP
   pi-2: monitor
   pi-3: ai
-# Not yet pages that open on a device: the system diagram (the projector), the cameras, the webcam
-# teleop, Commits, AI Spend. The Quest opens the VR hub itself (/xr).
+  projector: system # the classroom projector (name its computer's hub "projector")
+  ubuntu-2: spend   # another useful page: commits, webcam, …

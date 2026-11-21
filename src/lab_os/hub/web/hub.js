@@ -360,8 +360,14 @@ const device = connectDevice({
 // a module sent from another device: shown at once, even from the start screen (that device has the hub
 // open, so it's there for this); a module already open here gives way
 function openHere(id, sentFrom) {
-  const m = S.modules.find((x) => x.id === id);
-  if (!m) return device.update();
+  // any view with a page opens in the module frame; the designed hub's own views (details, the system
+  // diagram, the conversation) and the VR hub aren't on the plain hub: it says so
+  const v = (S.views || []).find((x) => x.id === id);
+  const m = S.modules.find((x) => x.id === id) || (v?.page && v.id !== "xr" ? v : null);
+  if (!m) {
+    if (v) showError(`${v.title} isn't on the plain hub: open the designed hub on this screen to see it.`);
+    return device.update();
+  }
   if (S.screen !== "hub") start(true);
   closeModule();
   openModule(m, sentFrom);
@@ -1137,6 +1143,7 @@ async function boot() {
   document.title = title;
   $("#brand").textContent = title;
   S.modules = cfg?.modules || [];
+  S.views = cfg?.views || []; // every view that opens on a device (2026-11-21)
   if (cfg?.reset_after_s) S.resetAfterMs = cfg.reset_after_s * 1000;
   renderMods();
   renderStart();

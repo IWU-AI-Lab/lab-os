@@ -118,7 +118,7 @@ async def test_open_on_refuses_what_it_cant_do(aiohttp_client):
     desk, _ = await page(client, "desk")
     for body, words in (
         ({"module": "monitor", "device": "newline"}, "doesn't have the hub open"),
-        ({"module": "nonsense", "device": "desk"}, "isn't one of the hub's modules"),
+        ({"module": "nonsense", "device": "desk"}, "isn't a page that opens on a device"),
         ({"module": "monitor", "device": "Not A Name"}, "isn't a device name"),
     ):
         r = await client.post("/api/hub-devices/open", json=body)
@@ -475,3 +475,26 @@ def test_device_settings_save_without_a_local_folder(tmp_path):
     store = DeviceSettings(lambda: tmp_path / "local" / "hub-devices.yaml")
     store.update("quest-a", {"sound": False})
     assert (tmp_path / "local" / "hub-devices.yaml").exists()
+
+
+async def test_every_view_opens_on_a_device(aiohttp_client):
+    """The builder, 2026-11-21: "all the pages should be able to open on a device": not only the
+    module buttons, also webcam teleop, the details pages, the system diagram, the conversation."""
+    from lab_os.hub.server import DEVICE_VIEWS
+
+    client = await aiohttp_client(make_app())
+    views = {v["id"]: v for v in (await (await client.get("/api/hub")).json())["views"]}
+    assert {"webcam", "spend", "commits", "project", "devices", "system", "chat", "xr"} <= set(
+        views
+    )
+    assert views["webcam"]["page"] == "/webcam" and views["spend"]["page"] == ""
+    newline, welcome = await page(client, "newline")
+    for view in ("spend", "system", "webcam", "chat"):
+        ask = {"module": view, "device": "newline", "window": welcome["window"]}
+        r = await (await client.post("/api/hub-devices/open", json=ask)).json()
+        assert r["ok"] and DEVICE_VIEWS[view][0] in r["message"], view
+        assert (await next_of(newline, "open"))["module"] == view
+    await newline.close()
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert "function viewEl(id)" in design and "setViews(hub?.views" in design
+    assert "S.views" in (SRC / "hub" / "web" / "hub.js").read_text()
