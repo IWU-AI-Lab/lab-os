@@ -235,7 +235,15 @@ async def _file(request: web.Request, name: str) -> web.FileResponse:
     return web.FileResponse(HUB_WEB_DIR / name)
 
 
+def _headset_start(request: web.Request) -> bool:
+    """A Quest opening the hub gets the start page first (Enter VR, Enter AR, or the hub in the
+    browser: the builder, 2026-11-21). `?flat=1` is the hub in the browser, chosen there."""
+    return "OculusBrowser" in request.headers.get("User-Agent", "") and "flat" not in request.query
+
+
 async def hub_page(request: web.Request) -> web.FileResponse:
+    if _headset_start(request):
+        return await _file(request, "xr.html")
     look = str((load_theme().get("hub") or {}).get("look") or "plain")
     if look not in LOOKS:
         log.warning("theme hub.look: %r isn't one of %s; showing plain", look, ", ".join(LOOKS))
@@ -243,7 +251,32 @@ async def hub_page(request: web.Request) -> web.FileResponse:
     return await _file(request, LOOKS[look])
 
 
+async def web_manifest(request: web.Request) -> web.Response:
+    """The hub as an app (the builder, 2026-11-21): the Quest's browser (and Chrome) can install
+    it with its own icon, so nobody types the address in the headset. It opens the hub (in a
+    Quest: the start page). The theme's colours."""
+    colors = load_theme().get("colors") or {}
+    bg = colors.get("background", "#05080b")
+    body = {
+        "name": "Lab hub",
+        "short_name": "Lab hub",
+        "description": "The lab's hub: VR, AR, teleop and the assistant.",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "background_color": bg,
+        "theme_color": bg,
+        "icons": [
+            {"src": f"/hub/media/icon-{n}.png", "sizes": f"{n}x{n}", "type": "image/png"}
+            for n in (192, 512)
+        ],
+    }
+    return web.json_response(body, content_type="application/manifest+json")
+
+
 async def design_page(request: web.Request) -> web.FileResponse:
+    if _headset_start(request):
+        return await _file(request, "xr.html")
     return await _file(request, LOOKS["design"])
 
 
@@ -1311,6 +1344,7 @@ def create_brain_app(
     app.router.add_get("/ai", ai_page)
     app.router.add_get("/training", training_page)
     app.router.add_get("/xr", xr_page)
+    app.router.add_get("/manifest.webmanifest", web_manifest)
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
     app.router.add_post("/api/green/stop", api_green_stop)

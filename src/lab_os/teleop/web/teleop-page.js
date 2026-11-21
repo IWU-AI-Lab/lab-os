@@ -94,7 +94,16 @@ function fmt(c) {
 }
 
 let lastReadout = 0;
-const sourceButtons = { xr: $("enter"), desktop: $("desktop") };
+const sourceButtons = { xr: $("enter"), ar: $("enter-ar"), desktop: $("desktop") };
+if (!sourceButtons.ar) delete sourceButtons.ar; // the classic page has one XR button
+// In a headset there's no keyboard to drive with: Desktop control can't be chosen there (the builder,
+// 2026-11-21); the Quest's way in is Enter VR or Enter AR.
+if (/OculusBrowser/.test(navigator.userAgent)) {
+  const d = $("desktop");
+  d.dataset.unavailable = "1";
+  d.disabled = true;
+  d.title = "Desktop control is for a computer with a keyboard. In the headset, use Enter VR or Enter AR.";
+}
 
 const ui = {
   active: null,

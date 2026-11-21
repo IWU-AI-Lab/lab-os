@@ -172,7 +172,7 @@ class Show {
     this.hub.ask.V?.off();
     this.sfx.close?.();
   }
-  /** B or Y: back (closes an open page or module; in Teleop only B, Y is teleop's). */
+  /** B or Y: back (closes an open page or module). */
   back(now, key) { if (this.phase === "hub") this.hub.back(now, key); }
 
   startJump(now) {
@@ -315,10 +315,6 @@ class Show {
     this.pointer.setTargets(P === "hub" ? [...this.hub.targets(), this.exit.mesh] : []);
     camera.getWorldPosition(this.hub.cameraPos ||= new THREE.Vector3());
     this.stage.worldToLocal(this.hub.cameraPos);
-    // teleop's own room replaces the far layer while it's open
-    const teleop = this.hub.module?.id === "teleop";
-    this.net.group.visible = !teleop;
-    if (teleop) this.stars.visible = false;
     this.hub.step(dt, now, P === "hub" ? this.pointer.all() : []);
   }
 
@@ -395,18 +391,14 @@ const FWD = new THREE.Vector3();
 const backWas = {};
 function xrPointers(show, frame, r, now) {
   const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" || !!show.off; // off: Exit on the card
-  const teleop = on && !show.off && show.hub.module?.id === "teleop";
-  // Teleop open: its own session reads the controllers and drives the arm; only the right ray can
-  // reach the tab (Back), with no beam in the way (its trigger or pinch only grips while the clutch is held)
-  if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
   for (const src of frame.session.inputSources) {
     const key = src.handedness;
     if (key !== "left" && key !== "right") continue;
     const pose = src.targetRaySpace && frame.getPose(src.targetRaySpace, ref);
-    if (!pose || !on || (teleop && key === "left")) { show.pointer.hide(key); continue; }
+    if (!pose || !on) { show.pointer.hide(key); continue; }
     const p = pose.transform.position, o = pose.transform.orientation;
     FWD.set(0, 0, -1).applyQuaternion(new THREE.Quaternion(o.x, o.y, o.z, o.w));
-    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), !teleop);
+    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), true);
     const b = !!src.gamepad?.buttons[5]?.pressed; // B (right) / Y (left)
     if (b && !backWas[key]) show.back(now, key);
     backWas[key] = b;
@@ -421,11 +413,12 @@ function makeRenderer(ar) {
   renderer.setClearColor(BG, ar ? 0 : 1);
   return renderer;
 }
-async function start(mode) {
+async function start(mode, { atHub = false } = {}) {
   const ar = mode === "immersive-ar" || params.has("passthrough"), show = new Show(ar); // ?preview&passthrough: the AR way, see-through (quick job 10)
   window.__xrShow = show; // for tests and the console
   window.__xrNow = clockNow;
   show.hub.ask.now = clockNow;
+  show.hub.onTeleop = () => openTeleop(show, mode); // Teleop: the teleop page, out of VR
   await Promise.all([loadFacts(show), loadFonts(), loadIcons()]);
   show.title.text = show.facts.title;
   await pollPanels(show);
@@ -510,27 +503,59 @@ async function start(mode) {
     if (show.phase === "hub" && show.hub.mode === "hub" && show.pointer.hitOf(key)?.what.kind === "ask") { holds.add(key); show.hub.ask.pressStart(clockNow()); }
   });
   session.addEventListener("selectend", (e) => { if (holds.delete(e.inputSource.handedness)) show.hub.ask.pressEnd(); });
-  session.addEventListener("select", (e) => {
-    const key = e.inputSource.handedness;
-    if (show.hub.module?.id === "teleop" && key === "left") return; // the left hand is teleop's clutch
-    show.press(clockNow(), show.pointer.hitOf(key));
+  session.addEventListener("select", (e) => show.press(clockNow(), show.pointer.hitOf(e.inputSource.handedness)));
+  session.addEventListener("end", () => {
+    r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2);
+    if (!show.toTeleop) $("#msg").textContent = "Left VR. Press a button to go back in.";
   });
-  session.addEventListener("end", () => { r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2); $("#msg").textContent = "Left VR. Press a button to go back in."; });
+  if (atHub) show.finishBoot(); // back from Teleop: straight to the hub, no startup
   r.setAnimationLoop(frame);
+}
+
+/* ---------- Teleop from the hub in VR or AR (the builder, 2026-11-21): the session ends and the teleop page
+   opens over this one, where you choose relative or 1:1 (and more), then its own Enter VR or AR. Back
+   returns to the hub in the same mode, straight to the hub. On a screen (the preview) it opens the same. ---- */
+function openTeleop(show, mode) {
+  show.toTeleop = true;
+  if (mode !== "screen") renderer?.xr.getSession()?.end().catch(() => {});
+  const box = $("#teleop"), frame = document.createElement("iframe");
+  const device = new URLSearchParams(location.search).get("device");
+  frame.src = `/teleop${device ? `?device=${encodeURIComponent(device)}` : ""}`;
+  frame.title = "Teleop";
+  frame.allow = "xr-spatial-tracking; fullscreen"; // its own Enter VR and Enter AR
+  box.querySelector("iframe")?.remove();
+  box.append(frame);
+  box.hidden = false;
+  $("#teleop-back").textContent = mode === "immersive-ar" ? "Back to the hub in AR" : mode === "immersive-vr" ? "Back to the hub in VR" : "Back to the hub";
+  $("#teleop-back").onclick = () => { // a click: it may start a VR or AR session again
+    frame.remove(); // the page's link closes: the arm freezes, control is free (dead-man)
+    box.hidden = true;
+    show.toTeleop = false;
+    if (mode !== "screen") start(mode, { atHub: true }).catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
+  };
 }
 
 async function init() {
   const vr = $("#vr"), ar = $("#ar");
+  const device = params.get("device");
+  $("#flat").href = `/?flat=1${device ? `&device=${encodeURIComponent(device)}` : ""}`; // the hub in the browser
+  getJSON("/api/hub").then((h) => h?.title && ($("#place").textContent = h.title));
   const preview = document.createElement("button");
   preview.className = "btn"; preview.type = "button"; preview.textContent = "Preview on this screen";
   preview.onclick = () => start("screen").catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
-  vr.after(preview);
   const can = async (m) => !!navigator.xr && (await navigator.xr.isSessionSupported(m).catch(() => false));
   const [hasVR, hasAR] = await Promise.all([can("immersive-vr"), can("immersive-ar")]);
   vr.disabled = !hasVR;
-  vr.textContent = hasVR ? "Enter VR" : "No VR on this device";
+  vr.querySelector(".label").textContent = hasVR ? "Enter VR" : "No VR here";
   ar.hidden = !hasAR;
-  if (!hasVR && !hasAR) $("#msg").textContent = "Open this page in the Quest's browser: http://localhost:8080/xr (with adb reverse, docs/guides/quest-setup.md). Here you can watch it on the screen.";
+  const headset = /OculusBrowser/.test(navigator.userAgent);
+  if (!hasVR && !hasAR && headset && !window.isSecureContext) {
+    // over Wi-Fi the address isn't "secure", and the browser offers no VR there (GOTCHAS 2026-10-24)
+    $("#msg").textContent = `VR needs a secure address. In the Quest's browser, open chrome://flags, find "Insecure origins treated as secure", add ${location.origin}, select Enabled, then Relaunch. Over a USB cable, http://localhost:8080 works as it is.`;
+  } else if (!hasVR && !hasAR) {
+    $(".actions").append(preview); // a computer: watch it here
+    $("#msg").textContent = "On a computer: watch it with Preview on this screen. In the Quest, open the hub's address in its browser.";
+  }
   const go = (m) => () => start(m).catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
   vr.onclick = go("immersive-vr");
   ar.onclick = go("immersive-ar");

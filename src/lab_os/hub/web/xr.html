@@ -3,46 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hub in VR</title>
-  <link rel="icon" href="data:,">
+  <title>Lab hub</title>
+  <link rel="icon" href="/hub/media/icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/web/design/kit.css">
   <script type="importmap">
     { "imports": { "three": "/web/vendor/three/three.module.js",
                    "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
   </script>
   <style>
-    main.one { display: grid; gap: 1rem; max-width: 40rem; width: 100%; margin: 0 auto; padding: 1rem; }
-    .actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
-    .hint, #msg { font: var(--w-lines) 0.9rem/1.5 var(--f-lines); color: var(--text-dim); margin: 0.5rem 0 0; }
+    /* The start page in a headset (the builder, 2026-11-21): three choices in the middle, nothing else. */
+    .start { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 0.9rem; padding: 1.5rem; text-align: center; }
+    .start .brand { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.6rem; font: 700 1.2rem/1 var(--f-title); letter-spacing: 0.18em; text-transform: uppercase; color: var(--hot); }
+    .start .brand .ico { color: var(--c); font-size: 1.5rem; }
+    .choice { --cut: 0.7rem; width: min(24rem, 86vw); display: grid; gap: 0.25rem; padding: 1rem 1.4rem; cursor: pointer; text-align: left;
+      font: 600 1.25rem/1.2 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--hot);
+      background: color-mix(in srgb, var(--c) 14%, transparent); border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+      clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+    .choice small { font: var(--w-lines) 0.95rem/1.3 var(--f-lines); letter-spacing: 0; text-transform: none; color: var(--text-dim); }
+    .choice:hover:not(:disabled), .choice:focus-visible { background: color-mix(in srgb, var(--c) 30%, transparent); outline: none; }
+    .choice:disabled { cursor: default; opacity: 0.45; }
+    .flat { margin-top: 0.4rem; font: var(--w-lines) 1rem/1.4 var(--f-lines); color: var(--c); }
+    .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+    .actions:empty { display: none; }
+    #msg { max-width: 30rem; margin: 0; font: var(--w-lines) 0.92rem/1.5 var(--f-lines); color: var(--text-dim); }
+    #msg:empty { display: none; }
+    /* Teleop from the hub in VR or AR: the teleop page over this one (leave VR, choose, enter again) */
+    #teleop { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg); }
+    #teleop[hidden] { display: none; }
+    #teleop header { display: flex; align-items: center; gap: 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); }
+    #teleop header b { font: 700 1rem/1 var(--f-title); letter-spacing: 0.18em; text-transform: uppercase; color: var(--hot); }
+    #teleop iframe { width: 100%; height: 100%; border: 0; background: transparent; }
   </style>
 </head>
 <!--
-  The hub, immersive, for the Quest's browser: the designed hub's startup around you (the ignition, the
-  hyperspace jump, the core assembling, the checks, the place's name and the brain's greeting), then the
-  network surrounds you and the core floats in front. Same look, timings and sounds as the designed hub
-  (/theme.json); the core shows the assistant's real state (/api/status). Watch-only: it drives nothing.
-  Code: xr-hub.js and xr/. ?slow=10 plays it ten times slower (silent), to look at each moment.
+  The start page in a headset, and the hub in VR or AR (xr-hub.js and xr/). A Quest that opens the hub
+  (/ or /design) gets this page first: Enter VR, Enter AR, or the hub in the browser (?flat=1). VR and AR
+  play the designed hub's startup around you, then the hub (watch-only: it drives nothing). Teleop there
+  leaves VR and opens the teleop page over this one (relative or 1:1, then its own Enter VR or AR); Back
+  returns to the hub in VR or AR. On a computer: "Preview on this screen". ?slow=10: ten times slower.
 -->
 <body class="xr">
-<div class="page">
-  <header class="bar">
-    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-headset"/></svg><span>Hub in VR</span></div>
-    <span class="place"></span>
-    <span class="grow"></span>
-    <span class="clock"></span>
-  </header>
-  <main class="one">
-    <section class="card"><div class="in">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-headset"/></svg>The startup, around you</h2>
-      <p class="hint">Put the headset on and press a button below. Then pull the trigger (or pinch) to start; again to skip the startup. To leave, point at <b>EXIT</b> under the hub and pull the trigger, or use the Quest's menu button.</p>
-      <div class="actions">
-        <button id="vr" class="btn primary" type="button" disabled>Checking…</button>
-        <button id="ar" class="btn" type="button" hidden>Enter AR (your room)</button>
-      </div>
-      <p id="msg" aria-live="polite"></p>
-    </div></section>
-  </main>
-</div>
+<main class="start">
+  <div class="brand"><svg class="ico"><use href="/web/design/icons.svg#i-headset"/></svg><span id="place">Lab hub</span></div>
+  <button id="vr" class="choice" type="button" disabled><span class="label">Checking…</span><small>The hub all around you</small></button>
+  <button id="ar" class="choice" type="button" hidden><span class="label">Enter AR</span><small>The hub in your room</small></button>
+  <a id="flat" class="flat" href="/?flat=1">Use the hub in the browser instead</a>
+  <div class="actions"></div>
+  <p id="msg" aria-live="polite"></p>
+</main>
+<section id="teleop" hidden aria-label="Teleop">
+  <header><button id="teleop-back" class="btn" type="button">Back to the hub</button><b>Teleop</b></header>
+</section>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module" src="/hub/xr-hub.js"></script>
 </body>
