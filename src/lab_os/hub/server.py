@@ -138,6 +138,22 @@ PAGES = (
     ("/settings", "Settings", "This page: ⚙ on the hub."),
 )
 
+# Every view that "Open on…" and the room's layout can show on a device (the builder, 2026-11-21:
+# "all the pages should be able to open on a device"): id → (title, its page's address, or "" for a
+# view of the designed hub itself: a details page, the system diagram, the conversation)
+DEVICE_VIEWS = {
+    **{mid: (title, page) for mid, (title, page) in MODULES.items()},
+    "webcam": ("Webcam Teleop", "/webcam"),
+    "settings": ("Settings", "/settings"),
+    "project": ("Current Project", ""),
+    "spend": ("AI Spend", ""),
+    "commits": ("Commits", ""),
+    "devices": ("Devices", ""),
+    "system": ("System Diagram", ""),
+    "chat": ("The Conversation", ""),
+    "xr": ("VR Hub", "/xr"),  # only on a headset's browser
+}
+
 DEFAULT_RESET_AFTER_S = 1800.0
 MAX_COMMIT_DAYS = 90
 MAX_QUESTION_CHARS = 2000
@@ -954,6 +970,7 @@ async def api_hub(request: web.Request) -> web.Response:
             "modules": hub_modules(theme),
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
             "pages": [{"path": p, "title": t, "line": line} for p, t, line in PAGES],
+            "views": [{"id": v, "title": t, "page": pg} for v, (t, pg) in DEVICE_VIEWS.items()],
         }
     )
 
@@ -1332,7 +1349,7 @@ def create_brain_app(
     )
     app[WAVES] = set()
     app[HUB_DEVICES] = HubDevices(
-        lambda: {m["id"]: m["title"] for m in hub_modules(load_theme())}, device_settings
+        lambda: {vid: title for vid, (title, _) in DEVICE_VIEWS.items()}, device_settings
     )
     app[QUEST_VIEW] = quest_view or QuestView()
     app[RESTART] = {"asked": False}

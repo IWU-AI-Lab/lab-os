@@ -272,7 +272,9 @@ class HubDevices:
         when the sender has to pick a monitor; raises DeviceError when it can't."""
         titles = self.modules()
         if module not in titles:
-            raise DeviceError(f"{module!r} isn't one of the hub's modules ({', '.join(titles)})")
+            raise DeviceError(
+                f"{module!r} isn't a page that opens on a device ({', '.join(titles)})"
+            )
         device = clean_name(device)
         wins = [w for w in self.of(device) if w.id != sender_window]
         if not wins:
