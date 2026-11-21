@@ -280,7 +280,8 @@ async def test_only_from_the_brains_own_screen(hub, monkeypatch):
     monkeypatch.setattr(hub_server, "is_local", lambda request: False)
     script.extend([("tool", START), ("words", "I can't from here.")])
     await ask(client, "it's demo time")
-    assert START not in offered(seen[0]) and len(seen) == 1  # not offered: a call is ignored
+    assert START not in offered(seen[0])  # not offered: a call is refused
+    assert len(seen) == 1 or "isn't a tool you have" in tool_result(seen[1])
     assert (await (await client.get("/api/status")).json())["visitors"] is None
     assert (await client.post("/api/venue", json={"to": "visitors"})).status == 403
 
