@@ -28,10 +28,8 @@ async def test_pages_answer(aiohttp_client):
     client = await aiohttp_client(make_app())
     for path in (
         "/",
-        "/perf",
         "/hub/hub.js",
         "/hub/hub.css",
-        "/hub/perf.js",
         "/teleop",
         "/monitor",
         "/web/theme.js",

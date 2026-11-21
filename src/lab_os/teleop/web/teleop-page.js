@@ -48,7 +48,7 @@ link.on("status", (s) => {
   $("speed").textContent = `${Math.round(s.speed_scale * 100)}%`;
   // the slider goes up to the venue's cap; it follows the arm's speed unless it's being dragged
   const sp = $("speed-set");
-  if (!sp) return; // the classic page (/classic/teleop) has no speed slider
+  if (!sp) return; // a page without the speed slider
   sp.disabled = false;
   sp.max = Math.round((s.max_speed_scale ?? 1) * 100);
   if (document.activeElement !== sp) sp.value = Math.round(s.speed_scale * 100);
@@ -56,7 +56,7 @@ link.on("status", (s) => {
 // Two arms at once (preview 3): the left controller's arm, next to the right one's state.
 link.on("status", (s) => {
   const l = s.left_arm;
-  if (!$("left-chip")) return; // the classic page (/classic/teleop) has no left-arm chip
+  if (!$("left-chip")) return; // a page without the left-arm chip
   $("left-chip").hidden = !l;
   $("two-arms-hint").hidden = !l;
   $("arm-label").textContent = l ? "Right arm" : "Arm";

@@ -16,7 +16,8 @@ DESIGN = SRC / "hub" / "web" / "design.html"
 
 async def test_each_look_has_its_address_and_the_theme_picks_slash(aiohttp_client, monkeypatch):
     client = await aiohttp_client(make_app())
-    plain = await (await client.get("/plain")).text()
+    assert (await client.get("/plain")).status == 404  # removed 2026-11-20: / shows it
+    plain = await (await client.get("/")).text()
     design = await (await client.get("/design")).text()
     assert "hub.js" in plain and "/web/vendor/fonts/fonts.css" in design
     assert await (await client.get("/")).text() == plain  # the repo's theme: hub.look: plain
