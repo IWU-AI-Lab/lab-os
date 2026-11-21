@@ -40,7 +40,6 @@ def sheet(cell_cm: float) -> Image.Image:
     right = w - margin
     title_font = ImageFont.load_default(size=px(1.0))
     text = ImageFont.load_default(size=px(0.46))
-    d.text((margin, px(1.1)), "LAB JARVIS", font=text, fill=line)
     d.text((margin, px(1.75)), "Tic-Tac-Toe", font=title_font, fill=ink)
     y = px(3.2)
     d.line([(margin, y), (right - cut, y), (right, y - cut)], fill=line, width=px(0.04))
