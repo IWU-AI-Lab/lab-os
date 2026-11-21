@@ -121,8 +121,31 @@ export function toArmFrame(c, yaw, base = new THREE.Vector3()) {
   return { ...c, pos: pos.toArray(), quat: quat.toArray() };
 }
 
+// The teleop page's options for the headset (the builder, 2026-11-21: chosen on the page, before entering)
+export const STYLE_KEY = "lab-os.xr-arm-style"; // "" (full model) or "stick"; ?xrarm= in the address wins
+function armStyle() {
+  const fromUrl = new URLSearchParams(location.search).get("xrarm");
+  if (fromUrl) return fromUrl;
+  try { return localStorage.getItem(STYLE_KEY) || undefined; } catch { return undefined; }
+}
+function initOptions() {
+  const style = document.getElementById("xr-style"), reset = document.getElementById("xr-place-reset");
+  if (style) {
+    style.value = armStyle() || "";
+    style.onchange = () => { try { localStorage.setItem(STYLE_KEY, style.value); } catch { /* private window */ } };
+  }
+  if (reset) {
+    reset.onclick = () => {
+      try { localStorage.removeItem(PLACE_KEY); localStorage.removeItem(LEFT_PLACE_KEY); } catch { /* nothing kept */ }
+      reset.textContent = "Put back: it starts at its first place";
+    };
+  }
+}
+
 export async function initXR(link, ui) {
+  initOptions();
   const button = document.getElementById("enter");
+  const arButton = document.getElementById("enter-ar"); // the teleop page: Enter VR and Enter AR side by side
   const unavailable = (text, hint) => {
     button.textContent = text;
     button.dataset.unavailable = "1";
@@ -135,9 +158,26 @@ export async function initXR(link, ui) {
       "On the Quest, open http://localhost:8080 (docs/guides/quest-setup.md). On a desktop, use Desktop control below, or the Immersive Web Emulator extension.",
     );
   }
+  const hasAR = await navigator.xr.isSessionSupported("immersive-ar").catch(() => false);
+  const hasVR = await navigator.xr.isSessionSupported("immersive-vr").catch(() => false);
+  if (arButton) { // each button does what it says (the builder, 2026-11-21)
+    if (!hasVR && !hasAR) return unavailable("No immersive XR on this device");
+    arButton.hidden = !hasAR;
+    arButton.disabled = false;
+    arButton.onclick = () => start("immersive-ar", link, ui);
+    if (hasVR) {
+      button.textContent = "Enter VR";
+      button.dataset.unavailable = "";
+      button.disabled = false;
+      button.onclick = () => start("immersive-vr", link, ui);
+    } else {
+      button.hidden = true;
+    }
+    return;
+  }
   let mode = null;
-  if (await navigator.xr.isSessionSupported("immersive-ar")) mode = "immersive-ar";
-  else if (await navigator.xr.isSessionSupported("immersive-vr")) mode = "immersive-vr";
+  if (hasAR) mode = "immersive-ar";
+  else if (hasVR) mode = "immersive-vr";
   if (!mode) return unavailable("No immersive XR on this device");
 
   button.textContent = mode === "immersive-ar" ? "Enter AR (passthrough)" : "Enter VR";
@@ -166,8 +206,8 @@ async function start(mode, link, ui) {
   }
   renderer.setClearColor(0x000000, ar ? 0 : 1); // transparent in AR = passthrough
   renderer.xr.setReferenceSpaceType(refType);
-  // ?xrarm=stick on the page URL = light arm model in the headset (testing, or if frames drop)
-  const style = new URLSearchParams(location.search).get("xrarm") || undefined;
+  // the page's "3D arm in the headset" (or ?xrarm=stick in the address): the light model if frames drop
+  const style = armStyle();
   const tele = new TeleopSession(link, { ar, style, refType });
   const camera = new THREE.PerspectiveCamera(70, 1, 0.01, 50); // replaced by the headset's cameras
   await renderer.xr.setSession(session);

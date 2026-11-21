@@ -5,8 +5,8 @@
 // bottom left; the screen frame (cut corners, tabs, notches) around it all; thin traces from the core
 // up to the strip and down to the log. Module buttons (xr/modules.js) between the core and the
 // callouts, alternating left and right in the theme's order (hub.modules), traces running to them:
-// Teleop opens the arm scene without leaving VR; Monitor and AI Control their holograms; Back (or B)
-// closes them and the hub comes back.
+// Teleop leaves VR for the teleop page (its options, then its own Enter VR or AR; Back returns here);
+// Monitor and AI Control open their holograms; Back (or B) closes them and the hub comes back.
 // Pointing and pressing (xr/pointer.js): a callout opens its details page (it unfolds from the callout,
 // the core docks in its corner, Back closes it); its own controls work (7d / 14d / 30d, List all, a
 // device opens its card).
@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
 import { Ask } from "./ask.js";
-import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, TeleopModule, VR_MODULES } from "./modules.js";
+import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 import { SettingsPage } from "./settings.js";
 
@@ -275,41 +275,33 @@ export class HubView {
   /** A module opens: the hub steps back, the module's view comes forward, the core docks small. */
   async openModule(id, now) {
     if (this.module) return;
+    // Teleop: the teleop page, out of VR (relative or 1:1 and the rest, then its own Enter VR or AR; the
+    // builder, 2026-11-21). The page around this scene does it (xr-hub.js openTeleop).
+    if (id === "teleop") { this.sfx.blip(); this.onTeleop?.(); return; }
     this.sfx.blip(); this.sfx.open();
     this.mode = "module";
     this.card.show(null);
     this.tab.title = VR_MODULES[id][0]; this.tab.ico = VR_MODULES[id][1];
-    let view;
-    if (id === "teleop") {
-      view = this.views.teleop ||= new TeleopModule({ ar: this.ar, refType: this.refType });
-      this.module = { id, view, at: now };
-      const scene = await view.open();
-      if (this.module?.view !== view) return view.close(); // closed meanwhile
-      this.module.scene = scene;
-      this.scene.add(scene);
-    } else {
-      view = this.views[id] ||= new ArmHologram(id);
-      view.group.position.set(0, -0.62, -1.55);
-      this.group.parent.add(view.group);
-      view.open(now);
-      this.module = { id, view, at: now };
-    }
+    const view = this.views[id] ||= new ArmHologram(id);
+    view.group.position.set(0, -0.62, -1.55);
+    this.group.parent.add(view.group);
+    view.open(now);
+    this.module = { id, view, at: now };
   }
   closeModule(now) {
     const m = this.module;
     if (!m) return;
     this.module = null;
     this.mode = "hub";
-    if (m.scene) this.scene.remove(m.scene);
     if (m.view.group) m.view.group.parent?.remove(m.view.group);
     m.view.close();
     this.sfx.close();
     this.t0 = Math.min(this.t0, (now ?? 0) - 5000); // the hub comes straight back
   }
-  /** B (or Y, but not while teleop uses Y) closes what's open. */
+  /** B or Y closes what's open. */
   back(now, key) {
     if (this.menu.mesh.visible) return this.closeMenu();
-    if (this.mode === "module") { if (!(this.module.id === "teleop" && key === "left")) this.closeModule(now); }
+    if (this.mode === "module") this.closeModule(now);
     else if (this.mode === "settings") this.closeSettings(now);
     else this.closeDetails(now);
   }
