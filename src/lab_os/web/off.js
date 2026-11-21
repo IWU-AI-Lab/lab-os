@@ -3,7 +3,8 @@
 // and /ws/hub-device, docs/dev/protocol.md). Each page then leaves full screen and tries to close itself. A
 // browser closes only a window that a script opened ("Open on…" → another monitor); lab-os's own hub window
 // (the "Start lab-os" icon) is closed by the brain. Any other page (a tab you opened yourself, on any device)
-// can't close, so it shows only a small card with a big Close button, out of full screen, so nobody is stuck.
+// doesn't close itself (in VS Code's browser that left an empty view, 2026-11-21): it leaves full screen and
+// shows only a small card that says how to close the tab, so nobody is stuck.
 // Once the brain answers again, the page reloads by itself (the builder, 2026-11-21: screens like the
 // Newline come back without a tap). "Restart Now" keeps full screen and says it's restarting.
 //
@@ -43,8 +44,13 @@ function leaveFullScreen() {
   (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
 }
 
+// Only a window that a script opened ("Open on…" → another monitor) closes itself. Elsewhere a close does
+// nothing, or worse: in VS Code's browser it left an empty view that wouldn't close (the builder, 2026-11-21).
+const closable = () => !!window.opener && window.top === window;
 function tryClose() {
-  try { window.close(); } catch { /* not allowed here */ }
+  if (closable()) {
+    try { window.close(); } catch { /* not allowed here */ }
+  }
 }
 
 /** Cover this page: lab-os is off (or restarting). */
@@ -65,7 +71,7 @@ export function showOff(msg = {}) {
   const who = msg.from ? ` from ${msg.from}` : "";
   box.innerHTML = `<div class="box">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v8"/><path d="M7.2 6.5a7 7 0 1 0 9.6 0"/></svg>
-    <h1></h1><p class="when"></p>${restarting ? "" : '<button type="button">Close</button>'}<p class="how"></p><p class="back"></p>
+    <h1></h1><p class="when"></p>${restarting || !closable() ? "" : '<button type="button">Close</button>'}<p class="how"></p><p class="back"></p>
   </div>`;
   box.querySelector("h1").textContent = restarting ? "lab-os is restarting" : "lab-os is off";
   box.querySelector(".when").textContent = `${restarting ? "Restarted" : "Shut down"}${who} at ${hhmm(msg.time_ms)}.`;
@@ -73,6 +79,7 @@ export function showOff(msg = {}) {
     ? "It starts again by itself in a few seconds, and this page comes back then."
     : "This page comes back by itself when lab-os runs again.";
   const how = box.querySelector(".how");
+  if (!restarting && !closable()) how.textContent = `You can close this tab (${mac ? "Cmd+W" : "Ctrl+W"}).`;
   if (!restarting && browserFull()) how.textContent = `Press ${mac ? "Ctrl+Cmd+F" : "F11"} to leave full screen.`;
   box.querySelector("button")?.addEventListener("click", () => {
     tryClose();
