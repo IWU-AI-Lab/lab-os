@@ -68,6 +68,11 @@ SHORT_DEG = 4.0
 PICK_ABOVE_CM = 6.0  # pick_at: the hover point is this far above the object's top
 PICK_OFF_CM = 1.5  # pick_at: a step that ends further off than this ends the pick
 PICK_HEIGHT_CM = (0.5, 8.0)  # objects pick_at takes (cm tall)
+# pick_at closes the jaws this far below the object's top, but never below the floor: as deep as
+# the jaws can go without the gripper's body touching the top (it is ~10 cm from the jaw tips on
+# the SO-101's model; 4 cm keeps clear). Half the height (before quick job 51) held a 3 cm cube
+# with the jaw tips only, the elbow's ~3° sag lifting them more (lab check 3b.5).
+PICK_JAW_DEPTH_CM = 4.0
 # Closed on nothing, the real so101-white read 7.8 % open (GOTCHAS 2026-11-12): more than this
 # after the lift = holding something. A guess between that and a 2.5 cm cube; lab check part 3.
 PICK_HELD_PCT = 15.0
@@ -720,7 +725,8 @@ class RobotTools:
         arm: str | None = None,
     ) -> dict:
         """Pick up the object standing at (x, y) on the table: open, go above it pointing
-        straight down, go straight down to half its height, close, lift. Every point is checked
+        straight down, go straight down as deep as the jaws reach (PICK_JAW_DEPTH_CM below its
+        top, never below the floor), close, lift. Every point is checked
         before anything moves; each step is logged (and shown on AI Control) before it moves."""
         self._check_can_move(arm)
         if not self.kin:
@@ -732,7 +738,7 @@ class RobotTools:
                 f"height_cm {height_cm:g}: pick_at takes objects {lo_h:g}–{hi_h:g} cm tall"
             )
         above = (x_cm, y_cm, height_cm + PICK_ABOVE_CM)
-        grip = (x_cm, y_cm, max(height_cm / 2, self.limits.min_z_cm))
+        grip = (x_cm, y_cm, max(height_cm - PICK_JAW_DEPTH_CM, self.limits.min_z_cm))
         current = self.arm.read_joints()
         (tx, ty, tz), _ = self.kin.fk(current)
         here = (tx * 100, ty * 100, tz * 100)

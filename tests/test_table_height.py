@@ -81,7 +81,9 @@ async def test_move_to_and_the_floor_are_from_the_table():
         task.cancel()
 
 
-async def test_pick_at_grips_at_half_the_height_from_the_table():
+async def test_pick_at_grips_from_the_table():
+    """The grip height is measured from the table (quick job 28): as deep as the jaws reach
+    (quick job 51: 4 cm below the top), never below the floor, here -0.5 cm."""
     tools, task = await rig(min_z_cm=-0.5)
     try:
         for _ in range(4):
@@ -91,7 +93,7 @@ async def test_pick_at_grips_at_half_the_height_from_the_table():
     finally:
         task.cancel()
     downs = [e for e in tools.calls.entries[n:] if e["tool"] == "move_to"]
-    assert downs[1]["args"]["z_cm"] == pytest.approx(1.5)  # the cube's middle, from the table
+    assert downs[1]["args"]["z_cm"] == pytest.approx(-0.5)  # the floor: 3 - 4 cm is below it
 
 
 def test_teleop_floor_in_the_arms_own_heights():
