@@ -413,3 +413,11 @@ def test_pages_choose_full_screen_or_a_window():
     assert "lab-os.window:" in kit and 'brainWindow("fullscreen")' in kit and "Window`" in kit
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert "wasFull" in design and 'brainWindow("fullscreen")' in design
+
+
+def test_device_settings_save_without_a_local_folder(tmp_path):
+    """Quick job 60 found it: in a fresh copy of lab-os there's no config/local/ yet, and the first
+    device setting failed ("No such file or directory"). The folder is made on the first save."""
+    store = DeviceSettings(lambda: tmp_path / "local" / "hub-devices.yaml")
+    store.update("quest-a", {"sound": False})
+    assert (tmp_path / "local" / "hub-devices.yaml").exists()

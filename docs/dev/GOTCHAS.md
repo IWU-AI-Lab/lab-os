@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-20 — A fresh copy of lab-os couldn't save a device's settings
+**What:** quick job 60 (in a new `git worktree`): the first "This Device" setting failed with "No such file or directory: …/config/local/hub-devices.tmp". `config/local/` is not in git, and the brain wrote the file without making the folder. The lab desktop has the folder, so nobody saw it there.
+**Fix:** `hub_devices.DeviceSettings` makes the folder on the first save.
+
 ### 2026-11-20 — A settings file broken by hand gave "500 Internal Server Error" and an empty ⚙ (quick job 45)
 **What:** lab check F.14: a change to Top Speed showed `500 Internal Server Error`, no "Saved", and Restart Now did nothing; after ⚙ was opened again, the page was empty until the brain restarted. Probably a config file made invalid by hand: the settings page's writer (ruamel) raised its own error, which nothing caught, and the reader had no way to say which file.
 **Fix:** a file that can't be read gives one sentence with the file and the line (`config.broken_yaml`), at the top of ⚙ and for a change; nothing on the settings endpoints answers with a bare error number. A restart that doesn't come back in 45 s says to look at the terminal.
