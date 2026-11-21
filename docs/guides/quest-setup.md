@@ -96,7 +96,7 @@ Do this in each session:
 uv run lab-os serve                    # the brain, with the fake arm
 ```
 The brain runs `adb reverse tcp:8080 tcp:8080` by itself each time the Quest connects by USB (it looks every 3 seconds). `lab-os-teleop serve` does not: with it, run that command yourself, again after each new connection of the cable.
-In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor` must follow. If the page has a problem in the Quest's browser, use the old page: `http://localhost:8080/classic/teleop`.
+In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor` must follow.
 
 Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
 

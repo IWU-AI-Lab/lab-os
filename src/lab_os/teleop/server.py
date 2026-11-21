@@ -5,7 +5,6 @@ GET /teleop      the XR input page (Quest browser or a desktop browser + WebXR e
 GET /webcam      webcam teleop (preview 2): a bare hand in front of a webcam, same input as the
                  Quest's bare hands (docs/guides/webcam-teleop.md)
 GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
-GET /classic/teleop, /classic/monitor   the plain versions of both (before the design, 2026-11-10)
 GET /static/...  the teleop pages' own scripts
 GET /web/...     web files every page shares (vendored libraries, theme.js): src/lab_os/web/
 GET /models/...  robot models (URDF + meshes) for the 3D view
@@ -81,14 +80,6 @@ async def _page(name: str) -> web.FileResponse:
 
 async def index(_request: web.Request) -> web.FileResponse:
     return await _page("index.html")
-
-
-async def classic_teleop(_request: web.Request) -> web.FileResponse:
-    return await _page("classic/index.html")
-
-
-async def classic_monitor(_request: web.Request) -> web.FileResponse:
-    return await _page("classic/monitor.html")
 
 
 async def webcam(_request: web.Request) -> web.FileResponse:
@@ -325,8 +316,6 @@ def create_app(
     app.router.add_get("/teleop", index)
     app.router.add_get("/monitor", monitor)
     app.router.add_get("/webcam", webcam)
-    app.router.add_get("/classic/teleop", classic_teleop)  # the plain pages, kept in case
-    app.router.add_get("/classic/monitor", classic_monitor)
     app.router.add_get("/theme.json", theme)
     app.router.add_get("/ws", websocket)
     app.router.add_static("/static", WEB_DIR)

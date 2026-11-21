@@ -23,7 +23,7 @@ This page lists the features that work today, and some lab robot projects that a
 | **Named devices** (`/?device=desk`): the brain lists the devices with the hub open (each monitor is a window) and keeps each device's settings under its name. Pages connect again by themselves when the brain restarts. | ✅ | Tried with headless browser pages as devices. Lab: checklist part 11. |
 | **Open on…:** a module opens on another device's hub (the free monitor, or it asks which). Back there or **Bring it back** here closes it. Only devices with the hub open are listed. | ✅ | Both looks. Desk and Newline in the lab: checklist part 11. |
 | One tap for each device: "Start lab-os" on the brain's computer (`lab-os icon`), a "Lab hub" icon for other computers (⚙ → This Device), a home-screen icon on the Newline. A second tap on "Start lab-os" brings its one hub window to the front (2026-11-20). | 🧪 | Linux icons; macOS and Windows get the command. Bring to front: tested with headless Chrome on the Mac; lab check part I. |
-| Drawing resolution for each screen (`?res=`) and levels of detail (`?quality=`) for slow screens | ✅ | The hub on the Newline: checklist part 2 (`/perf` there: 44 to 59 frames a second). |
+| Drawing resolution for each screen (`?res=`) and levels of detail (`?quality=`) for slow screens | ✅ | The hub on the Newline: checklist part 2. |
 | A Full screen button on every page; Esc = Back without leaving full screen (Chrome, Edge) | ✅ | |
 | A card swipe on the designed hub's start screen starts it, with its own unlock and sound; only a plain number (a student ID), never stored, logged or sent (2026-11-20, quick job 79) | 🧪 | Typed card data in headless Chrome; lab check I.11. |
 | The room's layout (`room.yaml`): "Hey Jarvis, set up the room", ⚙ → Set Up the Room or `lab-os room` open each page on its device; a device not connected is skipped and named (2026-11-20, quick job 71) | 🧪 | Tested with fake hub pages; lab check M.4. |
@@ -32,7 +32,6 @@ This page lists the features that work today, and some lab robot projects that a
 | Back to the start screen after 30 minutes with nobody there (never while something is in use) | ✅ | |
 | A module on another monitor of the brain's computer (Open on… → Another monitor of this computer). Since 2026-11-20 (quick job 74), in lab-os's own window both pages stay full screen; module pages have a **Window** button too. | 🧪 | Uses Chrome's Window Management API; full screen without a press through the browser's DevTools (tested in headless Chrome); lab check I.7 to I.9. |
 | Other computers on the network can watch; only the brain's computer drives (`--drive-from <host>` lets one more computer drive) | ✅ | Tried with `pi01`, a second lab desktop and the Newline (its STOP stopped the arm). |
-| Performance test page (`/perf`) | ✅ | The Newline's own Chrome: 44 frames a second with 3000 stars, 59 with 1000 (2026-11-13). |
 
 ## Talking to it (typed chat, voice and personas)
 `docs/dev/chat.md`, `docs/guides/voice.md`, `docs/dev/personas.md`
@@ -71,7 +70,7 @@ This page lists the features that work today, and some lab robot projects that a
 | **What the Quest sees, on another screen** (2026-11-18): a button in the hub's strip (brain's computer) opens scrcpy's window with the headset's picture (watch only). `lab-os quest-view --install` downloads scrcpy, `--remove` deletes it. | 🟡 | Download, start and stop tried on the Mac without a headset. On the Quest: lab check F.12. |
 | Desktop control without a headset: the keyboard and trackpad act as a controller. **X** = STOP in every mode; **`** or Esc leaves desktop control. | ✅ | |
 | Record and replay controller sessions (`--record`, `lab-os-teleop replay`) | ✅ | For tests without a headset. |
-| The redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | Old pages at `/classic/…`. |
+| The redesigned teleop and monitor pages (3D on the left, controls on the right, STOP in the bar) | ✅ | The old pages were removed on 2026-11-20. |
 | **Camera pictures on Teleop** (2026-11-20, quick job 63): under the joint angles, a picture from each camera of the arm (stand, wrist), about 4 a second. The brain opens a camera only while the page is shown (closed ~5 s after), refuses one that another program has open, and the AI's `camera_snapshot` uses the open camera's newest frame. | 🟡 | Faked cameras and a faked page feed in headless Chrome. Lab: check U.11. |
 | **Control buttons only when control is possible** (2026-11-20, quick job 76): while another page or the AI tools drive the arm, or the screen may only watch, Teleop's and Webcam control's buttons that would take control are grey, and a line says who has control (the page's device name). | ✅ | Two pages in headless Chrome, and the brain's tests. Lab: check part U.6. |
 | The arm freezes on release, lost tracking, a lost connection or old input; STOP on every page | ✅ | |

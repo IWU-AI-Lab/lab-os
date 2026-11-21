@@ -1,7 +1,7 @@
 # The hub
 
 The hub is the brain's start page: a start screen, then a status strip, module buttons (Teleop, Monitor, AI Control, Training), the assistant, and panels of real project facts. It has two looks:
-- **plain** (`/plain`, and `/` by default): simple on purpose. It has the same parts and names as the approved design, without its looks.
+- **plain** (`/` by default): simple on purpose. It has the same parts and names as the approved design, without its looks.
 - **designed** (`/design`): the approved design (`docs/design/hub-concept.html`), built since 2026-11-10. This is the one that we show (below: "The designed hub").
 
 `hub.look` in `config/theme.yaml` (`plain` or `design`, or ⚙ → The Lab → The Main Address Shows) selects which look `/` shows.
@@ -15,7 +15,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | Address | What |
 |---|---|
 | `/` | the hub, in the look that `hub.look` selects. Add `#skip` to go past the start screen. |
-| `/design`, `/plain` | each look by name |
+| `/design` | the designed hub, whatever `hub.look` selects |
 | `/ai` | AI Control: what an AI tool does with the arm (below) |
 | `/settings` | the settings (also the ⚙ in the hub's strip) |
 | `/xr` | the hub in VR or AR for the Quest (`docs/guides/quest-setup.md` → "The hub in VR"). On another computer, "Preview on this screen" shows it (drag to look around, click to press). The designed hub's strip shows a headset button where VR works. |
@@ -23,8 +23,6 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/teleop` | the teleop page (the Quest opens this one with `lab-os serve`; `lab-os-teleop` shows it at `/`) |
 | `/monitor` | the arm monitor |
 | `/webcam` | teleop with a webcam (preview): your bare hand in front of a webcam drives the arm, on the brain's computer (`docs/guides/webcam-teleop.md`) |
-| `/classic/teleop`, `/classic/monitor` | the plain teleop and monitor pages from before the design, kept in case the new ones break |
-| `/perf` | the performance test (below) |
 
 **Options** (the same as `lab-os-teleop`'s):
 - `--arm` (for example `fake`, `fake-xarm1`, `so101-white`). Without `--arm`, the brain drives the SO-101s that are plugged in when it starts: one arm, or two arms as `--arm` and `--left-arm`. It never takes the green set by itself, because LeLab or a training run may need it: name it with `--arm so101-green`. With no arm plugged in, it drives the fake arm. When a plugged-in arm cannot open (another program has its port, or it has no calibration), the brain says why and drives the fake arm. When it drives the fake arm this way, it takes an SO-101 that you plug in later, with the same rules: only while nobody drives the fake arm (for 5 seconds), and the pages then show the new arm. `--arm fake` always drives the fake arm. An unplugged SO-101 or xArm freezes, every page says "disconnected", and it connects again by itself when you plug it back in.
@@ -52,7 +50,7 @@ If the plain hub leaves full screen (a swipe, holding Esc, a reload), the start 
 
 **No long-press menu:** on a touch screen, a long press on a hub page does not open the browser's menu (Inspect, Save image). In the ask line, a long press still selects text, and paste works. A mouse's right click still opens the menu.
 
-**The Full screen button** is on every page (the hubs' status strips, the bar of each module page, the classic pages, `/perf`), while the page is not full screen (also after F11, and in the window that "Start lab-os" opens). It does what tap 1 does. If the browser cannot go full screen, the button stays, and when you press it, it **says why** (also in its tooltip). The reasons: no Fullscreen API; the browser switched it off (for example a kiosk or a managed policy); a permissions policy blocks it; or the browser refuses it with its own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One file does this for every page: `src/lab_os/web/fullscreen.js`.
+**The Full screen button** is on every page (the hubs' status strips, the bar of each module page), while the page is not full screen (also after F11, and in the window that "Start lab-os" opens). It does what tap 1 does. If the browser cannot go full screen, the button stays, and when you press it, it **says why** (also in its tooltip). The reasons: no Fullscreen API; the browser switched it off (for example a kiosk or a managed policy); a permissions policy blocks it; or the browser refuses it with its own words. Then use the browser's own full screen (F11; Ctrl+Cmd+F on a Mac). One file does this for every page: `src/lab_os/web/fullscreen.js`.
 
 **Modules open inside the hub,** so the page stays full screen. **Back** or **Esc** closes them. In Chrome and Edge, Esc means Back without leaving full screen (Keyboard Lock; hold Esc to leave full screen). In Firefox (and Chromium browsers without the lock), Esc also leaves full screen; the next tap or key then goes full screen again. Leaving on purpose (F11, or Esc with nothing open) stays left. In teleop's desktop control, the first Esc leaves desktop control and the next one is Back.
 
@@ -98,7 +96,7 @@ The design's look, motion and sound, on the brain's real facts:
 - `auto` (the default): the screen's own, up to 2× (a 4K panel at 2× draws 3840×2160 pixels in each frame).
 - `1`: one per CSS pixel (a quarter of that on such a screen). `0.75`. `0.5`: a sixteenth (soft, but very light).
 - It applies to the network and hyperspace, the effects layer, the arm drawings in modules, and the 3D arm in teleop, monitor and AI Control's side view. Text, the core and the frame do not change (they are not canvases).
-- Set it for each device in ⚙ → This Device (the brain keeps it under the device's name), or in the address: `?res=` wins (also for the pages that open inside the hub). The numbers are the same as for `/perf?res=`, so a number that runs smoothly there is the one to use. The browser console says `hub: drawing at 1× (1920×1080 for 1920×1080)`.
+- Set it for each device in ⚙ → This Device (the brain keeps it under the device's name), or in the address: `?res=` wins (also for the pages that open inside the hub). The browser console says `hub: drawing at 1× (1920×1080 for 1920×1080)`.
 
 **System diagram** (2026-11-18, quick job 12): the network icon next to **List all** in the Devices panel opens it in full screen, like a details page.
 - The brain is the core in the middle. The screens are on the left (lit with the hub open, gray if listed but not open; this screen in brackets), with an AI tool (MCP) below them. The cameras and arms are on the right (lit: the arm that the brain drives), with LeLab below a borrowed arm. The AI service is above. The brain's parts are in the order that a move goes through them.
@@ -161,7 +159,6 @@ Each page opens from the hub in two taps: ⚙ → **All Pages** → **Open** (a 
 |---|---|---|
 | `/` | The Hub | The main address: the plain or the designed hub (⚙ → The Lab). |
 | `/design` | Designed Hub | The designed hub, whatever the main address shows. |
-| `/plain` | Plain Hub | The plain hub, whatever the main address shows. |
 | `/teleop` | Teleop | Drive the arm: the Quest, the desktop's keys or the joint sliders. |
 | `/monitor` | Monitor | The arm's joints and 3D view, with STOP; drives nothing. |
 | `/ai` | AI Control | What an AI tool does with the arm, live. |
@@ -169,16 +166,13 @@ Each page opens from the hub in two taps: ⚙ → **All Pages** → **Open** (a 
 | `/webcam` | Webcam Teleop | Your bare hand in front of the webcam drives the arm (preview). |
 | `/xr` | VR Hub | The hub in the headset (opens only in a VR browser). |
 | `/settings` | Settings | This page: ⚙ on the hub. |
-| `/perf` | Performance Test | Drifting dots and star streaks with frames per second. |
-| `/classic/teleop` | Classic Teleop | The first teleop page, kept in case. |
-| `/classic/monitor` | Classic Monitor | The first monitor page, kept in case. |
 
 ## The module pages (Teleop, Monitor, AI Control)
 They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub, they have no frame or title of their own. On their own screen, they have both, the place's name, the clock and a choice: **Full screen** while the page is a window, **Window** while it is full screen. Select **Window** to put several pages on one monitor. The browser keeps the choice for each page. The core page (the hub) has no **Window** button: it is always full screen.
 - **Teleop** (`/teleop`): the arm in 3D on the left, with the joint angles beside it and, under them, a picture from each camera of the arm (the stand and the wrist camera, about 4 a second). The brain opens a camera only while the page is shown, and closes it about 5 seconds after. A camera that another program has open (LeLab, a recording) shows why there is no picture. The fake arm has no cameras. On the right: how to drive it (the Quest's Enter AR or VR, Desktop control and its keys) and what the page sends. The status (brain, control, arm) and **STOP** are in the bar, always in view. While desktop control is on, its button says "Desktop control on", and "X = STOP" shows next to STOP (X stops in every mode). **Controls**, beside it, shows the mode and the keys (it opens by itself when desktop control starts). When another page drives the arm, or the AI tools do, the buttons that would take control are grey, and a line under them says who has control ("The page on desk has control. It must stop first."). A screen that may only watch says "View only". The Webcam control page does the same with its Start button.
 - **Monitor** (`/monitor`): for a screen that people watch: the arm in 3D, a gauge for each joint, STOP. It only watches; it never drives.
 - **AI Control** (`/ai`): what an AI tool (Claude Code, Codex, and others) does with the arm, live. It shows the arm from its side with its real geometry (from the arm's kinematics, in cm), and where the last `move_to` aimed. It lists each robot-tool call as it happens (ok, clipped, refused, stopped, error), with the result. It shows if the tools are on and moves are allowed, and STOP. Until the first call, it says how to connect Claude Code. It never moves anything.
-- **The old pages** stay at `/classic/teleop` and `/classic/monitor` (the same scripts, the old look), in case the new ones break somewhere (for example in the Quest's browser).
+- **The old pages** (`/classic/teleop`, `/classic/monitor`), `/plain` and the performance test `/perf` were removed on 2026-11-20 (the builder). They are in git's history before that day.
 
 ## What the Quest sees
 On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window with what the Quest on the USB cable sees, so that the room can watch. It needs scrcpy: `docs/guides/quest-view.md`.
@@ -285,13 +279,10 @@ This lasts until the cable is unplugged or you log out. To make it come back by 
 
 To undo it: on X11, unplug the cable; on Wayland, run the same `gsettings` command with `reset` instead of `set … output "[…]"`.
 
-## Performance test (`/perf`)
-It draws moving dots that link when they are near, and star streaks that speed up from the middle, in the same way as the design's network and hyperspace, in plain gray. It shows the frames per second (the last second, the average over 10 s, the slowest frame) and the canvas size. The settings (what to draw, dots per million pixels, stars, resolution) are in the address, for example `/perf?draw=net&density=90&stars=3000&res=2`, so that you can bookmark each screen's test. Run it in full screen on each screen for a minute and write down the average. 55 to 60 frames a second can carry `full`; lower numbers need `reduced` or `minimal` (DESIGN.md → "Quality levels").
-
 ## Where the code is
 - `src/lab_os/cli.py`: `lab-os serve`.
 - `src/lab_os/hub/`: `server.py` (the pages, the `/api/…` endpoints, the module list, the assistant's state, the look), `hub_devices.py` (the devices with the hub open, "Open on…", each device's settings), `launch.py` (`--open`, the "Start lab-os" icon), `visitors.py` (visitor mode), `project.py` (the Steps list), `commits.py` (`git log`: for each day, and the latest few), `internet.py` (the internet check).
-- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the plain hub), `design.html` (the designed hub), `system-diagram.js`, `ai.html` and `ai.js` (AI Control), `settings.html` and `settings.js`, `perf.html` and `perf.js`.
+- `src/lab_os/hub/web/`: `index.html`, `hub.js`, `hub.css` (the plain hub), `design.html` (the designed hub), `system-diagram.js`, `ai.html` and `ai.js` (AI Control), `settings.html` and `settings.js`.
 - `src/lab_os/settings.py`: what the settings page shows, and how it checks and writes the values.
 - `src/lab_os/teleop/web/`: `index.html` (teleop), `monitor.html`, `pages.css`, their scripts, `classic/` (the old pages).
 - `src/lab_os/web/design/`: the module pages' shared look (`kit.css`, `kit.js`, `icons.svg`).

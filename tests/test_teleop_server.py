@@ -358,4 +358,3 @@ def test_the_pages_grey_their_control_buttons():
         assert 'id="control-why"' in (web / page).read_text(), page
         js = (web / script).read_text()
         assert 'from "./control-gate.js"' in js and "device: deviceName()" in js, script
-    assert 'id="control-why"' in (web / "classic/index.html").read_text()
