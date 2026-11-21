@@ -1,5 +1,6 @@
-"""The module pages in the hub's design (teleop, monitor, AI control, settings), the settings (src/lab_os/settings.py) and what keeps the brain up when a port is
-taken. No hardware, no internet; settings are only ever written into a temporary place."""
+"""The module pages in the hub's design (teleop, monitor, AI control, settings), the settings
+(src/lab_os/settings.py) and what keeps the brain up when a port is taken. No hardware, no
+internet; settings are only ever written into a temporary place."""
 
 import asyncio
 import shutil
