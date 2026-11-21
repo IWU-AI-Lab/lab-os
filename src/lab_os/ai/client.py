@@ -91,6 +91,7 @@ async def stream_chat(
     messages: list[dict],
     reply: Reply,
     tools: list[dict] | None = None,
+    quiet_s: float = QUIET_TIMEOUT_S,
 ) -> AsyncIterator[str]:
     """Send `messages`, yield the answer's text as it arrives, and fill `reply` (text, tool calls,
     usage). Raises AiError with a sentence for the screen when the service doesn't answer."""
@@ -99,7 +100,8 @@ async def stream_chat(
     if tools:
         body["tools"] = tools
     calls: dict[int, ToolCall] = {}
-    timeout = aiohttp.ClientTimeout(sock_connect=CONNECT_TIMEOUT_S, sock_read=QUIET_TIMEOUT_S)
+    # `quiet_s`: a model that thinks before it writes is quiet for longer (quick job 69)
+    timeout = aiohttp.ClientTimeout(sock_connect=CONNECT_TIMEOUT_S, sock_read=quiet_s)
     who = setup.where or setup.name
     try:
         async with session.post(

@@ -20,6 +20,21 @@ setups:
       max_completion_tokens: 800
     fallback: backup           # no OPENAI_API_KEY in .env → use this setup instead
 
+  strong:
+    # Harder questions (quick job 69): maths, a plan, something not about the lab. The quick
+    # model calls its think_hard tool and says "Let me think about that." first; the answer is
+    # in the AI spend under "strong". The same model, made to think first (slower, more output
+    # tokens). A bigger model works too: change `model` (and its prices).
+    where: OpenAI, thinking
+    base_url: https://api.openai.com/v1
+    model: gpt-6-luna
+    key_env: OPENAI_API_KEY
+    price_per_mtok: {input: 0.10, cached_input: 0.01, output: 0.50}
+    options:
+      reasoning_effort: high
+      max_completion_tokens: 4000
+    fallback: backup           # no OpenAI key: the quick setup answers, and there's no tool
+
   backup:
     where: Gemini, free key
     base_url: https://generativelanguage.googleapis.com/v1beta/openai/

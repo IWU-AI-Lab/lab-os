@@ -478,3 +478,79 @@ def test_every_ai_spend_panel_says_estimated_and_this_brain_only():
         assert "Estimated · this computer's brain only" in (web / page).read_text(), page
     assert "This month, estimated" in (web / "design.html").read_text()
     assert "This month, estimated" in (web / "xr" / "panels.js").read_text()
+
+
+# ---------- harder questions to a stronger model (quick job 69) ----------
+
+
+def thinking_service(seen):
+    """The quick model asks think_hard once, then says the result; the strong model answers."""
+
+    async def completions(request):
+        body = await request.json()
+        seen.append(body)
+        msgs = body["messages"]
+        if body["model"] == "strong-model":
+            chunks = [{"choices": [{"index": 0, "delta": {"content": "It is 1764."}}]}]
+            end = "stop"
+        elif not any(m["role"] == "tool" for m in msgs) and any(
+            t["function"]["name"] == "think_hard" for t in body.get("tools", [])
+        ):
+            call = {"index": 0, "id": "c1", "type": "function"}
+            call["function"] = {"name": "think_hard", "arguments": '{"problem": "42 squared"}'}
+            chunks = [{"choices": [{"index": 0, "delta": {"tool_calls": [call]}}]}]
+            end = "tool_calls"
+        else:
+            chunks = [
+                {"choices": [{"index": 0, "delta": {"content": "Forty-two squared is 1764."}}]}
+            ]
+            end = "stop"
+        chunks.append({"choices": [{"index": 0, "delta": {}, "finish_reason": end}]})
+        chunks.append({"choices": [], "usage": {"prompt_tokens": 100, "completion_tokens": 10}})
+        resp = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        for c in chunks:
+            await resp.write(f"data: {json.dumps(c)}\n\n".encode())
+        await resp.write(b"data: [DONE]\n\n")
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/v1/chat/completions", completions)
+    return app
+
+
+async def test_a_hard_question_goes_to_the_stronger_model(aiohttp_server, tmp_path, monkeypatch):
+    monkeypatch.setenv("LAB_TEST_KEY", "test-key")
+    seen = []
+    server = await aiohttp_server(thinking_service(seen))
+    quick = setup_for(server)
+    strong = setup_for(server, name="strong")
+    strong = Setup(**{**strong.__dict__, "model": "strong-model"})
+    conv = conversation(quick, tmp_path)
+    conv._setups = lambda: {"main": quick, "strong": strong}
+    events = await collect(conv, "Hey Jarvis, calculate 42 squared")
+    said = "".join(e["text"] for e in events if e["type"] == "text")
+    assert said.startswith("Let me think about that.") and "1764" in said
+    assert [b["model"] for b in seen] == ["test-model", "strong-model", "test-model"]
+    assert "tools" not in seen[1]  # the strong model only thinks
+    assert "1764" in seen[2]["messages"][-1]["content"]  # the quick model got its answer
+    setups_spent = [e.get("setup") for e in conv.spend.entries()]
+    assert "strong" in setups_spent and "main" in setups_spent  # both in the AI spend
+
+
+async def test_no_stronger_tool_without_a_stronger_setup(aiohttp_server, tmp_path, monkeypatch):
+    monkeypatch.setenv("LAB_TEST_KEY", "test-key")
+    seen = []
+    server = await aiohttp_server(thinking_service(seen))
+    quick = setup_for(server)
+    conv = conversation(quick, tmp_path)
+    assert conv.strong_setup() is None
+    conv._setups = lambda: {"main": quick, "strong": quick}  # the same: no point
+    assert conv.strong_setup() is None
+    await collect(conv, "hi")
+    assert not any(t["function"]["name"] == "think_hard" for t in seen[0].get("tools", []))
+
+
+def test_models_yaml_has_a_strong_setup():
+    s = load_setups()["strong"]
+    assert s.options.get("reasoning_effort") == "high" and s.fallback == "backup"

@@ -55,6 +55,7 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Copy the terminal's line that ends with `answers`.
 - **V.13** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
 - **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
+- **V.15** Quick job 69. Say "Hey Jarvis, calculate 37 times 48, then add 199". → did it say "Let me think about that" first? (yes / no) Was the answer 1975? (yes / no) Open the AI Spend details. → is there a line for "strong"? (yes / no)
 
 ---
 
