@@ -113,3 +113,24 @@ async def test_stop_mid_pick_ends_it_there():
         task.cancel()
     assert r["result"] == "stopped" and "Don't move again" in r["message"]
     assert len(r["steps"]) < 5
+
+
+async def test_the_jaws_close_as_deep_as_they_reach(monkeypatch):
+    """Quick job 51 (lab check 3b.5): half the height held the cube with the jaw tips only. The
+    jaws now close PICK_JAW_DEPTH_CM below the top, never below the floor: the floor for a 3 cm
+    cube; with shorter jaws (here 1 cm, as for a tall object) above it, so the gripper's body
+    stays clear of the top. (Straight down reaches only a thin ring, so the cube stays small.)"""
+    from lab_os.tools import robot
+
+    for depth, want in ((robot.PICK_JAW_DEPTH_CM, None), (1.0, 2.0)):
+        monkeypatch.setattr(robot, "PICK_JAW_DEPTH_CM", depth)
+        tools, task = await make()
+        try:
+            await near_the_spot(tools)
+            n = len(tools.calls.entries)
+            await tools.call("pick_at", x_cm=SPOT[0], y_cm=SPOT[1], height_cm=3.0)
+        finally:
+            task.cancel()
+        down = [e for e in tools.calls.entries[n:] if e["tool"] == "move_to"][1]
+        floor = tools.limits.min_z_cm
+        assert down["args"]["z_cm"] == pytest.approx(want if want is not None else floor), depth
