@@ -162,7 +162,7 @@ To try it without a camera, add `--image picture.jpg` to use a saved picture.
 `pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object that stands at (x, y) on the table, in one call instead of about 17 small calls. It has five steps, each through the same safety path as `gripper` and `move_to`:
 1. Open the gripper.
 2. Go to `height_cm` + 6 cm above the object, pointing straight down.
-3. Go straight down to half its height (never below the floor).
+3. Go straight down as deep as the jaws reach: 4 cm below the object's top, never below the floor (`min_z_cm`). For the 3 cm cube that is the floor. Before 2026-11-20 it went to half the height, and the cube was held with the jaw tips only.
 4. Close.
 5. Lift back up.
 

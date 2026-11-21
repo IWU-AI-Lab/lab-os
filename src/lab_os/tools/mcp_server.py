@@ -174,8 +174,9 @@ def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) ->
     ) -> dict:
         """Pick up the object standing at (x, y) cm on the table (its middle, where it touches
         the table: the stand camera's grid), in one call: open the gripper (open_pct), go
-        height_cm + 6 cm above it pointing straight down, straight down to half its height,
-        close, lift. Start within max_move_cm of the point above it (move_to there first).
+        height_cm + 6 cm above it pointing straight down, straight down as deep as the jaws
+        reach (4 cm below its top, never below the floor), close, lift. Start within
+        max_move_cm of the point above it (move_to there first).
         Every point is checked before anything moves; each step shows on the AI Control page
         before it moves. "result": "holding" (the gripper stopped on something), "missed" (it
         shut all the way), or the step where it stopped ("steps" lists them). Check with the
