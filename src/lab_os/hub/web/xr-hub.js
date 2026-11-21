@@ -88,7 +88,7 @@ class Show {
     this.hub = new HubView({ core: this.core, sfx: this.sfx, D });
     this.hub.clock = () => this.clock();
     this.hub.scene = this.scene; this.hub.ar = ar;
-    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh);
+    this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh, this.hub.menu.mesh);
     this.pointer = new Pointer(this.scene);
     // Exit (quick job 78): under the core and the ask line, on every page of the hub (a module too)
     this.exit = new ExitButton(0.44, 0.15);
@@ -151,7 +151,9 @@ class Show {
       this.wantPlace = true;
     } else if (this.phase === "jump" || this.phase === "boot") this.finishBoot();
     else if (this.phase === "hub" && now > this.hubAt + 600) {
-      if (this.hub.press(hit, now) === "power") this.toIgnite(); // ⏻: back to the start screen
+      const r = this.hub.press(hit, now); // ⏻ opens its menu; the menu says which
+      if (r === "power") this.toIgnite(); // back to the start screen
+      else if (r === "exit") this.leave(); // leave VR or AR (the menu's Exit)
     }
   }
   /** lab-os was shut down (or restarts): the hub goes, the microphone closes, the card stays. */
@@ -479,7 +481,7 @@ async function start(mode) {
     });
     addEventListener("pointerup", (e) => { if (holding) { holding = false; show.hub.ask.pressEnd(); return; } if (drag && !drag.moved) { aim(e); show.press(clockNow(), show.pointer.hitOf("mouse")); } drag = null; });
     addEventListener("keydown", (e) => {
-      if (e.key === "Escape") return show.hub.mode !== "hub" ? show.back(clockNow(), "right") : location.reload();
+      if (e.key === "Escape") return show.hub.mode !== "hub" || show.hub.menu.mesh.visible ? show.back(clockNow(), "right") : location.reload();
       if (show.phase !== "hub") show.press(clockNow());
     });
     r.setAnimationLoop(frame);

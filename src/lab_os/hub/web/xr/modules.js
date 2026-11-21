@@ -74,9 +74,9 @@ export class ModuleTab {
     this.title = ""; this.ico = ""; this.hover = null;
   }
   get mesh() { return this.p.mesh; }
-  hit(u) { return u > 1 - 0.16 / 0.9 ? { kind: "back" } : { kind: "tab" }; }
+  hit(u) { return u > 1 - 0.16 / 0.9 ? { kind: "back" } : u > 1 - 0.31 / 0.9 ? { kind: "power" } : { kind: "tab" }; }
   paint() {
-    const back = this.hover?.kind === "back";
+    const back = this.hover?.kind === "back", power = this.hover?.kind === "power";
     this.p.paint((g, w, h) => {
       g.fillStyle = rgba(C.bg, 0.85); g.fillRect(0, 0, w, h);
       g.fillStyle = C.primary; g.fillRect(0, 0, 3, h * 0.5); g.fillRect(0, 0, h * 0.5, 3);
@@ -87,7 +87,12 @@ export class ModuleTab {
       if (back) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(bx, h * 0.05, bw, h * 0.9); }
       g.strokeStyle = back ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 2; g.strokeRect(bx, h * 0.05, bw, h * 0.9);
       icon(g, "i-back", bx + bw / 2, h / 2, h * 0.55, back ? C.hot : C.text, 1.8);
-    }, `${this.title}|${back}`);
+      // ⏻ beside Back: the menu with Exit (quick job 78, the builder: on every page of the hub in VR)
+      const px = bx - bw - h * 0.12;
+      if (power) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(px, h * 0.05, bw, h * 0.9); }
+      g.strokeStyle = power ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 2; g.strokeRect(px, h * 0.05, bw, h * 0.9);
+      icon(g, "i-power", px + bw / 2, h / 2, h * 0.5, power ? C.hot : C.text, 1.8);
+    }, `${this.title}|${back}|${power}`);
   }
 }
 
@@ -110,6 +115,49 @@ export class StopButton {
       g.fillText("STOP", w / 2, h / 2);
     }, this.hover);
   }
+}
+
+/* ---------- ⏻'s menu: back to the start screen, or Exit (leave VR or AR). Opens from ⏻ in the strip and from
+   ⏻ on a module's tab, so it's on every page of the hub in VR (the builder, 2026-11-20) ---------- */
+export class PowerMenu {
+  constructor() {
+    this.items = [["start", "i-power", "Back to the start screen"], ["exit", "i-headset", "Exit"]];
+    this.p = new CanvasPlane(0.82, 0.1 + 0.11 * this.items.length, PX);
+    this.p.mesh.userData.hit = this;
+    this.p.mesh.renderOrder = 13;
+    this.p.mat.depthTest = false; // in front of everything, like the way out
+    this.p.mesh.visible = false;
+    this.hover = null;
+  }
+  get mesh() { return this.p.mesh; }
+  hit(u, v) {
+    const y = (1 - v) * this.p.h - 0.05, i = Math.floor(y / 0.11);
+    return i >= 0 && i < this.items.length ? { kind: "menu", id: this.items[i][0] } : { kind: "menu-pad" };
+  }
+  paint() {
+    const over = this.hover?.kind === "menu" ? this.hover.id : "";
+    this.p.paint((g, w, h) => {
+      const m = h * 0.05 / this.p.h * 1, rowH = (h * 0.11) / this.p.h, top = (h * 0.05) / this.p.h;
+      cutPathBox(g, w, h);
+      this.items.forEach(([id, ico, label], i) => {
+        const y = top + i * rowH;
+        if (id === over) { g.fillStyle = rgba(C.primary, 0.18); g.fillRect(m, y, w - 2 * m, rowH - 4); }
+        icon(g, ico, m + rowH * 0.5, y + rowH / 2 - 2, rowH * 0.5, id === over ? C.hot : C.primary, 1.6);
+        let size = rowH * 0.38;
+        g.font = `600 ${size}px ${FONT.ui}`;
+        const room = w - m * 2 - rowH * 1.1, tw = g.measureText(label).width;
+        if (tw > room) { size *= room / tw; g.font = `600 ${size}px ${FONT.ui}`; } // shrunk to fit
+        g.fillStyle = id === over ? C.hot : C.text; g.textAlign = "left"; g.textBaseline = "middle";
+        g.fillText(label, m + rowH, y + rowH / 2 - 2);
+      });
+    }, over);
+  }
+}
+function cutPathBox(g, w, h) {
+  const c = h * 0.12;
+  g.beginPath(); g.moveTo(c, 0); g.lineTo(w, 0); g.lineTo(w, h - c); g.lineTo(w - c, h); g.lineTo(0, h); g.lineTo(0, c); g.closePath();
+  g.fillStyle = rgba(C.bg, 0.95); g.fill();
+  g.strokeStyle = rgba(C.primary, 0.7); g.lineWidth = 3; g.stroke();
 }
 
 /* ---------- Exit (quick job 78): leaves VR or AR, back to the browser. On every page of the hub in

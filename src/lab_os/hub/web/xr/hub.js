@@ -14,7 +14,7 @@
 import * as THREE from "three";
 import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
 import { Ask } from "./ask.js";
-import { ArmHologram, ModuleButton, ModuleTab, TeleopModule, VR_MODULES } from "./modules.js";
+import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 import { SettingsPage } from "./settings.js";
 
@@ -116,6 +116,7 @@ export class HubView {
     this.tab.mesh.visible = false;
     this.tab.mesh.position.set(-0.62, 0.42, -1.35); // the stage adds it (it stays when the hub hides)
     this.tab.mesh.rotation.y = 0.4;
+    this.menu = new PowerMenu(); // ⏻'s menu: the stage adds it (it shows over a module too)
     this.module = null; // {id, view}
     this.views = {};
   }
@@ -163,8 +164,9 @@ export class HubView {
   }
   /** What the pointer can land on. */
   targets() {
-    if (this.mode === "details") return [this.page.mesh];
-    if (this.mode === "settings") return [this.settings.mesh];
+    if (this.menu.mesh.visible) return [this.menu.mesh]; // ⏻'s menu: choose, or press beside it
+    if (this.mode === "details") return [this.page.mesh, this.power.mesh];
+    if (this.mode === "settings") return [this.settings.mesh, this.power.mesh];
     if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
     return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.gear.mesh, this.card.mesh, this.ask.mesh];
   }
@@ -180,7 +182,7 @@ export class HubView {
     this.nextLog = now + 1500;
     this.logRows = [];
   }
-  hide() { this.closeModule(); this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; this.settings.mesh.visible = false; }
+  hide() { this.closeMenu(); this.closeModule(); this.group.visible = false; this.mode = "hub"; this.page.mesh.visible = false; this.settings.mesh.visible = false; }
 
   /** Lay the callout columns out from their drawn heights (centred around the core's height). */
   _layout() {
@@ -200,11 +202,30 @@ export class HubView {
     }
   }
 
-  /** What a press on `hit` does here. Returns "power" when the hub should go back to the start. */
+  /** ⏻'s menu, opened beside the ⏻ that was pressed (the strip's, or a module tab's), facing you. */
+  openMenu(from) {
+    const p = new THREE.Vector3(), stage = this.group.parent;
+    from.getWorldPosition(p); stage.worldToLocal(p);
+    const toYou = p.clone().setY(0).normalize();
+    p.addScaledVector(toYou, -0.25); // a little nearer than the button
+    p.y -= this.menu.p.h / 2 + 0.1; // under it, so the button stays in view
+    p.x -= Math.sign(p.x) * Math.min(0.6, Math.abs(p.x)); // and toward the middle
+    this.menu.mesh.position.copy(p);
+    this.menu.mesh.rotation.set(0, Math.atan2(-p.x, -p.z), 0);
+    this.menu.mesh.visible = true;
+  }
+  closeMenu() { this.menu.mesh.visible = false; this.menu.hover = null; }
+  /** What a press on `hit` does here. Returns "power" when the hub should go back to the start,
+   *  "exit" when it should leave VR or AR (⏻'s menu). */
   press(hit, now) {
+    if (this.menu.mesh.visible) { // the menu is open: an item, or a press beside it closes it
+      this.closeMenu(); this.sfx.blip();
+      const id = hit?.what.kind === "menu" ? hit.what.id : null;
+      return id === "start" ? "power" : id === "exit" ? "exit" : null;
+    }
     if (!hit) return null;
     const w = hit.what;
-    if (w.kind === "power") { this.sfx.blip(); return "power"; }
+    if (w.kind === "power") { this.sfx.blip(); this.openMenu(hit.obj); return null; }
     if (w.kind === "settings") { this.openSettings(now); return null; }
     if (w.kind === "set") { this.sfx.blip(); this.settings.press(w); return null; }
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
@@ -287,6 +308,7 @@ export class HubView {
   }
   /** B (or Y, but not while teleop uses Y) closes what's open. */
   back(now, key) {
+    if (this.menu.mesh.visible) return this.closeMenu();
     if (this.mode === "module") { if (!(this.module.id === "teleop" && key === "left")) this.closeModule(now); }
     else if (this.mode === "settings") this.closeSettings(now);
     else this.closeDetails(now);
@@ -316,6 +338,7 @@ export class HubView {
     this.page.hover = null;
     this.tab.hover = null;
     this.settings.hover = null;
+    this.menu.hover = null;
     for (const b of this.buttons) b.hover = false;
     let powerHover = false, askHover = false, gearHover = false;
     for (const h of hits) {
@@ -323,6 +346,7 @@ export class HubView {
       if (o instanceof Callout) o.hover = h.what;
       else if (o === this.page) this.page.hover = h.what;
       else if (o === this.settings) this.settings.hover = h.what;
+      else if (o === this.menu) this.menu.hover = h.what;
       else if (h.what.kind === "settings") gearHover = true;
       else if (o === this.tab) this.tab.hover = h.what;
       else if (h.what.kind === "module") o.hover = true;
@@ -330,6 +354,7 @@ export class HubView {
       else if (h.what.kind === "ask") askHover = true;
     }
     // a module: the hub steps back (hidden), the module's view and its tab come forward
+    if (this.menu.mesh.visible) this.menu.paint();
     const inModule = this.mode === "module";
     this.tab.mesh.visible = inModule;
     if (inModule) {
@@ -364,7 +389,7 @@ export class HubView {
     });
     this.paintBrand(); this.brand.opacity = clamp((t - 900) / 300, 0, 1) * this._dim;
     this.paintStrip(now); this.strip.opacity = early;
-    this.paintPower(powerHover); this.power.opacity = early;
+    this.paintPower(powerHover); this.power.opacity = clamp((t - 300) / 600, 0, 1); // never dimmed: ⏻'s menu is on every page
     this.paintGear(gearHover); this.gear.opacity = early;
     this.stepLog(now); this.log.opacity = early;
     this.ask.step(now, askHover);

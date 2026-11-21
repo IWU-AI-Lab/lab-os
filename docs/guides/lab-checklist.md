@@ -236,6 +236,8 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.12** Quick job 49. Connect the Quest by USB. On the desktop's hub, press the Quest view button. Close the window with its own X. → does the button go dark within a second or two? (yes / no) Press it once. → does the window open again? (yes / no)
 - **U.13** Quick job 50. Keep a hand at STOP. With `so101-white` and AI Control open, ask the hub's assistant "move the arm to home" (⚙ → Robots → The Assistant May Move the Arm on). → does AI Control show the move without "clipped"? (yes / no) → is the arm folded where it was before? (yes / no)
 - **U.14** Quick job 51. Keep a hand at STOP. Put the cube about 20 cm straight in front of `so101-white`. Ask the hub's assistant "Jarvis, hand me the cube". → when the jaws closed, did they hold the cube with most of their length, not only the tips? (yes / no) Did the gripper touch the table? (yes / no)
+- **U.15** Quick job 52. Keep a hand at STOP. Clear the space to the right of `so101-white` and above it. On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. → does it look like a wave from where the visitors stand? (yes / no) Did the arm touch anything? (yes / no) Say `Hey Jarvis, the visitors have left`.
+- **U.16** In the hub in VR, point at ⏻ (top right) and pull the trigger. → does a menu open with "Back to the start screen" and "Exit"? (yes / no) Open **Teleop**, then press ⏻ beside ← on its tab, then **Exit**. → are you back on the browser page? (yes / no)
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
