@@ -85,6 +85,14 @@ The last voice turns are also at **http://localhost:8080/api/voice/timings** (mi
 - **The models** (`models/openwakeword/`, with a README): openWakeWord's models, run with `onnxruntime` directly (its own package does not install on Linux with Python 3.12). License: non-commercial (CC BY-NC-SA 4.0).
 - **The room microphone:** from across the room, it needs a good microphone (a conference speakerphone or a microphone array; small USB microphones hear you only when you are near). In the lab (2026-11-13), the desktop's USB microphone heard it at the desk, sometimes only when spoken louder. On the Quest it usually hears it and sometimes misses (`docs/dev/GOTCHAS.md`).
 
+## Conversation mode (quick job 68)
+The assistant keeps listening and answering, with no wake word, like the live voice modes of ChatGPT and Gemini.
+- **Start it:** press the conversation button (two speech boxes) next to the mic, or say "Hey Jarvis, start a conversation".
+- **While it is on:** a sign above the core says "In a conversation · say "that's all" to end", and the button is lit. Ask a question, as after the wake word. After the answer has played, it listens again by itself. While nobody talks, it keeps listening and says nothing.
+- **End it:** say "that's all" (or "goodbye", "end the conversation"), press the button again, or press Esc. It also ends when lab-os stops, or when the voice service does not answer (the hub says why).
+- **How it works:** the brain starts each next question as after the wake word. It does not use OpenAI Realtime or Gemini Live: those are full live audio modes, but they need a second audio pipeline and cost more. It listens only after the answer has played, so it does not hear itself.
+- **In a noisy room:** it takes any speech as a question, also other people's talk. The question ends after a short quiet, so a steady fan does not keep it open. But two people talking near the microphone get an answer to what they said. Use it near the microphone, and end it when you are done. The VR hub has no button for it; the phrase works there.
+
 ## In VR (`/xr`)
 The hub in VR is a screen like the others, with the headset's own microphone and speakers:
 - **Push-to-talk:** point at the ask line under the core and hold the trigger (or a pinch). Release it when you are done. The answer shows under the core while it is spoken.
