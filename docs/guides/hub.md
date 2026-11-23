@@ -32,7 +32,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 - `--persona` (`docs/dev/personas.md`).
 - `--open desk`: open the hub on this computer as that device when the brain runs ("Devices" below).
 - `--status-line`: show teleop's live status line under the log. It is off by default for `lab-os serve`, because the hub shows the state. `lab-os-teleop` shows it unless you add `--quiet`.
-- `--host 0.0.0.0`: other computers can open the hub. With a real arm, they only watch (and their STOP works). `--drive-from pi01.iwu.ai.lab` (you can use it more than once) lets that computer drive too.
+- `--host 0.0.0.0`: other computers can open the hub. With a real arm, they only watch (and their STOP works). `--drive-from pi01.iwu.ai.lab` (you can use it more than once) lets that computer drive too. To keep a device on the list, add its name or address to `drive_from:` in `config/place.yaml`, then restart lab-os. The brain reads the list when it starts. The Quest on the router's Wi-Fi (192.168.8.180) is on the list. A page that may only watch tells which address to add. One controller at a time, STOP and the freeze stay the same.
 
 **The terminal** (since 2026-11-19): each log line starts with the time ("12:04:31 INFO …"). In a terminal, warnings are amber and errors are red. The other lines stay plain. In a pipe or a log file, there is no colour. To switch the colours off, set `NO_COLOR=1` (no-color.org).
 

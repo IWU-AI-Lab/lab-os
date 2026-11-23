@@ -322,3 +322,27 @@ def test_a_port_in_use_stops_serve_with_a_sentence(no_run, monkeypatch):
     with pytest.raises(SystemExit, match="--arm so101-green: not opened. so101-green is in use"):
         cli.main(["serve", "--quiet", "--arm", "so101-green"])
     assert no_run == []
+
+
+def test_devices_that_may_drive_come_from_place_yaml(home, no_run, monkeypatch, capsys):
+    """Quick job 95: place.yaml's `drive_from` (names or addresses) is read at start and added to
+    --drive-from. A name that isn't found now (that device is off) is said; the brain still
+    starts."""
+    (home / "local").mkdir()
+    (home / "local" / "place.yaml").write_text("drive_from: [192.168.8.180, quest-off.lan]\n")
+    assert config.load_place().drive_from == ("192.168.8.180", "quest-off.lan")
+    seen = []
+    real = cli.create_brain_app
+    monkeypatch.setattr(
+        cli, "create_brain_app", lambda *a, **kw: seen.append(kw["drive_from"]) or real(*a, **kw)
+    )
+
+    def lookup(name):
+        if name == "quest-off.lan":
+            raise OSError("not found")
+        return name
+
+    monkeypatch.setattr(cli.socket, "gethostbyname", lookup)
+    cli.main(["serve", "--config", str(home), "--drive-from", "10.0.0.9"])
+    assert seen == [frozenset({"192.168.8.180", "10.0.0.9"})]
+    assert "quest-off.lan is not found now" in capsys.readouterr().out

@@ -211,6 +211,9 @@ class Place:
     # each persona's wake word, chosen in ⚙ → Assistant (quick job 90): persona id → word; wins
     # over the persona file's `wake_word:`
     wake_words: dict = field(default_factory=dict)
+    # other devices that may drive a real arm, by computer name or address (quick job 95): the
+    # same as `lab-os serve --drive-from`, read at start
+    drive_from: tuple[str, ...] = ()
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
@@ -227,6 +230,7 @@ PLACE_FIELDS = {
     "assistant_moves_arm",
     "assistant_full_access",
     "wake_words",
+    "drive_from",
 }
 
 
@@ -275,8 +279,15 @@ def load_place(folder: Path | None = None) -> Place:
         wake_words={str(k): str(v) for k, v in (raw.get("wake_words") or {}).items() if v}
         if isinstance(raw.get("wake_words"), dict)
         else {},
+        drive_from=_names(raw.get("drive_from")),
         extra=extra,
     )
+
+
+def _names(value) -> tuple[str, ...]:
+    """A list of names in place.yaml (or one name), as clean strings."""
+    items = value if isinstance(value, list) else [value] if value else []
+    return tuple(str(v).strip() for v in items if str(v).strip())
 
 
 def _secret(path: Path) -> bool:

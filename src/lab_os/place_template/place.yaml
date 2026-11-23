@@ -6,4 +6,5 @@ venue: home        # the venue (venues/<name>.yaml) used when --venue / $LAB_OS_
 persona: lab-assistant   # who the assistant is (lab-os's config/personas/, or your own personas/)
 ai_budget_usd_month: 5   # the hub's chat pauses when this month's AI spend reaches it
 chat_keep_minutes: 30    # a reset or interrupted conversation can be brought back this long (0 = off)
+# drive_from: [192.168.1.20]   # other devices that may drive a real arm (name or address)
 # domain: hub.example.com   # the brain's address name (not used yet); leave out if none
