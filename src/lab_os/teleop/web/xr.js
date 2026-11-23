@@ -123,7 +123,7 @@ export function toArmFrame(c, yaw, base = new THREE.Vector3()) {
 
 // The teleop page's options for the headset (the builder, 2026-11-21: chosen on the page, before entering)
 export const STYLE_KEY = "lab-os.xr-arm-style"; // "" (full model) or "stick"; ?xrarm= in the address wins
-function armStyle() {
+export function armStyle() {
   const fromUrl = new URLSearchParams(location.search).get("xrarm");
   if (fromUrl) return fromUrl;
   try { return localStorage.getItem(STYLE_KEY) || undefined; } catch { return undefined; }

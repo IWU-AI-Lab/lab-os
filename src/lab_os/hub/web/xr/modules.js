@@ -1,8 +1,10 @@
 // The hub's modules in VR (decision 2026-11-12, the builder):
 //   - ModuleButton: the designed hub's module button (cut-corner box, the icon in a turning dotted ring,
 //     the name in caps, corner brackets that open when pointed at), left and right of the core.
-//   - Teleop has no module here since 2026-11-21 (the builder): its button leaves VR and opens the teleop
-//     page (relative or 1:1, then the page's own Enter VR or AR; xr-hub.js openTeleop).
+//   - TeleopModule: Teleop without leaving VR or AR (quick job 97; from 2026-11-21 to 11-23 it opened the
+//     teleop page instead): the teleop page's own session (TeleopSession, /static/xr.js: the arm on its
+//     table, its status box, controllers or hands, the same messages to the brain) inside the hub's
+//     session. STOP is A/X; the brain freezes the arm when input stops, and one page drives at a time.
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
@@ -14,6 +16,7 @@ import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
 import { getLink } from "/static/link.js";
+import { deviceName } from "/web/device.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
 
@@ -354,6 +357,27 @@ function floorGrid() {
   g.add(scan);
   g.userData.step = (now) => { const k = (now / 3500) % 1; scan.scale.setScalar(0.05 + 0.6 * k); scan.material.opacity = 0.35 * (1 - k); };
   return g;
+}
+
+/* ---------- Teleop, inside the hub's session ---------- */
+export class TeleopModule {
+  constructor({ ar, refType }) {
+    this.ar = ar; this.refType = refType;
+    this.tele = null;
+  }
+  async open() {
+    const { TeleopSession, armStyle } = await import("/static/xr.js");
+    const link = getLink("input");
+    // its device name, so the other pages say who has control (quick job 76); again after a reconnect
+    const hello = () => link.send({ type: "hello", agent: navigator.userAgent, device: deviceName() });
+    if (!this.helloOn) { link.on("open", hello); this.helloOn = true; }
+    hello(); // dropped when the link isn't open yet: then "open" sends it
+    // the teleop page's "3D arm in the headset" (or ?xrarm=stick): the light model if frames drop
+    this.tele = new TeleopSession(link, { ar: this.ar, style: armStyle(), refType: this.refType });
+    return this.tele.scene;
+  }
+  frame(t, xrFrame, refSpace) { return this.tele?.frame(t, xrFrame, refSpace); }
+  close() { this.tele?.end(); this.tele = null; } // session_end: the arm freezes, control is free
 }
 
 export { clamp };
