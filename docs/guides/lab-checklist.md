@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order.** Monday 2026-11-23 (about 1 hour): 0, then N. If you have more time: M, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run. **Part P is for after the demo** (2026-12-03): the demo needs only that the AI moves the arm and does something.
+**Order.** Tuesday 2026-11-24 (the testing day): 0, V, then the parts that the new quick jobs add, then T, D, W, G, H, I, Q, U, B, C, R, and E if the green arms are free. Tuesday 2026-12-01: M, setting up for the demo, and a practice run. **Parts P and V2 are for after the demo** (2026-12-03): the demo needs only that the AI moves the arm and does something.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -41,52 +41,15 @@ uv sync --extra so101
 uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
-- **0.2** Quick job 85. After the brain has run today, run `uv run lab-os logs`. → does it print the brain's lines, each with today's date? (yes / no)
-- **0.3** Quick job 82. Open ⚙. Scroll to the bottom. Change **Keep a Conversation For** from 30 to 35. → did the amber Restart bar show at the bottom of the window? (yes / no) Did the value box stay in place under the pointer? (yes / no) Set it back to 30.
-- **0.4** In ⚙ → Assistant, read the first rows and **Assistant Language**. → do they say **Persona**, **Persona in This Venue**, and Expects above Answers? (yes / no) Close ⚙. Press the link icon next to ⚙. → did All Pages open? (yes / no)
-- **0.5** Quick job 92. Set ⚙ → Assistant → **Persona** to Lab Assistant. Open the hub, ⚙ and All Pages. → does any page say "Jarvis"? (no / yes: where)
 
-## V. The wake word and the greeting (25 min)
-Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores the wake word, and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
-- **V.1** Quick job 84. Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting wait until the jump ended? (yes / no)
-- **V.20** Quick job 84. Set ⚙ → Assistant → **Persona** to Lab Assistant. Press ⏻ → **Back to the start screen**, and tap to start. → did the greeting show the Lab Assistant's line (or news), not "All local systems are up"? (yes / no) Write the time.
-- **V.21** Quick job 90. Set ⚙ → Assistant → **Persona** to Lab Assistant, and **Wake Word: Lab Assistant** to OK Computer. Sit in the chair. Say "OK computer, what time is it?" 5 times, at a normal voice. → how many times did it answer? (0 to 5)
-- **V.22** Set **Wake Word: Lab Assistant** to TARS. Say "TARS, what time is it?" 5 times. Then set it to Hey Friday, and say "Hey Friday, what time is it?" 5 times. → how many answers for TARS? For Hey Friday? (0 to 5 each)
-- **V.23** Set **Persona** to J.A.R.V.I.S. Say "Hey Jarvis, what time is it?" 5 times. → how many answers? (0 to 5) Set the Lab Assistant's word back to OK Computer.
-- **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
-- **V.25** Quick job 86. Ask: "How many minutes does a 1200 km flight take at 850 km per hour?" → did it say about 85 minutes, with short steps? (yes / no) Ask: "Calculate 37 times 48, then add 199." → did it say 1975? (yes / no)
-- **V.2** Say "(wake word), what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
-- **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "(wake word), what's next?". → did it answer? (yes / no) If no, write the time.
+## V. The wake word and the greeting (15 min)
+**Done (2026-11-23):** V.1, V.2, V.3, V.15, V.16, V.17, V.19, V.20 and 0.2 to 0.5 passed. The wake words answered too rarely (V.21 to V.23), and the end of a question came too early (V.25, V.18): quick jobs 98 and 99. The settings value box moved (0.3): quick job 101. The brain logs only the wake words it heard, so the misses of V.5 are not in the log (quick job 99 adds them).
+**These steps need a microphone on the Newline's screen.** The Pi that drives the Newline (HDMI and the touch cable) has no microphone: the Newline's own microphone belongs to its Android, not to the Pi. Connect a USB microphone to that Pi first, or skip them.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say the wake word again. → did the desktop answer at once? (yes / no) If no, write the time.
-- **V.5** Each time during the day that the wake word does not answer: write the time. → how many times did it stop today? (a number)
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
 - **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "(wake word), what time is it?". → did only the Newline answer? (yes / no) Write the time.
-- **V.14** Say "(wake word), start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
-- **V.15** Quick job 83. Ask a question that has a long answer. While the answer plays, say the wake word. → did the answer stop, and did it listen? (yes / no)
-- **V.16** Say "(wake word), start a conversation". Ask one question. Then say "That's all". → did the core go back to rest (not thinking)? (yes / no)
-- **V.17** Press and hold the mic for 1 second. Say nothing. → did it answer something? (yes / no) Write the time.
-- **V.18** Say "(wake word), calculate 37 times 48," then wait a moment, then say "then add 199". → did it hear the whole question? (yes / no)
-- **V.19** Set ⚙ → Answers to **Any**. Say "(wake word), hi". → which language was the answer? Ask three more questions. → did the voice sound like the same person each time? (yes / no)
 
 ---
-
-## N. The travel router (20 min)
-**Done in the lab (2026-11-23):** the router gets internet from the wall port: 120 Mbps on 2.4 GHz, 560 Mbps on 5 GHz. The desktop's reserved address is **192.168.8.130**, its Wi-Fi (the builder, 2026-11-23: the router's one LAN port stays free for the switch or to troubleshoot a device). The hub is at `http://192.168.8.130:8080`. The cable gave 192.168.8.112 during the checks. The router has one LAN port, so it goes to the big switch; the Pis and the Jetson showed in the router's clients. The Pi with the touchscreen, the phone, the Quest (without USB), the Newline and a Pi on Wi-Fi all loaded the hub. Found: the hub does not fit a phone or the Pi's touchscreen (quick job 96). The Quest's control buttons were grey: a page from another computer only watches a real arm, unless `--drive-from` names it (quick job 95).
-Later the same day: the Wi-Fi security is WPA2-PSK/WPA3-SAE. raspbot1 joined the router's **5 GHz** Wi-Fi with `sudo nmcli dev wifi connect`. It does not see the 2.4 GHz Wi-Fi, so the `lab-router` profile for that name failed ("the Wi-Fi network could not be found").
-- **N.18** Connect to raspbot1 (on Wi-Fi now, or by its cable). Run `sudo nmcli con delete lab-router` (it removes only the failed 2.4 GHz profile). Run `hostname -I` and copy the first address. Run `ping -c 3 192.168.8.130`. → replies? (yes / no) In the router's list of clients, reserve raspbot1's address. → the reserved address: ___ Then, on the desktop, run `ssh-copy-id pi@<that address>` (type raspbot1's password once). Add the `Host raspbot1` lines to `~/.ssh/config` (`docs/guides/network-setup-checklist.md` → Step 6). Run `ssh raspbot1 hostname`. → does it answer without a password question? (yes / no: copy what it shows)
-- **N.22** In the router's list of clients, check that the desktop's Wi-Fi address 192.168.8.130 is reserved. Remove the desktop's cable from the router. On the desktop, open a web page. → does it open? (yes / no)
-- **N.19** Quick job 95. In the router's page, find the Quest's reserved address. → is it 192.168.8.180? (yes / no: which address?) If it is another address, write it under `drive_from:` in `config/place.yaml`.
-- **N.20** Plug in `so101-white` with its power. Start lab-os with its icon. On the Quest (no USB cable), open `http://192.168.8.130:8080/teleop`. → is the line "View only" gone, and is **Enter VR** not grey? (yes / no: copy the line under the buttons) If Enter VR is grey, do the `chrome://flags` step in `docs/guides/quest-setup.md` ("Over Wi-Fi"). Keep a hand at STOP. Enter VR and hold Grip. → does the arm follow? (yes / no)
-- **N.21** On the phone (on the router's Wi-Fi), open the same address, then Teleop. → are the buttons grey, with a line that says which address to add to `drive_from`? (yes / no)
-
-## M. Every screen in the room (30 min)
-After part N, or on the campus network for the computers that are already on it (the desktops and the Pis). The plan for the demo: `docs/plan/current-focus.md` → item 10. Use the brain's address on the same network as the device: `192.168.8…` on the router, or the campus address that `hostname -I` shows first.
-- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Newline), open Chrome at `http://<the brain's address>:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
-- **M.2** On each computer with a USB microphone (the 2 Windows desktops) and on the Newline: open `chrome://flags`, search for "Insecure origins treated as secure", type `http://<the brain's address>:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
-- **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
-- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
-- **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
-- **M.6** Quick job 96. Open `http://<the brain's address>:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
 
 ## For Tuesday 2026-11-24: the previews
 
@@ -279,6 +242,15 @@ Quick job 72. raspbot1 on the router's Wi-Fi, with its battery charged. Put it o
 - **R.9** When raspbot1 stops by itself again (black screen, keyboard and mouse off), switch it off and on. Run `ssh raspbot1 tail -n 20 lab-os/health.log`. → copy the lines. What did raspbot1 do just before (nothing / driving / the camera page open / other)?
 - **R.6** Put raspbot1 on the floor with space around it. Drive it forward, back and in a circle. Move **Speed** from 0 % to 100 %. → which speed is good for the demo? (a percentage) Is the camera picture behind by less than about 1 second? (yes / no)
 
+## M. Every screen in the room, on Tuesday 2026-12-01 (30 min)
+After part N, or on the campus network for the computers that are already on it (the desktops and the Pis). The plan for the demo: `docs/plan/current-focus.md` → item 10. Use the brain's address on the same network as the device: `192.168.8…` on the router, or the campus address that `hostname -I` shows first.
+- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Newline), open Chrome at `http://<the brain's address>:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
+- **M.2** On each computer with a USB microphone (the 2 Windows desktops) and on the Newline: open `chrome://flags`, search for "Insecure origins treated as secure", type `http://<the brain's address>:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
+- **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
+- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
+- **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
+- **M.6** Quick job 96. Open `http://<the brain's address>:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
+
 ## P. After the demo: one program or single moves, 5 against 5 (60 min)
 Quick job 81. Do this part only after the demo. It compares how often the pick works, and how long it takes. Use Claude Code, `so101-white`, and the cube about 20 cm straight in front of the arm. Keep a hand at **STOP**. Before each try, put the cube back in the same place, and send the arm to `ready`.
 - **P.1** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube step by step, with single moves and no run_program, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)
@@ -286,7 +258,8 @@ Quick job 81. Do this part only after the demo. It compares how often the pick w
 - **P.3** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube with one run_program call, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)
 - **P.4** For each try of P.3, write the seconds. → the 5 times, in seconds. For each try that did not work, write what went wrong (missed the cube, dropped it, stopped, other).
 
-## Optional: raspbot1 on a phone hotspot (10 min)
-Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
-- **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)
-- **R.2** Run `sudo nmcli con up Raspbot`. → nothing to report.
+## V2. After the demo: the wake word with other people near (30 min)
+There are no other people in the lab before the demo.
+- **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
+- **V.14** Say "(wake word), start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
+
