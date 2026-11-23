@@ -30,7 +30,7 @@ def onboard():
 
 async def test_one_page_drives_at_the_speed_cap():
     bot = FakeRaspbot()
-    desk = RaspbotDesk(bot, max_speed=0.5)
+    desk = RaspbotDesk(bot, speed=0.5)
     a, b = object(), object()
     assert await desk.press(a, "forward") == ""
     assert bot.last == ("drive", 0.5, 0.5)
@@ -78,10 +78,10 @@ async def test_not_connected_says_why():
 
 
 def test_devices_yaml_gives_the_real_raspbot_else_the_fake():
-    reg = Registry({"r": Device("raspbot1", "raspbot", host="10.0.0.5", port=8765, max_speed=0.3)})
+    reg = Registry({"r": Device("raspbot1", "raspbot", host="10.0.0.5", port=8765, speed=0.3)})
     desk = raspbot.from_registry(reg)
     assert isinstance(desk.bot, TcpRaspbot) and desk.bot.host == "10.0.0.5"
-    assert desk.max_speed == 0.3
+    assert desk.speed == 0.3
     assert isinstance(raspbot.from_registry(Registry({})).bot, FakeRaspbot)
 
 
@@ -237,3 +237,27 @@ async def test_the_camera_picture_is_relayed(aiohttp_client):
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+async def test_the_speed_slider_from_none_to_the_cap(aiohttp_client):
+    bot = FakeRaspbot()
+    desk = RaspbotDesk(bot, speed=0.5)
+    page = object()
+    assert desk.set_speed(1.5) == 1.0 and desk.set_speed(-1) == 0.0
+    await desk.press(page, "forward")
+    assert bot.last == ("drive", 0.0, 0.0)  # none: the wheels don't turn
+    desk.set_speed(0.8)
+    await desk.press(page, "forward")  # the held button's next repeat
+    assert bot.last == ("drive", 0.8, 0.8) and desk.status()["speed"] == 0.8
+
+    app = make_app()
+    client = await aiohttp_client(app)
+    async with client.ws_connect("/ws/raspbot") as ws:
+        await ws.send_str(json.dumps({"type": "set_speed", "speed": 0.25}))
+        for _ in range(30):
+            status = await ws.receive_json()
+            if status.get("speed") == 0.25:
+                break
+        assert app[RASPBOT].speed == 0.25
+    html = (SRC / "hub" / "web" / "raspbot.html").read_text()
+    assert 'id="speed"' in html and '"set_speed"' in html

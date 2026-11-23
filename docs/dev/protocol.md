@@ -372,10 +372,11 @@ Focus step 8 (`docs/guides/hub.md` → "Devices"). Every hub page (both looks) k
 ## The Raspbot page (quick job 72)
 `WS /ws/raspbot`, the page `/raspbot` (`src/lab_os/hub/raspbot_page.py`). Page → brain:
 - `{"type": "drive", "dir": "forward" | "back" | "left" | "right"}`: sent every 100 ms while a button is held. The first page that drives has control.
+- `{"type": "set_speed", "speed": 0.3}`: the Speed slider, 0 (none) … 1 (the program's cap); one speed for every page. Only a page that may drive.
 - `{"type": "release"}`: every button let go; the car stops and control is free.
 - `{"type": "stop", "device": "<name>"}`: STOP, from any page (also a view-only page). The page that drove must send `release` before it drives again.
 
-Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
+Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "speed": 0.5, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
 
 `GET /api/raspbot/camera.mjpg`: the Raspbot's camera (`multipart/x-mixed-replace` JPEGs), relayed from the Raspbot's port 8766; `404` without a camera.
 

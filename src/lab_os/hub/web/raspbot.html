@@ -22,6 +22,10 @@
     .pad .btn.lit { background: var(--primary); color: var(--bg); box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 60%, transparent); }
     .pad .hub { grid-area: 2 / 2; display: grid; place-items: center; font: var(--w-lines) 0.85rem/1.2 var(--f-lines); color: var(--text-dim); text-align: center; }
     .side .stop { width: 100%; min-height: 4rem; font-size: 1.3rem; }
+    /* the Speed slider: from none to the Raspbot's top speed, one speed for every page */
+    .speed { display: grid; grid-template-columns: auto minmax(0, 1fr) 3.2rem; align-items: center; gap: 0.8rem; margin: 0 0 1rem; font: var(--w-lines) 0.9rem/1 var(--f-lines); color: var(--text); }
+    .speed input { width: 100%; min-height: 2.6rem; }
+    .speed output { font: 0.95rem/1 var(--f-digits); color: var(--c, var(--primary)); text-align: right; }
     .keys { font: var(--w-lines) 0.82rem/1.5 var(--f-lines); color: var(--text-dim); margin: 0.8rem 0 0; }
     @media (max-width: 900px) { main.bot { grid-template-columns: 1fr; } .view { max-height: 50vh; } }
     /* a short screen (the Pi's touchscreen, 800 × 480): camera and pad side by side, all in view */
@@ -30,6 +34,7 @@
       .view { max-height: calc(100vh - 8rem); }
       .pad { grid-template-columns: repeat(3, 3.6rem); grid-template-rows: repeat(3, 3.6rem); gap: 0.4rem; margin: 0.4rem 0 0.6rem; }
       .side .stop { min-height: 3.2rem; }
+      .speed { margin-bottom: 0.6rem; }
       .keys { display: none; }
     }
   </style>
@@ -39,7 +44,8 @@
   button (or an arrow key) to drive; the page sends it again every 100 ms while it is held. Let go,
   and the car stops. The brain stops the car when the input stops for 0.3 s (a page that hangs, lost
   Wi-Fi), and the program on the Raspbot stops it after 0.5 s without a command. STOP (or Space)
-  works from every page, also a page that only watches. One page drives at a time.
+  works from every page, also a page that only watches. One page drives at a time. Speed: 0 % (the
+  wheels don't turn) to 100 % (the program's own cap); one speed for every page, kept by the brain.
 -->
 <body class="raspbot">
 <div class="page">
@@ -67,6 +73,7 @@
         <button class="btn" type="button" data-dir="right" aria-label="Turn right"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
         <button class="btn" type="button" data-dir="back" aria-label="Back"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
       </div>
+      <label class="speed"><span>Speed</span><input id="speed" type="range" min="0" max="100" step="5" value="50" aria-label="Speed, from none to the top speed"><output id="speed-out" for="speed">50%</output></label>
       <button id="stop" class="stop" type="button" title="Stop the Raspbot now (works from every page; Space on the keyboard)">STOP</button>
       <p id="msg" class="msg" aria-live="polite"></p>
       <p class="keys">Hold a button to drive. Let go to stop. Keys: <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>; <kbd>Space</kbd> = STOP.</p>
@@ -102,6 +109,16 @@
     for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, letGo);
   }
   $("#stop").onclick = stop;
+  let sliding = false;
+  const speed = $("#speed");
+  speed.addEventListener("input", () => {
+    $("#speed-out").textContent = `${speed.value}%`;
+    send({ type: "set_speed", speed: Number(speed.value) / 100 });
+  });
+  speed.addEventListener("pointerdown", () => { sliding = true; });
+  for (const ev of ["pointerup", "pointercancel", "change"]) speed.addEventListener(ev, () => { sliding = false; });
+  speed.addEventListener("pointerup", () => speed.blur());  // the arrow keys drive the car again
+  speed.addEventListener("keydown", (e) => e.stopPropagation());  // its arrow keys move the slider, not the car
   addEventListener("keydown", (e) => {
     if (e.key === " ") { e.preventDefault(); stop(); return; }
     const dir = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
@@ -134,6 +151,11 @@
     for (const b of document.querySelectorAll(".pad .btn")) {
       b.classList.toggle("lit", b.dataset.dir === s.moving && s.control === "you");
       b.disabled = !s.may_drive || !s.connected;
+    }
+    speed.disabled = !s.may_drive;
+    if (!sliding && document.activeElement !== speed) {  // another page moved it
+      speed.value = Math.round(s.speed * 100);
+      $("#speed-out").textContent = `${speed.value}%`;
     }
     if (!s.camera) $("#cam-why").textContent = s.fake ? "The fake Raspbot has no camera." : "No camera picture.";
     camera(s.camera && s.connected);

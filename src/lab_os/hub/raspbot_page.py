@@ -1,6 +1,6 @@
 """The Raspbot page (quick job 72): drive the Raspbot from a browser, through the brain.
 
-GET /raspbot                 the page: forward, back, left, right (hold), STOP, the camera
+GET /raspbot                 the page: forward, back, left, right (hold), Speed, STOP, the camera
 WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.RaspbotDesk; status at 5 Hz
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
@@ -63,13 +63,15 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                 kind = raw.get("type")
                 if kind == "stop":  # any page, watchers too
                     await desk.stop(str(raw.get("device") or "")[:32])
+                elif kind == "set_speed" and drives:  # the Speed slider
+                    desk.set_speed(float(raw["speed"]))
                 elif kind == "release" and drives:
                     await desk.release(ws)
                 elif kind == "drive":
                     why = await desk.press(ws, str(raw.get("dir"))) if drives else "View only."
                     if why:
                         await ws.send_json({"type": "error", "message": why})
-            except (ValueError, TypeError, AttributeError) as e:
+            except (ValueError, TypeError, AttributeError, KeyError) as e:
                 log.warning("raspbot page: ignored a bad message: %s", e)
     finally:
         status.cancel()
