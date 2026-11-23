@@ -22,7 +22,8 @@ lab-os-teleop = "lab_os.teleop.cli:run"
 
 [project.optional-dependencies]
 so101 = [
-    "lerobot[feetech]>=0.6.1",
+    # viz: Rerun, for LeRobot's own teleop view on the Training page (quick job 91)
+    "lerobot[feetech,viz]>=0.6.1",
 ]
 
 [dependency-groups]

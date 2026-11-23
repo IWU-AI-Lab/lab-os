@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-22 — LeRobot's teleop with Rerun: four surprises (quick job 91)
+**What:** (1) Rerun is not in `lerobot[feetech]`: it is LeRobot's `viz` extra, so `--display_data=true` failed without it. (2) Rerun 0.33 collects anonymous usage data by default (its viewer prints "Welcome to Rerun"). Its only switches are `rerun analytics disable` (the user's own setting) or a `CI` variable. (3) LeRobot's robots and teleoperators take `calibration_dir`, so LeRobot can read the training files from a copy and never touch its cache. (4) Rerun's own web viewer page links Google's fonts; offline it uses its own font.
+**Fix:** the `so101` extra is `lerobot[feetech,viz]`; `CI=1` for the two programs only (a `# HACK:`, current-focus.md); `--robot.calibration_dir` and `--teleop.calibration_dir` point at a temporary copy under the ids `sheep` and `shepherd`. Rerun's page is its own, in a frame, so lab-os's pages still load nothing from the internet.
+
 ### 2026-11-22 — The community wake words: 200 KB each, and TARS scores low (quick job 90)
 **What:** the three models from the community collection are about 200 KB each (the job said 1 MB). They take the same input as openWakeWord's own (16 embeddings × 96). On macOS's `say` voice, OK computer and hey Friday scored 0.88 and TARS only 0.42, under the default threshold of 0.5. A clip shorter than about 1 s scored near 0 in a test: the detector's first 5 chunks (0.4 s) are its warm-up, so the test pads the clip with quiet.
 **Fix:** none in code. The lab check (V.21–V.24) decides whether TARS stays.

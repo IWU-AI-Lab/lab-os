@@ -19,7 +19,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/ai` | AI Control: what an AI tool does with the arm (below) |
 | `/settings` | the settings (also the ⚙ in the hub's strip) |
 | `/xr` | the hub in VR or AR for the Quest (`docs/guides/quest-setup.md` → "The hub in VR"). On another computer, "Preview on this screen" shows it (drag to look around, click to press). The designed hub's strip shows a headset button where VR works. |
-| `/training` | start the SO-101 training setup (green arms and LeLab) after a port check, on the brain's computer (`docs/guides/green-launcher.md`) |
+| `/training` | start the SO-101 training setup (green arms and LeLab), or LeRobot's own teleop with Rerun, after a check, on the brain's computer (`docs/guides/green-launcher.md`) |
 | `/teleop` | the teleop page (the Quest opens this one with `lab-os serve`; `lab-os-teleop` shows it at `/`) |
 | `/monitor` | the arm monitor |
 | `/webcam` | teleop with a webcam (preview): your bare hand in front of a webcam drives the arm, on the brain's computer (`docs/guides/webcam-teleop.md`) |
@@ -162,7 +162,7 @@ Each page opens from the hub in two taps: **All Pages** (the button next to ⚙ 
 | `/teleop` | Teleop | Drive the arm: the Quest, the desktop's keys or the joint sliders. |
 | `/monitor` | Monitor | The arm's joints and 3D view, with STOP; drives nothing. |
 | `/ai` | AI Control | What an AI tool does with the arm, live. |
-| `/training` | Training | Start the green arms' LeLab after a port check. |
+| `/training` | Training | Start the green arms' LeLab, or LeRobot's teleop with Rerun, after a check. |
 | `/webcam` | Webcam Teleop | Your bare hand in front of the webcam drives the arm (preview). |
 | `/xr` | VR Hub | The hub in the headset (opens only in a VR browser). |
 | `/settings` | Settings | ⚙ on the hub. |

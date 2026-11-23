@@ -10,6 +10,9 @@ GET /training            the training launcher's page (so101-green + LeLab,
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)
+GET /api/lerobot-teleop  LeRobot's own teleop for the green set (quick job 91): its check and state
+POST /api/lerobot-teleop/start  check again, then start it with Rerun (the brain's computer only)
+POST /api/lerobot-teleop/stop   stop it like Ctrl+C: the follower goes limp (brain's computer only)
 GET /api/shutdown        may this page shut lab-os down, and what to warn about first
 POST /api/shutdown       {"from": device}: stop any move, tell every page, stop the brain as Ctrl+C
 POST /api/restart        {"from": device}: the same, then the brain starts again with the same
@@ -68,7 +71,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from lab_os import REPO_ROOT, camera_feed, config, green, settings
+from lab_os import REPO_ROOT, camera_feed, config, green, lerobot_teleop, settings
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
@@ -133,7 +136,7 @@ PAGES = (
     ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
     ("/monitor", "Monitor", "The arm's joints and 3D view, with STOP; drives nothing."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
-    ("/training", "Training", "Start the green arms' LeLab after a port check."),
+    ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
     ("/settings", "Settings", "⚙ on the hub."),
@@ -346,6 +349,61 @@ async def api_green_stop(request: web.Request) -> web.Response:
     log.info("green launcher: %s", said)
     c = await asyncio.to_thread(green.check)
     return web.json_response(c.as_dict() | {"here": True, "said": said})
+
+
+# ---------- LeRobot's own teleop for the green set (quick job 91) ----------
+def _brain_uses(app: web.Application) -> tuple[str, ...]:
+    """The devices the brain itself has open: its connected arms and its open cameras."""
+    loop = app[LOOP]
+    arms = [x.arm.name for x in (loop, loop.left) if x is not None and x.arm_connected]
+    return (*arms, *app[FEEDS].open_names())
+
+
+async def _lerobot_state(request: web.Request, said: str = "") -> web.Response:
+    runner = lerobot_teleop.RUNNER
+    c, _ = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(request.app))
+    state = runner.state()
+    out = c.as_dict() | state | {"here": is_local(request)}
+    if said:
+        out["said"] = said
+    return web.json_response(out)
+
+
+async def api_lerobot_teleop(request: web.Request) -> web.Response:
+    return await _lerobot_state(request)
+
+
+async def api_lerobot_teleop_start(request: web.Request) -> web.Response:
+    """Check again, then start LeRobot's teleop (the leader drives the follower) with Rerun."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="LeRobot's teleop starts only on the brain's computer.")
+    runner = lerobot_teleop.RUNNER
+    if runner.running():
+        return await _lerobot_state(request)
+    c, plan = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(request.app))
+    if not c.ok:
+        return await _lerobot_state(request, "Not started: fix the lines marked with a warning.")
+    said = await asyncio.to_thread(runner.start, plan)
+    log.info("LeRobot teleop: %s", said)
+    return await _lerobot_state(request, said)
+
+
+async def api_lerobot_teleop_stop(request: web.Request) -> web.Response:
+    if not is_local(request):
+        raise web.HTTPForbidden(
+            text="LeRobot's teleop can be stopped only from the brain's computer."
+        )
+    said = await asyncio.to_thread(lerobot_teleop.RUNNER.stop)
+    log.info("LeRobot teleop: %s", said)
+    return await _lerobot_state(request, said)
+
+
+async def _lerobot_teleop_task(app: web.Application):
+    yield
+    if lerobot_teleop.RUNNER.running():  # the brain stops: so does LeRobot's teleop (limp)
+        log.warning(
+            "stopping LeRobot's teleop: %s", await asyncio.to_thread(lerobot_teleop.RUNNER.stop)
+        )
 
 
 # ---------- shut down from the hub (quick job 6) ----------
@@ -1372,6 +1430,9 @@ def create_brain_app(
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
     app.router.add_post("/api/green/stop", api_green_stop)
+    app.router.add_get("/api/lerobot-teleop", api_lerobot_teleop)
+    app.router.add_post("/api/lerobot-teleop/start", api_lerobot_teleop_start)
+    app.router.add_post("/api/lerobot-teleop/stop", api_lerobot_teleop_stop)
     app.router.add_get("/api/shutdown", api_shutdown_get)
     app.router.add_post("/api/shutdown", api_shutdown)
     app.router.add_post("/api/restart", api_restart)
@@ -1418,6 +1479,7 @@ def create_brain_app(
     app.cleanup_ctx.append(_new_arm_task)
     app.cleanup_ctx.append(_adb_reverse_task)
     app.cleanup_ctx.append(_camera_feeds_task)
+    app.cleanup_ctx.append(_lerobot_teleop_task)
     app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
     app.on_shutdown.append(_close_hub_pages)
     return app

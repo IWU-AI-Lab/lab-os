@@ -260,6 +260,12 @@ Quick job 87. Use the lab desktop's Chrome with the **Immersive Web Emulator** e
 - **B.2** Look under the buttons. → is there a **Controls** box with the speed, Hand → arm and the desktop keys? (yes / no)
 - **B.3** In the Quest's browser, open Teleop. → is **Desktop control** grey? (yes / no)
 
+## E. LeRobot teleop with Rerun (15 min)
+Quick job 91. The green leader drives the green follower through LeRobot's own command. Run `uv sync --extra so101` once before. Stop LeLab. Plug in both green arms and their two cameras. Run `uv run --extra so101 lab-os serve --arm fake`.
+- **E.1** On the lab desktop, open the hub's **Training** page. → are all lines in the "LeRobot teleop with Rerun" card fine? (yes / no; if no, copy the lines with a warning)
+- **E.2** Put the leader and the follower in the same pose. Press **Start**. Wait 20 seconds. → does Rerun show in the page, with the two camera pictures and the joints? (yes / no) Move the leader. → does the follower follow? (yes / no)
+- **E.3** Hold the follower. Press **Stop**, then OK. → did the follower go limp? (yes / no) Does the card say "LeRobot's teleop stopped"? (yes / no)
+
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
 - **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)

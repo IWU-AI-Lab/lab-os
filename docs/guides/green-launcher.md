@@ -1,6 +1,6 @@
 # The training launcher: so101-green and LeLab in one click
 
-Use it on the lab desktop only. It starts the setup of the SO-101 training project: the green leader and follower, driven from **LeLab** (Hugging Face's web page for LeRobot). It starts nothing until its check says that it is safe.
+Use it on the lab desktop only. The Training page also has LeRobot's own teleop with Rerun (see "LeRobot teleop with Rerun" below). The launcher starts the setup of the SO-101 training project: the green leader and follower, driven from **LeLab** (Hugging Face's web page for LeRobot). It starts nothing until its check says that it is safe.
 
 ## Start it
 Use one of these:
@@ -42,6 +42,33 @@ If a line fails, the launcher says what to change and opens nothing. After the f
 - It never changes LeLab's settings, the calibration folder or the `lerobot` conda environment.
 
 LeLab is its own uv tool (`~/.local/share/uv/tools/lelab`, with its own LeRobot). The launcher starts it as it is. lab-os itself may drive the green follower (`docs/guides/ai-control.md` → "The green arm"), but never at the same time as LeLab. The code is in `src/lab_os/green.py`.
+
+## LeRobot teleop with Rerun (since 2026-11-22)
+The Training page has a second choice beside LeLab: **LeRobot teleop with Rerun**. It runs LeRobot's own teleop command: the green leader drives the green follower. Rerun shows the camera pictures and the joints over time, in a frame on the Training page. It works only on the brain's computer.
+
+Before you start:
+- Install LeRobot and Rerun once: `uv sync --extra so101` (about 5 GB). After a plain `uv sync`, do it again.
+- Put the leader and the follower in the same pose. **Warning:** at Start, the follower moves to the leader's pose at once.
+
+To start, press **Start** in the card. The page first checks these lines:
+1. LeRobot and Rerun are installed.
+2. Both green arms are plugged in.
+3. The two training files (`sheep.json`, `shepherd.json`) are on this computer.
+4. LeLab does not run.
+5. lab-os does not drive a green arm, and the Teleop page does not show a green camera.
+6. No other program has a green arm or a green camera open.
+
+The green cameras are used when they are plugged in. Without them, the teleop runs and Rerun shows only the joints.
+
+To stop, press **Stop**. **Warning:** the green follower goes limp, as with Ctrl+C. Hold it first if it is lifted. When lab-os stops, the teleop stops too.
+
+How it keeps the green rules (`AGENTS.md` → "Hard rules"):
+- LeRobot reads a temporary copy of the training files, under their names `sheep` and `shepherd`. It cannot write to LeRobot's calibration folder.
+- If LeRobot wants to calibrate (the motors hold another calibration than the file), lab-os stops it at once. The page says why. lab-os never answers LeRobot's calibration question.
+- It runs through lab-os's own `so101` extra, never the `lerobot` conda environment.
+- It is LeRobot's tool, as LeLab is. STOP on the lab-os pages and the soft limits do not apply to it. Use **Stop** on the Training page.
+
+The command (`src/lab_os/lerobot_teleop.py`): `uv run --extra so101 lerobot-teleoperate --robot.type=so101_follower --robot.id=sheep --teleop.type=so101_leader --teleop.id=shepherd --display_data=true`, with the green ports, the cameras, the temporary calibration folders and the address of lab-os's Rerun. Rerun's usage data is off for these programs.
 
 ## Move the icon to another computer
 The icon is the file `~/.local/share/applications/lab-os-training.desktop`:

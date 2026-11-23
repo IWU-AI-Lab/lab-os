@@ -131,6 +131,10 @@ class CameraFeeds:
         path = self._path_if_open(name)
         return self.feeds[path].frame if path else None
 
+    def open_names(self) -> list[str]:
+        """The cameras open now, by name (LeRobot's teleop must not open them: quick job 91)."""
+        return [n for n in list(self.paths) if self._path_if_open(n)]
+
     def close_all(self) -> None:
         for feed in list(self.feeds.values()):
             feed.done = True
