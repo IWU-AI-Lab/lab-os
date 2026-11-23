@@ -91,7 +91,7 @@ SECTIONS: list[Section] = [
             Field(
                 "place",
                 "persona",
-                "Who It Is",
+                "Persona",
                 "choice",
                 "Its name, how it talks and which AI it uses.",
                 _personas,
@@ -100,7 +100,7 @@ SECTIONS: list[Section] = [
             Field(
                 "venue",
                 "persona",
-                "Who It Is in This Venue",
+                "Persona in This Venue",
                 "choice",
                 "Default: the same as above.",
                 lambda: ["default", *_personas()],

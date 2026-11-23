@@ -20,6 +20,13 @@ from lab_os import config
 log = logging.getLogger(__name__)
 
 
+def short_host(name: str | None = None) -> str:
+    """This computer's short name: "Mac", not "Mac.indy.rr.com" (on a home network the long name
+    is the internet provider's, and it looked like a website; quick job 82)."""
+    name = (name if name is not None else socket.gethostname()).strip()
+    return name.split(".", 1)[0] or name or "this computer"
+
+
 class SpendLog:
     def __init__(
         self,
@@ -114,7 +121,7 @@ class SpendLog:
             "month": f"{now or datetime.now():%Y-%m}",
             "spent_usd": round(total, 6),
             "estimated": True,
-            "counted_on": socket.gethostname(),
+            "counted_on": short_host(),
             "less_exact_usd": round(less_exact, 6),
             "budget_usd": self.budget_usd,
             "chats": sum(1 for e in entries if e.get("kind", "chat") == "chat"),

@@ -31,7 +31,7 @@ You need no ruler. Measure with these:
 
 ---
 
-## 0. Update (5 min)
+## 0. Update (10 min)
 ```bash
 cd ~/lab-os
 git switch main && git pull
@@ -40,9 +40,12 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 - **0.2** Quick job 85. After the brain has run today, run `uv run lab-os logs`. → does it print the brain's lines, each with today's date? (yes / no)
+- **0.3** Quick job 82. Open ⚙. Scroll to the bottom. Change **Keep a Conversation For** from 30 to 35. → did the amber Restart bar show at the bottom of the window? (yes / no) Did the value box stay in place under the pointer? (yes / no) Set it back to 30.
+- **0.4** In ⚙ → Assistant, read the first rows and **Assistant Language**. → do they say **Persona**, **Persona in This Venue**, and Expects above Answers? (yes / no) Close ⚙. Press the link icon next to ⚙. → did All Pages open? (yes / no)
 
 ## V. The wake word and the greeting (25 min)
-Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. - **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
+Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
+- **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, write the time.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, write the time.

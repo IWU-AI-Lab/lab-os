@@ -55,9 +55,14 @@
     .pair { display: flex; align-items: center; gap: 0.5rem; }
     .sub { padding: 0.65rem 1rem 0.35rem; font: 600 0.74rem/1 var(--f-ui); letter-spacing: 0.08em; color: var(--text-dim); border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
     .note { padding: 0.65rem 1rem; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--text-dim); border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
-    #restart-bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.3rem 0.8rem; align-items: center; margin: 0 0 1.2rem; padding: 0.6rem 0.8rem 0.6rem 1rem;
-      border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); font: 500 0.9rem/1.3 var(--f-ui); }
+    /* fixed at the bottom of the window while a change waits for a restart, so it's where you look (quick job 82:
+       at the top of the list it was out of sight after scrolling down) */
+    #restart-bar { position: fixed; z-index: 5; left: 50%; bottom: 1rem; transform: translateX(-50%); width: min(60rem, calc(100% - 2rem));
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.3rem 0.8rem; align-items: center; padding: 0.7rem 0.8rem 0.7rem 1rem;
+      border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent); font: 500 0.9rem/1.3 var(--f-ui);
+      background: color-mix(in srgb, var(--surface) 94%, var(--bg)); box-shadow: 0 0.4rem 1.6rem rgb(0 0 0 / 0.45); }
     #restart-bar[hidden] { display: none; }
+    body:has(#restart-bar:not([hidden])) #list { padding-bottom: 6rem; }  /* the last rows stay reachable above it */
     #restart-bar .act { display: flex; gap: 0.5rem; }
     #restart-bar .err { grid-column: 1 / -1; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--text); }
     #restart-bar .err:empty, #restart-bar .st { display: none; }
@@ -109,6 +114,8 @@
     /* a setting that waits for a restart: said at the row too, not only in the bar */
     .row .rs { margin-top: 0.25rem; font: 500 0.78rem/1.3 var(--f-ui); color: var(--accent); }
     .row .rs[hidden] { display: none; }
+    .row.may-restart .rs[hidden] { display: block; visibility: hidden; }  /* its place kept: nothing moves when it shows */
+    .pair.stack { flex-direction: column; align-items: flex-end; gap: 0.4rem; }
     #problems { margin: 0 0 1.2rem; padding: 0.7rem 1rem; border: 1px solid var(--danger); color: var(--text); font: var(--w-lines) 0.9rem/1.45 var(--f-lines); }
     #problems[hidden] { display: none; }
     #problems b { color: var(--danger); font: 600 0.92rem/1.3 var(--f-ui); display: block; margin-bottom: 0.3rem; }
