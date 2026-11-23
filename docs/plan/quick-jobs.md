@@ -8,7 +8,12 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 Two coding sessions may run at the same time, one for each lane (the builder, 2026-11-20). The prompt for lane 1: "Read AGENTS.md, then docs/plan/quick-jobs.md. Do the jobs in Lane 1 from the top, one at a time, until the lane is empty. Do not stop to ask between jobs." For lane 2, the same with "Lane 2". Each job moves to "Done" with its date and pull request. Each job adds its lab steps to `docs/guides/lab-checklist.md` (its rules: at most 3 questions in one step). Until Tuesday 2026-12-01, the builder wants as many jobs done as possible; after that, only fixes.
 
 ### Lane 1: voice and the hub pages
-Empty (2026-11-22).
+- 93. **A page with every camera** (the builder, 2026-11-23). A designed page (`docs/design/DESIGN.md`, like the module pages) that shows the picture of every camera in `config/devices.yaml`, live. With no camera, it says so in one line.
+  - A switch for each camera hides or shows its picture. A hidden camera is not opened (the brain opens a camera only while a page asks for it, `src/lab_os/camera_feed.py`).
+  - Many copies at once: the page on several screens or devices, each with its own cameras shown (kept for each device, like "This device"). So the stand camera can be on one screen and the wrist camera on another. It opens with "Open on…" and from All Pages, and it is a view in `room.yaml`.
+  - A camera that another program has open (LeLab, a recording) shows that sentence instead of its picture: the green set's rule, one program per port.
+  - Simple on purpose: the builder may replace it with a fancier page later. Not the recording page of `docs/plan/ideas.md` ("Our own recording and training page"), which shows all cameras too but waits for the builder.
+  - Lab steps: every camera's picture shows; a switch hides one; two devices show different cameras at the same time.
 
 ### Lane 2: arms, teleop and VR
 - 72. **Raspbot teleop as a page** (the builder, 2026-11-20). **Only after lab check N.11 says that raspbot1 joined the router; until then, skip this job.** A page drives raspbot1 (forward, back, turn, stop; its camera if easy) through the brain, with STOP and a freeze when input stops. Look first at Yahboom's own Raspbot v2 software and examples. Robots stay thin: a small program on the Raspbot, deployed from this repo.

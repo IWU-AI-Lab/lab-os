@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order.** Monday 2026-11-23 (about 1 hour): 0, then N (its home steps done before). If you have more time: M, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order.** Monday 2026-11-23 (about 1 hour): 0, then N (its home steps done before). If you have more time: M, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run. **Part P is for after the demo** (2026-12-03): the demo needs only that the AI moves the arm and does something.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -269,6 +269,13 @@ Quick job 91. The green leader drives the green follower through LeRobot's own c
 - **E.1** On the lab desktop, open the hub's **Training** page. → are all lines in the "LeRobot teleop with Rerun" card fine? (yes / no; if no, copy the lines with a warning)
 - **E.2** Put the leader and the follower in the same pose. Press **Start**. Wait 20 seconds. → does Rerun show in the page, with the two camera pictures and the joints? (yes / no) Move the leader. → does the follower follow? (yes / no)
 - **E.3** Hold the follower. Press **Stop**, then OK. → did the follower go limp? (yes / no) Does the card say "LeRobot's teleop stopped"? (yes / no)
+
+## P. After the demo: one program or single moves, 5 against 5 (60 min)
+Quick job 81. Do this part only after the demo. It compares how often the pick works, and how long it takes. Use Claude Code, `so101-white`, and the cube about 20 cm straight in front of the arm. Keep a hand at **STOP**. Before each try, put the cube back in the same place, and send the arm to `ready`.
+- **P.1** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube step by step, with single moves and no run_program, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)
+- **P.2** For each try of P.1, write the seconds from your request to the arm at `handover`. → the 5 times, in seconds.
+- **P.3** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube with one run_program call, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)
+- **P.4** For each try of P.3, write the seconds. → the 5 times, in seconds. For each try that did not work, write what went wrong (missed the cube, dropped it, stopped, other).
 
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
