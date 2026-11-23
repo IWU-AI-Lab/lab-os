@@ -47,6 +47,10 @@ uv run pytest -q
 Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
 - **V.1** Quick job 84. Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting wait until the jump ended? (yes / no)
 - **V.20** Quick job 84. Set ⚙ → Assistant → **Persona** to Lab Assistant. Press ⏻ → **Back to the start screen**, and tap to start. → did the greeting show the Lab Assistant's line (or news), not "All local systems are up"? (yes / no) Write the time.
+- **V.21** Quick job 90. Set ⚙ → Assistant → **Persona** to Lab Assistant, and **Wake Word: Lab Assistant** to OK Computer. Sit in the chair. Say "OK computer, what time is it?" 5 times, at a normal voice. → how many times did it answer? (0 to 5)
+- **V.22** Set **Wake Word: Lab Assistant** to TARS. Say "TARS, what time is it?" 5 times. Then set it to Hey Friday, and say "Hey Friday, what time is it?" 5 times. → how many answers for TARS? For Hey Friday? (0 to 5 each)
+- **V.23** Set **Persona** to J.A.R.V.I.S. Say "Hey Jarvis, what time is it?" 5 times. → how many answers? (0 to 5) Set the Lab Assistant's word back to OK Computer.
+- **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, write the time.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, write the time.

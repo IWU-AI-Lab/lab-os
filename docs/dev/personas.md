@@ -30,7 +30,8 @@ display_name: "J.A.R.V.I.S."  # show name (on screen)
 personality: jarvis.md        # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml; main falls back to backup)
 voice: main                   # voice setup (models.yaml → voices; docs/guides/voice.md); none = no voice
-wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word
+wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word;
+                              # ⚙ → Assistant → Wake Word wins (place.yaml → wake_words)
 picture: { type: orb, style: calm-ring, color: primary }   # read by the designed hub (step 10)
 lines:
   greeting: "All local systems are up."   # the greeting when there's no news

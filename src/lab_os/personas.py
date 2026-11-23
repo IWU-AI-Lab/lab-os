@@ -10,7 +10,7 @@ them (never crashes), so new fields can be added any time.
 
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -145,10 +145,21 @@ def current_persona(override: str | None = None, venue: str | None = None) -> Pe
     + reload). A broken or unknown persona falls back to the plain one, with a warning, so the hub
     keeps working."""
     try:
-        return load_persona(chosen_persona_id(override, venue))
+        persona = load_persona(chosen_persona_id(override, venue))
     except (config.ConfigError, OSError, yaml.YAMLError) as e:
         _warn("%s; using the plain persona", e)
         return default_persona()
+    return with_place_wake_word(persona)
+
+
+def with_place_wake_word(persona: Persona) -> Persona:
+    """The persona with the wake word chosen for it in ⚙ → Assistant (place.yaml → `wake_words`,
+    quick job 90), else its file's own."""
+    try:
+        word = config.load_place().wake_words.get(persona.id)
+    except (config.ConfigError, OSError, yaml.YAMLError):
+        return persona
+    return replace(persona, wake_word=word) if word else persona
 
 
 def default_persona() -> Persona:

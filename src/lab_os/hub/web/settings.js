@@ -15,7 +15,8 @@ const ICONS = "/web/design/icons.svg";
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="${ICONS}#${id}"/></svg>`;
 
 /* ---------- words: Title Case for what the page shows (the values saved stay as they are) ---------- */
-const NAMES = { ai: "AI Control", design: "Designed Hub", plain: "Plain Hub", jarvis: "J.A.R.V.I.S.", "24h": "24-Hour", "12h": "12-Hour", "push-to-talk": "Push-to-Talk" };
+const NAMES = { ai: "AI Control", design: "Designed Hub", plain: "Plain Hub", jarvis: "J.A.R.V.I.S.", "24h": "24-Hour", "12h": "12-Hour", "push-to-talk": "Push-to-Talk",
+  hey_jarvis: "Hey Jarvis", ok_computer: "OK Computer", tars: "TARS", hey_friday: "Hey Friday", none: "None" };  // the wake words (quick job 90)
 const SMALL = new Set(["a", "an", "and", "of", "the", "to", "on", "in", "for"]);
 function show(v) {
   const s = String(v);
@@ -292,7 +293,7 @@ function visitorRow(m) {
   b.disabled = !m.here;
   const help = !m.here ? "Only on the brain's own computer."
     : m.on ? `The ${m.venue} venue. Exit here or ask the assistant; back to ${m.back_to}.`
-      : `The try-this cards; Settings and the AI spend hidden. Or ask the assistant ("hey Jarvis, it's demo time").`;
+      : `The try-this cards; Settings and the AI spend hidden. Or ask the assistant ("${WAKE_PHRASE}, it's demo time").`;
   const r = row("Visitor Mode", help, b, "");
   r.querySelector(".unit").textContent = m.on ? "On" : "Off";
   b.addEventListener("click", async () => {
@@ -393,7 +394,7 @@ function roomRow() {
   const b = btn("Set Up the Room");
   const wrap = document.createElement("div");
   wrap.append(b);
-  const r = row("Set Up the Room", "Opens each page on its device, as room.yaml in the place's config says. Or say \"Hey Jarvis, set up the room\".", wrap);
+  const r = row("Set Up the Room", `Opens each page on its device, as room.yaml in the place's config says. Or say "${WAKE_PHRASE}, set up the room".`, wrap);
   b.addEventListener("click", async () => {
     b.disabled = true;
     const out = await fetch("/api/room/setup", { method: "POST" }).then((x) => x.json()).catch((e) => ({ ok: false, message: `The brain didn't answer (${e.message}).` }));
@@ -406,7 +407,10 @@ function roomRow() {
 }
 
 /* ---------- start ---------- */
+let WAKE_PHRASE = "the wake word";  // the active persona's (quick job 90), for the hints
 async function start() {
+  const st = await fetch("/api/status", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
+  if (st?.voice?.wake?.phrase) WAKE_PHRASE = st.voice.wake.phrase;
   let data = null;
   try {
     const res = await fetch("/api/settings", { cache: "no-store" });

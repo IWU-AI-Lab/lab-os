@@ -109,6 +109,7 @@ WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
 NEAR_MISS = 0.25  # a score this high but under the threshold is logged (sensitivity, the Quest)
 NEAR_MISS_EVERY_S = 3.0
 AUDIO_GAP_S = 2.0  # a screen listening for the phrase sent no audio this long: logged
+WORD_CHECK_S = 2.0  # how often a listening screen checks that the persona's wake word is the same
 TIMINGS_KEPT = 20
 HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
@@ -672,6 +673,8 @@ class VoiceLink:
         self._last_audio = 0.0
         self._next_warm = 0.0
         self._near_logged = 0.0
+        self._word_checked = 0.0
+        self._rewaking: asyncio.Task | None = None
         self.timing: TurnTiming | None = None  # this turn's steps
         self.pages: dict | None = None  # what this page can show (the assistant opens them)
         self.hear_in: str | None = None  # this device's assistant languages (None = any)
@@ -800,6 +803,10 @@ class VoiceLink:
                 now - self._last_audio,
             )
         self._last_audio = now
+        if now - self._word_checked > WORD_CHECK_S:  # another persona or word (⚙, quick job 90)
+            self._word_checked = now
+            if self.detector.word != self.desk.wake_word() and not self._rewaking:
+                self._rewaking = asyncio.get_running_loop().create_task(self._rewake())
         if now >= self._next_warm:
             self._next_warm = now + WARM_EVERY_S
             self.desk.warm()
@@ -868,6 +875,16 @@ class VoiceLink:
         self.wake_on = True
         self.send({"type": "wake_on", "phrase": self.desk.wake_phrase()})
         self.desk.warm()
+
+    async def _rewake(self) -> None:
+        """The persona's wake word changed: listen for the new one (no restart)."""
+        try:
+            log.info(
+                "voice: %s now listens for %s", self.device or "a screen", self.desk.wake_phrase()
+            )
+            await self.wake(True, self.sensitivity)
+        finally:
+            self._rewaking = None
 
     def wake_elsewhere(self) -> None:
         if self.detector:
