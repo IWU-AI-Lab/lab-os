@@ -26,6 +26,7 @@ You need no ruler. Measure with these:
   - A dividing wall stands between the desk and the door. Do not ask for tests from the doorway.
   - A loud fan on the roof makes noise above the desk at times.
   - The Newline is used by HDMI at 1600×900, with its USB touch cable.
+  - The lab has many Ethernet cables. Do not ask to bring one.
   - Ask for what a person can tell: heard or not, a normal or a raised voice, near or far. Do not ask for counts that are not exact, such as steps walked.
 
 ---
@@ -68,7 +69,7 @@ The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). The 
 - **N.6** In the router's page, find the list of clients. Reserve the lab desktop's address, so that it does not change. → the desktop's reserved address: ___ (it starts with 192.168.8)
 - **N.15** The big switch (the Jetson and 4 Pis). Do not unplug anything yet. → where does the switch's other cable go now? (a wall port / another device / nothing) Is the switch's power light on? (yes / no)
 - **N.16** Connect a free port of the switch to the router's **LAN** port. If the router has only one LAN port and the desktop uses it, connect the desktop's cable to the switch instead. Wait 1 minute. In the router's list of clients → how many new devices? Do their names look like the Pis and the Jetson? (yes / no: copy the names)
-- **N.17** On the Pi with the touchscreen, open Chrome at `http://<the reserved address>:8080/design?device=pi-switch`. → did the hub load? (yes / no; if no, run `hostname -I` on that Pi and copy the line)
+- **N.17** On the Pi with the touchscreen, open Chrome at `http://<the reserved address>:8080/design?device=pi-switch`. → did the hub load? (yes / no; if no, run `hostname -I` on that Pi and copy the line) If the Pis do not work on the router: connect the switch back as it was in N.15. They were on the campus network before; the hub is then at the desktop's campus address (`hostname -I` on the desktop, the first one).
 - **N.7** On the desktop, run `uv run lab-os serve --host 0.0.0.0`. On your phone, join the router's Wi-Fi. Open `http://<the reserved address>:8080/design?device=phone`. → did the hub load? (yes / no)
 - **N.8** On the Quest, join the router's Wi-Fi. Without the USB cable, open `http://<the reserved address>:8080/design?device=quest-a` in its browser. → did the hub load? (yes / no) Open `chrome://flags` in the Quest's browser. → does a flags page open? (yes / no)
 - **N.10** On the Newline, open its Wi-Fi settings and join the router. In its Chrome, open `http://<the reserved address>:8080/?device=newline`. → did it join? (yes / no) Did the hub load? (yes / no)
