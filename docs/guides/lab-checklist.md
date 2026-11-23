@@ -39,16 +39,16 @@ uv sync --extra so101
 uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
+- **0.2** Quick job 85. After the brain has run today, run `uv run lab-os logs`. → does it print the brain's lines, each with today's date? (yes / no)
 
 ## V. The wake word and the greeting (25 min)
-Quick job 42. The cause of the stops was not found on the Mac. The brain's terminal now says when it ignores "hey Jarvis", and why. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. Keep the brain's terminal in view.
-- **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
+Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible. - **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
-- **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, copy the terminal's last lines that start with `voice:`.
-- **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, copy the `ignored:` line from the terminal.
-- **V.5** Each time during the day that the wake word does not answer: copy the terminal's `voice:` lines from that minute into the report. → how many times did it stop today? (a number)
+- **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, write the time.
+- **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, write the time.
+- **V.5** Each time during the day that the wake word does not answer: write the time. → how many times did it stop today? (a number)
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
-- **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Copy the terminal's line that ends with `answers`.
+- **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Write the time.
 - **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
 - **V.15** Quick job 83. Ask a question that has a long answer. While the answer plays, say "Hey Jarvis". → did the answer stop, and did it listen? (yes / no)
 - **V.16** Say "Hey Jarvis, start a conversation". Ask one question. Then say "That's all". → did the core go back to rest (not thinking)? (yes / no)

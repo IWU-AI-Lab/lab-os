@@ -42,6 +42,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
   Everything else (tests, causes, files, details) goes in the pull request, not in the report.
 - **Hacks are labeled**: `# HACK: …` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
 - **Every surprise** goes in `docs/dev/GOTCHAS.md`.
+- **Read the brain's log when a lab result says something went wrong** (quick job 85): `uv run lab-os logs --at 18:14` (the time the builder wrote) prints the minutes around it; `uv run lab-os logs` prints the end. Run it on the computer that ran the brain. The log is in `config/local/logs/` (not in git, 4 days kept).
 - **New ideas go into `docs/plan/ideas.md`, not code**, unless they are part of the current focus in `docs/plan/current-focus.md`. `docs/plan/ideas.md` is the single source of truth for ideas; don't list them in other docs. The long-term direction is `docs/plan/vision.md` (areas, not tasks).
 - **Secrets never in git**: real values in `.env` (gitignored); `.env.example` lists names with fake values.
 - **Works offline**: no CDN or internet-loaded code in the web pages. Browser libraries are vendored in `src/lab_os/web/vendor/` (versions + licenses in its README); robot models in `models/`.
@@ -65,6 +66,7 @@ uv run lab-os serve          # the brain: hub at http://localhost:8080/ + the SO
 uv run lab-os-teleop serve   # teleop on its own: XR page + fake arm (docs/guides/quest-setup.md)
 uv run lab-os serve --config ~/my-lab-os   # another place's config folder (docs/dev/places.md)
 uv run lab-os icon --device desk           # the "Start lab-os" icon (devices: docs/guides/hub.md)
+uv run lab-os logs --at 18:14              # the brain's log around a time (no --at: the end)
 ```
 Message format between clients and the brain: `docs/dev/protocol.md`. Keep it updated when adding message types. The JARVIS core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
 
