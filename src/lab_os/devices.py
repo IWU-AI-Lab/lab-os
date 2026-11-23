@@ -81,7 +81,7 @@ class Device:
     mirror: tuple[str, ...] = ()  # headsets: extra scrcpy options for its view (crop, window)
     host: str = ""  # network robots (the Raspbot): its name or address; "" = the device's name
     port: int = 0  # network robots: the port its program listens on; 0 = the robot's default
-    max_speed: float = 0.5  # the Raspbot: the fastest the page drives it, 0 … 1 of its own cap
+    speed: float = 0.5  # the Raspbot: the Speed slider at start, 0 … 1 of its program's speed cap
 
 
 @dataclass(frozen=True)
@@ -137,7 +137,7 @@ def _read_devices(path: Path) -> dict[str, Device]:
             mirror=tuple(str(a) for a in (spec.get("mirror") or ())),
             host=str(spec.get("host") or ""),
             port=int(spec.get("port") or 0),
-            max_speed=float(spec.get("max_speed", 0.5)),
+            speed=float(spec.get("speed", 0.5)),
         )
         for name, spec in (raw.get("devices") or {}).items()
     }

@@ -6,7 +6,8 @@ Description=lab-os Raspbot program (the brain's Raspbot page drives the car thro
 After=network-online.target
 
 [Service]
-ExecStart=/usr/bin/python3 %h/lab-os/lab_os_raspbot.py
+# -u: Yahboom's library prints its I2C errors; without it, the log shows them late or never
+ExecStart=/usr/bin/python3 -u %h/lab-os/lab_os_raspbot.py
 Restart=on-failure
 RestartSec=2
 

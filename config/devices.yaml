@@ -117,12 +117,12 @@ devices:
   # The Raspbot page (/raspbot, quick job 72) drives it through its own small program,
   # robots/raspbot/lab_os_raspbot.py (`uv run lab-os raspbot deploy`, docs/guides/raspbot.md).
   # host: its address on the router (from ~/.ssh/config, 2026-11-23; lab check N.18 reserves it).
-  # max_speed: the fastest the page drives it, 0 … 1 of the program's own speed cap.
+  # speed: the page's Speed slider when the brain starts, 0 … 1 of the program's speed cap.
   raspbot1:
     kind: raspbot
     host: 192.168.8.175
     port: 8765
-    max_speed: 0.5
+    speed: 0.5
     notes: Yahboom Raspbot v2 (Raspberry Pi 5, user pi), on the router's 5 GHz Wi-Fi. ssh raspbot1.
     ports: []
 

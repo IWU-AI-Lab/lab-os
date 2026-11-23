@@ -124,7 +124,8 @@ DIRECTIONS = {
 
 
 class RaspbotDesk:
-    """Drives one Raspbot for the pages: one page at a time, STOP from any page, and the freeze.
+    """Drives one Raspbot for the pages: one page at a time, STOP from any page, the freeze, and
+    the Speed slider (one speed for every page, 0 … 1 of the program's cap).
 
     A page drives by sending its button again and again while it is held (every 100 ms). The
     first page to drive while nobody does has control, until it lets go or closes. When the
@@ -135,9 +136,10 @@ class RaspbotDesk:
     INPUT_TIMEOUT_S = 0.3
     TICK_S = 0.1
 
-    def __init__(self, bot, max_speed: float = 0.5) -> None:
+    def __init__(self, bot, speed: float = 0.5) -> None:
         self.bot = bot
-        self.max_speed = max(0.0, min(float(max_speed), 1.0))
+        self.speed = 0.5
+        self.set_speed(speed)
         self.driver = None  # the page that drives, or None
         self.moving = ""  # the direction now, "" = stopped
         self._last_input = 0.0
@@ -154,6 +156,7 @@ class RaspbotDesk:
             "moving": self.moving,
             "control": control,
             "camera": bool(self.bot.camera_port),
+            "speed": self.speed,
         }
         if not self.bot.connected:
             msg["message"] = getattr(self.bot, "said", "") or f"{self.bot.name} is not connected."
@@ -174,9 +177,15 @@ class RaspbotDesk:
             return self.status()["message"]
         self._last_input = time.monotonic()
         left, right = DIRECTIONS[direction]
-        await self.bot.drive(left * self.max_speed, right * self.max_speed)
+        await self.bot.drive(left * self.speed, right * self.speed)
         self.moving = direction
         return ""
+
+    def set_speed(self, speed: float) -> float:
+        """The Speed slider: 0 (none) … 1 (the program's own cap). A held button takes it at its
+        next repeat (100 ms)."""
+        self.speed = round(max(0.0, min(float(speed), 1.0)), 3)
+        return self.speed
 
     async def release(self, page) -> None:
         """The page let go of every button (or closed): stop, and free control."""
@@ -215,7 +224,7 @@ def from_registry(registry) -> RaspbotDesk:
     """The first `kind: raspbot` device in devices.yaml, or the fake one when there is none."""
     for d in registry.devices.values():
         if d.kind == "raspbot":
-            return RaspbotDesk(TcpRaspbot(d.name, d.host or d.name, d.port or PORT), d.max_speed)
+            return RaspbotDesk(TcpRaspbot(d.name, d.host or d.name, d.port or PORT), d.speed)
     return RaspbotDesk(FakeRaspbot())
 
 
