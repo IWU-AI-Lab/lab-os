@@ -37,11 +37,15 @@ from lab_os import config
 log = logging.getLogger(__name__)
 
 NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$")
+NAME_IN_LIST = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+)  # a devices.yaml name (cameras_hidden)
 WINDOW_ID = re.compile(r"^[A-Za-z0-9_-]{4,40}$")
 STAGES = ("start", "hub")
 FILE_NAME = "hub-devices.yaml"
 
-# "This device" settings: key → allowed values (None = a bool). "" means "not set" (the default).
+# "This device" settings: key → allowed values (None = a bool, list = a list of camera names). ""
+# means "not set" (the default).
 SETTINGS = {
     "quality": ("", "maximal", "full", "reduced", "minimal"),
     "res": ("", "auto", "1", "0.75", "0.5"),
@@ -52,7 +56,9 @@ SETTINGS = {
     "wake_sensitivity": ("", *range(1, 10)),  # 1–9 (lab_os.ai.wake.SENSITIVITY); "" = 5
     "hear_in": ("", "en"),  # the assistant's languages (lab_os.ai.languages); "" = any
     "answer_in": ("", "en"),
+    "cameras_hidden": list,  # the Cameras page: the cameras this device doesn't show (quick job 93)
 }
+MAX_LIST = 32  # a list setting: at most this many names
 
 
 class DeviceError(ValueError):
@@ -111,6 +117,11 @@ class DeviceSettings:
             allowed = SETTINGS[key]
             if allowed is None:
                 ok = isinstance(value, bool)
+            elif allowed is list:  # camera names, as devices.yaml has them
+                ok = isinstance(value, list) and len(value) <= MAX_LIST
+                ok = ok and all(isinstance(v, str) and NAME_IN_LIST.match(v) for v in value)
+                if ok:
+                    value = sorted(set(value)) or None  # an empty list: back to the default
             else:  # (True == 1 in Python: a bool is never a number setting)
                 ok = not isinstance(value, bool) and value in allowed
             if value is None or value == "":
@@ -118,8 +129,16 @@ class DeviceSettings:
             elif ok:
                 mine[key] = value
             else:
-                choices = (str(a) for a in allowed or () if a != "")
-                want = "true or false" if allowed is None else ", ".join(choices)
+                choices = (
+                    str(a) for a in (allowed if isinstance(allowed, tuple) else ()) if a != ""
+                )
+                want = (
+                    "true or false"
+                    if allowed is None
+                    else f"a list of up to {MAX_LIST} device names"
+                    if allowed is list
+                    else ", ".join(choices)
+                )
                 raise DeviceError(f"{key} can be {want}, not {value!r}")
         if mine:
             devices[name] = mine

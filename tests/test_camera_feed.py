@@ -113,3 +113,48 @@ def test_the_teleop_page_shows_them_under_the_joints():
     assert "initCams(link)" in (web / "teleop-page.js").read_text()
     cams = (web / "cams.js").read_text()
     assert "/api/camera-feed/" in cams and "document.hidden" in cams  # only while it's shown
+
+
+def test_every_camera_once_for_each_socket():
+    """Quick job 93: two names for one socket are one camera on the Cameras page."""
+    reg = Registry(
+        {
+            "so101-green-cam-wrist": Device("so101-green-cam-wrist", "camera", socket="usb-0:7"),
+            "so101-white": Device("so101-white", "so101"),
+            "so101-white-cam-wrist": Device("so101-white-cam-wrist", "camera", socket="usb-0:7"),
+            "so101-white-cam-stand": Device("so101-white-cam-stand", "camera", socket="usb-0:8"),
+            "secret-cam": Device("secret-cam", "camera", off_limits=True, socket="usb-0:9"),
+            "new-cam": Device("new-cam", "camera"),  # no socket yet: shown, its picture says why
+        }
+    )
+    assert camera_feed.all_cameras(reg) == [
+        {
+            "id": "so101-green-cam-wrist",
+            "names": ["so101-green-cam-wrist", "so101-white-cam-wrist"],
+        },
+        {"id": "so101-white-cam-stand", "names": ["so101-white-cam-stand"]},
+        {"id": "new-cam", "names": ["new-cam"]},
+    ]
+    assert camera_feed.all_cameras(Registry({})) == []
+
+
+async def test_the_cameras_page(aiohttp_client, monkeypatch):
+    """Quick job 93: the page and its list; it asks only for the pictures it shows, and keeps the
+    switches for each device."""
+    from test_hub_server import SRC
+
+    monkeypatch.setattr(
+        camera_feed,
+        "all_cameras",
+        lambda: [{"id": "white-cam-stand", "names": ["white-cam-stand"]}],
+    )
+    client = await aiohttp_client(make_app())
+    got = await (await client.get("/api/cameras")).json()
+    assert got == {"cameras": [{"id": "white-cam-stand", "names": ["white-cam-stand"]}]}
+    page = await (await client.get("/cameras")).text()
+    assert "/web/design/kit.css" in page and "/api/cameras" in page
+    assert "/api/camera-feed/" in page and "document.hidden" in page
+    assert 'setPref("cameras_hidden"' in page and "There is no camera" in page
+    views = (await (await client.get("/api/hub")).json())["views"]
+    assert {"id": "cameras", "title": "Cameras", "page": "/cameras"} in views
+    assert "cameras:" in (SRC / "hub" / "web" / "design.html").read_text()  # its icon there

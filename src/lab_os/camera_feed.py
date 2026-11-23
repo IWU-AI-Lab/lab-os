@@ -119,7 +119,7 @@ class CameraFeeds:
                     feed = _Feed(path, self.capture(path), self.encode)
                     self.feeds[path] = feed
                     feed.thread.start()
-                    log.info("camera %s (%s) opened for the teleop page", name, path)
+                    log.info("camera %s (%s) opened for a page", name, path)
             feed = self.feeds[path]
             feed.asked = time.monotonic()
         if not feed.got.wait(FIRST_WAIT_S):
@@ -155,3 +155,21 @@ def arm_cameras(arm: str, registry: devices.Registry | None = None) -> list[str]
         if d.kind == "camera" and not d.off_limits and d.name.startswith(f"{arm}-cam-")
     ]
     return sorted(names, key=lambda n: (not n.endswith("stand"), n))
+
+
+def all_cameras(registry: devices.Registry | None = None) -> list[dict]:
+    """Every camera in devices.yaml for the Cameras page (quick job 93), one entry per USB socket:
+    {"id": the first name (the one to ask pictures for), "names": every name for that socket}.
+    Two names for one socket (the white and green sets) are one camera: one picture, not two.
+    Off-limits cameras are left out. In devices.yaml order; opens and lists nothing."""
+    registry = registry or devices.load_registry()
+    out: dict[str, dict] = {}
+    for d in registry.devices.values():
+        if d.kind != "camera" or d.off_limits:
+            continue
+        key = d.socket or d.name  # no socket: its own entry (the picture says what's missing)
+        if key in out:
+            out[key]["names"].append(d.name)
+        else:
+            out[key] = {"id": d.name, "names": [d.name]}
+    return list(out.values())

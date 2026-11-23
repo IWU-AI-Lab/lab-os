@@ -3187,7 +3187,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { webcam: "i-cam", settings: "i-gear", pages: "i-link" };
+const VIEW_ICONS = { webcam: "i-cam", cameras: "i-cam", settings: "i-gear", pages: "i-link" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;
