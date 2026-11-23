@@ -81,7 +81,8 @@ from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import load_registry
 from lab_os.hub import launch
-from lab_os.hub.arm_desk import Actions, ArmDesk
+from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
+from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
@@ -1417,7 +1418,10 @@ def create_brain_app(
     project = ProjectTools(repo, venue)
     app[TOOLS_PROJECT] = project
     server = create_mcp_server(
-        app[TOOLS], project, other_arms=lambda: [t for t in (app[TOOLS_LEFT],) if t]
+        app[TOOLS],
+        project,
+        other_arms=lambda: [t for t in (app[TOOLS_LEFT],) if t],
+        find_cube=lambda: locate_cube(app[TOOLS], load_handover()),  # preview 4's finder
     )
     add_lab_status(server, lambda: lab_status(app), app[TOOLS].calls)
     add_system_tools(server, app)

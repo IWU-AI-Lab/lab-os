@@ -142,6 +142,38 @@ def _tool(name: str, description: str, parameters: dict | None = None) -> dict:
     }
 
 
+class NoCube(Exception):
+    """The cube can't be found or reached. The message is a sentence for the person."""
+
+
+async def locate_cube(robot: RobotTools, s: HandOver) -> tuple[float, float]:
+    """Where the blue cube stands (x, y cm), from the stand camera's picture and its table map,
+    checked to be within the arm's reach for a pick (preview 4; also `find_cube` in a program,
+    quick job 81). Raises NoCube with the reason."""
+    m = table_map.load(s.camera)
+    if m is None:
+        raise NoCube(f"{s.camera} has no table map, so the brain can't find the cube.")
+    try:
+        shot = await robot.call("camera_snapshot", camera=s.camera, grid=False)
+    except Refused as e:
+        raise NoCube(f"no picture from the stand camera: {e}.") from None
+    found = await asyncio.to_thread(find_cube, shot["image_jpeg"], m, s)
+    if found is None:
+        raise NoCube(
+            "I can't see the blue cube in the stand camera's picture. Ask the person to put it on "
+            "the table about 20 cm in front of the arm."
+        )
+    x, y = round(found[0], 1), round(found[1], 1)
+    ready = robot.arm.read_joints() | robot.poses.get("ready", {})
+    q = robot._reaches(ready, (x, y, s.height_cm + PICK_ABOVE_CM), DOWN_DEG)
+    if q is None or robot._reaches(q, (x, y, s.height_cm / 2), DOWN_DEG) is None:
+        raise NoCube(
+            f"the cube is at about ({x:g}, {y:g}) cm from the arm's base, where the arm can't "
+            "pick it up. Ask the person to put it about 20 cm straight in front of the arm."
+        )
+    return x, y
+
+
 class ArmDesk:
     """The assistant's arm tools. `robot`: the brain's robot tools; `enabled()`: place.yaml's
     switch, read each turn; `setup()`: config/handover.yaml."""
@@ -241,29 +273,10 @@ class ArmDesk:
             return f"Error: there's no hand-over setup ({e})."
         if s.pose not in self.robot.poses:
             return f"Error: poses.yaml has no {s.pose!r} pose to hold the cube out at."
-        m = table_map.load(s.camera)
-        if m is None:
-            return f"Error: {s.camera} has no table map, so the brain can't find the cube."
         try:
-            shot = await self.robot.call("camera_snapshot", camera=s.camera, grid=False)
-        except Refused as e:
-            return f"Error: no picture from the stand camera: {e}."
-        found = await asyncio.to_thread(find_cube, shot["image_jpeg"], m, s)
-        if found is None:
-            return (
-                "Error: I can't see the blue cube in the stand camera's picture. Ask the person to "
-                "put it on the table about 20 cm in front of the arm."
-            )
-        x, y = round(found[0], 1), round(found[1], 1)
-        ready = self.robot.arm.read_joints() | self.robot.poses.get("ready", {})
-        above = (x, y, s.height_cm + PICK_ABOVE_CM)
-        q = self.robot._reaches(ready, above, DOWN_DEG)
-        if q is None or self.robot._reaches(q, (x, y, s.height_cm / 2), DOWN_DEG) is None:
-            return (
-                f"Error: the cube is at about ({x:g}, {y:g}) cm from the arm's base, where the "
-                "arm can't pick it up. Ask the person to put it about 20 cm straight in front of "
-                "the arm."
-            )
+            x, y = await locate_cube(self.robot, s)
+        except NoCube as e:
+            return f"Error: {e}"
         self.holding = False
         self._start("bringing the cube", self._fetch(x, y, s))
         return (

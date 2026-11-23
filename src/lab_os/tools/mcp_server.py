@@ -10,15 +10,17 @@ gripper, move_to and go_to_pose are move (never allow-list them: each one should
 buttons as tools (quick job 80) are added by lab_os.hub.system_tools.
 """
 
+import asyncio
 import contextlib
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import uvicorn
 from mcp.server.mcpserver import Image, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
+from lab_os.tools.program import DEFAULT_LIMIT_S, ProgramRunner
 from lab_os.tools.project import NotFound, ProjectTools
 from lab_os.tools.robot import Refused, RobotTools
 
@@ -59,6 +61,12 @@ trying again. (Tips adapted from robot_MCP: docs/dev/existing-work-teleop-ai.md.
 Tic-tac-toe on the paper grid: camera_snapshot of the stand camera with board true shows the board
 and gives everything else you need (docs/guides/tic-tac-toe.md).
 
+One program instead of many moves (run_program): when a task takes several moves (look, go
+above, pick, carry), write one short Python program that calls the functions and run it in one
+call. It runs on the brain with no wait between the steps, so it is much faster than single
+calls. Use loops and ifs to check results (a move that went only part of the way says so in
+"clipped"; call it again). Prefer it over many single moves. Single calls are for looking first.
+
 Two arms at once: arm_status lists "other_arms"; give a tool's `arm` to drive another one (the
 first arm is the default). The hub's buttons are tools too: hub_screens and open_on_device ("Open
 on…"), bring_back, set_up_the_room, list_settings and change_setting, change_device_setting,
@@ -79,6 +87,7 @@ def create_mcp_server(
     tools: RobotTools,
     project: ProjectTools | None = None,
     other_arms: Callable[[], list[RobotTools]] = list,
+    find_cube: Callable[[], Awaitable[tuple[float, float]]] | None = None,
 ) -> MCPServer:
     """`tools`: the first arm's (the default); `other_arms`: the tools of every other connected
     arm (two arms at once), reached by naming the arm (quick job 80)."""
@@ -223,6 +232,30 @@ def create_mcp_server(
     async def stop(arm: str | None = None) -> dict:
         """Stop the arm now and hold it still. Always allowed, whoever has control."""
         return await run("stop", arm=arm)
+
+    @server.tool(annotations=MOVE)
+    async def run_program(code: str, time_limit_s: float = DEFAULT_LIMIT_S) -> dict:
+        """Run one short Python program on the brain that calls the robot functions, with no
+        model call between the steps (much faster than single calls). Functions (each returns
+        the same dict as the tool of that name): arm_status(), list_poses(), find_cube() (the
+        blue cube on the stand camera: {"x_cm", "y_cm"}, or None), table_point(camera, x_px,
+        y_px), move_to(x_cm, y_cm, z_cm, tool_angle_deg=None), pick_at(x_cm, y_cm,
+        height_cm=2.5), gripper(open_pct), go_to_pose(name), move_joints(joints), wait(seconds);
+        each takes arm= for another arm. Also math.*, statistics.*, print() and plain builtins.
+        No imports, no files, no names starting with "_", no d[k] += x (write d[k] = d[k] + x).
+        Set `result` to return a value. A move goes at most max_move_cm or max_joint_change_deg
+        a call: loop until it's there (e.g. while "went" is in any of r["clipped"]). Every call
+        has the usual checks; a refusal, a stopped move, STOP or the time limit (default 120 s,
+        at most 300) ends the program. Returns what happened: "result" (done, stopped, time
+        limit, error), each call with its result, what it printed, and where it stopped
+        ("line")."""
+        runner = ProgramRunner(
+            lambda tool, **a: pick(a.get("arm")).call(tool, **a),
+            asyncio.get_running_loop(),
+            stops=lambda: tools.loop.stops,
+            find_cube=find_cube,
+        )
+        return await asyncio.to_thread(runner.run, code, time_limit_s)
 
     return server
 

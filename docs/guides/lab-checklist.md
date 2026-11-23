@@ -211,6 +211,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.8** Quick job 77. Start the brain again with the command above. Open AI Control (`/ai`) on the desktop. Ask "move the arm to ready", then "move the arm to the hand-over pose". → does AI Control show each move as arrived, not "short"? (yes / no: copy the line that says short)
 - **H.9** Quick job 80. Keep a hand at STOP. Put the cube about 20 cm straight in front of the arm. Set ⚙ → Assistant → **Full Access** off, and ⚙ → Robots → **The Assistant May Move the Arm** off. Ask the hub's assistant: "Pick up the cube." → did the arm stay still? (yes / no)
 - **H.10** Set **Full Access** on. Ask again, in one sentence: "Pick up the cube." → did the arm pick it up? (yes / no) About how many seconds did it take? Write the time. Set **Full Access** off again.
+- **H.11** Quick job 81. Put the cube about 20 cm straight in front of the arm. In Claude Code, ask: "Pick up the cube with one run_program call, then hold it at the handover pose." → did the arm do it in one call? (yes / no) How many seconds did it take? Earlier, single moves took about a minute or more.
 
 ## I. The icon, one hub window and full screen (30 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.
