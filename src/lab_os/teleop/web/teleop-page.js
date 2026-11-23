@@ -2,6 +2,7 @@
 // (Quest/WebXR in xr.js, keyboard + trackpad in desktop-input.js). Only one source is active at a time.
 import { getLink } from "./link.js";
 import { initXR } from "./xr.js";
+import { isHeadset } from "./headset.js";
 import { initDesktop } from "./desktop-input.js";
 import { gate } from "./control-gate.js";
 import { initCams } from "./cams.js";
@@ -95,10 +96,10 @@ function fmt(c) {
 
 let lastReadout = 0;
 const sourceButtons = { xr: $("enter"), ar: $("enter-ar"), desktop: $("desktop") };
-if (!sourceButtons.ar) delete sourceButtons.ar; // the classic page has one XR button
 // In a headset there's no keyboard to drive with: Desktop control can't be chosen there (the builder,
-// 2026-11-21); the Quest's way in is Enter VR or Enter AR.
-if (/OculusBrowser/.test(navigator.userAgent)) {
+// 2026-11-21); the Quest's way in is Enter VR or Enter AR. Told by the browser, so a desktop with a
+// WebXR emulator keeps all three choices (quick job 87).
+if (isHeadset()) {
   const d = $("desktop");
   d.dataset.unavailable = "1";
   d.disabled = true;

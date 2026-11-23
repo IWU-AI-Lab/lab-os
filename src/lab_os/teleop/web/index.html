@@ -40,12 +40,10 @@
       <section class="card"><div class="in">
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
         <div class="sources">
-          <button id="enter" class="btn primary" type="button" disabled>Checking WebXR…</button>
-          <button id="enter-ar" class="btn primary" type="button" hidden>Enter AR (passthrough)</button>
-          <div class="pair">
-            <button id="desktop" class="btn" type="button">Desktop control</button>
-            <button id="desk-controls" class="btn" type="button" aria-controls="desk-help" aria-expanded="false">Controls</button>
-          </div>
+          <!-- the order (quick job 87): Desktop control, Enter AR, Enter VR; Controls in its own box under them -->
+          <button id="desktop" class="btn primary" type="button">Desktop control</button>
+          <button id="enter-ar" class="btn primary" type="button" disabled>Enter AR (passthrough)</button>
+          <button id="enter" class="btn primary" type="button" disabled>Enter VR</button>
         </div>
         <p id="xr-msg" class="msg" aria-live="polite"></p>
         <p id="control-why" class="msg" aria-live="polite" hidden></p>
@@ -53,6 +51,11 @@
           <dt>Gripper</dt><dd id="gripper">—</dd>
           <dt>Speed</dt><dd id="speed">—</dd>
         </dl>
+        <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down = <b>hands</b>: hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper. Let go and the arm holds still.</p>
+        <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
+      </div></section>
+
+      <details id="desk-help" class="card" open><summary>Controls</summary><div class="in">
         <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
         <label class="row">Hand → arm
           <select id="mode-set" disabled>
@@ -69,11 +72,7 @@
         </label>
         <button id="xr-place-reset" class="btn small" type="button" title="The 3D arm starts at its first place again (left Grip moves it in the headset, Y puts it back)">Put the 3D arm back at its first place</button>
         <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>; with two arms, <b>Y</b> and that hand's <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
-        <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down = <b>hands</b>: hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper. Let go and the arm holds still.</p>
-        <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
-      </div></section>
-
-      <details id="desk-help" class="card"><summary>Desktop control: mode and keys</summary><div class="in">
+        <h3>Desktop control</h3>
         <label class="row">Mode
           <select id="desk-mode">
             <option value="keys">Keys: a key pair per motor</option>
