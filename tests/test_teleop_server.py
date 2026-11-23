@@ -245,7 +245,9 @@ async def test_other_computers_only_watch_a_real_arm(aiohttp_client, monkeypatch
     assert loop.inputs.latest is None and app[srv.CONTROL]["ws"] is None
     await ws.send_json({"type": "stop"})
     assert await wait_for(lambda: loop.frozen)
-    assert (await next_of(ws, "status"))["may_drive"] is False  # its buttons are grey (job 76)
+    status = await next_of(ws, "status")
+    assert status["may_drive"] is False  # its buttons are grey (job 76)
+    assert status["address"] == "127.0.0.1"  # its line says which address to allow (job 95)
     await ws.close()
 
     monkeypatch.setattr(srv, "is_local", lambda request: True)  # this computer still drives
@@ -319,6 +321,7 @@ async def test_listed_computers_may_drive_a_real_arm(aiohttp_client, monkeypatch
     ws = await client.ws_connect("/ws")
     await ws.send_json(FRAME)
     assert await wait_for(lambda: loop.inputs.latest is not None)
+    assert "address" not in await next_of(ws, "status")  # it drives: nothing to allow
     await ws.close()
 
     app, loop = make_app(local_control_only=True, drive_from=frozenset({"192.168.7.118"}))
@@ -354,6 +357,7 @@ def test_the_pages_grey_their_control_buttons():
     web = Path(__file__).resolve().parents[1] / "src/lab_os/teleop/web"
     gate = (web / "control-gate.js").read_text()
     assert "has control. It must stop first." in gate and "s.may_drive === false" in gate
+    assert "to drive_from in place.yaml" in gate  # how to let a device drive (quick job 95)
     for page, script in (("index.html", "teleop-page.js"), ("webcam.html", "webcam.js")):
         assert 'id="control-why"' in (web / page).read_text(), page
         js = (web / script).read_text()
