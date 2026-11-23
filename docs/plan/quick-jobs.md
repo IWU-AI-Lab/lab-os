@@ -25,8 +25,13 @@ Two coding sessions may run at the same time, one for each lane (the builder, 20
   - **AI Spend names the computer by its short name** ("the brain on Mac", or the device's name), not the network's long name: on the Mac's home network it said "Mac.indy.rr.com", which looked like a website.
 - 84. **The greeting follows the persona, and waits for the jump** (the builder, 2026-11-21).
   - With the Lab Assistant as the persona (both settings), the startup still said JARVIS's welcome and "say hey Jarvis". The greeting and its hint come from the persona that is active.
-  - The Lab Assistant's own wake word: see `docs/plan/ideas.md` → "A wake word for the Lab Assistant" (waits for the builder's choice of name). Until then the hint says the wake word that really works.
+  - The hint says the persona's own wake word (quick job 90).
   - After ⏻ → Restart, the greeting started at once, over the jump. It waits as it does after the first start.
+- 90. **Five wake words to choose from** (the builder, 2026-11-22: "if it's cheap (storage-wise), we can just use like 5 different ones of your choice"). Each model is about 1 MB.
+  - The five: **hey Jarvis** (have it), **hey Mycroft** (openWakeWord's own), and from the community collection [fwartner/home-assistant-wakewords-collection](https://github.com/fwartner/home-assistant-wakewords-collection) (MIT): **ok computer**, **hey Friday**, **TARS**. Put them in `models/openwakeword/` with their source, sha256 and license in its README. Not plain "computer": people say it all day in a computer lab.
+  - Each persona listens for its own wake word only (more words at once means more false wakes). ⚙ → Assistant gets a **Wake Word** choice for each persona. JARVIS keeps "hey Jarvis"; the Lab Assistant gets "ok computer".
+  - The greeting's hint and the hub's hints say the persona's wake word.
+  - The community models are trained by different people: if one wakes badly in the lab, drop it. Lab steps: each word wakes the hub 4 of 5 times at a normal voice from the chair, and none woke by itself in 10 minutes of talk.
 - 80. **Full access for the hub's assistant, and the whole system as tools** (the builder, 2026-11-21). The builder wants to see everything the assistant can do first; safety for it comes later.
   - A switch in ⚙ → Assistant: **Full Access**, off by default. It replaces nothing: The Assistant May Move the Arm stays as it is.
   - With Full Access on, the hub's assistant gets every MCP tool of the brain: the move tools (`move_to`, `pick_at`, `move_joints`, `gripper`, `go_to_pose`, `stop`) and the picture tools (`camera_snapshot`, `pose_view`, `table_point`: the picture goes to the model as an image). For every connected arm and camera, the green set included.
@@ -55,7 +60,6 @@ Two coding sessions may run at the same time, one for each lane (the builder, 20
 
 ### Last, when both lanes are empty
 - 53. **Capital letters in content text.** A lot of text is all lowercase, for example on AI Control ("clipped", "arrived · clipped: …", "name home") and the status words. `docs/design/DESIGN.md` says labels are small CAPS and content is normal case. Start sentences and status words with a capital letter on every page. Names of commands, files, poses and settings stay as they are.
-- 89. **A polish sweep of every page** (the builder, 2026-11-21: "a lot of minor issues… iron these out in one fell swoop"). After 53. On the fake arm, open every page in a headless browser at the laptop's size, 1920×1080 and the Newline's 1600×900 (and the VR hub's preview). Look for text that overlaps or almost touches, controls that move when a value changes, words that don't match the names elsewhere, and what `docs/design/DESIGN.md` says. Fix the small ones. List the bigger ones as one line each at the end of the report. Sound, voice timing and how a control feels can't be checked this way: those stay in the lab checklist.
 
 ## Done
 - **Two arms without naming them** (the builder, 2026-11-21; PR #206, left open: it changes the green arms' rules). With no `--arm`, a plugged-in green set becomes the left arm beside another SO-101 (it was taken only when named); alone it still needs `--arm so101-green`, so the AI tools never drive it unasked. Its port is still checked: LeLab or a run using it means one arm only. The teleop page's options already apply to both arms (Hand → arm, the 3D arm's look, putting both 3D arms back). An arm plugged in after the start becomes only the main arm.
