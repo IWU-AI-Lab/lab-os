@@ -169,13 +169,16 @@ The first thing people see, so it's the flashiest part.
 Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so it carries over the lab's fans. **Silence between events**, no hum. About a third of idle events make a matching sound (a tick, a faint shimmer). Startup: a low swell, rising lock-on tones, a deep shockwave thump, a soft chord for the title, a landing whoosh (hyperspace: a swelling hum, a rising whine, the roar of the jump, then a deep arrival boom). Buttons: a short soft blip. Assistant: a two-note rise when it starts listening, a falling one when done. Warning: two falling tones. Critical: an urgent low double tone in step with the red pulse. Volume and mute live in the sound pack.
 
 ## Screens and places
-**Everything scales with the screen,** the core included: sizes are set relative to the screen (the smaller of width and height decides), so the core keeps its share instead of shrinking first. **Portrait screens get their own layout:** the core on top, the buttons in a row under it, the fact panels in two columns below, and the page scrolls if it has to.
+**Everything scales with the screen,** the core included: sizes are set relative to the screen (the smaller of width and height decides), so the core keeps its share instead of shrinking first. **Portrait screens get their own layout:** the core on top with the ask line under it, the buttons in a row under that, the fact panels in two columns below (one column on a phone narrower than 560 px), and the page scrolls if it has to. On a phone the latest answer lies on a fill, because it can cover the buttons for a moment.
+
+**Small screens** (a phone, the Pi's touchscreen; 1100 px wide or less, or 640 px high or less; quick job 96, 2026-11-23): every control is at least about 40 px, big enough for a finger. A small mark (the open mark ⤢) keeps its look and gets a bigger area for the tap. An open page has a thin frame, and the docked core is small in the corner with its own room, so it covers nothing. On a phone, "Open on…" shows only its icon. A small screen on its side (800 × 480) gets less frame and air and a smaller core, so the fact panels keep room for their words. Large screens keep their layout.
 
 - **32" lab monitor (main):** seen from 1–3 m, often by visitors standing. Big text, strong contrast, the assistant readable from across the room. Left on, waiting at the ignition screen.
 - **Quest headset:** panels float at arm's length; bigger text; no large bright areas. HUD arcs can wrap around tracked hands and the arm, FRIDAY-style; the network can become a 3D cloud; the hyperspace jump fits here.
 - **Large touch display (Newline) and hallway screens:** seen by people passing by, so the "newcomer can tell what it is" test matters most here. The network reacts to fingers; buttons big enough for a fingertip. **Public screens hide internal details** (IP addresses, spend): the venue profile decides.
 - **Projector / bright rooms:** lines must stay bright; minimal quality reads best.
 - **Laptops:** same layout, scaled down; reduced quality by default.
+- **Phones and the Pi's touchscreens (800 × 480, 1024 × 600):** the small-screen rules above. No sideways scroll; a page scrolls down when it has to.
 
 ## Do
 - Start from darkness; add light only where it means something.
