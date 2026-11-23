@@ -34,6 +34,7 @@ from lab_os.ai.models import NoSetup, Setup, load_setups, pick
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.personas import Persona
+from lab_os.tools.program import calculate
 
 log = logging.getLogger(__name__)
 
@@ -71,15 +72,36 @@ THINK_TOOL = {
     "function": {
         "name": THINK,
         "description": (
-            "Ask a stronger, slower model. Use it for a hard question only: maths or a "
-            "calculation, a plan with several steps, or a hard question not about the lab. Never "
-            "for a simple or lab question. Give the whole problem, with every number. Then say "
-            "its answer in your own words, briefly, for speaking aloud."
+            "Ask a stronger, slower model. Use it for a hard question only: a plan with several "
+            "steps, or a hard question not about the lab. Never for a simple or lab question, "
+            "and not for arithmetic (use calculate). Give the whole problem, with every number. "
+            "Then say its answer in your own words, briefly, for speaking aloud."
         ),
         "parameters": {
             "type": "object",
             "properties": {"problem": {"type": "string", "description": "the whole problem"}},
             "required": ["problem"],
+        },
+    },
+}
+# Real calculations (quick job 86): Python math run on the brain, so a number is computed, not
+# guessed. Not quick job 69's stronger model.
+CALC = "calculate"
+CALC_TOOL = {
+    "type": "function",
+    "function": {
+        "name": CALC,
+        "description": (
+            "Compute with Python on the brain: for any arithmetic beyond the trivial, a unit "
+            "change with several steps, distances, times, angles, statistics. Write a short "
+            "program that sets `result` (math.* and statistics.* functions, round, sum, min, max, "
+            "range, lists and loops; no imports). Example: result = round(37 * 48 + 199, 2). "
+            "Then say the result with its steps, briefly, in words."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"code": {"type": "string", "description": "Python that sets result"}},
+            "required": ["code"],
         },
     },
 }
@@ -168,6 +190,23 @@ def _page_arg(arguments: str, pages: dict[str, str]) -> str | None:
     except (ValueError, AttributeError):
         return None
     return page if isinstance(page, str) and page in pages else None
+
+
+def calc_answer(arguments: str) -> str:
+    """The calculate tool's answer for the model: the result (and printed lines), or why not."""
+    try:
+        code = str(json.loads(arguments or "{}").get("code") or "")
+    except (ValueError, AttributeError):
+        return "Error: the arguments aren't valid JSON."
+    out = calculate(code)
+    if out["result"] != "done":
+        where = f" (line {out['line']})" if out.get("line") else ""
+        return f"Error{where}: {out.get('error')}"
+    answer = {k: out[k] for k in ("value", "printed") if out.get(k) not in (None, [])}
+    if not answer:
+        return "Error: the program set no `result` and printed nothing."
+    log.info("chat: calculate: %s", str(answer)[:200])
+    return json.dumps(answer, ensure_ascii=False)
 
 
 class Conversation:
@@ -455,6 +494,7 @@ class Conversation:
         max_rounds = FULL_ACCESS_ROUNDS if full else MAX_TOOL_ROUNDS
         tools = await self.tools.openai_tools(skip=action_names) if self.tools else []
         strong = self.strong_setup()
+        tools = [*tools, CALC_TOOL]
         if strong:
             tools = [*tools, THINK_TOOL]
         if pages:
@@ -510,6 +550,9 @@ class Conversation:
                             answer += THINK_SAY
                             yield {"type": "text", "text": THINK_SAY}
                         result = await self._think_hard(strong, call.arguments)
+                    elif call.name == CALC:
+                        only_pages = False
+                        result = await asyncio.to_thread(calc_answer, call.arguments)
                     elif call.name == OPEN_PAGE and pages:
                         page = _page_arg(call.arguments, pages)
                         if page:
