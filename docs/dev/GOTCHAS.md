@@ -4,6 +4,9 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-23 — raspbot1 sees only the router's 5 GHz Wi-Fi (lab check N.11)
+- The router has one Wi-Fi name for each band. On raspbot1, `nmcli dev wifi list` did not show the 2.4 GHz name, so a profile for it failed ("the Wi-Fi network could not be found"). `sudo nmcli dev wifi connect "<the 5 GHz name>" password …` worked. The first try (2.4 GHz) gave "Secrets were required, but not provided". The cause of the missing 2.4 GHz name is not known. Use the 5 GHz name for the Raspbots.
+
 ### 2026-11-23 — An arm with USB but no motor power stops the brain with a traceback (lab check N.17)
 **What:** `uv run lab-os serve --host 0.0.0.0` stopped twice. The white arm's USB board was connected, so the brain chose so101-white. In the first try no motor answered (`FeetechMotorsBus motor check failed … Missing motor IDs: 1–6`, found `{}`): the board gets its power from USB, the motors only from the 12 V plug. In the second try motor 2 did not answer (`ConnectionError: Failed to write 'Torque_Enable' on id_=2 … There is no status packet!`): the power was coming on, or a cable between motors was loose. A few minutes later the same command started. `_open_arm` (`teleop/cli.py`) falls back to the fake arm only for `PortNotAllowed` and `LookupError`, so LeRobot's `RuntimeError` and `ConnectionError` stopped the brain.
 **Fix:** for now, connect the arm's motor power before you start the brain, or disconnect its USB cable. A clear sentence and the fake arm: quick job 94 in `docs/plan/quick-jobs.md`.

@@ -70,10 +70,10 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's log n
 
 ---
 
-## N. The travel router (10 min)
+## N. The travel router (5 min)
 **Done in the lab (2026-11-23):** the router gets internet from the wall port: 120 Mbps on 2.4 GHz, 560 Mbps on 5 GHz. The desktop's reserved address is **192.168.8.112** (its cable); its Wi-Fi is on the router too (192.168.8.130). The hub is at `http://192.168.8.112:8080`. The router has one LAN port, so it goes to the big switch; the Pis and the Jetson showed in the router's clients. The Pi with the touchscreen, the phone, the Quest (without USB), the Newline and a Pi on Wi-Fi all loaded the hub. Found: the hub does not fit a phone or the Pi's touchscreen (quick job 96). The Quest's control buttons were grey: a page from another computer only watches a real arm, unless `--drive-from` names it (quick job 95).
-- **N.5** In the router's page, open the Wi-Fi settings. If the security is not **WPA2-PSK/WPA3-SAE**, select it and Save. Do not use WPA3-SAE alone: older Pis and the Raspbot need WPA2. → which security does it show now?
-- **N.11** raspbot1 did not join: "Secrets were required, but not provided". Connect to raspbot1 by its cable (`docs/guides/network-setup-checklist.md` → Step 2). Run `nmcli -f SSID,SECURITY dev wifi list`. → what is the SECURITY of the router's Wi-Fi name? Run `sudo nmcli con delete "<the router's Wi-Fi name>"` (it removes only the failed try; an error "unknown connection" is OK). Then run this, with the password in single quotes: `sudo nmcli con add type wifi ifname wlan0 con-name lab-router ssid "<the router's Wi-Fi name>" wifi-sec.key-mgmt wpa-psk wifi-sec.psk '<password>'`. Then run `sudo nmcli con up lab-router`. → did it join? (yes / no; if no, copy the error line)
+Later the same day: the Wi-Fi security is WPA2-PSK/WPA3-SAE. raspbot1 joined the router's **5 GHz** Wi-Fi with `sudo nmcli dev wifi connect`. It does not see the 2.4 GHz Wi-Fi, so the `lab-router` profile for that name failed ("the Wi-Fi network could not be found").
+- **N.18** Connect to raspbot1 (on Wi-Fi now, or by its cable). Run `sudo nmcli con delete lab-router` (it removes only the failed 2.4 GHz profile). Run `hostname -I` and copy the first address. Run `ping -c 3 192.168.8.112`. → replies? (yes / no) In the router's list of clients, reserve raspbot1's address. → the reserved address: ___
 
 ## M. Every screen in the room (30 min)
 After part N, or on the campus network for the computers that are already on it (the desktops and the Pis). The plan for the demo: `docs/plan/current-focus.md` → item 10. Use the brain's address on the same network as the device: `192.168.8…` on the router, or the campus address that `hostname -I` shows first.
