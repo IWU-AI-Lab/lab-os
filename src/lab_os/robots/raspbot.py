@@ -230,6 +230,7 @@ def from_registry(registry) -> RaspbotDesk:
 
 ONBOARD_DIR = Path(__file__).parents[3] / "robots" / "raspbot"
 SERVICE = "lab-os-raspbot"
+WIFI_FILES = ("lab-os-wifi.sh", "lab-os-wifi.service", "install-wifi.sh")
 
 
 def deploy_commands(host: str) -> list[list[str]]:
@@ -242,7 +243,9 @@ def deploy_commands(host: str) -> list[list[str]]:
         f"systemctl --user enable {SERVICE} && systemctl --user restart {SERVICE} && "
         f"sleep 1 && systemctl --user is-active {SERVICE}"
     )
-    files = [str(ONBOARD_DIR / "lab_os_raspbot.py"), str(ONBOARD_DIR / f"{SERVICE}.service")]
+    # the Wi-Fi files are only copied: install-wifi.sh needs sudo, once (docs/guides/raspbot.md)
+    names = ["lab_os_raspbot.py", f"{SERVICE}.service", *WIFI_FILES]
+    files = [str(ONBOARD_DIR / n) for n in names]
     return [
         ["ssh", host, "mkdir -p ~/lab-os"],
         ["rsync", "-t", *files, f"{host}:lab-os/"],
