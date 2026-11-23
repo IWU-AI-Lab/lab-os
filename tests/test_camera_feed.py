@@ -157,4 +157,10 @@ async def test_the_cameras_page(aiohttp_client, monkeypatch):
     assert 'setPref("cameras_hidden"' in page and "There is no camera" in page
     views = (await (await client.get("/api/hub")).json())["views"]
     assert {"id": "cameras", "title": "Cameras", "page": "/cameras"} in views
-    assert "cameras:" in (SRC / "hub" / "web" / "design.html").read_text()  # its icon there
+    # a button around the core (the builder, 2026-11-23), with its icon in the designed hub
+    assert {"id": "cameras", "title": "Cameras", "page": "/cameras"} in (
+        await (await client.get("/api/hub")).json()
+    )["modules"]
+    assert (
+        'cameras: ["Cameras", "i-cam", "page"]' in (SRC / "hub" / "web" / "design.html").read_text()
+    )

@@ -5,9 +5,9 @@
 # Each line: a device's name (the ?device= in its hub's address) and a page (since 2026-11-21 every
 # view opens on a device):
 #   core                              the hub itself (whatever it shows closes)
-#   teleop, monitor, ai, training     the module pages
+#   teleop, monitor, ai, training,    the module pages
+#   cameras
 #   webcam                            webcam teleop
-#   cameras                           every camera's picture (each device keeps its own switches)
 #   project, spend, commits, devices  a panel's details page (Current Project, AI Spend, …)
 #   system                            the system diagram
 #   chat                              the conversation

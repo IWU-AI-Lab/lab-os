@@ -2455,7 +2455,7 @@ const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
 // every module the hub knows: id -> [title, icon, kind]. The theme's hub.modules picks which ones and
 // their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it).
 // Settings opens from the gear in the strip. Chat isn't one: it belongs to the core.
-const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], training: ["Training", "i-leader", "page"], settings: ["Settings", "i-gear", "page"], pages: ["All Pages", "i-link", "page"] };
+const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], training: ["Training", "i-leader", "page"], cameras: ["Cameras", "i-cam", "page"], settings: ["Settings", "i-gear", "page"], pages: ["All Pages", "i-link", "page"] };
 const CHAT = ["Chat", "i-chat", "chat"];
 function buildMring(g) {
   el("circle", { r: 22, fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "14 5 2 5", opacity: 0.8 }, g);
@@ -3187,7 +3187,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { webcam: "i-cam", cameras: "i-cam", settings: "i-gear", pages: "i-link" };
+const VIEW_ICONS = { webcam: "i-cam", settings: "i-gear", pages: "i-link" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;
