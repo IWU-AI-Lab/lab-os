@@ -187,6 +187,7 @@ Each single move is one round trip to the AI service: a few seconds each. With `
 - **Safety:** every call goes through the same checks as a single tool call, and it shows on AI Control. STOP ends the program at once, also in a loop that calls nothing. A refusal, a stopped move or an error also ends it.
 - **The answer:** done, stopped, time limit or error; each call with its result; what the program printed; and the line where it stopped.
 - The hub's assistant gets `run_program` when Full Access is on.
+- **Claude Code asks before each `run_program`** until `mcp__lab-os__run_program` is on the allow list in `.claude/settings.json` (a separate pull request that waits for the builder).
 
 ## Picking up (`pick_at`)
 `pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object that stands at (x, y) on the table, in one call instead of about 17 small calls. It has five steps, each through the same safety path as `gripper` and `move_to`:
