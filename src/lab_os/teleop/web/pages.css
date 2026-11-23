@@ -51,6 +51,9 @@
 @media (max-width: 900px), (orientation: portrait) {
   /* narrow: the readout under the view, two joints a row (a fixed height) */
   .arm3d-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  /* a short screen (the Pi's 800 × 480): the 3D view keeps its height and the page scrolls (quick job 96) */
+  .view { height: auto; }
+  .arm3d-body { grid-template-rows: max(14rem, 40vh) auto; }
   .arm-joints { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1rem; }
   .jrow:nth-child(2) { border-top: 0; }
 }

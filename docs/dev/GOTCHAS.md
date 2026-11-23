@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-23 — The hub on a phone and on the Pi's touchscreen (quick job 96)
+**What:** checked in headless Chrome at 390 × 844, 800 × 480 and 1024 × 600. (1) On the Pi's 800 × 480 screen, the Teleop and Monitor 3D view shrank to a thin line: the page had a fixed height, and the joint list took the room. (2) On a phone, the ask line lay over the module buttons, because it hangs under the core and the buttons came right after the core. (3) At 800 × 480 the fact panels were too narrow: words were cut, and "List all" went past the edge. (4) The docked core covered buttons on an open page. (5) Many buttons were 20 to 30 px high, because the sizes follow the screen and a small screen makes them small.
+**Fix:** small-screen rules in the hub, the shared page style, Settings and the Teleop style: a minimum height for the 3D view (the page scrolls), room under the core for the ask line, a tighter grid on 800 × 480, one column of panels on a narrow phone, the docked core in its own corner, and controls of at least about 40 px. Large screens keep their layout. `docs/design/DESIGN.md` → "Screens and places".
+
 ### 2026-11-23 — raspbot1 sees only the router's 5 GHz Wi-Fi (lab check N.11)
 - The router has one Wi-Fi name for each band. On raspbot1, `nmcli dev wifi list` did not show the 2.4 GHz name, so a profile for it failed ("the Wi-Fi network could not be found"). `sudo nmcli dev wifi connect "<the 5 GHz name>" password …` worked. The first try (2.4 GHz) gave "Secrets were required, but not provided". The cause of the missing 2.4 GHz name is not known. Use the 5 GHz name for the Raspbots.
 

@@ -86,6 +86,7 @@ After part N, or on the campus network for the computers that are already on it 
 - **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
 - **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
 - **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
+- **M.6** Quick job 96. Open `http://<the brain's address>:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
 
 ## For Tuesday 2026-11-24: the previews
 
