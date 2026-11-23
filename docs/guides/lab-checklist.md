@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order.** This weekend, on your laptop: part L. Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
+**Order.** Monday 2026-11-23, if you go: 0, then N and M if the router is here, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -27,35 +27,6 @@ You need no ruler. Measure with these:
   - A loud fan on the roof makes noise above the desk at times.
   - The Newline is used by HDMI at 1600×900, with its USB touch cable.
   - Ask for what a person can tell: heard or not, a normal or a raised voice, near or far. Do not ask for counts that are not exact, such as steps walked.
-
----
-
-## L. On your laptop, at home (60 min)
-These steps need no lab: the fake arm, the laptop's own microphone and camera, and the OpenAI key in the laptop's `.env`. Use Chrome. Do them before the lab days; then the lab days are shorter.
-```bash
-cd ~/lab-os
-git switch main && git pull
-uv sync
-uv run pytest -q
-uv run lab-os serve --arm fake
-```
-Open http://localhost:8080/design in Chrome and allow the microphone. "The desktop" in a step means the laptop here.
-- **L.1** Read the last line that `pytest` shows. → copy the line.
-- **L.2** Quick job 45. Open ⚙. Change **Top Speed**. → does the amber bar show, and does the Top Speed row say "Applies when the brain restarts"? (yes / no) Set Top Speed back to its old value. → did the bar go away? (yes / no)
-- **L.3** In **Buttons Around the Core**, look at the arrows. → are they in one straight column, and do they look like arrows? (yes / no)
-- **L.4** Quick job 67. Open ⚙ → **All Pages**. Open **Webcam Teleop**, then **Monitor**. → did each open in its own window? (yes / no)
-- **L.5** Quick job 66. On the desktop's Teleop, press **Controls**. → does it show the mode and the keys? (yes / no) Select **Desktop control**. → is the button's text short ("Desktop control on")? (yes / no)
-- **L.6** Quick job 46. Open ⚙ → This Device → Assistant Language. Set **Answers** to English. Type `¿Qué hora es?` and send it. Then type `Wie spät ist es?`. → were both answers in English? (yes / no)
-- **L.7** Set **Expects** to English. Say "Hey Jarvis, test" five times. → did the word "test" show in Latin letters every time? (yes / no) If no, copy the terminal's line that starts with `voice: question on`.
-- **L.8** Quick job 57. Ask "Hey Jarvis, tell me about the lab's robots". While it answers aloud, say "Hey Jarvis, what time is it?". → did the first answer stop at once? (yes / no) Did it answer the new question? (yes / no)
-- **L.9** Ask a question by voice. While the core thinks, hold the mic and ask "what's next?". → did it answer only the new question? (yes / no)
-- **L.10** Quick job 47. Ask 5 questions by voice, one after the other. → did the voice sound like the same person every time? (yes / no) If no, copy the terminal's lines that start with `voice: answer on`.
-- **L.11** Quick job 68. Press the conversation button next to the mic. Ask "What time is it?". After the answer, ask "What's next?" without "Hey Jarvis". → did it answer both? (yes / no) Say "That's all". → did the sign above the core go away? (yes / no)
-- **L.12** Quick job 69. Say "Hey Jarvis, calculate 37 times 48, then add 199". → did it say "Let me think about that" first? (yes / no) Was the answer 1975? (yes / no) Open the AI Spend details. → is there a line for "strong"? (yes / no)
-- **L.13** Quick job 55. Set ⚙ → Assistant → Who It Is to **Lab Assistant**, and This Device → Assistant Language to Any and Any. Ask 5 short questions by voice ("Hi", "What's next?", "Thanks"). → were all the answers in English? (yes / no) If no, copy the terminal's lines that start with `voice: question on`. Set Who It Is back to **JARVIS**.
-- **L.14** Open `http://localhost:8080/` in a normal Chrome tab. Tap to start, so that it is full screen. Press Ctrl+C in the terminal. → did the page leave full screen? (yes / no) Did it close, or show a card with a **Close** button? (closed / card) If a card: press Close. → what happened? (closed / it said Cmd+W)
-
-Also on the laptop, if you like: part W, steps W.2 to W.9, with the laptop's camera instead of the C615 (skip W.9 if you are alone). Then do only W.1 and W.10 to W.15 in the lab.
 
 ---
 
@@ -155,8 +126,8 @@ Setup: `so101-white` connected, the brain running (part T's command without `--l
 - **D.2** On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
 - **D.3** Say `Hey Jarvis, the visitors have left`. → nothing to report.
 
-## W. Teleop with a webcam (40 min)
-Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. Do W.1 to W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
+## W. Teleop with a webcam (25 min)
+Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21). Do W.1, W.2 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
 
 Cables to plug in, on the lab desktop:
 - The C615: a free USB socket. If no socket is free, unplug the two cameras in sockets 7 and 8. This part does not use them.
@@ -168,14 +139,8 @@ uv run lab-os serve
 ```
 
 - **W.1** Run `ls /dev/v4l/by-path/`. Unplug the C615, run it again, and plug the C615 back in. → which name went away? (copy it)
-- **W.2** On the desktop, open http://localhost:8080/webcam. Click **Start webcam control** and allow the camera. → does the picture show you, like a mirror? (yes / no) Does **Camera** show the C615? (yes / no) What does **Frames a second** show?
-- **W.3** Sit in the chair. Hold up both hands, palms to the camera. → is your right hand drawn in cyan and your left hand in amber? (yes / no; if no, select **Swap left and right hands** and write it down)
-- **W.4** Hold your left hand open and relaxed, not pinching. → what does **Clutch** show? (a number) Now pinch with your left hand. → what does **Clutch** show? Does the state say "Following your right hand"? (yes / no)
-- **W.5** Keep the left pinch. Move your right hand slowly 20 cm to the right, then up, then down. Watch the 3D view. → did the 3D arm move to the right, up and down with your hand? (yes / no each)
-- **W.6** Keep the left pinch. Move your right hand slowly 20 cm toward the camera, then back. → did the 3D arm move forward and back? (yes / no) Did it shake when your hand was still? (no / a little / a lot)
-- **W.7** Release the left pinch. Hold **Space** instead and move your right hand. → does the 3D arm follow? (yes / no) Pinch and open your right hand. → does the 3D gripper close and open? (yes / no)
-- **W.8** Keep Space held. Move your right hand out of the picture, then back in. → did the 3D arm stop, and the state say "Frozen"? (yes / no) Does it stay still when your hand comes back? (yes / no) Release Space and press it again. → does it follow again? (yes / no)
-- **W.9** Ask another person to stand behind you in the picture. Do W.5 again. → did the page follow your hand only? (yes / no; if no, what happened?) Close the webcam page. Press Ctrl+C in the brain's terminal.
+- **W.2** On the desktop, open http://localhost:8080/webcam. Click **Start webcam control** and allow the camera. → does **Camera** show the C615? (yes / no) What does **Frames a second** show?
+- **W.9** Ask another person to stand behind you in the picture. Pinch with your left hand, and move your right hand slowly 20 cm to the right. → did the page follow your hand only? (yes / no; if no, what happened?) Close the webcam page. Press Ctrl+C in the brain's terminal.
 
 Now the real arm. Keep one hand near the keyboard: **X** is STOP on the webcam page. Plug in `so101-white` (its USB cable and its power supply), then run:
 ```bash
