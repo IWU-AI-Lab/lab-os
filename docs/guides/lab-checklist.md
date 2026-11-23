@@ -239,6 +239,7 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.16** In the hub in VR, point at ⏻ (top right) and pull the trigger. → does a menu open with "Back to the start screen" and "Exit"? (yes / no) Open **Teleop**, then press ⏻ beside ← on its tab, then **Exit**. → are you back on the browser page? (yes / no)
 - **U.17** In the Quest's browser, open the hub's address. → do you see three choices in the middle (Enter VR, Enter AR, the hub in the browser)? (yes / no) Press **Enter AR**, start, then **Teleop**. → does the Teleop page open, with Desktop control grey? (yes / no)
 - **U.18** On the Teleop page, select 1:1, then **Enter AR**. Drive the fake arm. → does it work? (yes / no) Leave AR, then press **Back to the hub in AR**. → are you back at the hub in AR? (yes / no) In the browser's menu, is there an Install choice? (yes / no)
+- **U.19** Quick job 94. Connect the USB cable of `so101-white`, but not its power supply. Start lab-os with its icon. → does the terminal say "so101-white: the motors do not answer. Is the arm's power on?", with no traceback? (yes / no) Does the hub's Arm line say the fake arm? (yes / no) Connect the power supply. Wait 10 seconds. → does the Arm line say `so101-white`? (yes / no)
 
 ## B. The Teleop page's buttons (5 min)
 Quick job 87. Use the lab desktop's Chrome with the **Immersive Web Emulator** extension switched on.

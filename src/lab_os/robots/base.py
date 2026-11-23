@@ -13,6 +13,13 @@ class JointLimit:
         return min(max(value, self.low), self.high)
 
 
+class MotorsNotAnswering(RuntimeError):
+    """The arm's USB board is there, but its motors don't answer (no motor power, a loose cable
+    between motors). `connect` raises it after letting go of the port (quick job 94)."""
+
+    SENTENCE = "the motors do not answer. Is the arm's power on?"
+
+
 class Arm(Protocol):
     """Joints use shared names across arms (shoulder_pan, shoulder_lift, elbow_flex, wrist_flex,
     wrist_roll, gripper), in degrees; each driver maps them to its own servos/units."""
