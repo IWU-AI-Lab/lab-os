@@ -50,6 +50,11 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's termi
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
 - **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Copy the terminal's line that ends with `answers`.
 - **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
+- **V.15** Quick job 83. Ask a question that has a long answer. While the answer plays, say "Hey Jarvis". → did the answer stop, and did it listen? (yes / no)
+- **V.16** Say "Hey Jarvis, start a conversation". Ask one question. Then say "That's all". → did the core go back to rest (not thinking)? (yes / no)
+- **V.17** Press and hold the mic for 1 second. Say nothing. → did it answer something? (yes / no) Write the time.
+- **V.18** Say "Hey Jarvis, calculate 37 times 48," then wait a moment, then say "then add 199". → did it hear the whole question? (yes / no)
+- **V.19** Set ⚙ → Answers to **Any**. Say "Hey Jarvis, hi". → which language was the answer? Ask three more questions. → did the voice sound like the same person each time? (yes / no)
 
 ---
 

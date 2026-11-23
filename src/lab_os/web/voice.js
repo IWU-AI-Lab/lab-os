@@ -56,9 +56,9 @@ export function assistantLanguage() {
   return { hear: p.hear_in || "", answer: p.answer_in || "" };
 }
 
-// The question after the wake word ends after this much quiet (it was 1.5 s; the brain may end it sooner,
-// when the voice service hears the pause).
-export const WAKE_QUIET_MS = 1000;
+// The question after the wake word ends after this much quiet (1.5 s, then 1 s, now 1.6 s; the brain may end
+// it sooner, when the voice service hears the pause at the end of a sentence).
+export const WAKE_QUIET_MS = 1600; // quick job 83: 1 s cut "37 times 48, … then add 199" at the pause
 
 // Can this screen hear at all? (A secure page and a microphone; the brain's side is in /api/status.)
 export async function screenCanHear() {
@@ -318,11 +318,13 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     });
     const node = new AudioWorkletNode(ctx, "lab-os-mic");
     node.port.onmessage = (e) => {
-      // pressed, or the wake word (not while the answer plays: its own voice shouldn't wake it)
-      const forWake = st.wakeOn && !st.playing.length && st.ws?.readyState === WebSocket.OPEN;
+      // pressed, or the wake word. Also while an answer plays (quick job 83): "hey Jarvis" stops it.
+      // The browser's echo cancellation keeps most of its own voice out, and the brain ignores the
+      // phrase while an answer that says it plays (the greeting's hint).
+      const forWake = st.wakeOn && st.ws?.readyState === WebSocket.OPEN;
       if (st.sending || forWake || st.wakeTurn) send(e.data.pcm);
       st.lastPiece = performance.now();
-      if (forWake) { // the room's level: follows quiet down fast, noise up slowly
+      if (forWake && !st.playing.length) { // the room's level (not the answer's): quiet down fast, noise up slowly
         const l = e.data.level;
         st.floor = l < st.floor ? st.floor * 0.8 + l * 0.2 : st.floor * 0.995 + l * 0.005;
       }
