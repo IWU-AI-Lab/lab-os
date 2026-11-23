@@ -128,6 +128,7 @@ MODULES = {
     "monitor": ("Monitor", "/monitor"),
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
+    "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
 }
 
 # Every page the brain serves: (address, name, one line). All Pages (`/pages`, a button in the hub's
@@ -157,7 +158,6 @@ PAGES = (
 DEVICE_VIEWS = {
     **{mid: (title, page) for mid, (title, page) in MODULES.items()},
     "webcam": ("Webcam Teleop", "/webcam"),
-    "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
     "settings": ("Settings", "/settings"),
     "pages": ("All Pages", "/pages"),
     "project": ("Current Project", ""),
