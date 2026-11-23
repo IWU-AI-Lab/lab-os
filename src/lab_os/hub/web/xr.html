@@ -28,20 +28,14 @@
     .actions:empty { display: none; }
     #msg { max-width: 30rem; margin: 0; font: var(--w-lines) 0.92rem/1.5 var(--f-lines); color: var(--text-dim); }
     #msg:empty { display: none; }
-    /* Teleop from the hub in VR or AR: the teleop page over this one (leave VR, choose, enter again) */
-    #teleop { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg); }
-    #teleop[hidden] { display: none; }
-    #teleop header { display: flex; align-items: center; gap: 1rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--line); }
-    #teleop header b { font: 700 1rem/1 var(--f-title); letter-spacing: 0.18em; text-transform: uppercase; color: var(--hot); }
-    #teleop iframe { width: 100%; height: 100%; border: 0; background: transparent; }
   </style>
 </head>
 <!--
   The start page in a headset, and the hub in VR or AR (xr-hub.js and xr/). A Quest that opens the hub
   (/ or /design) gets this page first: Enter VR, Enter AR, or the hub in the browser (?flat=1). VR and AR
   play the designed hub's startup around you, then the hub (watch-only: it drives nothing). Teleop there
-  leaves VR and opens the teleop page over this one (relative or 1:1, then its own Enter VR or AR); Back
-  returns to the hub in VR or AR. On a computer: "Preview on this screen". ?slow=10: ten times slower.
+  opens as a module, like Monitor and AI Control: the arm follows the controllers or hands, without
+  leaving VR or AR (quick job 97). On a computer: "Preview on this screen". ?slow=10: ten times slower.
 -->
 <body class="xr">
 <main class="start">
@@ -52,9 +46,6 @@
   <div class="actions"></div>
   <p id="msg" aria-live="polite"></p>
 </main>
-<section id="teleop" hidden aria-label="Teleop">
-  <header><button id="teleop-back" class="btn" type="button">Back to the hub</button><b>Teleop</b></header>
-</section>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module" src="/hub/xr-hub.js"></script>
 </body>

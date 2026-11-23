@@ -64,6 +64,20 @@ def panel(
         ({"no_controller": True, "source": "hands"}, "No right hand", "warning"),
         ({"status": None}, "Connecting…", "offline"),
         ({"status": STATUS | {"arm": {"connected": False}}}, "Arm disconnected", "offline"),
+        # one page drives at a time (quick job 97: the hub's Teleop in VR says who has control)
+        ({"status": STATUS | {"may_drive": False}}, "View only", "warning"),
+        (
+            {"status": STATUS | {"control": "other", "driver": "desk"}},
+            "desk has control",
+            "warning",
+        ),
+        (
+            {"status": STATUS | {"control": "other", "driver": ""}},
+            "Another page has control",
+            "warning",
+        ),
+        ({"status": STATUS | {"control": "ai"}}, "The AI tools have control", "warning"),
+        ({"status": STATUS | {"control": "you", "clutch": True}}, "Following", "following"),
         (
             {"status": STATUS | {"mode": "one_to_one", "hand_gap_cm": 14.4}},
             "Reach the gripper: 14 cm",
