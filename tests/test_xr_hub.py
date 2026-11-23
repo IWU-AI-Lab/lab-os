@@ -252,7 +252,7 @@ def test_the_teleop_page_has_the_headset_options():
                'id="xr-place-reset"'):  # fmt: skip
         assert el in page, el
     xr = (web / "xr.js").read_text()
-    assert 'start("immersive-ar", link, ui)' in xr and 'start("immersive-vr", link, ui)' in xr
+    assert '"immersive-ar", "This device' in xr and '"immersive-vr", "This device' in xr
     assert "STYLE_KEY" in xr and "localStorage.removeItem(PLACE_KEY)" in xr
     tp = (web / "teleop-page.js").read_text()
-    assert "/OculusBrowser/.test(navigator.userAgent)" in tp and 'd.dataset.unavailable = "1"' in tp
+    assert "if (isHeadset())" in tp and 'd.dataset.unavailable = "1"' in tp  # test_teleop_buttons

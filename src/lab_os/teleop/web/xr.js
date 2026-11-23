@@ -144,46 +144,26 @@ function initOptions() {
 
 export async function initXR(link, ui) {
   initOptions();
-  const button = document.getElementById("enter");
-  const arButton = document.getElementById("enter-ar"); // the teleop page: Enter VR and Enter AR side by side
-  const unavailable = (text, hint) => {
-    button.textContent = text;
-    button.dataset.unavailable = "1";
-    button.disabled = true;
-    if (hint) ui.message(hint);
+  const vr = document.getElementById("enter"), ar = document.getElementById("enter-ar");
+  // Each button does what it says (the builder, 2026-11-21). Both always show, grey where this device
+  // can't do it, so a desktop sees all three choices (quick job 87).
+  const offer = (btn, ok, mode, why) => {
+    btn.dataset.unavailable = ok ? "" : "1";
+    btn.disabled = !ok;
+    btn.title = ok ? "" : why;
+    if (ok) btn.onclick = () => start(mode, link, ui);
   };
   if (!navigator.xr) {
-    return unavailable(
-      "WebXR not available",
-      "On the Quest, open http://localhost:8080 (docs/guides/quest-setup.md). On a desktop, use Desktop control below, or the Immersive Web Emulator extension.",
-    );
+    offer(ar, false, "", "WebXR is not available in this browser");
+    offer(vr, false, "", "WebXR is not available in this browser");
+    ui.message("No WebXR here. On the Quest, open http://localhost:8080 (docs/guides/quest-setup.md). On a desktop, use Desktop control, or the Immersive Web Emulator extension.");
+    return;
   }
   const hasAR = await navigator.xr.isSessionSupported("immersive-ar").catch(() => false);
   const hasVR = await navigator.xr.isSessionSupported("immersive-vr").catch(() => false);
-  if (arButton) { // each button does what it says (the builder, 2026-11-21)
-    if (!hasVR && !hasAR) return unavailable("No immersive XR on this device");
-    arButton.hidden = !hasAR;
-    arButton.disabled = false;
-    arButton.onclick = () => start("immersive-ar", link, ui);
-    if (hasVR) {
-      button.textContent = "Enter VR";
-      button.dataset.unavailable = "";
-      button.disabled = false;
-      button.onclick = () => start("immersive-vr", link, ui);
-    } else {
-      button.hidden = true;
-    }
-    return;
-  }
-  let mode = null;
-  if (hasAR) mode = "immersive-ar";
-  else if (hasVR) mode = "immersive-vr";
-  if (!mode) return unavailable("No immersive XR on this device");
-
-  button.textContent = mode === "immersive-ar" ? "Enter AR (passthrough)" : "Enter VR";
-  button.dataset.unavailable = "";
-  button.disabled = false;
-  button.onclick = () => start(mode, link, ui);
+  offer(ar, hasAR, "immersive-ar", "This device has no AR (passthrough)");
+  offer(vr, hasVR, "immersive-vr", "This device has no VR");
+  if (!hasVR && !hasAR) ui.message("No immersive XR on this device. Use Desktop control.");
 }
 
 let renderer = null; // one WebGL renderer for every session on this page

@@ -222,15 +222,6 @@ export function initDesktop(link, ui) {
       ui.message(`Couldn't capture the pointer: ${e.message}`);
     }
   };
-  // Controls: shows (or hides) the key guide, the mode and the keys (quick job 66: they were in the button)
-  const guide = $("desk-help"), controls = $("desk-controls");
-  if (controls) {
-    controls.onclick = () => {
-      guide.open = !guide.open;
-      if (guide.open) guide.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    };
-    guide.addEventListener("toggle", () => controls.setAttribute("aria-expanded", String(guide.open)));
-  }
   document.addEventListener("pointerlockerror", () => ui.message("The browser refused to capture the pointer; click the button again."));
   document.addEventListener("pointerlockchange", () => {
     if (document.pointerLockElement === document.body) startControl();
