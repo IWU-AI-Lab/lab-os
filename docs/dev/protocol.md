@@ -369,5 +369,17 @@ Focus step 8 (`docs/guides/hub.md` → "Devices"). Every hub page (both looks) k
 - `POST /api/room/setup` (quick job 71) → `{"ok", "opened": [{"device", "page", "title"}], "skipped": [{"device", "page", "why"}], "message"}`: each `device: page` of the place's `room.yaml`, in order. `core` closes what the device shows (the page gets `close`); any other view opens on the device's leftmost window (`open`, `from: "room"`). A device without the hub open, or an unknown page, is skipped with the reason. The assistant's `set_up_room` tool and `lab-os room` call the same.
 - `GET /api/hub-devices/<name>/settings` → `{"ok": true, "settings": {...}}`. `POST` `{"res": "0.5", "sound": false}` changes some (`""` or `null` = back to the default) → `{"ok": true, "settings": {...all of them}}`, and every window of that device gets `settings`. Keys: `quality` (`maximal` / `full` / `reduced` / `minimal`), `res` (`auto` / `1` / `0.75` / `0.5`), `sound`, `full` (true / false), `voice` (`push-to-talk` / `dictation` / `wake word`), `wake_sensitivity` (a number 1–9), `cameras_hidden` (since 2026-11-23: a list of up to 32 camera names that the Cameras page hides on this device; `[]` = back to the default, every camera shown); anything else is `400`. Kept in the place's `local/hub-devices.yaml`. Any page may (as before, when they were per browser).
 
+## The Raspbot page (quick job 72)
+`WS /ws/raspbot`, the page `/raspbot` (`src/lab_os/hub/raspbot_page.py`). Page → brain:
+- `{"type": "drive", "dir": "forward" | "back" | "left" | "right"}`: sent every 100 ms while a button is held. The first page that drives has control.
+- `{"type": "release"}`: every button let go; the car stops and control is free.
+- `{"type": "stop", "device": "<name>"}`: STOP, from any page (also a view-only page). The page that drove must send `release` before it drives again.
+
+Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
+
+`GET /api/raspbot/camera.mjpg`: the Raspbot's camera (`multipart/x-mixed-replace` JPEGs), relayed from the Raspbot's port 8766; `404` without a camera.
+
+Brain → the program on the Raspbot (`robots/raspbot/lab_os_raspbot.py`, TCP port 8765), one JSON line each: `{"drive": [left, right]}` (-1.0 … 1.0 of its speed cap) or `{"stop": true}`. The program answers once at connect: `{"hello": "<hostname>", "camera_port": 8766 | 0}`. It stops the motors after 0.5 s without a command, when the connection drops, and for a line it does not understand. A new connection replaces the old one.
+
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.

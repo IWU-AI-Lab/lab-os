@@ -11,12 +11,14 @@ import sys
 from pathlib import Path
 
 from lab_os import brainlog, config, term
+from lab_os.devices import load_registry
 from lab_os.hub import launch
 from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.server import RESTART, create_brain_app
 from lab_os.personas import current_persona, load_persona
 from lab_os.quest_view import AdbReverse
+from lab_os.robots.raspbot import from_registry as raspbot_from_registry
 from lab_os.teleop.cli import (
     add_arm_args,
     any_real_arm,
@@ -230,7 +232,18 @@ def main(argv: list[str] | None = None) -> None:
         help='the minutes around this time: 18:14 (the last 18:14) or "2026-11-21 18:14"',
     )
     lg.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
+    rb = sub.add_parser(
+        "raspbot",
+        help="deploy: copy lab-os's program to the Raspbot and (re)start it there; the car does "
+        "not move (docs/guides/raspbot.md)",
+    )
+    rb.add_argument("action", choices=["deploy"])
+    rb.add_argument("--to", default="raspbot1", help="the Raspbot's ssh name (default raspbot1)")
     args = parser.parse_args(argv)
+    if args.command == "raspbot":
+        from lab_os.robots.raspbot import deploy
+
+        raise SystemExit(deploy(args.to))
     if args.command == "logs":
         return _logs(args)
     if args.command == "room":
@@ -307,6 +320,7 @@ def main(argv: list[str] | None = None) -> None:
         # no --arm and none plugged in: take an SO-101 plugged in later (quick job 73)
         find_arm=arm_finder() if getattr(args, "auto_arm", False) and args.arm == "fake" else None,
         adb_reverse=AdbReverse(args.port),  # the Quest's browser reaches it by USB (quick job 73)
+        raspbot=raspbot_from_registry(load_registry()),  # the Raspbot page's car (quick job 72)
     )
     if args.record:
         print(f"recording teleop input to {args.record}")
