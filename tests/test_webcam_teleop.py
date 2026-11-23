@@ -81,11 +81,13 @@ def hand(wrist_x, label="Left"):
 
 @needs_node
 def test_sides_by_place_and_label():
-    # one hand: MediaPipe's label is for a mirrored picture, so it's the other hand
-    assert run(f"return m.sidesOf([{json.dumps(hand(0.3, 'Left'))}])") == ["right"]
-    assert run(f"return m.sidesOf([{json.dumps(hand(0.3, 'Right'))}])") == ["left"]
+    # one hand: MediaPipe's label as it is (quick job 88: the opposite label swapped the hands on a
+    # real webcam)
+    assert run(f"return m.sidesOf([{json.dumps(hand(0.3, 'Right'))}])") == ["right"]
+    assert run(f"return m.sidesOf([{json.dumps(hand(0.3, 'Left'))}])") == ["left"]
+    assert run(f"return m.sidesOf([{json.dumps(hand(0.3, 'Right'))}], true)") == ["left"]
     # two hands, different labels: the labels (they follow crossed arms)
-    crossed = json.dumps([hand(0.8, "Left"), hand(0.2, "Right")])
+    crossed = json.dumps([hand(0.8, "Right"), hand(0.2, "Left")])
     assert run(f"return m.sidesOf({crossed})") == ["right", "left"]
     # two hands, the same label: the person's right hand is on the picture's left
     two = json.dumps([hand(0.8, "Left"), hand(0.2, "Left")])
@@ -146,7 +148,11 @@ const L = (pinch) => ({side: "left", pos: [0, 0, 0.5], pinch});
 const out = [];
 const go = (hands, t, space = false) => { const o = h.step(hands, t, space);
   out.push({state: o.state, grip: o.msg.hands.right.grip, pos: o.msg.hands.right.pos,
+            quat: o.msg.hands.right.quat, clutch: o.clutch,
             source: o.msg.source, frame: o.msg.frame ?? null, left: "left" in o.msg.hands}); };
+// a hand counts only after a few frames in a row: show them before t (not recorded)
+const warm = (hands, t, space = false) => {
+  for (let i = m.STEADY_FRAMES - 1; i > 0; i--) h.step(hands, t - i * 0.03, space); };
 """
 
 
@@ -155,8 +161,10 @@ def test_freeze_until_the_clutch_is_let_go():
     out = run(
         STEP
         + """
+warm([R(0), L(0)], 0.00);
 go([R(0), L(1)], 0.00);         // clutch held: following
 go([L(1)], 0.03);               // right hand out of view: tracking lost, frozen
+warm([R(0.05), L(1)], 0.06);
 go([R(0.05), L(1)], 0.06);      // back, clutch still held: still frozen, grip 0
 go([R(0.05), L(0)], 0.09);      // clutch let go: unfrozen, holding
 go([R(0.05), L(1)], 0.12);      // pinch again: following
@@ -175,9 +183,11 @@ def test_space_is_a_clutch_and_a_lost_hand_without_it_needs_nothing():
     out = run(
         STEP
         + """
+warm([R(0)], 0.00);
 go([R(0)], 0.00, true);         // Space held, no left hand: following
 go([], 0.03, false);            // hand gone with the clutch let go: holds, no freeze
-go([R(0.2)], 0.06, true);       // back with Space: follows from the new place
+warm([R(0.2)], 0.2);
+go([R(0.2)], 0.2, true);        // back with Space: follows from the new place
 return out;"""
     )
     assert [o["state"] for o in out] == ["following", "no hand", "following"]
@@ -188,6 +198,7 @@ def test_a_jump_is_tracking_lost():
     out = run(
         STEP
         + """
+warm([R(0), L(0)], 0.00);
 go([R(0), L(1)], 0.00);
 go([R(0.01), L(1)], 0.03);
 go([R(0.5), L(1)], 0.06);       // 49 cm in 30 ms: not a real hand
@@ -195,3 +206,101 @@ return out;"""
     )
     assert out[1]["state"] == "following"
     assert out[2]["state"] == "frozen" and out[2]["pos"] is None
+
+
+@needs_node
+def test_a_hand_counts_only_after_a_few_frames():
+    """Quick job 88: a left hand that wasn't there showed for a few seconds. A hand for fewer than
+    STEADY_FRAMES frames in a row is ignored, so a short ghost pinch never holds the clutch."""
+    out = run(
+        STEP
+        + """
+warm([R(0)], 0.0);
+for (let i = 0; i < m.STEADY_FRAMES - 1; i++) go([R(0), L(1)], 0.03 * i);  // a ghost left pinch
+go([R(0)], 0.2);                                                         // gone again
+for (let i = 0; i < m.STEADY_FRAMES; i++) go([R(0), L(1)], 0.3 + 0.03 * i);  // a real one
+return out;"""
+    )
+    steady = run("return m.STEADY_FRAMES")
+    assert all(o["clutch"] == 0 and o["state"] == "holding" for o in out[:steady])
+    assert out[-1]["clutch"] == 1 and out[-1]["state"] == "following"
+
+
+@needs_node
+def test_the_hands_moves_count_more_than_one_to_one():
+    """Quick job 88: the picture is smaller than the arm's reach, so a move counts REACH times."""
+    out = run(
+        STEP
+        + """
+warm([R(0), L(0)], 0.0);
+go([R(0), L(1)], 0.0);
+for (let i = 1; i <= 60; i++) go([R(0.002 * i), L(1)], 0.033 * i);  // 12 cm in 2 s, then still
+for (let i = 61; i <= 150; i++) go([R(0.12), L(1)], 0.033 * i);
+return out;"""
+    )
+    reach = run("return m.REACH")
+    assert reach > 1
+    assert out[-1]["pos"][0] == pytest.approx(0.12 * reach, abs=0.003)
+
+
+def turned(roll_deg=0.0, tilt_deg=0.0):
+    """World landmarks of a flat hand, fingers up, palm to the camera, turned in the picture by
+    `roll_deg` (about the camera's axis) and tilted by `tilt_deg` (fingers toward the camera)."""
+    return (
+        "const rot = (p, r, t) => {"
+        "  const [cr, sr, ct, st] = [Math.cos(r), Math.sin(r), Math.cos(t), Math.sin(t)];"
+        "  let {x, y, z} = p; [y, z] = [y * ct - z * st, y * st + z * ct];"
+        "  return {x: x * cr - y * sr, y: x * sr + y * cr, z}; };"
+        "const base = Array.from({length: 21}, () => ({x: 0, y: 0, z: 0}));"
+        "base[5] = {x: -0.03, y: -0.08, z: 0}; base[17] = {x: 0.04, y: -0.07, z: 0};"
+        "base[9] = {x: 0, y: -0.085, z: 0};"  # picture y is down: fingers up = −y
+        f"const [r, t] = [{roll_deg} * Math.PI / 180, {tilt_deg} * Math.PI / 180];"
+        "const w = base.map((p) => rot(p, r, t));"
+    )
+
+
+def twist_deg(q, axis):
+    """The turn about one room axis, as the brain measures it (mapping.py `_twist_deg`)."""
+    import math
+
+    return math.degrees(2 * math.atan2(q[axis], q[3]))
+
+
+@needs_node
+def test_the_hands_turn_is_sent_like_the_quests():
+    """Quick job 88: hand roll → wrist_roll, hand tilt → wrist_flex, as on the Quest: the page sends
+    the hand's turn, and the brain reads its change about the room's axes (x: tilt, z: roll)."""
+
+    def quat(roll=0.0, tilt=0.0):
+        return run(turned(roll, tilt) + "return m.axesQuat(m.handAxes(w));")
+
+    rest = quat()
+    rolled = quat(roll=30)
+    tilted = quat(tilt=30)
+
+    def rel(q):  # q · rest⁻¹
+        x1, y1, z1, w1 = q
+        x2, y2, z2, w2 = -rest[0], -rest[1], -rest[2], rest[3]
+        return [
+            w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+            w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+            w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+        ]
+
+    assert abs(twist_deg(rel(rolled), 2)) == pytest.approx(30, abs=1)  # roll: about forward
+    assert abs(twist_deg(rel(rolled), 0)) < 2
+    assert abs(twist_deg(rel(tilted), 0)) == pytest.approx(30, abs=1)  # tilt: about left-right
+    assert abs(twist_deg(rel(tilted), 2)) < 2
+    # through WebcamHands: the turn is in the message (no turn measured: a fixed one)
+    out = run(
+        turned(30)
+        + STEP
+        + """
+const RA = (axes) => ({side: "right", pos: [0, 0, 0.5], pinch: 0, axes});
+warm([RA(m.handAxes(w))], 0.0);
+go([RA(m.handAxes(w))], 0.0);
+go([R(0)], 0.03);
+return out;"""
+    )
+    assert out[0]["quat"] != [0, 0, 0, 1] and out[1]["quat"] == [0, 0, 0, 1]
