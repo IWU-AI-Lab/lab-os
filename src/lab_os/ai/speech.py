@@ -18,6 +18,9 @@ import dataclasses
 import io
 import json
 import logging
+import math
+import re
+import struct
 import time
 import wave
 from collections.abc import Callable
@@ -34,7 +37,13 @@ CONNECT_TIMEOUT_S = 10.0
 SPEAK_TIMEOUT_S = 15.0  # a sentence takes 2–4 s; longer = that model is stuck (the next one tries)
 FINISH_TIMEOUT_S = 6.0  # after the release, the longest wait for the last words
 NO_SPEECH_WAIT_S = 1.5  # ... when the service hasn't noticed any speech at all
-HEAR_PROMPTS = {"en": "The speaker talks English to a lab assistant called Jarvis."}
+# the transcriber's hint, in the language it expects; {name} = the active persona's name
+HEAR_PROMPTS = {"en": "The speaker talks English to the lab's assistant, {name}."}
+# A recording with no speech in it is not sent (quick job 83): a transcriber can answer silence with
+# its own hint, which then went to the AI as the question. Loudness of 16-bit PCM, in 0.1 s pieces.
+SPEECH_RMS = 300.0  # the loudest piece must reach this (quiet speech near a USB microphone: ~1000+)
+SPEECH_OVER_ROOM = 3.0  # ... and be this many times the quietest piece (the room's own noise)
+MIN_SPEECH_S = 0.3  # shorter recordings are a tap, not a question
 GEMINI_LIVE_PATH = "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 
 
@@ -98,6 +107,37 @@ def _rewrap(data: bytes) -> bytes:
         return data
 
 
+def has_speech(pcm: bytes, rate: int = RATE) -> bool:
+    """Whether a recording may hold speech: long enough, and some part of it clearly louder than
+    the quietest part (silence and a steady hum are not speech)."""
+    step = rate // 10 * 2  # 0.1 s of 16-bit samples
+    if len(pcm) < MIN_SPEECH_S * rate * 2:
+        return False
+    levels = []
+    for i in range(0, len(pcm) - step + 1, step):
+        n = step // 2
+        samples = struct.unpack(f"<{n}h", pcm[i : i + step])
+        levels.append(math.sqrt(sum(x * x for x in samples) / n))
+    loudest, quietest = max(levels), min(levels)
+    return loudest >= SPEECH_RMS and loudest >= SPEECH_OVER_ROOM * max(quietest, 1.0)
+
+
+def hear_prompt(language: str | None, name: str) -> str:
+    """The transcriber's hint for this language and persona ("" = none)."""
+    spoken = re.sub(r"(?<=\w)\.(?=\w)|\.$", "", name).strip() or "the assistant"  # J.A.R.V.I.S.
+    return HEAR_PROMPTS.get(language or "", "").format(name=spoken)
+
+
+def _plain(text: str) -> str:
+    return " ".join(re.sub(r"[^\w ]+", " ", text.lower()).split())
+
+
+def repeats_hint(text: str, hint: str) -> bool:
+    """The transcript is (mostly) the hint itself: the transcriber heard no words."""
+    t, h = _plain(text), _plain(hint)
+    return bool(t and h) and (t == h or (len(t) > 12 and t in h) or (len(h) > 12 and h in t))
+
+
 def _who(setup: VoiceSetup) -> str:
     return setup.where or setup.name
 
@@ -141,6 +181,7 @@ class Hearing:
         # what to expect ("en"; None = any): OpenAI's transcription takes it. Gemini's live
         # transcriber has no such setting (an instruction made no difference, 2026-11-18)
         self.language: str | None = None
+        self.assistant_name = ""  # the active persona's name, for the transcriber's hint
 
     @property
     def seconds(self) -> float:
@@ -328,16 +369,20 @@ class RecordedHearing(Hearing):
         self._pcm += pcm
 
     async def finish(self) -> str:
-        if not self._pcm:
+        if not has_speech(bytes(self._pcm)):
+            log.info(
+                "%s hearing: no speech in %.1f s of audio: not sent", self.setup.name, self.seconds
+            )
             return ""
         form = aiohttp.FormData()
         form.add_field("model", self.setup.hear)
+        hint = hear_prompt(self.language, self.assistant_name)
         if self.language:
             form.add_field("language", self.language)
             # the code alone let "test" come back in Cyrillic a few times (lab check 9.14): the
             # prompt says it again, in the language itself
-            if self.language in HEAR_PROMPTS:
-                form.add_field("prompt", HEAR_PROMPTS[self.language])
+            if hint:
+                form.add_field("prompt", hint)
         form.add_field(
             "file", wav_bytes(bytes(self._pcm)), filename="speech.wav", content_type="audio/wav"
         )
@@ -353,6 +398,9 @@ class RecordedHearing(Hearing):
                 text = str((await resp.json()).get("text") or "").strip()
         except (aiohttp.ClientError, TimeoutError):
             raise _unreachable(self.setup) from None
+        if hint and repeats_hint(text, hint):
+            log.info("%s hearing: the transcript was its own hint: no words", self.setup.name)
+            text = ""
         self.on_words(text)
         return text
 

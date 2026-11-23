@@ -2338,6 +2338,7 @@ function onVoiceEvent(ev) {
     if (VS.fromCore && !VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
     if (!ev.final) return;
     if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
+    if (ev.command) { endVoice(); return; }  // "that's all", "conversation mode": not a question, no answer comes (quick job 83)
     $("#reply .q").classList.remove("heard");
     VS.turn = VS.shown = beginTurn(ev.text, VS.fromCore, true);
   } else if (VS.turn && ["state", "tool", "text", "open", "error", "done"].includes(ev.type)) {

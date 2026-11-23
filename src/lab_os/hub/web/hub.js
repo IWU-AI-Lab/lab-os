@@ -909,6 +909,11 @@ function onVoiceEvent(ev) {
       endVoice();
       return;
     }
+    if (ev.command) { // "that's all", "conversation mode": not a question, no answer comes (quick job 83)
+      endVoice();
+      setAssistant("idle", 0);
+      return;
+    }
     const turn = (VS.turn = beginTurn(ev.text));
     turn.paced = true;
     VS.shown = revealPacer(
