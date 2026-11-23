@@ -43,6 +43,7 @@ The service works only at start. When the router's Wi-Fi goes away later, raspbo
 raspbot1 logs in by itself when it starts, so the program starts with it (a systemd user service). On a Raspbot that does not log in by itself, run `sudo loginctl enable-linger pi` once.
 
 ## When something is wrong
+- raspbot1 stops (black screen, keyboard and mouse off): switch it off and on. Then run `ssh raspbot1 tail -n 20 lab-os/health.log`. The health log writes a line every 10 seconds: the power flags, the 5 V input, the core's current, the temperature, the Wi-Fi link, the load, free memory and free disk. The lines before the "--- start" line show the last minute before the stop. `throttled=0x0` means no power or temperature problem.
 - "raspbot1 does not answer": the Raspbot is off, or not on the router's Wi-Fi, or the program does not run. Run `ssh raspbot1 systemctl --user status lab-os-raspbot`.
 - The program's log: `ssh raspbot1 journalctl --user -u lab-os-raspbot -n 50`.
 - No camera picture: Yahboom's app program may hold the camera (step 1 above).

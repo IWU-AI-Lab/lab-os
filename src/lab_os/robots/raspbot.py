@@ -230,21 +230,24 @@ def from_registry(registry) -> RaspbotDesk:
 
 ONBOARD_DIR = Path(__file__).parents[3] / "robots" / "raspbot"
 SERVICE = "lab-os-raspbot"
+HEALTH = "lab-os-health"  # the health log (lab_os_health.py), for raspbot1's stops
 WIFI_FILES = ("lab-os-wifi.sh", "lab-os-wifi.service", "install-wifi.sh")
 
 
 def deploy_commands(host: str) -> list[list[str]]:
-    """rsync the program and its service to the Raspbot, then (re)start the service there. The
-    program only listens: starting it never moves the car."""
+    """rsync the program, the health log and their services to the Raspbot, then (re)start both
+    services there. The program only listens: starting it never moves the car."""
+    units = f"{SERVICE} {HEALTH}"
     start = (
         "mkdir -p ~/.config/systemd/user && "
-        f"mv ~/lab-os/{SERVICE}.service ~/.config/systemd/user/ && "
+        f"mv ~/lab-os/{SERVICE}.service ~/lab-os/{HEALTH}.service ~/.config/systemd/user/ && "
         "systemctl --user daemon-reload && "
-        f"systemctl --user enable {SERVICE} && systemctl --user restart {SERVICE} && "
-        f"sleep 1 && systemctl --user is-active {SERVICE}"
+        f"systemctl --user enable {units} && systemctl --user restart {units} && "
+        f"sleep 1 && systemctl --user is-active {units}"
     )
     # the Wi-Fi files are only copied: install-wifi.sh needs sudo, once (docs/guides/raspbot.md)
-    names = ["lab_os_raspbot.py", f"{SERVICE}.service", *WIFI_FILES]
+    names = ["lab_os_raspbot.py", f"{SERVICE}.service", "lab_os_health.py", f"{HEALTH}.service"]
+    names += WIFI_FILES
     files = [str(ONBOARD_DIR / n) for n in names]
     return [
         ["ssh", host, "mkdir -p ~/lab-os"],

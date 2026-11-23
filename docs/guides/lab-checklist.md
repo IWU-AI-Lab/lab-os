@@ -276,6 +276,7 @@ Quick job 72. raspbot1 on the router's Wi-Fi, with its battery charged. Put it o
 - **R.5** Hold **↑**. While the wheels turn, turn off the desktop's Wi-Fi. → did the wheels stop within 1 second? (yes / no) Turn the Wi-Fi on again.
 - **R.7** Run `ssh -t raspbot1 sudo sh lab-os/install-wifi.sh` (type raspbot1's password). Run `ssh raspbot1 sudo reboot`. Wait 1 minute. Run `ssh raspbot1 systemctl status lab-os-wifi`. → does the last line say "joined GL-B7-5G" or "on GL-B7-5G"? (yes / no: copy the last line)
 - **R.8** Turn off the router's Wi-Fi in its admin page, or take raspbot1 out of the router's range. Restart raspbot1 with its switch. Wait 2 minutes. → does a phone see the "Raspbot" Wi-Fi? (yes / no) Turn the router's Wi-Fi on again. Restart raspbot1. → does `ssh raspbot1 hostname` answer after 2 minutes? (yes / no)
+- **R.9** When raspbot1 stops by itself again (black screen, keyboard and mouse off), switch it off and on. Run `ssh raspbot1 tail -n 20 lab-os/health.log`. → copy the lines. What did raspbot1 do just before (nothing / driving / the camera page open / other)?
 - **R.6** Put raspbot1 on the floor with space around it. Drive it forward, back and in a circle. Move **Speed** from 0 % to 100 %. → which speed is good for the demo? (a percentage) Is the camera picture behind by less than about 1 second? (yes / no)
 
 ## P. After the demo: one program or single moves, 5 against 5 (60 min)
