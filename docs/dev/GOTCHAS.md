@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-23 — An arm with USB but no motor power stops the brain with a traceback (lab check N.17)
+**What:** `uv run lab-os serve --host 0.0.0.0` stopped twice. The white arm's USB board was connected, so the brain chose so101-white. In the first try no motor answered (`FeetechMotorsBus motor check failed … Missing motor IDs: 1–6`, found `{}`): the board gets its power from USB, the motors only from the 12 V plug. In the second try motor 2 did not answer (`ConnectionError: Failed to write 'Torque_Enable' on id_=2 … There is no status packet!`): the power was coming on, or a cable between motors was loose. A few minutes later the same command started. `_open_arm` (`teleop/cli.py`) falls back to the fake arm only for `PortNotAllowed` and `LookupError`, so LeRobot's `RuntimeError` and `ConnectionError` stopped the brain.
+**Fix:** for now, connect the arm's motor power before you start the brain, or disconnect its USB cable. A clear sentence and the fake arm: quick job 94 in `docs/plan/quick-jobs.md`.
+
 ### 2026-11-22 — Full Access: pictures can't go in a tool's answer, and in-process MCP calls raise (quick job 80)
 **What:** (1) OpenAI-style chat takes only text in a `tool` message, so a camera picture can't be the tool's answer. (2) The MCP library's in-process `call_tool` raises `ToolError` for a refusal; over HTTP the same refusal comes back as a result with `is_error`. Its picture field is `mime_type` (not `mimeType`, as in the protocol's JSON). (3) A conversation made outside `create_brain_app` (the tests) had no MCP tools at all, so the hub's chat in those tests never saw the read tools.
 **Fix:** after a round of tool calls, the pictures follow as one `user` message with `image_url` parts (`lab_os.ai.tools.ChatTools.take_images`). `create_brain_app` gives a conversation without tools the brain's tools.
