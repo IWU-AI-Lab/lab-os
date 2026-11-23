@@ -13,6 +13,7 @@ dependencies = [
     "onnxruntime>=1.20,<2",
     "pillow>=12.3.0",
     "pyyaml>=6.0",
+    "restrictedpython>=8.0",
     "ruamel-yaml>=0.19.1",
 ]
 

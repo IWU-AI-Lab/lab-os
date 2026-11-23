@@ -130,6 +130,7 @@ class TeleopLoop:
     last_command_t: float = -1e9  # monotonic time of the last arm_command (quick job 73)
     # lab-os is shutting down or restarting (why), or None: nothing moves any more (quick job 44)
     shutting_down: str | None = None
+    stops: int = 0  # how many times STOP was pressed: a running AI program ends on a new one (81)
 
     def _emit(self, msg: dict) -> None:
         self.command_seq += 1
@@ -262,6 +263,7 @@ class TeleopLoop:
     def stop(self, why: str = "stopped") -> None:
         """STOP button on any page: freeze now; the driver must release and re-grab the clutch.
         `why`: what an AI move that was running is told. The left arm freezes too."""
+        self.stops += 1
         self._freeze(why)
         if self.left:
             self.left.stop(why)

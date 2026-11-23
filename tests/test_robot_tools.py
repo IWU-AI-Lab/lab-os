@@ -430,7 +430,7 @@ def test_unknown_ai_tools_settings_are_ignored_not_fatal(caplog):
 # ---------- MCP ----------
 
 READ_TOOLS = {"arm_status", "list_poses", "pose_view", "camera_snapshot", "table_point"}
-MOVE_TOOLS = {"move_joints", "gripper", "move_to", "go_to_pose", "pick_at"}
+MOVE_TOOLS = {"move_joints", "gripper", "move_to", "go_to_pose", "pick_at", "run_program"}
 
 
 async def test_mcp_lists_the_tools_with_their_tiers(rig):

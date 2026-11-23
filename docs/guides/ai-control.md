@@ -65,6 +65,7 @@ An arm on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `
 | `go_to_pose` | move | A named pose |
 | `pick_at` | move | A full pick in one call: open, above, straight down, close, lift ("Picking up" below) |
 | `stop` | always | Stop now and hold, for any controller |
+| `run_program` | move | One short Python program that calls the robot functions, run on the brain with no model call between the steps ("One program" below) |
 
 **Project tools** (read; the hub's chat uses the same tools):
 | Tool | What it does |
@@ -178,6 +179,15 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
 5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture). The tic-tac-toe board uses the same map (`docs/guides/tic-tac-toe.md`).
 
 To try it without a camera, add `--image picture.jpg` to use a saved picture.
+
+## One program instead of many moves (`run_program`, quick job 81)
+Each single move is one round trip to the AI service: a few seconds each. With `run_program` the AI writes one short Python program, and the brain runs it at once. For example: find the cube, go to `ready`, go above the cube, `pick_at`, go to `handover`. The MCP server's instructions tell the AI to prefer one program over many single moves.
+- **Functions:** `arm_status`, `list_poses`, `find_cube` (the blue cube on the stand camera, as for "Hand me the cube"), `table_point`, `move_to`, `pick_at`, `gripper`, `go_to_pose`, `move_joints`, `wait`. Each returns the same answer as the tool. Also `math`, `statistics`, `print` and the plain builtins (`range`, `len`, `round`, …).
+- **Limits:** no imports, no files, no network, no names that start with `_`. The program is compiled by RestrictedPython (Zope's maintained restricted compiler). The time limit is 120 s by default and 300 s at most.
+- **Safety:** every call goes through the same checks as a single tool call, and it shows on AI Control. STOP ends the program at once, also in a loop that calls nothing. A refusal, a stopped move or an error also ends it.
+- **The answer:** done, stopped, time limit or error; each call with its result; what the program printed; and the line where it stopped.
+- The hub's assistant gets `run_program` when Full Access is on.
+- **Claude Code asks before each `run_program`** until `mcp__lab-os__run_program` is on the allow list in `.claude/settings.json` (a separate pull request that waits for the builder).
 
 ## Picking up (`pick_at`)
 `pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object that stands at (x, y) on the table, in one call instead of about 17 small calls. It has five steps, each through the same safety path as `gripper` and `move_to`:
