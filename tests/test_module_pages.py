@@ -372,7 +372,29 @@ async def test_every_page_is_listed(aiohttp_client):
     guide = (SRC.parents[1] / "docs" / "guides" / "hub.md").read_text()
     for path, _, _ in PAGES:
         assert f"`{path}`" in guide, path
-    assert "pagesGroup()" in (SRC / "hub" / "web" / "settings.js").read_text()
+    # quick job 82: All Pages is a page of its own, a button next to ⚙ in the strip (not in ⚙)
+    assert "pagesGroup" not in (SRC / "hub" / "web" / "settings.js").read_text()
+    assert "/api/hub" in await (await client.get("/pages")).text()
+    assert 'id="pages-btn"' in (SRC / "hub" / "web" / "design.html").read_text()
+    assert 'id="pages-btn"' in (SRC / "hub" / "web" / "index.html").read_text()
+
+
+def test_settings_fixes_from_the_laptop_check():
+    """Quick job 82: the restart bar stays in view, a restart row's note has its place kept,
+    Assistant Language is in the Assistant group (stacked), the new names, a short computer name."""
+    from lab_os.ai.spend import short_host
+    from lab_os.settings import SECTIONS
+
+    html = (SRC / "hub" / "web" / "settings.html").read_text()
+    js = (SRC / "hub" / "web" / "settings.js").read_text()
+    assert "position: fixed" in html.split("#restart-bar {")[1].split("}")[0]
+    assert ".row.may-restart .rs[hidden]" in html and '"may-restart"' in js
+    assert 'if (s.id === "assistant") rows.append(languageRow());' in js
+    assert '"pair stack"' in js and "This device only" in js
+    labels = [f.label for s in SECTIONS for f in s.fields]
+    assert "Persona" in labels and "Persona in This Venue" in labels
+    assert not any(label.startswith("Who It Is") for label in labels)
+    assert short_host("Mac.indy.rr.com") == "Mac" and short_host("lab-desktop") == "lab-desktop"
 
 
 async def test_the_unused_pages_are_gone(aiohttp_client):

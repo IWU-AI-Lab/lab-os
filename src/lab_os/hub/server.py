@@ -127,8 +127,9 @@ MODULES = {
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
 }
 
-# Every page the brain serves: (address, name, one line). ⚙ → All Pages lists them, so each opens
-# from the hub in two taps (quick job 67); a test checks that no page is missing here.
+# Every page the brain serves: (address, name, one line). All Pages (`/pages`, a button in the hub's
+# strip next to ⚙; quick jobs 67 and 82) lists them, so each opens from the hub in two taps; a test
+# checks that no page is missing here.
 PAGES = (
     ("/", "The Hub", "The main address: the plain or the designed hub (⚙ → The Lab)."),
     ("/design", "Designed Hub", "The designed hub, whatever the main address shows."),
@@ -138,7 +139,8 @@ PAGES = (
     ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
-    ("/settings", "Settings", "This page: ⚙ on the hub."),
+    ("/settings", "Settings", "⚙ on the hub."),
+    ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
 )
 
 # Every view that "Open on…" and the room's layout can show on a device (the builder, 2026-11-21:
@@ -148,6 +150,7 @@ DEVICE_VIEWS = {
     **{mid: (title, page) for mid, (title, page) in MODULES.items()},
     "webcam": ("Webcam Teleop", "/webcam"),
     "settings": ("Settings", "/settings"),
+    "pages": ("All Pages", "/pages"),
     "project": ("Current Project", ""),
     "spend": ("AI Spend", ""),
     "commits": ("Commits", ""),
@@ -305,6 +308,10 @@ async def ai_page(request: web.Request) -> web.FileResponse:
 
 async def settings_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "settings.html")
+
+
+async def pages_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "pages.html")
 
 
 async def xr_page(request: web.Request) -> web.FileResponse:
@@ -1434,6 +1441,7 @@ def create_brain_app(
     app.router.add_post("/api/quest-view/stop", api_quest_view_stop)
     app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
+    app.router.add_get("/pages", pages_page)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)
