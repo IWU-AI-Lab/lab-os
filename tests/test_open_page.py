@@ -100,7 +100,8 @@ async def test_no_pages_no_tool(aiohttp_server, tmp_path, key):  # noqa: F811
     """A page that sends nothing (an older page, another client) gets no open_page tool."""
     conv, seen = await make_conv(aiohttp_server, tmp_path, [("words", "Hello.")])
     events = [e async for e in conv.ask("Show me teleop")]
-    assert "tools" not in seen[0] and texts(events) == "Hello."
+    offered = {t["function"]["name"] for t in seen[0].get("tools") or []}
+    assert "open_page" not in offered and texts(events) == "Hello."  # (calculate: job 86)
     assert "open pages" not in seen[0]["messages"][0]["content"]
     await conv.close()
 

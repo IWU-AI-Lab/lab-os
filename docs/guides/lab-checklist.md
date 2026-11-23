@@ -54,6 +54,7 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's log n
 - **V.22** Set **Wake Word: Lab Assistant** to TARS. Say "TARS, what time is it?" 5 times. Then set it to Hey Friday, and say "Hey Friday, what time is it?" 5 times. → how many answers for TARS? For Hey Friday? (0 to 5 each)
 - **V.23** Set **Persona** to J.A.R.V.I.S. Say "Hey Jarvis, what time is it?" 5 times. → how many answers? (0 to 5) Set the Lab Assistant's word back to OK Computer.
 - **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
+- **V.25** Quick job 86. Ask: "How many minutes does a 1200 km flight take at 850 km per hour?" → did it say about 85 minutes, with short steps? (yes / no) Ask: "Calculate 37 times 48, then add 199." → did it say 1975? (yes / no)
 - **V.2** Say "(wake word), what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "(wake word), what's next?". → did it answer? (yes / no) If no, write the time.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say the wake word again. → did the desktop answer at once? (yes / no) If no, write the time.
