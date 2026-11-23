@@ -1079,6 +1079,6 @@ async def test_the_greeting_follows_the_persona(aiohttp_client, aiohttp_server, 
         said.append(" ".join(e["text"] for e in events if e["type"] == "audio"))
         await ws.close()
     assert said[0] == "Good evening. You can talk to me: say hey Jarvis."
-    assert said[1] == "Good evening. You can talk to me: say ok computer."
+    assert said[1] == "Good evening. You can talk to me: say OK computer."
     setup = VoiceSetup("main", "openai", "http://x/v1", "h", "tts-1", speaker="fable")
     assert greeting_file(tmp_path, setup, "Hi.", "a") != greeting_file(tmp_path, setup, "Hi.", "b")

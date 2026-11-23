@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-22 — The community wake words: 200 KB each, and TARS scores low (quick job 90)
+**What:** the three models from the community collection are about 200 KB each (the job said 1 MB). They take the same input as openWakeWord's own (16 embeddings × 96). On macOS's `say` voice, OK computer and hey Friday scored 0.88 and TARS only 0.42, under the default threshold of 0.5. A clip shorter than about 1 s scored near 0 in a test: the detector's first 5 chunks (0.4 s) are its warm-up, so the test pads the clip with quiet.
+**Fix:** none in code. The lab check (V.21–V.24) decides whether TARS stays.
+
 ### 2026-11-22 — Webcam teleop: the arm can't reach down, and MediaPipe's label is right on a webcam (quick job 88)
 **What:** lab check W on the laptop. (1) MediaPipe's left and right labels were right for the webcam's plain picture, though its documents say they assume a mirrored one; the 2026-11-19 choice came from a sample photo. (2) "Can't reach down": the brain's mapping reaches the table in a test with the fake arm's numbers, so the limit is the picture. At 60 cm from a 78° camera the picture is about 48 cm high, and MediaPipe loses the hand before the wrist reaches the edge. (3) MediaPipe's default confidences (0.5) let a hand that wasn't there show for seconds.
 **Fix:** the label as it is; hand moves count 1.5 times and the page says to grab again to go further; confidences 0.7 and 5 frames in a row before a hand counts; the hand's turn is sent, so tilting the hand can also point the gripper down. Smoothing chosen with simulated noise (`OneEuro` 0.3 Hz, β 5; 0.2 Hz, β 3 for toward/away): not yet checked on a real hand.

@@ -478,3 +478,87 @@ async def test_two_screens_the_nearer_one_answers_and_it_is_logged(
     assert "heard the wake word: " in caplog.text and "near answers" in caplog.text
     for ws in (near, far):
         await ws.close()
+
+
+# ---------- quick job 90: a wake word for each persona ----------
+
+
+@pytest.mark.parametrize("word", ["ok_computer", "tars", "hey_friday"])
+def test_the_community_wake_words(models, word):
+    """Each model wakes on its own phrase (fixtures: macOS's `say`, 2026-11-22) and on no other.
+    TARS scored lowest (0.42): the lab check decides whether it stays."""
+    assert models.why_not(word) is None
+    own = WakeDetector(models, word)
+    pad = b"\x00\x00" * 16000  # a second of quiet around it: past the detector's warm-up
+    assert max(own.feed(p) for p in pieces(pad + pcm(word) + pad)) > 0.3
+    for other in ("hey_jarvis", "not_jarvis"):
+        d = WakeDetector(models, word)
+        assert max(d.feed(p) for p in pieces(pcm(other))) < 0.15, other
+
+
+def test_each_persona_has_its_wake_word(tmp_path, monkeypatch):
+    from lab_os import config
+    from lab_os.personas import current_persona
+    from lab_os.settings import SECTIONS
+
+    rows = {f.path: f for s in SECTIONS for f in s.fields if f.path.startswith("wake_words.")}
+    assert set(rows) == {"wake_words.jarvis", "wake_words.lab-assistant"}
+    assert rows["wake_words.jarvis"].default == "hey_jarvis"
+    assert rows["wake_words.lab-assistant"].default == "ok_computer"
+    assert {"hey_jarvis", "ok_computer", "tars", "hey_friday"} <= set(
+        rows["wake_words.jarvis"].options()
+    )
+    assert current_persona("jarvis").wake_word == "hey_jarvis"
+    assert current_persona("lab-assistant").wake_word == "ok_computer"
+    place = config.load_place()
+    monkeypatch.setattr(
+        config,
+        "load_place",
+        lambda folder=None: type(place)(
+            **{**place.__dict__, "wake_words": {"jarvis": "hey_friday"}}
+        ),
+    )
+    assert current_persona("jarvis").wake_word == "hey_friday"  # ⚙'s choice wins
+
+
+async def test_a_new_wake_word_is_listened_for_without_a_restart(
+    aiohttp_client, aiohttp_server, key, tmp_path, monkeypatch
+):
+    import lab_os.hub.voice as voice_mod
+    from lab_os.personas import Persona
+
+    monkeypatch.setattr(voice_mod, "WORD_CHECK_S", 0.0)
+    now = {"w": "hey_jarvis"}
+    app, _, _ = await voice_app(
+        aiohttp_server,
+        tmp_path,
+        persona=lambda: Persona(id="p", display_name="P", voice="test", wake_word=now["w"]),
+    )
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice?device=desk")
+    await ws.send_json({"type": "wake", "on": True})
+    on = (await events_until(ws, {"wake_on"}, timeout=20))[-1]
+    assert on["phrase"] == "hey Jarvis"
+    now["w"] = "ok_computer"
+    await stream(ws, SECOND)
+    on = (await events_until(ws, {"wake_on"}, timeout=20))[-1]
+    assert on["phrase"] == "OK computer"
+    await stream(ws, pcm("ok_computer") + b"\x00\x00" * 16000)
+    assert (await events_until(ws, {"wake"}, timeout=10))[-1]["type"] == "wake"
+    await ws.close()
+
+
+def test_the_wake_word_setting_is_written_to_place_yaml(tmp_path):
+    from lab_os import config, settings
+    from lab_os.personas import current_persona
+
+    folder = config.new_place(tmp_path / "home")
+    config.use(folder)
+    try:
+        settings.write("place:wake_words.jarvis", "tars")
+        assert config.load_place().wake_words == {"jarvis": "tars"}
+        assert current_persona("jarvis").wake_word == "tars"
+        with pytest.raises(settings.SettingError):
+            settings.write("place:wake_words.jarvis", "computer")  # not a model we have
+    finally:
+        config.use(None)
