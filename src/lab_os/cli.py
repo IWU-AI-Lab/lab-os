@@ -304,7 +304,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.mcp_port and not loop.arm.name.startswith("fake"):
         print(f"AI tools can move the REAL {loop.arm.name}: STOP on any page.")
     if loop.left:
-        print(f"AI tools drive only {loop.arm.name}; {loop.left.arm.name} is for teleop only.")
+        print(f"AI tools drive {loop.arm.name}; they drive {loop.left.arm.name} when they name it.")
     if args.host not in LOCAL_HOSTS:
         print(f"listening on {args.host}: other computers on the network can open the hub")
     if local_control_only:

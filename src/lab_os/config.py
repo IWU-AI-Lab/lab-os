@@ -225,6 +225,7 @@ PLACE_FIELDS = {
     "chat_keep_minutes",
     "about",
     "assistant_moves_arm",
+    "assistant_full_access",
     "wake_words",
 }
 
@@ -234,6 +235,12 @@ def ai_budget() -> float | None:
     brain runs); None = no cap."""
     budget = load_yaml("place.yaml").get("ai_budget_usd_month")
     return float(budget) if budget is not None else None
+
+
+def assistant_full_access() -> bool:
+    """place.yaml's `assistant_full_access` as it is now (⚙ → Assistant → Full Access, quick job
+    80): the hub's assistant gets every tool of the brain. Off when left out."""
+    return load_yaml("place.yaml").get("assistant_full_access") is True
 
 
 def assistant_moves_arm() -> bool:

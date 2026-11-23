@@ -44,6 +44,15 @@ ANSWER_IN = (
     "If the question is in another language, still answer in {name}."
 )
 MAX_TOOL_ROUNDS = 4  # look-ups per question before the model must answer
+# With Full Access (quick job 80) a task takes many calls (look, find, move a few times, pick)
+FULL_ACCESS_ROUNDS = 24
+FULL_RULES = """\
+Full Access is on: you have every tool of the brain. You can move the robot arms, look through the
+cameras (the pictures come to you as images) and do what the hub's buttons do (open a page on a
+device, change a setting, visitor mode, say a sentence aloud, restart or shut down lab-os). Someone
+watches with STOP in reach; say in one short line what you do before you move an arm, and never
+restart or shut down lab-os unless asked. The robot tools' own guide:
+"""
 CONFIRM_TRIES, CONFIRM_GAP_S = 2, 3.0  # a failed check while connected: ask again this often first
 
 RULES = """\
@@ -351,6 +360,10 @@ class Conversation:
             rules = f"Your name on the screen is {self.display_name}.\n{rules}"
         if self.tools:
             rules = f"{rules}\n\n{TOOL_RULES}"
+            if self.tools.full_access():
+                from lab_os.tools.mcp_server import INSTRUCTIONS
+
+                rules = f"{rules}\n\n{FULL_RULES}{INSTRUCTIONS}"
         if pages:
             listed = ", ".join(f"{title} ({pid})" for pid, title in pages.items())
             rules = f"{rules}\n\n{PAGE_RULES.format(pages=listed)}"
@@ -436,14 +449,16 @@ class Conversation:
             if rule:
                 sent[-1] = {"role": "user", "content": f"{text}\n\n({rule})"}
         answer, usage = "", Usage()
-        tools = await self.tools.openai_tools() if self.tools else []
+        actions = self.actions.tools(local) if self.actions else []
+        action_names = {t["function"]["name"] for t in actions}
+        full = bool(self.tools and self.tools.full_access())
+        max_rounds = FULL_ACCESS_ROUNDS if full else MAX_TOOL_ROUNDS
+        tools = await self.tools.openai_tools(skip=action_names) if self.tools else []
         strong = self.strong_setup()
         if strong:
             tools = [*tools, THINK_TOOL]
         if pages:
             tools = [*tools, page_tool(pages)]
-        actions = self.actions.tools(local) if self.actions else []
-        action_names = {t["function"]["name"] for t in actions}
         tools = [*tools, *actions]
         welcomed = False  # visitor mode started this turn: its answer is the welcome
         error, completed, rounds = None, False, 0
@@ -452,7 +467,7 @@ class Conversation:
             yield {"type": "state", "state": "thinking"}
             while True:
                 reply = Reply()
-                offer = tools if tools and rounds < MAX_TOOL_ROUNDS else None
+                offer = tools if tools and rounds < max_rounds else None
                 try:
                     async for piece in stream_chat(self._session_(), setup, sent, reply, offer):
                         if self.assistant.state != "speaking":
@@ -517,6 +532,13 @@ class Conversation:
                         only_pages = False
                         result = f"Error: {call.name!r} isn't a tool you have."
                     sent.append({"role": "tool", "tool_call_id": call.id, "content": result})
+                images = self.tools.take_images() if self.tools else []
+                if images:  # tool messages take text only: the pictures follow as the user's
+                    parts = [{"type": "text", "text": "The pictures from those tool calls:"}]
+                    for im in images:
+                        parts.append({"type": "text", "text": f"From {im['tool']}:"})
+                        parts.append({"type": "image_url", "image_url": {"url": im["url"]}})
+                    sent.append({"role": "user", "content": parts})
                 if answer and not answer.endswith(("\n", " ")):
                     answer += "\n"
                     yield {"type": "text", "text": "\n"}

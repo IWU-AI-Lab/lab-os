@@ -159,6 +159,17 @@ SECTIONS: list[Section] = [
             *_wake_word_fields(),
             Field(
                 "place",
+                "assistant_full_access",
+                "Full Access",
+                "bool",
+                "On: the assistant gets every tool of the brain: it moves the arms, looks through "
+                "the cameras, changes settings and more, asked on any screen. The robot safety "
+                "limits stay. Off by default.",
+                default=False,
+                applies="next",
+            ),
+            Field(
+                "place",
                 "chat_keep_minutes",
                 "Keep a Conversation For",
                 "number",

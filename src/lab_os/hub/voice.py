@@ -542,6 +542,27 @@ class VoiceDesk:
         """A question is coming: open the chat's connection while the person talks."""
         asyncio.get_running_loop().create_task(self.chat.warm())
 
+    async def say_text(self, text: str, device: str | None = None) -> str:
+        """Speak a sentence aloud on a screen with the hub open (the MCP tool `say_aloud`, quick
+        job 80): the named device, else one on the brain's own computer, else any. A sentence
+        for the caller: what it did, or "Error: ..." and why not."""
+        text = " ".join(str(text or "").split())[:SPEAK_MAX_CHARS]
+        if not text:
+            return "Error: there's nothing to say."
+        why = self.why_not()
+        if why:
+            return f"Error: {why}"
+        links = [lk for lk in self.links if not device or lk.device == device]
+        if not links:
+            where = f"called {device!r} " if device else ""
+            return f"Error: no screen {where}has the hub open, so nobody would hear it."
+        link = sorted(links, key=lambda lk: (not lk.local, lk.device))[0]
+        if link.task is not None and not link.task.done():
+            return f"Error: {link.device or 'that screen'} is talking or listening now."
+        link.task = asyncio.get_running_loop().create_task(link._say(self.setup(), text))
+        log.info("voice: saying a sentence on %s (asked by a tool)", link.device or "a screen")
+        return f"Saying it on {link.device or 'the screen'}."
+
     def keep_timing(self, timing: "TurnTiming") -> None:
         self.timings.append(timing.summary())
         log.info("%s", timing.line())
