@@ -270,6 +270,12 @@ Quick job 91. The green leader drives the green follower through LeRobot's own c
 - **E.2** Put the leader and the follower in the same pose. Press **Start**. Wait 20 seconds. → does Rerun show in the page, with the two camera pictures and the joints? (yes / no) Move the leader. → does the follower follow? (yes / no)
 - **E.3** Hold the follower. Press **Stop**, then OK. → did the follower go limp? (yes / no) Does the card say "LeRobot's teleop stopped"? (yes / no)
 
+## C. The Cameras page (15 min)
+Quick job 93. Plug in the white arm's two cameras. Run `uv run lab-os serve`. Open the hub on the lab desktop as `/design?device=desk`, and on the Newline as `/design?device=newline`.
+- **C.1** On the desktop's hub, open **All Pages** → **Cameras** → **Open**. → does each camera show a live picture? (yes / no) Do the digits next to each camera's name stay under 1.0? (yes / no)
+- **C.2** Press the name of the wrist camera above the pictures. → did the wrist picture go away? (yes / no) Did the stand picture stay? (yes / no)
+- **C.3** On the desktop's hub, open Cameras inside the hub, press **Open on…**, then select the Newline. On the Newline, hide the stand camera. On the desktop, show the stand camera and hide the wrist camera. → does the Newline show only the wrist camera? (yes / no) Does the desktop show only the stand camera? (yes / no)
+
 ## P. After the demo: one program or single moves, 5 against 5 (60 min)
 Quick job 81. Do this part only after the demo. It compares how often the pick works, and how long it takes. Use Claude Code, `so101-white`, and the cube about 20 cm straight in front of the arm. Keep a hand at **STOP**. Before each try, put the cube back in the same place, and send the arm to `ready`.
 - **P.1** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube step by step, with single moves and no run_program, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)

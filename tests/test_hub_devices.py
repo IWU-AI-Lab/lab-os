@@ -498,3 +498,19 @@ async def test_every_view_opens_on_a_device(aiohttp_client):
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert "function viewEl(id)" in design and "setViews(hub?.views" in design
     assert "S.views" in (SRC / "hub" / "web" / "hub.js").read_text()
+
+
+def test_the_cameras_page_keeps_its_hidden_cameras_for_each_device(tmp_path):
+    """Quick job 93: each device's own list of hidden cameras (the stand camera on one screen, the
+    wrist camera on another)."""
+    s = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    hide = ["so101-white-cam-wrist", "so101-white-cam-stand", "so101-white-cam-wrist"]
+    assert s.update("newline", {"cameras_hidden": hide}) == {
+        "cameras_hidden": ["so101-white-cam-stand", "so101-white-cam-wrist"]
+    }
+    s.update("desk", {"cameras_hidden": ["so101-white-cam-stand"]})
+    assert s.get("desk") == {"cameras_hidden": ["so101-white-cam-stand"]}
+    assert s.update("newline", {"cameras_hidden": []}) == {}  # every camera shown: the default
+    for junk in ("so101-white-cam-wrist", [1], ["../x"], [True], ["c"] * 33):
+        with pytest.raises(DeviceError, match="cameras_hidden can be a list"):
+            s.update("quest", {"cameras_hidden": junk})

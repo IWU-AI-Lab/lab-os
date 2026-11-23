@@ -54,6 +54,7 @@ POST /api/room/setup     open each page of the room's layout on its device (room
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
+GET /api/cameras         every camera in devices.yaml, one per USB socket (the Cameras page)
 GET /api/camera-feed/{name}   that camera's newest picture (JPEG); opened while asked for, closed
                          5 s after (lab_os/camera_feed.py)
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
@@ -140,6 +141,11 @@ PAGES = (
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
     ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
+    (
+        "/cameras",
+        "Cameras",
+        "Every camera's live picture, with a switch for each (kept per device).",
+    ),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
@@ -151,6 +157,7 @@ PAGES = (
 DEVICE_VIEWS = {
     **{mid: (title, page) for mid, (title, page) in MODULES.items()},
     "webcam": ("Webcam Teleop", "/webcam"),
+    "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
     "settings": ("Settings", "/settings"),
     "pages": ("All Pages", "/pages"),
     "project": ("Current Project", ""),
@@ -321,6 +328,10 @@ async def pages_page(request: web.Request) -> web.FileResponse:
 
 async def xr_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "xr.html")
+
+
+async def cameras_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "cameras.html")
 
 
 async def training_page(request: web.Request) -> web.FileResponse:
@@ -1000,6 +1011,16 @@ async def api_arm_cameras(request: web.Request) -> web.Response:
     return web.json_response({"arm": loop.arm.name, "cameras": out})
 
 
+async def api_cameras(request: web.Request) -> web.Response:
+    """Every camera in devices.yaml, one per USB socket, for the Cameras page (quick job 93).
+    Opens nothing: the pictures come from /api/camera-feed, only for the cameras shown."""
+    try:
+        cams = await asyncio.to_thread(camera_feed.all_cameras)
+    except config.ConfigError:
+        cams = []
+    return web.json_response({"cameras": cams})
+
+
 async def api_camera_feed(request: web.Request) -> web.Response:
     """One camera's newest picture (quick job 63). The camera opens on the first request and
     closes IDLE_S after the last; a camera another program has open is refused (409)."""
@@ -1492,6 +1513,7 @@ def create_brain_app(
     app.router.add_get("/design", design_page)
     app.router.add_get("/ai", ai_page)
     app.router.add_get("/training", training_page)
+    app.router.add_get("/cameras", cameras_page)
     app.router.add_get("/xr", xr_page)
     app.router.add_get("/manifest.webmanifest", web_manifest)
     app.router.add_get("/api/green", api_green)
@@ -1514,6 +1536,7 @@ def create_brain_app(
     app.router.add_get("/api/commits", api_commits)
     app.router.add_get("/api/arm", api_arm)
     app.router.add_get("/api/arm-cameras", api_arm_cameras)
+    app.router.add_get("/api/cameras", api_cameras)
     app.router.add_get("/api/camera-feed/{name}", api_camera_feed)
     app.router.add_get("/api/pose-view.png", api_pose_view)
     app.router.add_get("/api/devices", api_devices)

@@ -7,6 +7,7 @@
 #   core                              the hub itself (whatever it shows closes)
 #   teleop, monitor, ai, training     the module pages
 #   webcam                            webcam teleop
+#   cameras                           every camera's picture (each device keeps its own switches)
 #   project, spend, commits, devices  a panel's details page (Current Project, AI Spend, …)
 #   system                            the system diagram
 #   chat                              the conversation
