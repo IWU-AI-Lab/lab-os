@@ -124,6 +124,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 ## Training launcher (so101-green)
 | Feature | Status | Notes |
 |---|---|---|
+| **LeRobot teleop with Rerun** (2026-11-22, quick job 91), on the Training page: LeRobot's own `lerobot-teleoperate` for the green set (the leader drives the follower) with Rerun's view of the cameras and joints in a frame on the page. The same checks as LeLab's and more; the training calibration through a temporary copy; a calibration question stops it; Stop = Ctrl+C (limp). | 🧪 | Command line checked with LeRobot 0.6.1's own parser; fake programs for the calibration stop and Stop; Rerun's viewer in the page with test data (headless Chrome). No arms yet. Lab: check part E. |
 | `lab-os green` (desktop icon, the hub's Training page): checks the green arms' ports, then starts LeLab. **Stop LeLab** (or `--stop`) stops only the LeLab that it started. | ✅ | Tried in the lab 2026-11-16 and 11-17; it refuses while another program (for example the brain driving `so101-green`) has a green port. `docs/guides/green-launcher.md` |
 
 ---
