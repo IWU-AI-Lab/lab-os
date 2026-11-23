@@ -1,6 +1,6 @@
 # Dev Setup — Claude Code + robots
 
-How development works for the Lab JARVIS project. Companions: `docs/plan/lab-jarvis-log.md`, `docs/plan/current-focus.md`, `docs/guides/network-setup-checklist.md`.
+How development works for the lab-os project. Companions: `docs/plan/log.md`, `docs/plan/current-focus.md`, `docs/guides/network-setup-checklist.md`.
 
 ---
 
@@ -54,7 +54,7 @@ Host *
 In the project's `.claude/settings.json` (permission rules):
 - **Allow without asking:** `ssh` to known robots for read-only checks, `rsync` deploys, `git` commands, running tests.
 - **Always ask first:** `sudo`, deleting files, rebooting devices, and (in a coding session) **running anything that makes a real robot move**. The brain's move tools themselves are allowed without asking since 2026-11-14 (`docs/guides/ai-control.md` → "Permissions").
-- `AGENTS.md` in the repo tells every AI coding agent the rules (`CLAUDE.md` points to it, for Claude Code) and points to **docs/plan/current-focus.md** and **docs/plan/lab-jarvis-log.md**.
+- `AGENTS.md` in the repo tells every AI coding agent the rules (`CLAUDE.md` points to it, for Claude Code) and points to **docs/plan/current-focus.md** and **docs/plan/log.md**.
 - **Git is the undo button:** commit often.
 
 ---
@@ -96,7 +96,7 @@ Build at home against fakes → test in the lab on real hardware → note surpri
 ---
 
 ## Standards
-Device names, accounts, folders on robots, logs, secrets and principles: `docs/plan/lab-jarvis-log.md` → "Standards" (the one list). Hacks: `# HACK:` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
+Device names, accounts, folders on robots, logs, secrets and principles: `docs/plan/log.md` → "Standards" (the one list). Hacks: `# HACK:` + a line in `docs/plan/current-focus.md` → "Hacks to clean up".
 
 **Terminal output** (quick job 40, 2026-11-19): `src/lab_os/term.py` holds the one rule, after clig.dev and no-color.org. Colour goes only to a terminal. `NO_COLOR` (not empty) switches it off, and `FORCE_COLOR` switches it on. A new command calls `term.setup_logging()` for its log (the time, amber warnings, red errors; the `colorlog` library). It prints a warning with `print(term.warning(...))` and an error with `term.error(...)`. Its entry point in `pyproject.toml` is `run = term.exit_in_red(main)`, so a `SystemExit("...")` message shows in red. Keep each line's words: lab checks copy them. **The log file** (quick job 85): `lab-os serve` also writes its log to `config/local/logs/brain.log` (the place's `local/logs/` with `--config`), with the date and no colours (`src/lab_os/brainlog.py`). A new file starts at midnight, and 4 days are kept. `lab-os logs` prints the end, `lab-os logs --at 18:14` the minutes around that time. `print()` lines (the banner) are not in it.
 

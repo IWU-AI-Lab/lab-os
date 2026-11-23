@@ -2,11 +2,11 @@
 
 The rules for every AI coding agent in this repo (Claude Code, Codex, Cursor, …). This is the one copy: `CLAUDE.md` only points here, so change the rules here.
 
-Lab JARVIS: one portable "brain" that connects the lab's robots. Right now: the JARVIS hub, voice, and AI driving the SO-101 arms through the brain's tools, for a demo of every feature on 2026-12-03 (`docs/plan/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
+lab-os: one portable "brain" that connects the lab's robots. Its assistant has personas (J.A.R.V.I.S., the Lab Assistant, more later); use "lab-os" for the project, and a persona's name only for that persona. Right now: the hub, voice, and AI driving the SO-101 arms through the brain's tools, for a demo of every feature on 2026-12-03 (`docs/plan/current-focus.md`). The Quest → robot-arm teleop demo works (tag `demo-2026-10-30`).
 
 ## Read first, every session
 1. `docs/plan/current-focus.md` — what to work on now (and "Up next").
-2. `docs/plan/lab-jarvis-log.md` — plan, decisions, device names.
+2. `docs/plan/log.md` — plan, decisions, device names.
 3. `docs/dev/GOTCHAS.md` — surprises already found.
 4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). New and changed pages follow the design (the designed hub is at `/design`; the numbers come from `config/theme.yaml`). It's no longer a surprise (2026-11-12), but `/` still shows the plain hub by default (`hub.look: plain`), just in case.
 
@@ -50,7 +50,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
 - **Small commits, branch per feature**; `main` always runs. Demo only from a tagged version.
 - **At most two coding sessions at once, one for each lane** of the queue in `docs/plan/quick-jobs.md` (the builder, 2026-11-20; before, one at a time). Do your lane's jobs in order, and merge each one before you start the next. Before you start, run `gh pr list` and `git branch -r`; stay out of files an open pull request changes when you can. **Before you merge, merge `main` into your branch and fix every conflict yourself; never ask the builder about a conflict.** In the docs, keep both sides (two new GOTCHAS entries, two new checklist parts, two jobs moved to Done). A planning session may run at the same time: it edits only `docs/plan/` and the lab checklist. Sessions never share a folder (each its own `git worktree`).
 - **Merge your own pull request once the tests pass on GitHub** (`gh pr checks --watch`, then `gh pr merge --merge --delete-branch`). This includes new arm movement and new ways to drive an arm, when they go through the existing safety layer and the tests pass on the fake arm (the builder, 2026-11-20: "ensure I don't need to do this unless there's something super critical"). **Leave it open only when it is critical:** it removes or weakens a safety rule (STOP, the soft limits, the floor, the speed caps, one controller at a time, the freeze when input stops), it changes the green arms' rules, or it changes `.claude/` (permissions, the hook). Then say in at most 3 sentences what it changes and what to check, and put it first in the report. Do the next job only if it doesn't touch the same files.
-- **Say each fact in one place** (what's waiting on whom in `docs/plan/current-focus.md`, devices in `config/devices.yaml`, decisions in the log) and point to it elsewhere, so there's one copy to keep right. When two docs disagree, the newest decision in `docs/plan/lab-jarvis-log.md` wins: fix the other one.
+- **Say each fact in one place** (what's waiting on whom in `docs/plan/current-focus.md`, devices in `config/devices.yaml`, decisions in the log) and point to it elsewhere, so there's one copy to keep right. When two docs disagree, the newest decision in `docs/plan/log.md` wins: fix the other one.
 - **Update the docs in the same pull request, and leave no leftovers.** When you change how something works or what it's called, search every doc for the old name and wording (`grep -rn`) and fix or delete each place that's now wrong. Dated history (the log's decision rows, `docs/archive/`, GOTCHAS entries) stays as written; add a line saying what replaced it.
 
 ## Commands
@@ -68,7 +68,7 @@ uv run lab-os serve --config ~/my-lab-os   # another place's config folder (docs
 uv run lab-os icon --device desk           # the "Start lab-os" icon (devices: docs/guides/hub.md)
 uv run lab-os logs --at 18:14              # the brain's log around a time (no --at: the end)
 ```
-Message format between clients and the brain: `docs/dev/protocol.md`. Keep it updated when adding message types. The JARVIS core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
+Message format between clients and the brain: `docs/dev/protocol.md`. Keep it updated when adding message types. The lab-os core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.
 
 ## Style
 Python 3.12, ruff-formatted (line length 100), type hints on public functions, short docstrings. Keep things small and readable — this is a solo project that a future student will inherit.

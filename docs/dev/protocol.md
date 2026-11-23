@@ -1,6 +1,6 @@
 # Message protocol
 
-JSON messages over a WebSocket. This is the seed of the "one standard message protocol for all clients" in the architecture sketch (docs/plan/lab-jarvis-log.md). It grows as new clients appear; add message types here when you add them in code.
+JSON messages over a WebSocket. This is the seed of the "one standard message protocol for all clients" in the architecture sketch (docs/plan/log.md). It grows as new clients appear; add message types here when you add them in code.
 
 Every message has a `type`. Unknown or malformed messages are ignored (logged), never fatal.
 
@@ -214,7 +214,7 @@ Polled every 3 s by the hub.
 ### `/api/project`
 The Current Project panel, from the Steps list in `docs/plan/current-focus.md`.
 ```json
-{"available": true, "focus": "The JARVIS hub, voice, and AI driving the SO-101 arms", "step": 2, "of": 12,
+{"available": true, "focus": "The hub, voice, and AI driving the SO-101 arms", "step": 2, "of": 12,
  "next": "Robot tools for AI", "steps": [{"n": 0, "title": "Settle before coding", "done": true}, "…"]}
 ```
 `step` is the first step that isn't done (`next` its title, `null` when all are done). `{"available": false}` when the file is missing or has no steps.

@@ -208,6 +208,9 @@ class Place:
     persona: str | None = None  # who the assistant is (personas/<id>.yaml); None = the plain one
     chat_keep_minutes: float = 30  # the hub keeps a reset or interrupted conversation this long
     about: str = ""  # what the place is, in a few words: the welcome for visitors (quick job 35)
+    # each persona's wake word, chosen in ⚙ → Assistant (quick job 90): persona id → word; wins
+    # over the persona file's `wake_word:`
+    wake_words: dict = field(default_factory=dict)
     extra: dict = field(default_factory=dict)  # fields this version doesn't know (kept, warned)
 
 
@@ -222,6 +225,7 @@ PLACE_FIELDS = {
     "chat_keep_minutes",
     "about",
     "assistant_moves_arm",
+    "wake_words",
 }
 
 
@@ -261,6 +265,9 @@ def load_place(folder: Path | None = None) -> Place:
         persona=str(raw["persona"]) if raw.get("persona") else None,
         chat_keep_minutes=float(raw.get("chat_keep_minutes", 30)),
         about=" ".join(str(raw.get("about") or "").split()),
+        wake_words={str(k): str(v) for k, v in (raw.get("wake_words") or {}).items() if v}
+        if isinstance(raw.get("wake_words"), dict)
+        else {},
         extra=extra,
     )
 

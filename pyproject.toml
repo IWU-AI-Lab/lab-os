@@ -1,7 +1,7 @@
 [project]
 name = "lab-os"
 version = "0.1.0"
-description = "Lab JARVIS: a portable brain that connects the AI lab's robots."
+description = "lab-os: a portable brain that connects the AI lab's robots."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

@@ -6,6 +6,7 @@ personality: jarvis.md
 model: main
 voice: main                   # voice setup (models.yaml → voices); none = no voice
 wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word
+                              # (⚙ → Assistant → its Wake Word wins: place.yaml → wake_words)
 picture: { type: orb, style: calm-ring, color: primary }
 lines:
   greeting: "All local systems are up."

@@ -1,4 +1,4 @@
-# Robot registry. Names follow docs/plan/lab-jarvis-log.md.
+# Robot registry. Names follow docs/plan/log.md.
 #
 # Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/dev/GOTCHAS.md).
 # Cameras are listed ONLY by USB socket (/dev/v4l/by-path/): identical cameras share a serial.
@@ -98,7 +98,7 @@ devices:
   xarm1:
     kind: xarm1s
     notes: >-
-      Built, works over USB HID (not serial). Teleop prototype + JARVIS-track robot.
+      Built, works over USB HID (not serial). Teleop prototype + the lab-os track's robot.
       lsusb calls 0483:5750 an "LED badge"; match the product and serial too.
     ports: []
     usb:

@@ -71,8 +71,9 @@ SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
 # this much (a held greeting waits for the startup), so a page that never says so blocks the wake
 # word on every screen for seconds, not minutes (quick job 42; it was a flat 120 s)
 PLAYBACK_MARGIN_S = 10.0
-# The answer says the wake word itself (the greeting's hint "say hey Jarvis"): the microphones hear
-# it from the speaker, so the phrase is ignored until that piece has played, plus this much
+# The answer says the wake word itself (the greeting's hint "say hey Jarvis", or another persona's
+# word): the microphones hear it from the speaker, so the phrase is ignored until that piece
+# has played, plus this much
 SAID_PHRASE_MARGIN_S = 1.5
 # Conversation mode (quick job 68): after each answer the brain listens again by itself, as after
 # the wake word, until one of these is said, the button ends it, or voice stops working
@@ -84,7 +85,7 @@ CONVERSE_END = (
     "stop the conversation",
     "stop listening",
     "goodbye",
-    "bye jarvis",
+    "bye",  # was "bye jarvis": every persona (quick job 92)
 )
 CONVERSE_NEXT_S = 0.3  # after the answer has played: the next question's listening starts
 PLAYING_HOLD_S = 3.0  # "still playing" from the page holds this much longer
@@ -109,6 +110,7 @@ WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
 NEAR_MISS = 0.25  # a score this high but under the threshold is logged (sensitivity, the Quest)
 NEAR_MISS_EVERY_S = 3.0
 AUDIO_GAP_S = 2.0  # a screen listening for the phrase sent no audio this long: logged
+WORD_CHECK_S = 2.0  # how often a listening screen checks that the persona's wake word is the same
 TIMINGS_KEPT = 20
 HINTS = {  # how to talk to it, said after the greeting (by this screen's way in)
     "push_to_talk": "You can talk to me: hold the mic.",
@@ -126,13 +128,15 @@ def spoken_greeting(opening: str, hint: str, now: datetime | None = None) -> str
     return f"{hello or time_of_day(now or datetime.now())} {hint}".strip()
 
 
-def greeting_file(folder: Path, setup: VoiceSetup, text: str) -> Path:
-    """Where this voice's recording of `text` is kept: the name is a hash of the voice and the
-    words, so a new voice or a changed line makes a new file."""
+def greeting_file(folder: Path, setup: VoiceSetup, text: str, persona: str = "") -> Path:
+    """Where this voice's recording of `text` is kept: the name is a hash of the persona, the
+    voice and the words, so another persona, a new voice or a changed line makes a new file (a
+    persona never plays another's recording, quick job 84)."""
     voice = [setup.service, setup.base_url, setup.speak, setup.speaker, setup.style, setup.speed]
     # "v2": recordings from before quick job 47 may come from a fallback model (another person's
     # sound): they are made again once, by the first model
-    digest = hashlib.sha256(json.dumps(["v2", voice, text]).encode()).hexdigest()[:16]
+    key = ["v2", voice, text] + ([persona] if persona else [])
+    digest = hashlib.sha256(json.dumps(key).encode()).hexdigest()[:16]
     return folder / f"{setup.name}-{digest}.wav"
 
 
@@ -670,6 +674,8 @@ class VoiceLink:
         self._last_audio = 0.0
         self._next_warm = 0.0
         self._near_logged = 0.0
+        self._word_checked = 0.0
+        self._rewaking: asyncio.Task | None = None
         self.timing: TurnTiming | None = None  # this turn's steps
         self.pages: dict | None = None  # what this page can show (the assistant opens them)
         self.hear_in: str | None = None  # this device's assistant languages (None = any)
@@ -798,6 +804,10 @@ class VoiceLink:
                 now - self._last_audio,
             )
         self._last_audio = now
+        if now - self._word_checked > WORD_CHECK_S:  # another persona or word (⚙, quick job 90)
+            self._word_checked = now
+            if self.detector.word != self.desk.wake_word() and not self._rewaking:
+                self._rewaking = asyncio.get_running_loop().create_task(self._rewake())
         if now >= self._next_warm:
             self._next_warm = now + WARM_EVERY_S
             self.desk.warm()
@@ -866,6 +876,16 @@ class VoiceLink:
         self.wake_on = True
         self.send({"type": "wake_on", "phrase": self.desk.wake_phrase()})
         self.desk.warm()
+
+    async def _rewake(self) -> None:
+        """The persona's wake word changed: listen for the new one (no restart)."""
+        try:
+            log.info(
+                "voice: %s now listens for %s", self.device or "a screen", self.desk.wake_phrase()
+            )
+            await self.wake(True, self.sensitivity)
+        finally:
+            self._rewaking = None
 
     def wake_elsewhere(self) -> None:
         if self.detector:
@@ -1176,7 +1196,8 @@ class VoiceLink:
         hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
         text = spoken_greeting(self.desk.greeting(), hint)
         folder = self.desk.recordings()
-        saved = greeting_file(folder, setup, text) if folder else None
+        # the active persona's: its wake word in the hint, its own recording (quick job 84)
+        saved = greeting_file(folder, setup, text, self.desk.persona().id) if folder else None
         if saved and saved.is_file():
             self.last_greet = time.monotonic()
             log.info("voice: the greeting, from its recording by %s", voice_words(setup, []))

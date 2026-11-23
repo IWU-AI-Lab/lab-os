@@ -1,6 +1,6 @@
-# Lab JARVIS — Running Log
+# lab-os — Running Log
 
-A living record of decisions, facts and open questions for the AI-lab "JARVIS" project. Newest entries go at the top of each section. Ideas live only in **docs/plan/ideas.md** (the backlog). Companion docs: `docs/plan/current-focus.md` (what to work on now), `docs/plan/quick-jobs.md`, `docs/dev/project-scaffold.md` (what the repo should contain), `docs/dev/dev-setup.md`, `docs/guides/network-setup-checklist.md`. Early notes (the grill session, the teleop module's origin): `docs/archive/log-2026-10-early-notes.md`.
+A living record of decisions, facts and open questions for the AI lab's lab-os project (named "Lab JARVIS" until 2026-11-22: JARVIS is now one persona of several, quick job 92). Newest entries go at the top of each section. Ideas live only in **docs/plan/ideas.md** (the backlog). Companion docs: `docs/plan/current-focus.md` (what to work on now), `docs/plan/quick-jobs.md`, `docs/dev/project-scaffold.md` (what the repo should contain), `docs/dev/dev-setup.md`, `docs/guides/network-setup-checklist.md`. Early notes (the grill session, the teleop module's origin): `docs/archive/log-2026-10-early-notes.md`.
 
 **Current focus:** see **docs/plan/current-focus.md**.
 
@@ -87,7 +87,7 @@ Hardware: 5 finger potentiometers, MPU6050, Bluetooth, USB firmware port. Test: 
 1. **Milestone 1 — "Connected lab":** lab router, SSH keys + nicknames, device census, standards, one small visible win.
 2. **Milestone 2 — Wake + roll call** (`xarm1`, then Raspbot); venue profiles.
 3. **Milestone 3 — Voice + dev assistant.**
-4. **Later:** offline lite mode; more robots; bigger VLA models (second act). Teleop demo showable 2026-10-30 (tag `demo-2026-10-30`). Current focus: the JARVIS hub (`docs/plan/current-focus.md`); the troubleshooting suite and the rest of the teleop polish are on hold (`docs/plan/ideas.md` → "On hold"). Everything else: `docs/plan/ideas.md`.
+4. **Later:** offline lite mode; more robots; bigger VLA models (second act). Teleop demo showable 2026-10-30 (tag `demo-2026-10-30`). Current focus: the hub (`docs/plan/current-focus.md`); the troubleshooting suite and the rest of the teleop polish are on hold (`docs/plan/ideas.md` → "On hold"). Everything else: `docs/plan/ideas.md`.
 
 ---
 
@@ -113,7 +113,7 @@ Primary: faster development via a connected lab. In the plan: teleoperation for 
 ---
 
 ## The full vision (2026-10-19/20)
-Walk in → ignition (card, "hey Jarvis," button, keyboard, Quest) → screens on + short animation + greeting → optional Quest launch → ambient standby → commands by voice/push-to-talk/typing (fast path or agent harness). Works without the Quest, with the Quest alone, and away from the lab.
+Walk in → ignition (card, the wake word, button, keyboard, Quest) → screens on + short animation + greeting → optional Quest launch → ambient standby → commands by voice/push-to-talk/typing (fast path or agent harness). Works without the Quest, with the Quest alone, and away from the lab.
 Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; offline lite mode; remote access (staged); portable kit. Further optional modules: `docs/plan/ideas.md`.
 
 ---
@@ -129,7 +129,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - Safety: speed/workspace limits, always-working stop, approved visitor commands, remote mode = no motion by default, dead-man stop; drones excluded for now.
 
 ### Shapes to design toward (2026-10-24), not things to build now
-- **Triggers slot** (generalizes "ignition"): everything that turns the system on or off is a plug-in: wake word, spoken phrases ("Jarvis, log out"), clap, card swipe, keyboard/button. Each can be switched on/off in config and per venue profile. *Why:* new activation methods keep coming; each should be a small add-on.
+- **Triggers slot** (generalizes "ignition"): everything that turns the system on or off is a plug-in: wake word, spoken phrases ("log out"), clap, card swipe, keyboard/button. Each can be switched on/off in config and per venue profile. *Why:* new activation methods keep coming; each should be a small add-on.
 - **Conversation manager:** one component owns voice-conversation behavior (interrupting, queueing, turn-taking), so it isn't scattered across the code.
 - **Theme file ("design tokens") + sound packs:** all visual style (colors, fonts, sizes, glow, animation speed, decorative intensity) lives in one config file (`config/theme.yaml`); nothing hardcodes a style. Sounds are a swappable **sound pack** with volume and mute. Later, a settings panel edits both. *Why:* full, easy control of look and sound from one user-friendly place. Sound sources: my brother (sound design), stock (check licenses), or AI-generated.
 - **Decorative layer separate from the information layer:** decorative effects (3D, animated elements) have an intensity setting; useful information always stays readable on top.

@@ -73,6 +73,34 @@ def _personas() -> list[str]:
     return persona_ids()
 
 
+def _wake_word_fields() -> tuple[Field, ...]:
+    """One Wake Word row for each persona in the repo's config/personas/ (quick job 90): each
+    persona listens for its own word only. Written to place.yaml → wake_words."""
+    from lab_os.ai.wake import PHRASES
+
+    out = []
+    for path in sorted((config.DEFAULT_DIR / "personas").glob("*.yaml")):
+        try:
+            raw = yaml.safe_load(path.read_text()) or {}
+        except (OSError, yaml.YAMLError):
+            continue
+        name = str(raw.get("display_name") or path.stem)
+        out.append(
+            Field(
+                "place",
+                f"wake_words.{path.stem}",
+                f"Wake Word: {name}",
+                "choice",
+                f"What {name} listens for. One word for each persona: more words would wake it "
+                "by mistake more often.",
+                (*PHRASES, "none"),
+                applies="next",
+                default=str(raw.get("wake_word") or "none"),
+            )
+        )
+    return tuple(out)
+
+
 def _modules() -> list[str]:
     from lab_os.hub.server import MODULES
 
@@ -123,10 +151,12 @@ SECTIONS: list[Section] = [
                 "wake_word",
                 "Wake Word in This Venue",
                 "choice",
-                'Devices that chose "hey Jarvis" listen for it. Default: off on a public venue.',
+                "Devices that chose the wake word listen for the persona's word. Default: off on a "
+                "public venue.",
                 choices=("default", "on", "off"),
                 applies="restart",
             ),
+            *_wake_word_fields(),
             Field(
                 "place",
                 "chat_keep_minutes",

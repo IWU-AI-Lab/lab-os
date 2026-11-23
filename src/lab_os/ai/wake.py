@@ -1,4 +1,5 @@
-"""The wake word (focus step 7): "hey jarvis" heard on the brain's own CPU, nothing sent anywhere.
+"""The wake word (focus step 7): the persona's phrase ("hey Jarvis", "OK computer", …) heard on
+the brain's own CPU, nothing sent anywhere.
 
 openWakeWord's models (models/openwakeword/, Apache 2.0 code, CC BY-NC-SA 4.0 models) run here
 with onnxruntime, the way openWakeWord 0.6 runs them in streaming mode, without its package (on
@@ -46,8 +47,15 @@ SENSITIVITY = {
     9: (0.25, 2),
 }
 DEFAULT_SENSITIVITY = 5
-# the phrase a persona's `wake_word:` names → its model file in MODELS_DIR, and how it's said
-PHRASES = {"hey_jarvis": ("hey_jarvis_v0.1.onnx", "hey Jarvis")}
+# the phrase a persona's `wake_word:` names → its model file in MODELS_DIR, and how it's said.
+# hey_jarvis is openWakeWord's; the others are from a community collection (quick job 90,
+# models/openwakeword/README.md): trained by different people, so drop one that wakes badly.
+PHRASES = {
+    "hey_jarvis": ("hey_jarvis_v0.1.onnx", "hey Jarvis"),
+    "ok_computer": ("ok_computer.onnx", "OK computer"),
+    "tars": ("tars.onnx", "TARS"),
+    "hey_friday": ("hey_friday.onnx", "hey Friday"),
+}
 
 
 def sensitivity_level(value) -> int:
