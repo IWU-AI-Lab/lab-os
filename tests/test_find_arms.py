@@ -167,3 +167,36 @@ def test_a_named_arm_is_not_replaced(plugged):
     a = args(arm="fake")
     teleop_cli.make_loop(a)
     assert not a.auto_arm  # --arm fake: the builder asked for the fake arm
+
+
+def test_an_arm_whose_motors_do_not_answer_starts_the_fake_arm(plugged, monkeypatch, capsys):
+    """Quick job 94 (lab check N.17): the white arm's USB in, its motor power off. Found plugged
+    in: one sentence and the fake arm. Named with --arm: it stops with the sentence."""
+    from lab_os.robots import so101
+
+    plugged.add(WHITE)
+    monkeypatch.setattr(so101, "guarded_port", lambda name: (None, WHITE))
+    real = teleop_cli._make_arm
+
+    class Bus:
+        def connect(self):
+            raise RuntimeError("FeetechMotorsBus motor check failed. Missing motor IDs: 1-6")
+
+    class Robot:
+        bus = Bus()
+        calibration = {"shoulder_pan": object()}
+
+    def no_power(name, venue):
+        if name.startswith("fake"):
+            return real(name, venue)
+        return so101.SO101Arm(name=name, make_robot=lambda n, p, d: Robot())
+
+    monkeypatch.setattr(teleop_cli, "_make_arm", no_power)
+    a = args()
+    loop = teleop_cli.make_loop(a)
+    assert loop.arm.name == "fake-arm" and a.arm == "fake"
+    out = capsys.readouterr().out
+    assert "so101-white: the motors do not answer. Is the arm's power on? The fake arm" in out
+    with pytest.raises(SystemExit) as e:
+        teleop_cli.make_loop(args(arm="so101-white"))
+    assert str(e.value) == "so101-white: the motors do not answer. Is the arm's power on?"
