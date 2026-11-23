@@ -4,7 +4,7 @@ Every step has a tag (for example **11.4**). The line after **→** says what to
 
 This list has only what is still to do. When a step is done, it is removed (its result goes to `docs/dev/GOTCHAS.md` or `docs/plan/quick-jobs.md`).
 
-**Order.** Monday 2026-11-23 (about 1 hour): 0, then N (its home steps done before). If you have more time: M, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run. **Part P is for after the demo** (2026-12-03): the demo needs only that the AI moves the arm and does something.
+**Order.** Monday 2026-11-23 (about 1 hour): 0, then N (its home steps are done). If you have more time: M, then W. Tuesday 2026-11-24 (the testing day): 0, V, T, D, G, H, I, Q, U, then the parts that the sessions add for the new quick jobs. This is about 5 hours. If you have time on Monday, do I and Q then (they need no arm). Tuesday 2026-12-01: setting up for the demo, and a practice run. **Part P is for after the demo** (2026-12-03): the demo needs only that the AI moves the arm and does something.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -70,13 +70,10 @@ Quick job 42. The cause of the stops was not found on the Mac. The brain's log n
 
 ---
 
-## N. The travel router (15 min at home, 45 min in the lab)
+## N. The travel router (45 min)
 The GL.iNet Beryl 7 (`docs/plan/current-focus.md` → "Waiting on others"). The professor approved the router and its use of the wall Ethernet port (2026-11-20). The router gets its internet from the wall port from the start. For now, the brain desktop keeps its own internet on the campus Wi-Fi, and reaches the router's devices by a cable. This is a temporary safeguard until the wall port's internet is proven; then everything goes on the router. Background: `docs/guides/network-setup-checklist.md`. To undo all of it: switch the router off and remove the desktop's cable.
-**At home, before the lab day (15 min).** Connect the router's power adapter. Setting it up at home changes nothing for the lab: the router keeps its settings. Do not change its own address (`192.168.8.1`); the steps below expect it.
-- **N.1** Read the label under the router. → write the router's admin address (for example `192.168.8.1`) and its Wi-Fi names. Do not write the Wi-Fi password in the report.
-- **N.4** Connect the laptop to the router (its Wi-Fi from the label, or a cable to a **LAN** port). Open the admin address from N.1. Set an admin password, and keep it in your password manager, not in the repo. → did the router's page open? (yes / no)
-- **N.5** In the router's page, open the Wi-Fi settings. Give both bands one name of your choice, a new password, and the security **WPA2-PSK** or **WPA2/WPA3**, not WPA3 alone (older Pis and the Raspbot need WPA2). Save. → which security options did it offer? (copy them)
-- **N.14** If you can, connect the router's **WAN** port to your home router by a cable. In the router's page, update the firmware. → which firmware version does it show now?
+**Done at home (2026-11-22):** the admin page opens at `192.168.8.1`, it has an admin password, and the firmware is 4.9.1. The Wi-Fi security options are Open, WPA2-PSK, WPA/WPA2-PSK, WPA3-SAE and WPA2-PSK/WPA3-SAE. The firmware update used your home Wi-Fi in repeater mode. In the lab the router does not find that Wi-Fi, so it uses the wall cable (N.12 checks it).
+- **N.5** At home or in the lab: in the router's page, open the Wi-Fi settings. If the security is not **WPA2-PSK/WPA3-SAE**, select it and Save. Do not use WPA3-SAE alone: older Pis and the Raspbot need WPA2. → which security does it show now?
 
 **In the lab.** Do the steps in this order; stop when your time ends. The first ones answer the main question: does the wall port give internet?
 - **N.2** Connect the wall Ethernet port to the router's **WAN** port. Connect the router's power adapter (from the box) to a wall socket. Wait 2 minutes. → is its light on and steady? (yes / no)
