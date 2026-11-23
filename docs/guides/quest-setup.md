@@ -55,7 +55,7 @@ Run `uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop`. It 
 ## 2. At a computer: desktop control
 1. Start teleop: `uv run lab-os-teleop serve` (the fake SO-101). Or use `--arm fake-xarm1` (the fake xArm), or `--arm xarm1 --speed 0.2` (the real xArm).
 2. Open **http://localhost:8080/**.
-3. Under "Desktop control: mode and keys", select a **mode**.
+3. In the **Controls** box, under "Desktop control", select a **mode**.
 4. Click **Desktop control**. The page takes the pointer.
 
 To leave, press **`** (backtick, above Tab) or **Esc**. The pointer is free again, the arm freezes, and another page can take control. In full screen in Chrome or Edge, Esc does only that, and the page stays full screen. To leave full screen, hold Esc.
@@ -74,7 +74,7 @@ To leave, press **`** (backtick, above Tab) or **Esc**. The pointer is free agai
 1. In Chrome or Brave, install Meta's **Immersive Web Emulator** extension from the Chrome Web Store.
 2. Run `uv run lab-os-teleop serve --record recordings/emulator.jsonl`.
 3. Open **http://localhost:8080/**. Open DevTools (F12), then the **WebXR** tab. Select a Quest 3 device.
-4. Click **Enter AR** or **Enter VR** on the page.
+4. Click **Enter AR** or **Enter VR** on the page. **Desktop control** stays available: the page tells a headset by its browser, not by the emulator.
 5. In the WebXR tab, drag the right controller's gizmo to move it. Use the grip and trigger sliders and the buttons. Look at the page's readout, the terminal line and the monitor tab.
 6. Press Ctrl+C to stop. You can replay the recording (section 1) or make a test from it.
 

@@ -234,6 +234,12 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.17** In the Quest's browser, open the hub's address. → do you see three choices in the middle (Enter VR, Enter AR, the hub in the browser)? (yes / no) Press **Enter AR**, start, then **Teleop**. → does the Teleop page open, with Desktop control grey? (yes / no)
 - **U.18** On the Teleop page, select 1:1, then **Enter AR**. Drive the fake arm. → does it work? (yes / no) Leave AR, then press **Back to the hub in AR**. → are you back at the hub in AR? (yes / no) In the browser's menu, is there an Install choice? (yes / no)
 
+## K. The Teleop page's buttons (5 min)
+Quick job 87. Use the lab desktop's Chrome with the **Immersive Web Emulator** extension switched on.
+- **K.1** Open Teleop. → are the buttons in this order: **Desktop control**, **Enter AR**, **Enter VR**? (yes / no) Can you click **Desktop control**? (yes / no)
+- **K.2** Look under the buttons. → is there a **Controls** box with the speed, Hand → arm and the desktop keys? (yes / no)
+- **K.3** In the Quest's browser, open Teleop. → is **Desktop control** grey? (yes / no)
+
 ## Optional: raspbot1 on a phone hotspot (10 min)
 Setup: connect to the Raspbot with a cable. Set the phone hotspot's security to **WPA2-Personal**.
 - **R.1** On the Raspbot, run `sudo nmcli dev wifi connect "<hotspot name>" password "<password>"`. → did it connect? (yes / no; if no, copy the error line)
