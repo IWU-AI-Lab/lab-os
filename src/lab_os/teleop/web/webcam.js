@@ -9,13 +9,14 @@ import { getLink } from "./link.js";
 import { gate } from "./control-gate.js";
 import { deviceName } from "/web/device.js";
 import { FilesetResolver, HandLandmarker } from "/web/vendor/mediapipe/vision_bundle.mjs";
-import { WebcamHands, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
+import { WebcamHands, handAxes, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
 import { color } from "/web/theme.js";
 
 const $ = (id) => document.getElementById(id);
 const link = getLink("input");
 const MP = "/web/vendor/mediapipe";
-const SWAP_KEY = "lab-os.webcam-swap";
+// a new name (quick job 88): the right hand is now right by default, so a box ticked before is cleared
+const SWAP_KEY = "lab-os.webcam-swap-2";
 const DEPTH_KEY = "lab-os.webcam-depth";
 const CAM_KEY = "lab-os.webcam-camera";
 // palm and finger lines between MediaPipe's 21 landmarks, for the drawing
@@ -127,6 +128,11 @@ async function loadModel() {
     baseOptions: { modelAssetPath: `${MP}/hand_landmarker.task`, delegate },
     runningMode: "VIDEO",
     numHands: 2,
+    // stricter than MediaPipe's 0.5 (quick job 88: a left hand that wasn't there); webcam-hands.js
+    // also wants a hand in several frames in a row
+    minHandDetectionConfidence: 0.7,
+    minHandPresenceConfidence: 0.7,
+    minTrackingConfidence: 0.6,
   });
   try {
     landmarker = await HandLandmarker.createFromOptions(files, options("GPU"));
@@ -218,6 +224,7 @@ function onFrame() {
       side: sides[i],
       pos: wristPosition(f.image, f.world, w, h, { depth: $("depth").checked }),
       pinch: pinchAmount(f.world),
+      axes: handAxes(f.world), // the hand's turn → the wrist (quick job 88)
     }));
     const out = hands.step(seen, now / 1000, space);
     link.send(out.msg);
