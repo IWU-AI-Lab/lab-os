@@ -12,6 +12,7 @@ Two coding sessions may run at the same time, one for each lane (the builder, 20
   - A switch for each camera hides or shows its picture. A hidden camera is not opened (the brain opens a camera only while a page asks for it, `src/lab_os/camera_feed.py`).
   - Many copies at once: the page on several screens or devices, each with its own cameras shown (kept for each device, like "This device"). So the stand camera can be on one screen and the wrist camera on another. It opens with "Open on…" and from All Pages, and it is a view in `room.yaml`.
   - A camera that another program has open (LeLab, a recording) shows that sentence instead of its picture: the green set's rule, one program per port.
+  - **Something creative, to make it a little special** (the builder, 2026-11-23): one extra touch in the design, the way it works or the controls. The session chooses it and says in its report what it is. Small, and it must not get in the way of watching the cameras.
   - Simple on purpose: the builder may replace it with a fancier page later. Not the recording page of `docs/plan/ideas.md` ("Our own recording and training page"), which shows all cameras too but waits for the builder.
   - Lab steps: every camera's picture shows; a switch hides one; two devices show different cameras at the same time.
 

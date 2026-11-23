@@ -44,6 +44,16 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-23)
+
+### The AI drives both arms at the same time
+- **What:** an AI (an LLM or a VLM) controls the two SO-101s together, in one task: for example one arm holds a block while the other picks from it, or the arms pass an object from one to the other.
+- **Today (quick job 80, 2026-11-22):** the AI tools reach the second arm by its name, but one call drives one arm. Two calls at the same time can move both arms; that was never tried. A `run_program` program moves one arm at a time. STOP stops both.
+- **Existing work:** the builder saw existing projects that let an AI control two arms at once (2026-11-23). Check them first (AGENTS.md → "Look for existing work first"); the builder can name the ones seen.
+- **Watch out:** nothing checks that the two arms stay apart: the soft limits and the floor are for each arm alone, so the arms can hit each other. It needs a check that keeps them apart (or a shared space that only one arm may enter at a time) before anything else. Both arms on one table also need one shared frame (where each base is), so a point means the same place for both.
+- **Plugs into:** the robot tools (`lab_os.tools.robot`, one `RobotTools` for each arm), `run_program` (a function that moves both arms at once), the cameras.
+- **Related:** "Two arms at once" (teleop, 2026-11-12) and "LLMs/VLMs driving the green SO-101s" below.
+
 ## Recent ideas (2026-11-21)
 
 ### Voice: an existing framework instead of our own pipeline?
@@ -182,7 +192,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** a hub module, the robot slot, the green launcher (could replace it).
 
 ### Two arms at once
-- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo"). Built 2026-11-19 (`docs/guides/quest-setup.md` → "Two arms at once"): Quest controllers only, relative and 1:1 on both arms, both 3D arms in the headset (each moved with Y and its grip), on the teleop page and the monitor; the AI tools and desktop control drive only the right arm. What's below beyond that is still an idea.
+- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo"). Built 2026-11-19 (`docs/guides/quest-setup.md` → "Two arms at once"): Quest controllers only, relative and 1:1 on both arms, both 3D arms in the headset (each moved with Y and its grip), on the teleop page and the monitor; desktop control drives only the right arm, and the AI tools drive the left arm only when they name it (since quick job 80, 2026-11-22; both together: "The AI drives both arms at the same time" above). What's below beyond that is still an idea.
 - **What:** drive two arms at the same time: in the Quest, the left controller (or hand) drives one arm and the right the other; on the desktop, perhaps one arm on the keyboard and one on the mouse, or a quick switch between them. Two-handed tasks become possible (pass a block from one arm to the other).
 - **Which arms:** both SO-101 followers (`so101-white` + `so101-green`, the builder's choice 2026-11-12, once step 11 makes the greens drivable); xArms also possible.
 - **Watch out:** today each hand has a job (left pinch = clutch for the right hand, right pinch = gripper), so two-arm control needs its own controls; the 3D scene shows both arms; the brain desktop's USB sockets are full (an arm on another computer: "Robots report in" above); STOP stops both.
