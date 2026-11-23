@@ -1,0 +1,14 @@
+# lab-os's program on the Raspbot, as a systemd user service (quick job 72).
+# `uv run lab-os raspbot deploy` copies it to ~/.config/systemd/user/ on the Raspbot and starts it.
+# It only listens: the car moves only when the brain's Raspbot page sends a command.
+[Unit]
+Description=lab-os Raspbot program (the brain's Raspbot page drives the car through it)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/lab-os/lab_os_raspbot.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -267,6 +267,15 @@ Quick job 93. Plug in the white arm's two cameras. Run `uv run lab-os serve`. Op
 - **C.2** Press the name of the wrist camera above the pictures. → did the wrist picture go away? (yes / no) Did the stand picture stay? (yes / no)
 - **C.3** On the desktop's hub, open Cameras inside the hub, press **Open on…**, then select the Newline. On the Newline, hide the stand camera. On the desktop, show the stand camera and hide the wrist camera. → does the Newline show only the wrist camera? (yes / no) Does the desktop show only the stand camera? (yes / no)
 
+## R. The Raspbot page (25 min)
+Quick job 72. raspbot1 on the router's Wi-Fi, with its battery charged. Put it on a box with the wheels off the floor. Steps: `docs/guides/raspbot.md`.
+- **R.1** Run `ssh raspbot1 sh /home/pi/project_demo/raspbot/killprocess.sh`. Run `ssh raspbot1 sudo loginctl enable-linger pi` (type raspbot1's password). Run `uv run lab-os raspbot deploy`. → does the last line say "lab-os's program runs on raspbot1"? (yes / no: copy the last lines)
+- **R.2** Run `uv run lab-os serve`. On the desktop, open **All Pages** → **Raspbot** → **Open**. → does the bar say **Connected**? (yes / no: copy the line under STOP) Does the camera show a picture? (yes / no)
+- **R.3** Keep a hand at **STOP**. Hold **↑** for 2 seconds, then let go. → did all four wheels turn the same way, forward? (yes / no: which wheel did not?) Did they stop when you let go? (yes / no)
+- **R.4** Hold **←** for 2 seconds. → did the left wheels turn back and the right wheels forward? (yes / no) Hold **↓**, and press **STOP** while you hold it. → did the wheels stop at once? (yes / no) Did they stay stopped while you still held **↓**? (yes / no)
+- **R.5** Hold **↑**. While the wheels turn, turn off the desktop's Wi-Fi. → did the wheels stop within 1 second? (yes / no) Turn the Wi-Fi on again.
+- **R.6** Put raspbot1 on the floor with space around it. Drive it forward, back and in a circle. → is the speed good for the demo? (yes / too fast / too slow) Is the camera picture behind by less than about 1 second? (yes / no)
+
 ## P. After the demo: one program or single moves, 5 against 5 (60 min)
 Quick job 81. Do this part only after the demo. It compares how often the pick works, and how long it takes. Use Claude Code, `so101-white`, and the cube about 20 cm straight in front of the arm. Keep a hand at **STOP**. Before each try, put the cube back in the same place, and send the arm to `ready`.
 - **P.1** Ask Claude Code 5 times, each time in a new conversation: "Pick up the cube step by step, with single moves and no run_program, then hold it at the handover pose." → how many times did it hold the cube at `handover`? (0 to 5)

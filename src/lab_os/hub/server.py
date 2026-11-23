@@ -89,6 +89,7 @@ from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
+from lab_os.hub.raspbot_page import add_raspbot
 from lab_os.hub.room import RoomDesk
 from lab_os.hub.room import set_up as set_up_room
 from lab_os.hub.system_tools import add_system_tools
@@ -96,6 +97,7 @@ from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
 from lab_os.quest_view import AdbReverse, QuestView, QuestViewError
+from lab_os.robots.raspbot import FakeRaspbot, RaspbotDesk
 from lab_os.teleop.cli import LEFT_FAKE, teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
@@ -147,6 +149,7 @@ PAGES = (
         "Cameras",
         "Every camera's live picture, with a switch for each (kept per device).",
     ),
+    ("/raspbot", "Raspbot", "Drive raspbot1: forward, back, turn, STOP, and its camera."),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
@@ -166,6 +169,7 @@ DEVICE_VIEWS = {
     "devices": ("Devices", ""),
     "system": ("System Diagram", ""),
     "chat": ("The Conversation", ""),
+    "raspbot": ("Raspbot", "/raspbot"),  # quick job 72
     "xr": ("VR Hub", "/xr"),  # only on a headset's browser
 }
 
@@ -1414,6 +1418,7 @@ def create_brain_app(
     quest_view: QuestView | None = None,
     find_arm: Callable | None = None,
     adb_reverse: AdbReverse | None = None,
+    raspbot: RaspbotDesk | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
@@ -1423,7 +1428,8 @@ def create_brain_app(
     `device_settings`: where each device's own settings are kept (default: the place's
     local/hub-devices.yaml). `find_arm`: started on the fake arm with no --arm, take an SO-101
     plugged in later (`lab_os.teleop.cli.arm_finder`, quick job 73). `adb_reverse`: run `adb
-    reverse` for each Quest connected by USB, also after the cable is plugged in again."""
+    reverse` for each Quest connected by USB, also after the cable is plugged in again. `raspbot`:
+    the Raspbot page's car (default: the fake one; `lab-os serve` gives devices.yaml's)."""
     app = create_app(
         loop,
         recorder,
@@ -1561,6 +1567,7 @@ def create_brain_app(
     app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
+    add_raspbot(app, raspbot or RaspbotDesk(FakeRaspbot()))  # quick job 72
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)

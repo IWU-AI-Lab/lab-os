@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raspbot</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    main.bot { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr); gap: 1rem; min-height: 0; overflow: auto; align-items: start; }
+    .view { position: relative; aspect-ratio: 4 / 3; max-height: calc(100vh - 9rem); width: 100%; margin: 0 auto; background: color-mix(in srgb, var(--bg) 85%, transparent); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
+    .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .view .why { position: relative; margin: 0; padding: 1rem 1.4rem; max-width: 26rem; text-align: center; font: var(--w-lines) 0.92rem/1.5 var(--f-lines); color: var(--text-dim); }
+    /* the pad: hold a button to drive; it lights while the car moves that way */
+    .pad { display: grid; grid-template-columns: repeat(3, minmax(4.2rem, 6rem)); grid-template-rows: repeat(3, minmax(4.2rem, 6rem)); gap: 0.6rem; justify-content: center; margin: 0.8rem 0 1rem; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .pad .btn { min-height: 0; padding: 0; width: 100%; height: 100%; touch-action: none; }
+    .pad .btn .ico { width: 2rem; height: 2rem; }
+    .pad .btn[data-dir="forward"] { grid-area: 1 / 2; } .pad .btn[data-dir="forward"] .ico { transform: rotate(-90deg); }
+    .pad .btn[data-dir="left"] { grid-area: 2 / 1; } .pad .btn[data-dir="left"] .ico { transform: rotate(180deg); }
+    .pad .btn[data-dir="right"] { grid-area: 2 / 3; }
+    .pad .btn[data-dir="back"] { grid-area: 3 / 2; } .pad .btn[data-dir="back"] .ico { transform: rotate(90deg); }
+    .pad .btn.lit { background: var(--primary); color: var(--bg); box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 60%, transparent); }
+    .pad .hub { grid-area: 2 / 2; display: grid; place-items: center; font: var(--w-lines) 0.85rem/1.2 var(--f-lines); color: var(--text-dim); text-align: center; }
+    .side .stop { width: 100%; min-height: 4rem; font-size: 1.3rem; }
+    .keys { font: var(--w-lines) 0.82rem/1.5 var(--f-lines); color: var(--text-dim); margin: 0.8rem 0 0; }
+    @media (max-width: 900px) { main.bot { grid-template-columns: 1fr; } .view { max-height: 50vh; } }
+    /* a short screen (the Pi's touchscreen, 800 × 480): camera and pad side by side, all in view */
+    @media (max-height: 640px) and (min-width: 600px) {
+      main.bot { grid-template-columns: minmax(0, 1.3fr) minmax(15rem, 1fr); gap: 0.6rem; }
+      .view { max-height: calc(100vh - 8rem); }
+      .pad { grid-template-columns: repeat(3, 3.6rem); grid-template-rows: repeat(3, 3.6rem); gap: 0.4rem; margin: 0.4rem 0 0.6rem; }
+      .side .stop { min-height: 3.2rem; }
+      .keys { display: none; }
+    }
+  </style>
+</head>
+<!--
+  Raspbot (quick job 72): drive raspbot1 through the brain (lab_os/hub/raspbot_page.py). Hold a
+  button (or an arrow key) to drive; the page sends it again every 100 ms while it is held. Let go,
+  and the car stops. The brain stops the car when the input stops for 0.3 s (a page that hangs, lost
+  Wi-Fi), and the program on the Raspbot stops it after 0.5 s without a command. STOP (or Space)
+  works from every page, also a page that only watches. One page drives at a time.
+-->
+<body class="raspbot">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-pi"/></svg><span>Raspbot</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b id="name">Raspbot</b><span id="state" class="pill off">Connecting</span></span>
+      <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="bot">
+    <section class="card"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-cam"/></svg>Camera</h2>
+      <div class="view"><p id="cam-why" class="why">No camera picture.</p><img id="cam" alt="The Raspbot's camera" hidden></div>
+    </div></section>
+    <section class="card side"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive</h2>
+      <div class="pad" role="group" aria-label="Hold a button to drive">
+        <button class="btn" type="button" data-dir="forward" aria-label="Forward"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+        <button class="btn" type="button" data-dir="left" aria-label="Turn left"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+        <span class="hub" id="moving">Stopped</span>
+        <button class="btn" type="button" data-dir="right" aria-label="Turn right"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+        <button class="btn" type="button" data-dir="back" aria-label="Back"><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+      </div>
+      <button id="stop" class="stop" type="button" title="Stop the Raspbot now (works from every page; Space on the keyboard)">STOP</button>
+      <p id="msg" class="msg" aria-live="polite"></p>
+      <p class="keys">Hold a button to drive. Let go to stop. Keys: <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>; <kbd>Space</kbd> = STOP.</p>
+    </div></section>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module">
+  const $ = (s) => document.querySelector(s);
+  const device = new URLSearchParams(location.search).get("device") || "";
+  const WORDS = { forward: "Forward", back: "Back", left: "Turning left", right: "Turning right" };
+  const KEYS = { ArrowUp: "forward", w: "forward", ArrowDown: "back", s: "back", ArrowLeft: "left", a: "left", ArrowRight: "right", d: "right" };
+  let ws = null, held = "", timer = null, last = {}, camOn = false, error = "", errorAt = 0;
+
+  function send(msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+  function hold(dir) {
+    if (held === dir) return;
+    held = dir;
+    clearInterval(timer);
+    send({ type: "drive", dir });
+    timer = setInterval(() => send({ type: "drive", dir }), 100);
+  }
+  function letGo() {
+    if (!held) return;
+    held = "";
+    clearInterval(timer);
+    send({ type: "release" });
+  }
+  function stop() { letGo(); send({ type: "stop", device }); }
+
+  for (const b of document.querySelectorAll(".pad .btn")) {
+    b.addEventListener("pointerdown", (e) => { b.setPointerCapture(e.pointerId); hold(b.dataset.dir); });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, letGo);
+  }
+  $("#stop").onclick = stop;
+  addEventListener("keydown", (e) => {
+    if (e.key === " ") { e.preventDefault(); stop(); return; }
+    const dir = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+    if (dir) { e.preventDefault(); hold(dir); }
+  });
+  addEventListener("keyup", (e) => { if (KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]) letGo(); });
+  addEventListener("blur", letGo);  // another window took the keys: they can't let go here
+  document.addEventListener("visibilitychange", () => { if (document.hidden) letGo(); });
+
+  function camera(on) {
+    if (on === camOn) return;
+    camOn = on;
+    const img = $("#cam");
+    img.hidden = !on;
+    $("#cam-why").hidden = on;
+    img.src = on ? `/api/raspbot/camera.mjpg?t=${Date.now()}` : "";
+  }
+  $("#cam").onerror = () => { camOn = false; $("#cam").hidden = true; $("#cam-why").hidden = false; $("#cam-why").textContent = "The camera does not answer."; };
+
+  function show(s) {
+    last = s;
+    $("#name").textContent = s.name;
+    const st = $("#state");
+    st.textContent = s.fake ? "Fake" : s.connected ? "Connected" : "Not connected";
+    st.className = `pill ${s.connected && !s.fake ? "on" : s.fake ? "off" : "bad"}`;
+    const c = $("#control");
+    c.textContent = !s.may_drive ? "View only" : { you: "You", other: "Another page", free: "Free" }[s.control];
+    c.className = `pill ${s.control === "you" ? "on" : s.control === "other" || !s.may_drive ? "warn" : "off"}`;
+    $("#moving").textContent = s.moving ? WORDS[s.moving] : "Stopped";
+    for (const b of document.querySelectorAll(".pad .btn")) {
+      b.classList.toggle("lit", b.dataset.dir === s.moving && s.control === "you");
+      b.disabled = !s.may_drive || !s.connected;
+    }
+    if (!s.camera) $("#cam-why").textContent = s.fake ? "The fake Raspbot has no camera." : "No camera picture.";
+    camera(s.camera && s.connected);
+    const recent = error && Date.now() - errorAt < 3000 ? error : "";
+    $("#msg").textContent = !s.may_drive
+      ? `View only. To drive from this device, add ${s.address || "its address"} to drive_from in place.yaml (docs/guides/raspbot.md).`
+      : s.message || recent;
+  }
+  function connect() {
+    ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/raspbot`);
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === "raspbot_status") show(m);
+      else if (m.type === "error") { error = m.message; errorAt = Date.now(); }
+    };
+    ws.onclose = () => {
+      clearInterval(timer); held = "";
+      $("#state").textContent = "Brain not reachable"; $("#state").className = "pill bad";
+      for (const b of document.querySelectorAll(".pad .btn")) b.disabled = true;
+      camera(false);
+      setTimeout(connect, 2000);
+    };
+  }
+  connect();
+</script>
+</body>
+</html>

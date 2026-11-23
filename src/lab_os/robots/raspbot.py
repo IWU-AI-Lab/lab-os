@@ -1,0 +1,251 @@
+"""The Yahboom Raspbot v2 (a small car with four wheels), from the brain's side (quick job 72).
+
+The Raspbot runs one small program, `robots/raspbot/lab_os_raspbot.py` (deployed from this repo,
+`lab-os raspbot deploy`). The brain connects to it over TCP and sends one JSON line per command:
+
+    {"drive": [left, right]}   wheel speeds, -1.0 … 1.0 (a fraction of the Raspbot's own cap)
+    {"stop": true}             all motors off
+
+The Raspbot answers once, at connect: {"hello": "<hostname>", "camera_port": 8766 or 0}. It stops
+the motors by itself when no command came for WATCHDOG_S, or when the connection drops, so a brain
+or network that hangs never leaves the car driving.
+
+`FakeRaspbot` is the same without a car: tests and `lab-os serve` without a Raspbot use it.
+"""
+
+import asyncio
+import json
+import logging
+import subprocess
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+
+PORT = 8765  # the program on the Raspbot listens here
+WATCHDOG_S = 0.5  # the Raspbot stops its motors when no command came for this long
+RECONNECT_S = 3.0
+
+
+@dataclass
+class FakeRaspbot:
+    """A Raspbot without a car: keeps the last command, for tests and the page without a car."""
+
+    name: str = "fake-raspbot"
+    connected: bool = True
+    camera_port: int = 0
+    sent: list = field(default_factory=list)
+
+    @property
+    def is_fake(self) -> bool:
+        return True
+
+    async def run(self) -> None:
+        await asyncio.Event().wait()  # nothing to connect to
+
+    async def drive(self, left: float, right: float) -> None:
+        self.sent.append(("drive", round(left, 3), round(right, 3)))
+
+    async def stop(self) -> None:
+        self.sent.append(("stop",))
+
+    @property
+    def last(self) -> tuple:
+        return self.sent[-1] if self.sent else ("stop",)
+
+
+class TcpRaspbot:
+    """The real Raspbot: one TCP connection to its program, made again when it drops."""
+
+    def __init__(self, name: str, host: str, port: int = PORT) -> None:
+        self.name = name
+        self.host = host
+        self.port = port
+        self.camera_port = 0
+        self._writer: asyncio.StreamWriter | None = None
+        self.said = ""  # why it isn't connected, for the page
+
+    @property
+    def is_fake(self) -> bool:
+        return False
+
+    @property
+    def connected(self) -> bool:
+        return self._writer is not None and not self._writer.is_closing()
+
+    async def run(self) -> None:
+        """Keep the connection: connect, wait until it drops, try again every RECONNECT_S."""
+        while True:
+            try:
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(self.host, self.port), timeout=RECONNECT_S
+                )
+                hello = json.loads(await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S))
+                self.camera_port = int(hello.get("camera_port") or 0)
+                self._writer = writer
+                self.said = ""
+                log.info("%s connected (%s:%s)", self.name, self.host, self.port)
+                await reader.read()  # returns when the Raspbot closes the connection
+                log.info("%s disconnected", self.name)
+            except (OSError, TimeoutError, ValueError) as e:
+                self.said = f"{self.name} does not answer. Is it on, and is its program running?"
+                log.debug("%s: %s", self.name, e)
+            finally:
+                if self._writer:
+                    self._writer.close()
+                self._writer = None
+            await asyncio.sleep(RECONNECT_S)
+
+    async def _send(self, msg: dict) -> None:
+        if not self.connected:
+            return
+        try:
+            self._writer.write((json.dumps(msg) + "\n").encode())
+            await asyncio.wait_for(self._writer.drain(), timeout=WATCHDOG_S)
+        except (OSError, TimeoutError):  # the Raspbot's watchdog stops it; reconnect
+            self._writer.close()
+            self._writer = None
+
+    async def drive(self, left: float, right: float) -> None:
+        await self._send({"drive": [round(left, 3), round(right, 3)]})
+
+    async def stop(self) -> None:
+        await self._send({"stop": True})
+
+
+# Each button → (left, right) wheel speeds, before the speed cap. Turns spin in place, slower.
+DIRECTIONS = {
+    "forward": (1.0, 1.0),
+    "back": (-1.0, -1.0),
+    "left": (-0.6, 0.6),
+    "right": (0.6, -0.6),
+}
+
+
+class RaspbotDesk:
+    """Drives one Raspbot for the pages: one page at a time, STOP from any page, and the freeze.
+
+    A page drives by sending its button again and again while it is held (every 100 ms). The
+    first page to drive while nobody does has control, until it lets go or closes. When the
+    driver's input stops for INPUT_TIMEOUT_S (a page that hangs, a lost Wi-Fi), the car stops.
+    STOP stops the car and frees control; the page must let go of the button before it drives
+    again (a held button does not start the car again after STOP)."""
+
+    INPUT_TIMEOUT_S = 0.3
+    TICK_S = 0.1
+
+    def __init__(self, bot, max_speed: float = 0.5) -> None:
+        self.bot = bot
+        self.max_speed = max(0.0, min(float(max_speed), 1.0))
+        self.driver = None  # the page that drives, or None
+        self.moving = ""  # the direction now, "" = stopped
+        self._last_input = 0.0
+        self._blocked: set = set()  # pages that held a button at STOP: they must let go first
+        self.stopped_by = ""  # the last STOP's page, for the status line
+
+    def status(self, page=None) -> dict:
+        control = "free" if self.driver is None else "you" if self.driver is page else "other"
+        msg = {
+            "type": "raspbot_status",
+            "name": self.bot.name,
+            "fake": self.bot.is_fake,
+            "connected": self.bot.connected,
+            "moving": self.moving,
+            "control": control,
+            "camera": bool(self.bot.camera_port),
+        }
+        if not self.bot.connected:
+            msg["message"] = getattr(self.bot, "said", "") or f"{self.bot.name} is not connected."
+        return msg
+
+    async def press(self, page, direction: str) -> str:
+        """The page holds a button. Returns "" when it drives, else why not."""
+        if direction not in DIRECTIONS:
+            raise ValueError(f"unknown direction {direction!r}")
+        if page in self._blocked:
+            return "Let go of the button after STOP, then press again."
+        if self.driver is None:
+            self.driver = page
+            log.info("raspbot: control taken by a page")
+        elif self.driver is not page:
+            return "Another page has control."
+        if not self.bot.connected:
+            return self.status()["message"]
+        self._last_input = time.monotonic()
+        left, right = DIRECTIONS[direction]
+        await self.bot.drive(left * self.max_speed, right * self.max_speed)
+        self.moving = direction
+        return ""
+
+    async def release(self, page) -> None:
+        """The page let go of every button (or closed): stop, and free control."""
+        self._blocked.discard(page)
+        if self.driver is page:
+            self.driver = None
+            await self._halt()
+
+    async def stop(self, by: str = "") -> None:
+        """STOP, from any page: the car stops now; whoever drove must let go and press again."""
+        if self.driver is not None:
+            self._blocked.add(self.driver)
+        self.driver = None
+        self.stopped_by = by
+        log.info("raspbot: STOP pressed%s", f" ({by})" if by else "")
+        await self._halt(always=True)
+
+    async def _halt(self, always: bool = False) -> None:
+        if self.moving or always:
+            await self.bot.stop()
+        self.moving = ""
+
+    async def tick(self) -> None:
+        """The freeze: the driver's input stopped coming, so the car stops (it keeps control)."""
+        if self.moving and time.monotonic() - self._last_input > self.INPUT_TIMEOUT_S:
+            log.info("raspbot: input stopped, the car stops")
+            await self._halt()
+
+    async def run(self) -> None:
+        while True:
+            await asyncio.sleep(self.TICK_S)
+            await self.tick()
+
+
+def from_registry(registry) -> RaspbotDesk:
+    """The first `kind: raspbot` device in devices.yaml, or the fake one when there is none."""
+    for d in registry.devices.values():
+        if d.kind == "raspbot":
+            return RaspbotDesk(TcpRaspbot(d.name, d.host or d.name, d.port or PORT), d.max_speed)
+    return RaspbotDesk(FakeRaspbot())
+
+
+ONBOARD_DIR = Path(__file__).parents[3] / "robots" / "raspbot"
+SERVICE = "lab-os-raspbot"
+
+
+def deploy_commands(host: str) -> list[list[str]]:
+    """rsync the program and its service to the Raspbot, then (re)start the service there. The
+    program only listens: starting it never moves the car."""
+    start = (
+        "mkdir -p ~/.config/systemd/user && "
+        f"mv ~/lab-os/{SERVICE}.service ~/.config/systemd/user/ && "
+        "systemctl --user daemon-reload && "
+        f"systemctl --user enable {SERVICE} && systemctl --user restart {SERVICE} && "
+        f"sleep 1 && systemctl --user is-active {SERVICE}"
+    )
+    files = [str(ONBOARD_DIR / "lab_os_raspbot.py"), str(ONBOARD_DIR / f"{SERVICE}.service")]
+    return [
+        ["ssh", host, "mkdir -p ~/lab-os"],
+        ["rsync", "-t", *files, f"{host}:lab-os/"],
+        ["ssh", host, start],
+    ]
+
+
+def deploy(host: str = "raspbot1") -> int:
+    """`lab-os raspbot deploy`: 0 when the program runs on the Raspbot."""
+    for cmd in deploy_commands(host):
+        if subprocess.run(cmd).returncode != 0:
+            print(f"Failed: {' '.join(cmd[:2])} … (docs/guides/raspbot.md)")
+            return 1
+    print(f"lab-os's program runs on {host}. Open the Raspbot page: /raspbot")
+    return 0
