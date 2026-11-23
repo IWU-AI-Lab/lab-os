@@ -110,7 +110,7 @@ The design's look, motion and sound, on the brain's real facts:
 **The code:** one file, `src/lab_os/hub/web/design.html`: the design's CSS, SVG and JavaScript, with the brain's endpoints instead of the made-up data. The fonts are in `src/lab_os/web/vendor/fonts/` (offline).
 
 ## AI Spend: what it counts (2026-11-19, quick job 41)
-The AI Spend panel shows "Estimated · this computer's brain only" under the total. The plain hub, the designed hub and the VR hub show the same words.
+The AI Spend panel shows "Estimated · this computer's brain only" under the total. Its details name the computer by its short name ("the brain on Mac"), not the network's long name ("Mac.indy.rr.com"; quick job 82). The plain hub, the designed hub and the VR hub show the same words.
 - **Estimated:** lab-os calculates the cost itself. It does not get the bill from OpenAI. For chat, it multiplies the token counts that the AI service sends back by the prices in `config/models.yaml`. Somebody types these prices in by hand, so they can be out of date. For voice, it multiplies the seconds that lab-os measured by a price per minute.
 - **Less exact entries:** voice, and chat answers where the service sent no token counts (lab-os then counts about 4 characters per token). The spend log marks these entries `estimated: true`. The panel's page says how much of the total they are.
 - **This computer's brain only:** each brain writes its own spend log. The total counts every screen of this brain (the desk, the Newline, the Quest). It does not count another brain (for example the laptop) that uses the same OpenAI key. The monthly budget also uses only this brain's total.
@@ -153,7 +153,7 @@ For the cube:
 - Questions from other screens never get these tools.
 
 ## Every page (quick job 67)
-Each page opens from the hub in two taps: ⚙ → **All Pages** → **Open** (a window of its own). Teleop, Monitor, AI Control and Training are also buttons around the core (⚙ → The Lab → Buttons Around the Core). The list is `PAGES` in `src/lab_os/hub/server.py`: a test fails when a new page is not in it.
+Each page opens from the hub in two taps: **All Pages** (the button next to ⚙ in the strip; the link icon on the designed hub) → **Open** (a window of its own). Before quick job 82, All Pages was a group in ⚙. Teleop, Monitor, AI Control and Training are also buttons around the core (⚙ → The Lab → Buttons Around the Core). The list is `PAGES` in `src/lab_os/hub/server.py`: a test fails when a new page is not in it.
 
 | Address | Name | What it is |
 |---|---|---|
@@ -165,7 +165,8 @@ Each page opens from the hub in two taps: ⚙ → **All Pages** → **Open** (a 
 | `/training` | Training | Start the green arms' LeLab after a port check. |
 | `/webcam` | Webcam Teleop | Your bare hand in front of the webcam drives the arm (preview). |
 | `/xr` | VR Hub | The hub in the headset (opens only in a VR browser). |
-| `/settings` | Settings | This page: ⚙ on the hub. |
+| `/settings` | Settings | ⚙ on the hub. |
+| `/pages` | All Pages | This list: the button next to ⚙ on the hub. |
 
 ## The module pages (Teleop, Monitor, AI Control)
 They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icons.svg`, shared by every module page). Inside the hub, they have no frame or title of their own. On their own screen, they have both, the place's name, the clock and a choice: **Full screen** while the page is a window, **Window** while it is full screen. Select **Window** to put several pages on one monitor. The browser keeps the choice for each page. The core page (the hub) has no **Window** button: it is always full screen.
@@ -181,7 +182,7 @@ On the brain's own computer, a button in the strip (the screen-with-goggles icon
 The ⚙ in either hub opens this page. Since 2026-11-19 (quick job 38), it follows common guidance for settings screens (Apple's Human Interface Guidelines, Nielsen Norman Group):
 - **Grouped by what a setting affects, the most-used first:** This Device, Assistant, The Lab, Robots. A sidebar on the left goes to a group. Each group's heading folds the group (the page remembers which groups are folded).
 - **Each row** shows its label, a short help line only where the setting is not obvious, and its **current value on the right**. All values end at the same edge, with the unit after them. **"✓ Saved"** shows for a moment after a change. A problem shows as a sentence under the row.
-- **Restart Now:** settings that apply only after a restart (the robot and safety settings, the wake word, how long to keep conversations) collect in an amber bar at the top, with **Restart Now**. It asks first, and warns when an SO-101 would go limp. The brain stops as for "Shut down", then starts again by itself with the same options. Every page comes back by itself. The row of each such setting also says "Applies when the brain restarts". When you set a value back to what the brain runs with, it leaves the bar (quick job 45). A change saves at once, as in GNOME's and Apple's settings: there is no OK or Cancel. To undo a change, set the old value again. The bar stays when you close ⚙, and every window of ⚙ shows the same bar.
+- **Restart Now:** settings that apply only after a restart (the robot and safety settings, the wake word, how long to keep conversations) collect in an amber bar at the bottom of the window, with **Restart Now** (since quick job 82; before, it was at the top of the list, out of sight after you scrolled down). It asks first, and warns when an SO-101 would go limp. The brain stops as for "Shut down", then starts again by itself with the same options. Every page comes back by itself. The row of each such setting also says "Applies when the brain restarts". The row keeps the place for that line, so the value box and its arrows do not move when it shows. When you set a value back to what the brain runs with, it leaves the bar (quick job 45). A change saves at once, as in GNOME's and Apple's settings: there is no OK or Cancel. To undo a change, set the old value again. The bar stays when you close ⚙, and every window of ⚙ shows the same bar.
 - **A settings file that can't be read** (for example after an edit by hand): a red box at the top names the file and the line, and says what to do. A change then says the same instead of saving. If **Restart Now** does not bring lab-os back within 45 s, the page says to look at the brain's terminal.
 - **Apart, at the bottom, with a red edge: "Safety Limits and Shut Down."** The switches for the AI tools' limit for each move, the speed cap and the floor (on by default). A limit that is off shows "(Off)" and is listed in the bar at the top. A public venue or a venue with `limits_locked: true` cannot switch them off. Then what always stays (STOP, the soft joint limits, one controller at a time), and **Shut Down lab-os**.
 - **This Device:** level of detail, sound, how to talk to it and the wake word's sensitivity, the assistant's languages, full screen on the start press. Then, for slow screens and other monitors: drawing resolution, the startup as a video, the monitors of this computer, the device's "Lab Hub" icon. The brain keeps these under the device's name ("Devices" below), so the Newline can run Full while a Pi runs Minimal. Each device can change its own.

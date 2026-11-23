@@ -29,6 +29,8 @@
     <button id="fs-btn" type="button" hidden>Full screen</button>
     <!-- what the Quest sees, in a window on this computer (quick job 36): the brain's computer only -->
     <button id="qv-btn" type="button" aria-pressed="false" hidden>Quest view</button>
+    <!-- every page the brain serves (quick job 82; was a group in ⚙) -->
+    <button id="pages-btn" type="button" onclick="window.open('/pages', 'lab-os-pages') || (location.href = '/pages')">All Pages</button>
   </header>
 
   <!-- the greeting after the start press: "Good evening." + one line of real news (or the persona's line) -->

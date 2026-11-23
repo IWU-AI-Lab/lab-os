@@ -245,13 +245,14 @@ const SENSITIVITY = { key: "wake_sensitivity", label: "Wake Word Sensitivity", k
 const LANG_NAMES = { "": "Any", en: "English" };  // the brain's codes (lab_os/ai/languages.py) → words
 function languageRow() {
   const pair = document.createElement("div");
-  pair.className = "pair";
-  const r = row("Assistant Language", "Expects: a hint to speech-to-text (OpenAI's voice only). It still hears other languages. Answers: the language of every answer, typed or spoken.", pair);
+  pair.className = "pair stack";  // Expects above Answers (quick job 82: side by side they touched the text)
+  const r = row("Assistant Language", `This device only${NAME ? ` (${NAME})` : ""}. Expects: a hint to speech-to-text (OpenAI's voice only). It still hears other languages. Answers: the language of every answer, typed or spoken.`, pair);
   // "Expects" was "Listens", which sounded like a filter (quick job 46)
   for (const [key, label] of [["hear_in", "Expects"], ["answer_in", "Answers"]]) {
     const f = { key, label, kind: "choice", choices: Object.values(LANG_NAMES) };
-    pair.append(Object.assign(document.createElement("span"), { className: "unit", textContent: label }));
-    pair.append(control(f, LANG_NAMES[screenGet()[key] || ""] || "Any", async (v) => {
+    const line = pair.appendChild(Object.assign(document.createElement("div"), { className: "pair" }));
+    line.append(Object.assign(document.createElement("span"), { className: "unit", textContent: label }));
+    line.append(control(f, LANG_NAMES[screenGet()[key] || ""] || "Any", async (v) => {
       const res = await screenSet(key, Object.keys(LANG_NAMES).find((k) => LANG_NAMES[k] === v) ?? "");
       said(r, res.ok, res.message);
       return res.ok;
@@ -404,20 +405,6 @@ function roomRow() {
   return r;
 }
 
-/* ---------- every page the brain serves (quick job 67): two taps from the hub, ⚙ then the page ---------- */
-async function pagesGroup() {
-  const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
-  if (!hub?.pages?.length) return;
-  const rows = group("pages", "All Pages", "Each opens in a window of its own.", { icon: "i-link" });
-  for (const p of hub.pages) {
-    const b = btn("Open");
-    b.addEventListener("click", () => {
-      if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
-    });
-    rows.append(row(p.title, `${p.path} · ${p.line}`, b));
-  }
-}
-
 /* ---------- start ---------- */
 async function start() {
   let data = null;
@@ -443,11 +430,11 @@ async function start() {
   for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
   const voiceSlot = dev.appendChild(document.createElement("div"));
   voiceRows().then((rows) => voiceSlot.replaceWith(...rows), (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });
-  dev.append(languageRow(), fieldRow(FULL, FULL.value(), (v) => FULL.save(v), false));
+  dev.append(fieldRow(FULL, FULL.value(), (v) => FULL.save(v), false));
   sub(dev, "For Slow Screens and Other Monitors");
   for (const f of SLOW) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
   dev.append(screensRow(), iconRow());
-  if (!data) return;
+  if (!data) { dev.append(languageRow()); return; }  // no Assistant group without the brain
   writableHere = !!data.writable;
   showProblems(data.problems);
   const ICON = { assistant: "i-chat", lab: "i-pin", robots: "i-hand", limits: "i-warn" };
@@ -456,9 +443,7 @@ async function start() {
     $("#limits-off").hidden = offNow.size === 0;
     $("#limits-off .pill").textContent = [...offNow.keys()].join(", ");
   };
-  let pagesShown = false;
   for (const s of data.sections) {
-    if (s.risky && !pagesShown) { pagesShown = true; await pagesGroup(); }  // before the safety group
     const rows = group(s.id, s.title, s.risky ? "" : s.help, { icon: ICON[s.id] || "i-gear", risky: s.risky });
     if (s.id === "lab" && m) rows.append(visitorRow(m));
     if (s.id === "lab") rows.append(roomRow());
@@ -484,14 +469,17 @@ async function start() {
       }, !data.writable || !!f.locked);
       markOff(f.value);
       r.dataset.key = f.key;
+      // its note "Applies when the brain restarts" has its place kept: the control doesn't move (quick job 82)
+      if (f.applies === "restart") r.classList.add("may-restart");
       rows.append(r);
     }
+    // the assistant's languages are this device's own, but belong with the assistant (quick job 82)
+    if (s.id === "assistant") rows.append(languageRow());
     if (s.risky) {
       if (s.help) note(rows, s.help);
       rows.append(await shutdownRow());
     }
   }
   setRestart(data.restart_needed, data.restart_keys);
-  if (!pagesShown) await pagesGroup();
 }
 start();
