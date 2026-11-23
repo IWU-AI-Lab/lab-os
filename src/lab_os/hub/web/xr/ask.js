@@ -111,6 +111,7 @@ export class Ask {
       this.replyAt = now;
       if (!ev.final) return;
       if (!ev.text) { this.q = "I didn't catch that. Hold the trigger while you talk."; this._end(); return; }
+      if (ev.command) { this._end(); return; } // "that's all": not a question, no answer comes (quick job 83)
       // the answer appears as it's said (the pieces' "playing"), like the screen's
       const answer = { text: "" };
       this.turn = { answer, pacer: this.VM.revealPacer(() => answer.text.length, (n, typing) => { this.shown = n; this.typing = typing; this.a = answer.text; }) };

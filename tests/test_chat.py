@@ -228,9 +228,10 @@ async def test_the_conversation_goes_along_and_clears(aiohttp_server, key, tmp_p
     seen = []
     server = await aiohttp_server(fake_service(seen=seen))
     conv = conversation(setup_for(server), tmp_path)
-    await collect(conv, "one")
-    await collect(conv, "two")
-    assert [m["content"] for m in seen[1]["body"]["messages"][1:]] == ["one", "Hello there.", "two"]
+    await collect(conv, "question number one")
+    await collect(conv, "question number two")
+    sent = [m["content"] for m in seen[1]["body"]["messages"][1:]]
+    assert sent == ["question number one", "Hello there.", "question number two"]
     conv.clear()
     assert conv.messages == []
     await conv.close()

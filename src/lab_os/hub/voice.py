@@ -101,6 +101,8 @@ WAKE_QUIET_S = 2.0  # after a wake, ignore the phrase for this long (the same wo
 WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from before the phrase was detected goes to the hearing
 WAKE_RING_BYTES = 32_000  # 1 s of the latest audio kept while listening for the phrase
 WAKE_END_HOLD_S = 0.35  # the service heard a pause after the question: end if it stays quiet
+# ... but the words so far don't end a sentence ("37 times 48, then"): wait longer (quick job 83)
+WAKE_MID_HOLD_S = 1.2
 STANDBY_MAX_S = 240.0  # a hearing kept connected ahead of time is renewed after this long
 STANDBY_RETRY_S = 30.0  # it couldn't connect: try again after this long
 WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
@@ -220,6 +222,12 @@ class TurnTiming:
             waited = self.marks["playing"] - self.marks["ended"]
             line += f" · waited {_s(waited)} after the question"
         return line
+
+
+def pause_hold(text: str) -> float:
+    """How long a pause after the words must last before the question ends: short after the end of
+    a sentence, longer in the middle of one (a comma, "then", no full stop yet)."""
+    return WAKE_END_HOLD_S if re.search(r"[.!?…]['\")\]]*\s*$", text) else WAKE_MID_HOLD_S
 
 
 def said_any(text: str, phrases: tuple[str, ...]) -> bool:
@@ -948,7 +956,7 @@ class VoiceLink:
         if self.hearing is not hearing or not strip_wake(hearing.text, self.desk.wake_phrase()):
             return
         loop = asyncio.get_running_loop()
-        loop.call_later(WAKE_END_HOLD_S, self._end_if_quiet, hearing)
+        loop.call_later(pause_hold(hearing.text), self._end_if_quiet, hearing)
 
     def _end_if_quiet(self, hearing: Hearing) -> None:
         if self.hearing is hearing and not hearing.in_speech:
@@ -981,6 +989,7 @@ class VoiceLink:
                 self.send({"type": "heard", "text": text, "final": False})
 
         hearing, warm = self.desk.take_hearing(setup, words, self.hear_in)
+        hearing.assistant_name = self.desk.persona().display_name
         self.hearing = hearing
         self.started_at = time.monotonic()
         if self.timing is None or "listening" in self.timing.marks:  # else: the wake word's
@@ -1045,7 +1054,15 @@ class VoiceLink:
             text = strip_wake(text, self.desk.wake_phrase())
         if self.timing:
             self.timing.mark("words")
-        self.send({"type": "heard", "text": text, "final": True})
+        # "That's all" and "conversation mode" are not questions: the page shows them and ends the
+        # turn (quick job 83: it waited for an answer, on the thinking core)
+        command = self.mode != "dictate" and (
+            (self.converse and said_any(text, CONVERSE_END))
+            or (not self.converse and said_any(text, CONVERSE_START))
+        )
+        self.send(
+            {"type": "heard", "text": text, "final": True} | ({"command": True} if command else {})
+        )
         if self.mode == "dictate" or not text:
             self._timing_done()
             self._settle()

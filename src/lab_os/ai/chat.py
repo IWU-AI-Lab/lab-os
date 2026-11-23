@@ -88,6 +88,19 @@ ANY_LANGUAGE = (
     "in that language. A short, unclear or mixed question gets an English answer: spoken "
     "questions come from speech-to-text, which sometimes guesses words in another language."
 )
+# Answers: Any, and a question of one or two words ("Hi"): it still got answers in other languages
+# (quick job 83). The rule goes with the question: the conversation's language so far, else English.
+SHORT_WORDS = 2
+SHORT_FIRST = "Answer in English."
+SHORT_LATER = "Answer in the language of this conversation so far."
+
+
+def short_question_rule(text: str, earlier_questions: int) -> str | None:
+    """The language rule for a very short question with Answers: Any, or None for a longer one."""
+    if len(text.split()) > SHORT_WORDS:
+        return None
+    return SHORT_LATER if earlier_questions else SHORT_FIRST
+
 
 OPEN_PAGE = "open_page"
 PAGE_RULES = """\
@@ -417,6 +430,11 @@ class Conversation:
             # (lab check 9.13). The rule also goes with the question itself (only in what's sent).
             name = LANGUAGES[clean_language(answer_in)]
             sent[-1] = {"role": "user", "content": f"{text}\n\n({ANSWER_IN.format(name=name)})"}
+        else:
+            earlier = sum(m.get("role") == "user" for m in self.messages[:-1])
+            rule = short_question_rule(text, earlier)
+            if rule:
+                sent[-1] = {"role": "user", "content": f"{text}\n\n({rule})"}
         answer, usage = "", Usage()
         tools = await self.tools.openai_tools() if self.tools else []
         strong = self.strong_setup()

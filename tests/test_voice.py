@@ -25,7 +25,9 @@ from lab_os.hub.voice import speakable, take_speech
 from lab_os.personas import Persona
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
-SECOND = b"\x01\x00" * 16_000  # one second of (nearly silent) 16 kHz audio
+# one second of 16 kHz audio: half quiet, half a loud tone (speech, for the silence check)
+SECOND = b"\x01\x00" * 8_000 + b"\x00\x10\x00\xf0" * 4_000
+SILENCE = b"\x01\x00" * 16_000  # one second of (nearly silent) audio
 HEARD = "what is the next step"
 
 
@@ -153,7 +155,8 @@ def key(monkeypatch):
 
 def test_models_yaml_voices():
     voices = load_voices()
-    assert "British" in voices["main"].style and voices["main"].speed == 1.15
+    assert voices["main"].speak == "tts-1-hd" and not voices["main"].style  # quick job 83
+    assert voices["main"].speed == 1.15
     assert voices["main"].service == "openai" and voices["main"].fallback == "backup"
     assert voices["backup"].service == "gemini" and voices["backup"].key_env == "GEMINI_API_KEY"
     assert voices["main"].cost(60, 60) == pytest.approx(0.018)
@@ -319,7 +322,7 @@ def test_speak_can_list_models():
         "gemini-3.8-flash-lite-tts",
         "gemini-3.8-flash-tts",
     )
-    assert load_voices()["main"].speak_models == ("gpt-4o-mini-tts",)
+    assert load_voices()["main"].speak_models == ("tts-1-hd",)
 
 
 async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):
@@ -813,8 +816,14 @@ async def test_the_answer_language_goes_with_the_question(
         ).read()
         assert sent[-1][-1]["content"].startswith("¿Hola?") and "English" in sent[-1][-1]["content"]
         assert conv.messages[-2] == {"role": "user", "content": "¿Hola?"}  # kept as asked
+        await (await client.post("/api/chat", json={"text": "What is next?", "lang": {}})).read()
+        assert sent[-1][-1]["content"] == "What is next?"
+        # quick job 83: one or two words with Answers: Any: the conversation's language so far
         await (await client.post("/api/chat", json={"text": "Hi", "lang": {}})).read()
-        assert sent[-1][-1]["content"] == "Hi"
+        assert (
+            sent[-1][-1]["content"] == "Hi\n\n(Answer in the language of this conversation so far.)"
+        )
+        assert conv.messages[-2] == {"role": "user", "content": "Hi"}
     finally:
         chat_mod.stream_chat = real
     ws = await client.ws_connect("/ws/voice?device=desk")
@@ -947,6 +956,10 @@ async def test_that_s_all_ends_it_and_a_phrase_starts_it(
     await until(ws, "listening", [])
     await ws.send_bytes(SECOND)
     await ws.send_json({"type": "end"})
+    heard = await until(ws, "heard", [], timeout=5)
+    while not heard.get("final"):
+        heard = await until(ws, "heard", [])
+    assert heard.get("command") is True  # quick job 83: the page ends the turn, no thinking core
     off = await until(ws, "converse", [], timeout=5)
     while off["on"]:
         off = await until(ws, "converse", [])
@@ -966,3 +979,76 @@ def test_the_hubs_have_the_conversation_button():
         and 'id="conv-btn"' in (SRC / "hub" / "web" / "index.html").read_text()
     )
     assert "async function converse(on)" in (SRC / "web" / "voice.js").read_text()
+
+
+# ---------- quick job 83: the laptop checks ----------
+
+
+def test_silence_is_not_speech():
+    from lab_os.ai.speech import has_speech
+
+    assert has_speech(SECOND)
+    assert not has_speech(SILENCE)
+    assert not has_speech(b"\x00\x10" * 16_000)  # a steady hum: as loud everywhere
+    assert not has_speech(SECOND[:3200])  # 0.1 s: a tap
+
+
+def test_the_hint_names_the_persona_and_its_echo_is_dropped():
+    from lab_os.ai.speech import hear_prompt, repeats_hint
+
+    hint = hear_prompt("en", "Lab Assistant")
+    assert "Lab Assistant" in hint and "Jarvis" not in hint
+    assert "JARVIS" in hear_prompt("en", "J.A.R.V.I.S.")
+    assert hear_prompt(None, "Lab Assistant") == ""
+    assert repeats_hint("The speaker talks English to the lab's assistant, Lab Assistant.", hint)
+    assert repeats_hint("the speaker talks English to the lab's assistant", hint)
+    assert not repeats_hint("What is next?", hint)
+
+
+async def test_a_silent_recording_is_not_sent(aiohttp_server, key):
+    from lab_os.ai.speech import hearing_for
+
+    seen = []
+    server = await aiohttp_server(fake_voice(seen=seen, heard="The speaker talks English."))
+    async with __import__("aiohttp").ClientSession() as session:
+        h = hearing_for(session, openai_setup(server), lambda t: None, "en")
+        h.feed(SILENCE)
+        assert await h.finish() == ""
+        assert not any("transcribe" in e for e in seen)  # nothing was sent
+
+
+async def test_a_transcript_that_is_the_hint_is_dropped(aiohttp_server, key):
+    from lab_os.ai.speech import hearing_for
+
+    hint = "The speaker talks English to the lab's assistant, Lab Assistant."
+    server = await aiohttp_server(fake_voice(seen=[], heard=hint))
+    async with __import__("aiohttp").ClientSession() as session:
+        h = hearing_for(session, openai_setup(server), lambda t: None, "en")
+        h.assistant_name = "Lab Assistant"
+        h.feed(SECOND)
+        assert await h.finish() == ""
+
+
+def test_a_pause_in_the_middle_of_a_sentence_waits_longer():
+    from lab_os.hub.voice import WAKE_END_HOLD_S, WAKE_MID_HOLD_S, pause_hold
+
+    assert pause_hold("What is next?") == WAKE_END_HOLD_S
+    assert pause_hold("Calculate 37 times 48,") == WAKE_MID_HOLD_S
+    assert pause_hold("then add") == WAKE_MID_HOLD_S
+    assert WAKE_MID_HOLD_S > WAKE_END_HOLD_S
+
+
+def test_a_short_question_gets_the_conversations_language():
+    from lab_os.ai.chat import short_question_rule
+
+    assert short_question_rule("Hi", 0) == "Answer in English."
+    assert "conversation so far" in short_question_rule("Hi there", 3)
+    assert short_question_rule("What is next?", 0) is None
+
+
+def test_the_wake_word_listens_while_an_answer_plays():
+    js = (Path(__file__).resolve().parents[1] / "src/lab_os/web/voice.js").read_text()
+    assert "const forWake = st.wakeOn && st.ws?.readyState === WebSocket.OPEN;" in js
+    src = Path(__file__).resolve().parents[1] / "src/lab_os/hub/web"
+    for page in ("hub.js", "design.html", "xr/ask.js"):
+        assert "ev.command" in (src / page).read_text(), page
