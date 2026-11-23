@@ -1,6 +1,6 @@
 """One short program instead of many moves (quick job 81, "Code as Policies"): the AI writes a
 little Python that calls the brain's robot tools, and the brain runs it here, with no model call
-between the steps.
+between the steps. `calculate` (quick job 86) runs plain math the same way, with no robot.
 
 The program is compiled by RestrictedPython (Zope's maintained restricted compiler: no imports,
 no names or attributes that start with "_", no files; https://github.com/zopefoundation/
@@ -321,3 +321,24 @@ class ProgramRunner:
         if out["result"] != "done":
             log.info("program: %s (%s)", out["result"], out.get("error"))
         return out | {"calls": calls}
+
+
+CALC_LIMIT_S = 5.0
+
+
+def calculate(code: str, time_limit_s: float = CALC_LIMIT_S) -> dict:
+    """Plain math for the hub's assistant (quick job 86): `math`, `statistics` and the plain
+    builtins in the same restricted compiler, with no robot functions; the answer is the
+    program's `result` variable (and what it prints). Runs in a thread of its own, so its line
+    tracer touches nothing else."""
+    box: dict = {}
+
+    def go():
+        box["out"] = run_restricted(code, {}, time_limit_s)
+
+    t = threading.Thread(target=go, name="lab-os-calculate", daemon=True)
+    t.start()
+    t.join(time_limit_s + 2)
+    if "out" not in box:  # stuck inside one C call (a huge power): left behind, a daemon thread
+        return {"result": "time limit", "error": "the calculation took too long", "printed": []}
+    return box["out"]
