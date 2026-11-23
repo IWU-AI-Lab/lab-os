@@ -1,0 +1,12 @@
+# lab-os's health log on the Raspbot (lab_os_health.py): one line every 10 s in ~/lab-os/health.log.
+# `uv run lab-os raspbot deploy` copies it to ~/.config/systemd/user/ and starts it. It only reads.
+[Unit]
+Description=lab-os health log (power, temperature, Wi-Fi every 10 s)
+
+[Service]
+ExecStart=/usr/bin/python3 -u %h/lab-os/lab_os_health.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

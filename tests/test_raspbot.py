@@ -311,3 +311,41 @@ def test_wifi_install_turns_off_the_hotspots_own_start():
     assert "modify Raspbot connection.autoconnect no" in src
     assert "systemctl enable lab-os-wifi.service" in src
     assert all(Path(f).is_file() for f in raspbot.deploy_commands("raspbot1")[1][2:-1])
+
+
+# ---- the health log on the Raspbot ----
+
+
+def _health():
+    spec = importlib.util.spec_from_file_location(
+        "lab_os_health", raspbot.ONBOARD_DIR / "lab_os_health.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_health_reads_raspbot1s_outputs():
+    h = _health()
+    adc = "     EXT5V_V volt(24)=5.19786000V\n  VDD_CORE_A current(7)=0.94657990A\n"
+    assert h.pmic(adc, "EXT5V_V") == "5.198V" and h.pmic(adc, "VDD_CORE_A") == "0.947A"
+    assert h.pmic("", "EXT5V_V") == "?"
+    assert h.throttled("throttled=0x50005\n") == "0x50005" and h.throttled("") == "?"
+    assert h.temperature("temp=48.3'C\n") == "48.3C"
+    wireless = (
+        "Inter-| sta-|   Quality\n face | tus | link level noise\n"
+        " wlan0: 0000   70.  -23.  -256        0      0      0      0      0        0\n"
+    )
+    assert h.wifi(wireless) == "q70 -23dBm" and h.wifi("") == "none"
+
+
+def test_health_log_is_kept_small(tmp_path):
+    h = _health()
+    log = tmp_path / "health.log"
+    for i in range(5):
+        h.write(f"line {i} " + "x" * 40, log, max_bytes=100)
+    assert log.with_name("health.log.1").is_file() and log.stat().st_size <= 150
+    assert (
+        "systemctl --user restart lab-os-raspbot lab-os-health"
+        in raspbot.deploy_commands("r")[2][-1]
+    )
