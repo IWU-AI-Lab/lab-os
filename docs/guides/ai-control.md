@@ -79,6 +79,27 @@ For example: "Use the lab-os tools: what's next, and what's on hold? Then make a
 
 Each move gives back where the arm **really** stopped (joints, gripper %, position, tool angle), and a `clipped` list of what the brain limited.
 
+## The hub's buttons as tools (quick job 80)
+Each action that a button on a hub page does is also a tool, for Claude Code, Codex and the hub's assistant (with Full Access, `docs/guides/hub.md` → "Full Access"). Each tool calls the same code as its button, so it has the same checks. A tool that moves an arm goes through the same safety layer as the other move tools.
+
+| Tool | Tier | The button |
+|---|---|---|
+| `hub_screens` | read | The devices with the hub open, their monitors and what each shows; the pages that can open on a device |
+| `open_on_device`, `bring_back` | act | "Open on…" a device, and "Bring it back" |
+| `set_up_the_room` | act | ⚙ → Set Up the Room (`room.yaml`) |
+| `list_settings` | read | ⚙: every setting, its key and its value |
+| `change_setting` | act | One setting of ⚙ (a setting that applies on a restart says so) |
+| `change_device_setting` | act | ⚙ → This Device, on that device |
+| `visitor_mode` | act | ⚙ → Visitor Mode |
+| `quest_view` | act | The strip's Quest view button |
+| `say_aloud` | act | Says a sentence with the assistant's voice on a screen with the hub open |
+| `teleop_speed`, `teleop_mode` | act | The Teleop page's speed and its hand → arm mode (relative or 1:1) |
+| `wave_arm` | move | Visitor mode's "Ask me to wave" |
+| `training_lelab`, `training_lerobot_teleop` | act | The Training page's LeLab and LeRobot teleop, with their own checks |
+| `restart_lab_os`, `shut_down_lab_os` | act | ⚙ → Restart Now and Shut Down (an SO-101 goes limp) |
+
+Not tools: what only a page can do for itself (its full screen, Desktop control, Enter VR and Enter AR, Back to the start screen).
+
 ## Limits
 The brain limits and refuses. It never trusts the numbers that it gets. This section is the reference for these limits; `SAFETY.md` has the rules for people.
 - **The same path as teleop:** moves go through the teleop loop: the arm's soft limits (3° inside the real limits), the venue's `max_speed_scale`, and a limited speed (all joints arrive together).
@@ -126,7 +147,7 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 ```
 - **Close LeLab first,** and stop any recording or training run. If another program has the green port open, the brain refuses with a sentence that names it ("so101-green is in use by lelab (pid …): one program per port") and opens nothing.
 - **The calibration:** lab-os drives with its own copy of the training calibration (`calibration/so101-green/so101-green.json`, and `calibration/so101-green-leader/`). It refuses with a sentence if the copy is different from the training file (the sentence gives the `cp` command to copy it again), or if the motors hold a different calibration. Then start teleop once in LeLab, or start LeRobot's command line and press ENTER at its calibration question (never `c`). `devices.yaml` names the training file (`training_calibration:`).
-- **Name it:** the green arm is never the default arm, so the brain cannot use it instead of the white arm by mistake. To only read it: `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`.
+- **Name it:** the green arm is never the default arm, so the brain cannot use it instead of the white arm by mistake. With two arms at once (the green set as the left arm), the tools drive the green arm when they name it (`arm: "so101-green"`; quick job 80). `arm_status` lists it in `other_arms`. To only read it: `uv run --extra so101 python -m lab_os.robots.so101 so101-green --watch`.
 - It is active in the `lab` and `visit-day` venues.
 - When the brain connects with motion on, it writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, as LeLab does. Never IDs, baud rate, firmware or calibration.
 

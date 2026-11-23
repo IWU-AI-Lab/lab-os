@@ -89,6 +89,7 @@ from lab_os.hub.internet import InternetCheck
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.room import RoomDesk
 from lab_os.hub.room import set_up as set_up_room
+from lab_os.hub.system_tools import add_system_tools
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
@@ -208,6 +209,9 @@ class Brain:
 BRAIN = web.AppKey("brain", Brain)
 TOOLS = web.AppKey("tools", RobotTools)
 TOOLS_PROJECT = web.AppKey("tools_project", ProjectTools)
+# the second arm's robot tools (two arms at once), or None: AI tools reach it by its name (quick
+# job 80); the first arm stays the default
+TOOLS_LEFT = web.AppKey("tools_left", object)
 MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
@@ -333,22 +337,32 @@ async def api_green_start(request: web.Request) -> web.Response:
     brain's computer (it opens a window there)."""
     if not is_local(request):
         raise web.HTTPForbidden(text="The training setup starts only on the brain's computer.")
+    return web.json_response(await green_start())
+
+
+async def green_start() -> dict:
+    """The Training page's Start (and the MCP tool `training_lelab`, quick job 80): check the
+    green ports again, then open a terminal here that starts LeLab."""
     c = await asyncio.to_thread(green.check)
     if c.ok and not c.running:
         green.remember(c)
         green.open_terminal()
         log.info("green launcher: LeLab starting in a terminal")
-    return web.json_response(c.as_dict() | {"here": True, "started": c.ok and not c.running})
+    return c.as_dict() | {"here": True, "started": c.ok and not c.running}
 
 
 async def api_green_stop(request: web.Request) -> web.Response:
     """Stop LeLab: only the one the launcher started (lab_os.green.stop_lelab)."""
     if not is_local(request):
         raise web.HTTPForbidden(text="LeLab can be stopped only from the brain's computer.")
+    return web.json_response(await green_stop())
+
+
+async def green_stop() -> dict:
     said = await asyncio.to_thread(green.stop_lelab)
     log.info("green launcher: %s", said)
     c = await asyncio.to_thread(green.check)
-    return web.json_response(c.as_dict() | {"here": True, "said": said})
+    return c.as_dict() | {"here": True, "said": said}
 
 
 # ---------- LeRobot's own teleop for the green set (quick job 91) ----------
@@ -360,13 +374,16 @@ def _brain_uses(app: web.Application) -> tuple[str, ...]:
 
 
 async def _lerobot_state(request: web.Request, said: str = "") -> web.Response:
+    return web.json_response(await lerobot_state(request.app, is_local(request), said))
+
+
+async def lerobot_state(app: web.Application, here: bool = True, said: str = "") -> dict:
     runner = lerobot_teleop.RUNNER
-    c, _ = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(request.app))
-    state = runner.state()
-    out = c.as_dict() | state | {"here": is_local(request)}
+    c, _ = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(app))
+    out = c.as_dict() | runner.state() | {"here": here}
     if said:
         out["said"] = said
-    return web.json_response(out)
+    return out
 
 
 async def api_lerobot_teleop(request: web.Request) -> web.Response:
@@ -377,15 +394,20 @@ async def api_lerobot_teleop_start(request: web.Request) -> web.Response:
     """Check again, then start LeRobot's teleop (the leader drives the follower) with Rerun."""
     if not is_local(request):
         raise web.HTTPForbidden(text="LeRobot's teleop starts only on the brain's computer.")
+    return web.json_response(await lerobot_start(request.app))
+
+
+async def lerobot_start(app: web.Application) -> dict:
+    """The Training page's LeRobot teleop Start (and its MCP tool, quick job 80)."""
     runner = lerobot_teleop.RUNNER
     if runner.running():
-        return await _lerobot_state(request)
-    c, plan = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(request.app))
+        return await lerobot_state(app)
+    c, plan = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(app))
     if not c.ok:
-        return await _lerobot_state(request, "Not started: fix the lines marked with a warning.")
+        return await lerobot_state(app, said="Not started: fix the lines marked with a warning.")
     said = await asyncio.to_thread(runner.start, plan)
     log.info("LeRobot teleop: %s", said)
-    return await _lerobot_state(request, said)
+    return await lerobot_state(app, said=said)
 
 
 async def api_lerobot_teleop_stop(request: web.Request) -> web.Response:
@@ -393,9 +415,13 @@ async def api_lerobot_teleop_stop(request: web.Request) -> web.Response:
         raise web.HTTPForbidden(
             text="LeRobot's teleop can be stopped only from the brain's computer."
         )
+    return web.json_response(await lerobot_stop(request.app))
+
+
+async def lerobot_stop(app: web.Application) -> dict:
     said = await asyncio.to_thread(lerobot_teleop.RUNNER.stop)
     log.info("LeRobot teleop: %s", said)
-    return await _lerobot_state(request, said)
+    return await lerobot_state(app, said=said)
 
 
 async def _lerobot_teleop_task(app: web.Application):
@@ -476,14 +502,18 @@ async def _stop_brain(request: web.Request, restart: bool) -> web.Response:
         by = clean_name(str(body.get("from") or ""))
     except (ValueError, AttributeError, DeviceError):
         by = ""
-    app = request.app
+    return web.json_response(await stop_brain(request.app, restart, by))
+
+
+async def stop_brain(app: web.Application, restart: bool, by: str = "", asker: str = "") -> dict:
+    """Shut down or restart (the hub's buttons, and the MCP tools, quick job 80)."""
     what = "restarting" if restart else "shutting down"
-    log.warning("%s: asked from the hub (%s)", what, by or "a page with no device name")
+    log.warning("%s: asked %s (%s)", what, asker or "from the hub", by or "no device name")
     app[LOOP].shut_down(f"lab-os is {what}")  # and nothing moves again (quick job 44)
     app[RESTART]["asked"] = restart
     await _tell_off(app, brain_off_message(by, restart))
     asyncio.get_running_loop().call_later(SHUTDOWN_DELAY_S, app[SHUTDOWN].set)
-    return web.json_response({"ok": True, "message": f"lab-os is {what}."})
+    return {"ok": True, "message": f"lab-os is {what}."}
 
 
 async def api_ai_calls(request: web.Request) -> web.Response:
@@ -566,44 +596,49 @@ async def api_settings_post(request: web.Request) -> web.Response:
     """Change one setting. Only from the brain's computer: other screens may be in a hallway."""
     if not is_local(request):
         raise web.HTTPForbidden(text="Settings change only on the brain's computer.")
-    if request.app[BRAIN].venue.visitors:
-        return web.json_response({"ok": False, "message": VISITORS_SETTINGS}, status=403)
     try:
         body = await request.json()
         key, value = str(body["key"]), body["value"]
     except (ValueError, KeyError, TypeError):
         raise web.HTTPBadRequest(text='send {"key": "...", "value": ...}') from None
-    brain = request.app[BRAIN]
+    status, out = await change_setting(request.app, key, value)
+    return web.json_response(out, status=status)
+
+
+async def change_setting(app: web.Application, key: str, value, by: str = "") -> tuple[int, dict]:
+    """Change one setting (the settings page, and the MCP tool, quick job 80): (HTTP status, the
+    answer)."""
+    brain = app[BRAIN]
+    if brain.venue.visitors:
+        return 403, {"ok": False, "message": VISITORS_SETTINGS}
     venue = brain.venue.name
     try:
         running = await asyncio.to_thread(brain.running_values, venue)  # before the change
         value = await asyncio.to_thread(settings.write, key, value, venue)
     except settings.SettingError as e:
-        return web.json_response({"ok": False, "message": str(e)}, status=400)
+        return 400, {"ok": False, "message": str(e)}
     except config.ConfigError as e:  # a file that can't be read: the file and the line
-        return web.json_response({"ok": False, "message": f"Not saved. {e}"}, status=400)
+        return 400, {"ok": False, "message": f"Not saved. {e}"}
     except Exception as e:  # never a bare "500 Internal Server Error" (quick job 45)
         log.exception("settings: couldn't save %s", key)
         msg = f"Not saved: {e}. The brain's terminal has the details."
-        return web.json_response({"ok": False, "message": msg}, status=500)
+        return 500, {"ok": False, "message": msg}
     field = settings.find(key)
-    log.info("setting %s = %r (from the settings page)", key, value)
+    log.info("setting %s = %r (from %s)", key, value, by or "the settings page")
     needed = brain.restart_needed
     if field.applies == "restart":
         if key in running and running[key] == value:
             needed.pop(key, None)  # back to what the brain runs with: no restart for it
         else:
             needed[key] = field.label
-    return web.json_response(
-        {
-            "ok": True,
-            "key": key,
-            "value": value,
-            "applies": field.applies,
-            "restart_needed": list(needed.values()),
-            "restart_keys": list(needed),
-        }
-    )
+    return 200, {
+        "ok": True,
+        "key": key,
+        "value": value,
+        "applies": field.applies,
+        "restart_needed": list(needed.values()),
+        "restart_keys": list(needed),
+    }
 
 
 def switch_venue(app: web.Application, name: str | None) -> Venue:
@@ -625,6 +660,8 @@ def switch_venue(app: web.Application, name: str | None) -> Venue:
             )
     brain.venue = venue
     app[TOOLS].use_venue(venue)
+    if app[TOOLS_LEFT]:
+        app[TOOLS_LEFT].use_venue(venue)
     app[TOOLS_PROJECT].venue = venue
     loop.use_caps(venue.speed_cap_scale, venue.max_speed_scale, venue.one_to_one_cap)
     loop.mapper.config.floor_m = teleop_floor_m(venue, loop.arm.name)
@@ -695,16 +732,20 @@ async def api_venue(request: web.Request) -> web.Response:
     to = body.get("to")
     if to not in ("visitors", "normal"):
         raise web.HTTPBadRequest(text='send {"to": "visitors"} or {"to": "normal"}')
-    name = visitors_venue_name() if to == "visitors" else None
-    if to == "visitors" and name is None:
-        return web.json_response(
-            {"ok": False, "message": "This place has no venue for visitors."}, status=400
-        )
+    status, out = await visitor_mode(request.app, to == "visitors")
+    return web.json_response(out, status=status)
+
+
+async def visitor_mode(app: web.Application, on: bool) -> tuple[int, dict]:
+    """Visitor mode on or off (⚙'s button, and the MCP tool, quick job 80)."""
+    name = visitors_venue_name() if on else None
+    if on and name is None:
+        return 400, {"ok": False, "message": "This place has no venue for visitors."}
     try:
-        venue = await asyncio.to_thread(switch_venue, request.app, name)
+        venue = await asyncio.to_thread(switch_venue, app, name)
     except ValueError as e:
-        return web.json_response({"ok": False, "message": str(e)}, status=400)
-    return web.json_response({"ok": True, "venue": venue.name, "visitors": venue.visitors})
+        return 400, {"ok": False, "message": str(e)}
+    return 200, {"ok": True, "venue": venue.name, "visitors": venue.visitors}
 
 
 def _visitors(venue: Venue) -> dict | None:
@@ -727,20 +768,30 @@ async def api_quest_view_start(request: web.Request) -> web.Response:
     except ValueError:
         body = {}
     name = (body or {}).get("headset") if isinstance(body, dict) else None
+    status, out = await quest_view_start(request.app, name or None)
+    return web.json_response(out, status=status)
+
+
+async def quest_view_start(app: web.Application, headset: str | None = None) -> tuple[int, dict]:
+    """Open the Quest's view here (the strip's button, and the MCP tool, quick job 80)."""
     try:
-        headset = await asyncio.to_thread(request.app[QUEST_VIEW].start, name or None)
+        headset = await asyncio.to_thread(app[QUEST_VIEW].start, headset)
     except QuestViewError as e:
-        return web.json_response({"ok": False, "message": str(e)}, status=400)
+        return 400, {"ok": False, "message": str(e)}
     except OSError as e:
-        return web.json_response({"ok": False, "message": f"scrcpy didn't start: {e}"}, status=500)
-    return web.json_response({"ok": True, "headset": headset})
+        return 500, {"ok": False, "message": f"scrcpy didn't start: {e}"}
+    return 200, {"ok": True, "headset": headset}
 
 
 async def api_quest_view_stop(request: web.Request) -> web.Response:
     if not is_local(request):
         raise web.HTTPForbidden(text="The Quest's view is closed on the brain's computer.")
-    stopped = await asyncio.to_thread(request.app[QUEST_VIEW].stop)
-    return web.json_response({"ok": True, "stopped": stopped})
+    return web.json_response(await quest_view_stop(request.app))
+
+
+async def quest_view_stop(app: web.Application) -> dict:
+    stopped = await asyncio.to_thread(app[QUEST_VIEW].stop)
+    return {"ok": True, "stopped": stopped}
 
 
 async def _tell_off(app: web.Application, msg: dict) -> None:
@@ -1189,17 +1240,23 @@ async def api_hub_device_settings_get(request: web.Request) -> web.Response:
 async def api_hub_device_settings_post(request: web.Request) -> web.Response:
     """Change a device's own settings; every window of that device gets them at once. Any page
     may (they were per browser before, so any screen could change its own)."""
-    devices = request.app[HUB_DEVICES]
     name = request.match_info["name"]
     b = await _body(request)
+    status, out = await device_settings(request.app, name, b)
+    return web.json_response(out, status=status)
+
+
+async def device_settings(app: web.Application, name: str, changes: dict) -> tuple[int, dict]:
+    """Change a device's own settings ("This device", and the MCP tool, quick job 80)."""
+    devices = app[HUB_DEVICES]
     try:
-        values = await asyncio.to_thread(devices.settings.update, name, b)
+        values = await asyncio.to_thread(devices.settings.update, name, changes)
     except DeviceError as e:
-        return _refused(e)
+        return 400, {"ok": False, "message": str(e)}
     except OSError as e:
-        return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
+        return 500, {"ok": False, "message": f"Couldn't save: {e}"}
     await devices.push_settings(name, values)
-    return web.json_response({"ok": True, "settings": values})
+    return 200, {"ok": True, "settings": values}
 
 
 async def api_spend(request: web.Request) -> web.Response:
@@ -1354,12 +1411,16 @@ def create_brain_app(
     )
     calls = CallLog.for_this_run() if mcp_port else CallLog()
     app[TOOLS] = RobotTools(loop, venue, app[CONTROL], calls=calls)
+    app[TOOLS_LEFT] = RobotTools(loop.left, venue, app[CONTROL], calls=calls) if loop.left else None
     # one MCP server: offered to AI tools over HTTP (with mcp_port), and its read tools to the
-    # hub's own chat (always, in-process)
+    # hub's own chat (always, in-process; every tool with Full Access, quick job 80)
     project = ProjectTools(repo, venue)
     app[TOOLS_PROJECT] = project
-    server = create_mcp_server(app[TOOLS], project)
+    server = create_mcp_server(
+        app[TOOLS], project, other_arms=lambda: [t for t in (app[TOOLS_LEFT],) if t]
+    )
     add_lab_status(server, lambda: lab_status(app), app[TOOLS].calls)
+    add_system_tools(server, app)
     app[MCP] = McpHttp(server, mcp_port) if mcp_port else None
     own_place = place is None  # the active place's files: the budget is re-read as it changes
     place = place or config.load_place()
@@ -1374,7 +1435,7 @@ def create_brain_app(
         ),
         place_name=place.name,
         persona=persona,
-        tools=ChatTools(server),
+        tools=ChatTools(server, full_access=config.assistant_full_access),
         store=_chat_store(place),
     )
     visitors = VisitorDesk(
@@ -1384,6 +1445,8 @@ def create_brain_app(
         facts=lambda v: _facts(app, v),
         wave=lambda: _wave(app),
     )
+    if chat.tools is None:  # a conversation made elsewhere (tests): the brain's tools too
+        chat.tools = ChatTools(server, full_access=config.assistant_full_access)
     # the arm's: preview 4; the room's layout: quick job 71
     chat.actions = Actions(visitors, ArmDesk(app[TOOLS]), RoomDesk(lambda: app[HUB_DEVICES]))
     voice = VoiceDesk(

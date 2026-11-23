@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-22 — Full Access: pictures can't go in a tool's answer, and in-process MCP calls raise (quick job 80)
+**What:** (1) OpenAI-style chat takes only text in a `tool` message, so a camera picture can't be the tool's answer. (2) The MCP library's in-process `call_tool` raises `ToolError` for a refusal; over HTTP the same refusal comes back as a result with `is_error`. Its picture field is `mime_type` (not `mimeType`, as in the protocol's JSON). (3) A conversation made outside `create_brain_app` (the tests) had no MCP tools at all, so the hub's chat in those tests never saw the read tools.
+**Fix:** after a round of tool calls, the pictures follow as one `user` message with `image_url` parts (`lab_os.ai.tools.ChatTools.take_images`). `create_brain_app` gives a conversation without tools the brain's tools.
+
 ### 2026-11-22 — LeRobot's teleop with Rerun: four surprises (quick job 91)
 **What:** (1) Rerun is not in `lerobot[feetech]`: it is LeRobot's `viz` extra, so `--display_data=true` failed without it. (2) Rerun 0.33 collects anonymous usage data by default (its viewer prints "Welcome to Rerun"). Its only switches are `rerun analytics disable` (the user's own setting) or a `CI` variable. (3) LeRobot's robots and teleoperators take `calibration_dir`, so LeRobot can read the training files from a copy and never touch its cache. (4) Rerun's own web viewer page links Google's fonts; offline it uses its own font.
 **Fix:** the `so101` extra is `lerobot[feetech,viz]`; `CI=1` for the two programs only (a `# HACK:`, current-focus.md); `--robot.calibration_dir` and `--teleop.calibration_dir` point at a temporary copy under the ids `sheep` and `shepherd`. Rerun's page is its own, in a frame, so lab-os's pages still load nothing from the internet.

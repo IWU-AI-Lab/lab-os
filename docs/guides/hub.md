@@ -152,6 +152,16 @@ For the cube:
 - The colour, the cube's height and the hand-over pose are in `config/handover.yaml`. The `handover` pose is in `config/poses.yaml`; it was computed on the arm's 3D model.
 - Questions from other screens never get these tools.
 
+## Full Access (quick job 80)
+**It is off by default.** To turn it on, set ⚙ → Assistant → **Full Access** (`assistant_full_access: true` in `place.yaml`). It applies from the next question, with no restart. It replaces nothing: The Assistant May Move the Arm stays as it is.
+
+When it is on, the hub's assistant gets every tool of the brain, as Claude Code has them:
+- the move tools (`move_to`, `pick_at`, `move_joints`, `gripper`, `go_to_pose`, `stop`), for every connected arm, the green set included;
+- the picture tools (`camera_snapshot`, `pose_view`, `table_point`): the picture goes to the AI as an image;
+- the hub's buttons as tools (`docs/guides/ai-control.md` → "The hub's buttons as tools"): Open on…, settings, visitor mode, the Quest's view, saying a sentence aloud, teleop's speed and mode, restart and shut down.
+
+It works for a question from any screen. It can take up to 24 tool calls for one question (4 without Full Access). Nothing new for safety, and nothing taken away: every move goes through the same layer as Claude Code's (STOP, the soft limits, the floor, one controller at a time), and the green arms' rules stay. Keep a hand at STOP while it is on. Safety for it comes later (the builder, 2026-11-21).
+
 ## Every page (quick job 67)
 Each page opens from the hub in two taps: **All Pages** (the button next to ⚙ in the strip; the link icon on the designed hub) → **Open** (a window of its own). Before quick job 82, All Pages was a group in ⚙. Teleop, Monitor, AI Control and Training are also buttons around the core (⚙ → The Lab → Buttons Around the Core). The list is `PAGES` in `src/lab_os/hub/server.py`: a test fails when a new page is not in it.
 

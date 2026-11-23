@@ -6,11 +6,13 @@ Listens on this computer only (127.0.0.1), on its own port next to the hub (defa
 connect: docs/guides/ai-control.md. Permission tiers (docs/plan/log.md): arm_status,
 list_poses, pose_view, camera_snapshot and the project tools (project_status, list_docs, read_doc,
 search_docs, git_status, git_log, list_devices) are read; stop is always allowed; move_joints,
-gripper, move_to and go_to_pose are move (never allow-list them: each one should ask).
+gripper, move_to and go_to_pose are move (never allow-list them: each one should ask). The hub's
+buttons as tools (quick job 80) are added by lab_os.hub.system_tools.
 """
 
 import contextlib
 import logging
+from collections.abc import Callable
 
 import uvicorn
 from mcp.server.mcpserver import Image, MCPServer
@@ -57,6 +59,12 @@ trying again. (Tips adapted from robot_MCP: docs/dev/existing-work-teleop-ai.md.
 Tic-tac-toe on the paper grid: camera_snapshot of the stand camera with board true shows the board
 and gives everything else you need (docs/guides/tic-tac-toe.md).
 
+Two arms at once: arm_status lists "other_arms"; give a tool's `arm` to drive another one (the
+first arm is the default). The hub's buttons are tools too: hub_screens and open_on_device ("Open
+on…"), bring_back, set_up_the_room, list_settings and change_setting, change_device_setting,
+visitor_mode, quest_view, say_aloud, teleop_speed and teleop_mode, wave_arm, the Training page's
+training_lelab and training_lerobot_teleop, restart_lab_os and shut_down_lab_os (only when asked).
+
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
 of guessing about the project.
@@ -67,17 +75,38 @@ MOVE = ToolAnnotations(read_only_hint=False, destructive_hint=True, open_world_h
 STOP = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True)
 
 
-def create_mcp_server(tools: RobotTools, project: ProjectTools | None = None) -> MCPServer:
+def create_mcp_server(
+    tools: RobotTools,
+    project: ProjectTools | None = None,
+    other_arms: Callable[[], list[RobotTools]] = list,
+) -> MCPServer:
+    """`tools`: the first arm's (the default); `other_arms`: the tools of every other connected
+    arm (two arms at once), reached by naming the arm (quick job 80)."""
     server = MCPServer(name="lab-os", instructions=INSTRUCTIONS)
     if project:
         add_project_tools(server, project, tools.calls)
 
+    def pick(arm: str | None) -> RobotTools:
+        for t in other_arms():
+            if arm and t.arm.name == arm:
+                return t
+        return tools
+
     async def run(tool: str, **args) -> dict:
         args = {k: v for k, v in args.items() if v is not None}
         try:
-            return await tools.call(tool, **args)
+            result = await pick(args.get("arm")).call(tool, **args)
         except Refused as e:
-            raise ToolError(f"Refused: {e}") from e
+            others = [t.arm.name for t in other_arms()]
+            more = f" (other arms: {', '.join(others)})" if others else ""
+            raise ToolError(f"Refused: {e}{more}") from e
+        if tool == "arm_status":
+            result["other_arms"] = [
+                t.arm.name for t in other_arms() if t is not pick(args.get("arm"))
+            ]
+            if pick(args.get("arm")) is not tools:
+                result["other_arms"].append(tools.arm.name)
+        return result
 
     @server.tool(annotations=READ)
     async def arm_status(arm: str | None = None) -> dict:
