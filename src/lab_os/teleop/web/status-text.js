@@ -52,6 +52,10 @@ function oneArmText(feed, noController, source) {
   const [state, level] = noController ? [hands ? "No right hand" : "No controller", "warning"]
     : !s ? ["Connecting…", "offline"]
     : s.arm?.connected === false ? ["Arm disconnected", "offline"]
+    // one page drives at a time (quick jobs 76, 97): this one can't now, so it says who can
+    : s.may_drive === false ? ["View only", "warning"]
+    : s.control === "ai" ? ["The AI tools have control", "warning"]
+    : s.control === "other" ? [s.driver ? `${s.driver} has control` : "Another page has control", "warning"]
     : feed.frozen ? ["Stopped", "held"] // what happened; what to do is the hint (quick job 66)
     : s.clutch && s.one_to_one && s.servos?.hot ? ["1:1 slowed: servos warm", "warning"]
     : s.clutch ? [s.one_to_one ? "Following 1:1" : "Following", "following"]
@@ -70,12 +74,14 @@ function oneArmText(feed, noController, source) {
   // stopped, and it waits for the grip (or the pinch) to be let go: say what to do (quick job 66; it
   // said "frozen: release grip", which didn't say either)
   const release = !noController && !!s && s.arm?.connected !== false && feed.frozen && !!s.needs_release;
-  const hint = release ? [hands ? "Let go of the pinch" : "Let go of the grip", hands ? "then pinch again" : "then grab again"]
+  const taken = !noController && !!s && s.arm?.connected !== false && (s.may_drive === false || s.control === "ai" || s.control === "other");
+  const hint = taken ? s.may_drive === false ? ["Driven from the brain's computer", "drive_from in place.yaml allows it"] : ["It must stop first"]
+    : release ? [hands ? "Let go of the pinch" : "Let go of the grip", hands ? "then pinch again" : "then grab again"]
     : oneToOne && !noController
     ? hands ? ["1:1: right wrist in the ball", "left pinch = move"] : ["1:1: hand in the ball", "hold grip = move", "A/X = stop"]
     : hands ? ["Hold left pinch = move", "right pinch = gripper"]
       : noController ? ["Pick up the controllers", "leave: palm up + pinch"]
         : ["Hold grip = move", "trigger = gripper", "A/X = stop"];
-  return { state, level, gripper, speed, hint, release };
+  return { state, level, gripper, speed, hint, release: release && !taken };
 }
 

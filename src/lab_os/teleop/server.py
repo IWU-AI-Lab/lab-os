@@ -64,6 +64,9 @@ OFF_TOLD = web.AppKey("off_told", dict)
 OFF_TELL_S = 0.2  # time for the broadcaster to send brain_off before the sockets close
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
 NAMES = web.AppKey("names", dict)  # page → its device name, from `hello` (quick job 76)
+# a page on another computer that may only watch → its address, for the line that says how to let
+# it drive (quick job 95)
+WATCHERS = web.AppKey("watchers", dict)
 DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
 LOOPBACK = ("127.0.0.1", "::1")
 
@@ -173,6 +176,7 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
             {"type": "error", "message": "view only: the arm is driven from the brain's computer"}
         )
         log.info("input page from %s connected view-only", request.remote)
+        app[WATCHERS][ws] = request.remote or ""
     if is_input and not app[ACCEPT_INPUT]:
         await ws.send_json({"type": "error", "message": "replay running; live input disabled"})
         await ws.close()
@@ -203,6 +207,7 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     finally:
         app[CLIENTS].discard(ws)
         app[NAMES].pop(ws, None)
+        app[WATCHERS].pop(ws, None)
         if is_input:
             app[INPUTS].discard(ws)
             _release_control(app, ws)  # dead-man: the driver's connection is gone → freeze
@@ -269,6 +274,8 @@ async def _broadcaster(app: web.Application) -> None:
                 # quick job 76: who drives (its device name), and may this page drive at all
                 who = app[NAMES].get(driver, "") if control == "other" else ""
                 mine = {"control": control, "driver": who, "may_drive": ws in app[INPUTS]}
+                if ws in app[WATCHERS]:  # view-only as another computer: its address
+                    mine["address"] = app[WATCHERS][ws]
                 await ws.send_str(json.dumps(msg | mine))
             else:
                 await ws.send_str(text)
@@ -307,6 +314,7 @@ def create_app(
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
     app[NAMES] = {}
+    app[WATCHERS] = {}
     app[SHUTDOWN] = asyncio.Event()
     app[OFF_TOLD] = {"told": False}
     app[LOCAL_CONTROL_ONLY] = local_control_only

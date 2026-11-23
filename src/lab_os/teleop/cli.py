@@ -16,7 +16,7 @@ from aiohttp import web
 from lab_os import REPO_ROOT, config, term
 from lab_os.devices import PortNotAllowed, load_registry, plugged_in_arms, table_z_cm
 from lab_os.kinematics import kinematics_for
-from lab_os.robots.base import Arm
+from lab_os.robots.base import Arm, MotorsNotAnswering
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
 from lab_os.teleop.mapping import MODES, ClutchMapper, MappingConfig
@@ -155,6 +155,8 @@ def _open_arm(option: str, name: str, venue) -> Arm:
         arm.connect()
     except (PortNotAllowed, LookupError) as e:  # in use by LeLab, unplugged, no calibration file
         raise SystemExit(f"{option} {name}: not opened. {e}") from None
+    except MotorsNotAnswering as e:  # USB there, motor power off (lab check N.17)
+        raise SystemExit(f"{name}: {e}") from None
     return arm
 
 

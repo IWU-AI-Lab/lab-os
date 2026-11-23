@@ -93,25 +93,35 @@ async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client)
 
 
 async def test_the_vr_modules(aiohttp_client):
-    """Monitor and AI Control are watch-only holograms with STOP; Training (LeLab on the desktop)
-    has no VR version (decision 2026-11-12). Teleop leaves VR for the teleop page: relative or 1:1
-    and the rest, then its own Enter VR or AR; Back returns to the hub (the builder, 2026-11-21)."""
+    """Teleop runs the teleop page's own XR session code inside the hub's session (one copy of the
+    controller handling): it opens as a module, like Monitor and AI Control (quick job 97; from
+    2026-11-21 to 11-23 it left VR for the teleop page). Monitor and AI Control are watch-only
+    holograms with STOP; Training (LeLab on the desktop) has no VR version, so no button
+    (decision 2026-11-12, the builder)."""
     client = await aiohttp_client(make_app())
+    teleop = await (await client.get("/static/xr.js")).text()
+    assert "export class TeleopSession" in teleop and "export function armStyle" in teleop
     mods = await (await client.get("/hub/xr/modules.js")).text()
-    assert "TeleopModule" not in mods.split("//   - Teleop has no module", 1)[1]
+    module = mods.split("export class TeleopModule", 1)[1].split("\n}\n", 1)[0]
+    assert 'import("/static/xr.js")' in module and 'getLink("input")' in module
+    assert "new TeleopSession(link" in module and "style: armStyle()" in module
+    assert 'type: "hello"' in module and "deviceName()" in module  # who has control, by name
+    assert "this.tele?.end()" in module  # closing it: session_end, the arm freezes
     vr_list = mods.split("export const VR_MODULES = {", 1)[1].split("};", 1)[0]
     assert "teleop" in vr_list and "monitor" in vr_list and "ai:" in vr_list
     assert "training" not in vr_list
     hub = await (await client.get("/hub/xr/hub.js")).text()
-    assert 'if (id === "teleop") { this.sfx.blip(); this.onTeleop?.(); return; }' in hub
+    assert "new TeleopModule({ ar: this.ar, refType: this.refType })" in hub
+    assert "onTeleop" not in hub
     assert 'getLink("monitor")' in mods and '{ type: "stop" }' in hub
     page = await (await client.get("/xr")).text()
     assert '"three/examples/jsm/"' in page  # the arm's URDF loader needs it
-    assert 'id="teleop"' in page and 'id="teleop-back"' in page
+    assert 'id="teleop"' not in page  # the teleop page no longer opens over the VR hub
     main = await (await client.get("/hub/xr-hub.js")).text()
-    opener = main.split("function openTeleop(show, mode) {", 1)[1].split("\n}\n", 1)[0]
-    assert "getSession()?.end()" in opener and 'frame.allow = "xr-spatial-tracking' in opener
-    assert "start(mode, { atHub: true })" in opener
+    assert "openTeleop" not in main
+    assert "show.hub.module.view.frame(performance.now(), frame, ref)" in main
+    assert 'show.hub.module?.id === "teleop" && key === "left") return' in main  # the clutch
+    assert "show.hub.closeModule(clockNow())" in main  # leaving VR: the arm freezes
 
 
 async def test_asking_in_vr(aiohttp_client):

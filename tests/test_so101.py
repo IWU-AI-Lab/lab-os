@@ -387,3 +387,47 @@ def test_unplugged_then_back_reconnects_from_where_the_motors_are(monkeypatch, t
     assert register == "Goal_Position" and values["shoulder_pan"] == 30.0 and not torque
     assert second.bus.torque
     assert arm.commanded_joints()["shoulder_pan"] == 30.0  # not the old goal of 10
+
+
+class Port:
+    """LeRobot's port handler: the bus opens it before the motor check."""
+
+    def __init__(self):
+        self.open = True
+
+    def closePort(self):  # noqa: N802 (LeRobot's name)
+        self.open = False
+
+
+def test_motors_that_do_not_answer_give_a_sentence_and_free_the_port(no_port_check, caplog):
+    """Quick job 94 (lab check N.17): the USB board is there, the motors' power is off. LeRobot's
+    motor check raises RuntimeError after it opened the port; the driver closes it and says one
+    sentence. LeRobot's own words go to the brain's log."""
+    robot = FakeRobot(START)
+    robot.bus.port_handler = Port()
+
+    def no_motors():
+        raise RuntimeError("FeetechMotorsBus motor check failed. Missing motor IDs: 1-6")
+
+    robot.bus.connect = no_motors
+    arm = arm_with(robot, allow_motion=True)
+    with pytest.raises(so101.MotorsNotAnswering, match="Is the arm's power on"):
+        arm.connect()
+    assert not robot.bus.port_handler.open
+    assert "Missing motor IDs" in caplog.text
+
+
+def test_a_motor_that_does_not_answer_a_write_gives_the_same_sentence(no_port_check):
+    """The second try in N.17: motor 2 didn't answer the torque write (a ConnectionError)."""
+    robot = FakeRobot(START)
+
+    def no_status():
+        raise ConnectionError(
+            "Failed to write 'Torque_Enable' on id_=2: There is no status packet!"
+        )
+
+    robot.configure = no_status
+    arm = arm_with(robot, allow_motion=True)
+    with pytest.raises(so101.MotorsNotAnswering):
+        arm.connect()
+    assert not robot.bus.connected

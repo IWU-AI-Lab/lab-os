@@ -54,14 +54,23 @@ def _banner(port: int, host: str, mcp_port: int) -> str:
     return "\n".join(lines)
 
 
-def _addresses(names: list[str]) -> frozenset[str]:
-    """--drive-from names → IP addresses (looked up once, at start)."""
+def _addresses(names: list[str], place_names: tuple[str, ...] = ()) -> frozenset[str]:
+    """--drive-from names and place.yaml's `drive_from` → IP addresses (looked up once, at
+    start). A wrong --drive-from stops the brain; a place.yaml name that isn't found (that device
+    is off now) is only said, so the brain still starts (quick job 95)."""
     out = set()
     for name in names:
         try:
             out.add(socket.gethostbyname(name))
         except OSError:
             raise SystemExit(f"--drive-from {name}: no computer by that name here") from None
+    for name in place_names:
+        try:
+            out.add(socket.gethostbyname(name))
+        except OSError:
+            print(
+                f"place.yaml drive_from: {name} is not found now. It cannot drive until a restart."
+            )
     return frozenset(out)
 
 
@@ -273,7 +282,7 @@ def main(argv: list[str] | None = None) -> None:
     term.setup_logging()
     use_config(args)
     brainlog.log_to_file()  # the terminal's log in a file too, for `lab-os logs` (quick job 85)
-    drive_from = _addresses(args.drive_from)
+    drive_from = _addresses(args.drive_from, config.load_place().drive_from)
     # no --arm: the arms plugged in (quick job 61). Stops with a message if the venue or a named
     # arm doesn't fit this place.
     loop = make_loop(args)

@@ -18,6 +18,7 @@ goal, not even the calibration). Turn motion on only after the builder's OK (SAF
   there; `drop()` lets go of a port that's gone without writing; `connect()` again reconnects.
 """
 
+import contextlib
 import json
 import logging
 import math
@@ -29,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from lab_os.devices import Device, PortNotAllowed, default_device
-from lab_os.robots.base import JointLimit
+from lab_os.robots.base import JointLimit, MotorsNotAnswering
 from lab_os.robots.fake import SO101_JOINTS, so101_limits
 from lab_os.robots.so101_setup import CALIBRATION_DIR, guarded_port
 
@@ -157,7 +158,13 @@ class SO101Arm:
                 f"{self.name} has no calibration in {folder}: run "
                 "uv run --extra so101 python -m lab_os.robots.so101_setup calibrate"
             )
-        robot.bus.connect()  # checks all six motors answer
+        try:
+            robot.bus.connect()  # checks all six motors answer
+        except (RuntimeError, ConnectionError) as e:
+            # LeRobot opened the port before the motor check and doesn't close it on a failure
+            with contextlib.suppress(Exception):
+                robot.bus.port_handler.closePort()
+            raise self._not_answering(e) from e
         try:
             if not robot.bus.is_calibrated:
                 if borrowed:
@@ -183,10 +190,17 @@ class SO101Arm:
                 robot.configure()
                 self._commanded = dict(now)
                 self._last_write_t = time.monotonic()
-        except Exception:
-            robot.bus.disconnect(disable_torque=False)
+        except Exception as e:
+            with contextlib.suppress(Exception):  # the port goes; the first error is the one said
+                robot.bus.disconnect(disable_torque=False)
             self._robot = None
+            if isinstance(e, ConnectionError):  # a read or write with no answer (motor 2, N.17)
+                raise self._not_answering(e) from e
             raise
+
+    def _not_answering(self, e: Exception) -> MotorsNotAnswering:
+        log.warning("%s: %s", self.name, e)  # LeRobot's own words, for the brain's log
+        return MotorsNotAnswering(MotorsNotAnswering.SENTENCE)
 
     def read_measured(self) -> dict[str, float]:
         """Positions straight from the motors (degrees, shared names)."""

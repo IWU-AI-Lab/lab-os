@@ -6,7 +6,10 @@
 
 /** Why this page can't take control now, or null when it can (control free, or its own). */
 export function whoHasControl(s) {
-  if (s.may_drive === false) return "View only: the arm is driven from the brain's computer.";
+  if (s.may_drive === false) {
+    const how = s.address ? ` To let this device drive, add ${s.address} to drive_from in place.yaml. Then restart lab-os.` : "";
+    return "View only: the arm is driven from the brain's computer." + how;
+  }
   if (s.control === "ai") return "The AI tools have control until their move ends.";
   if (s.control === "other") {
     return s.driver ? `The page on ${s.driver} has control. It must stop first.` : "Another page has control. It must stop first.";
