@@ -433,13 +433,12 @@ async def test_a_screen_that_never_says_it_played_doesnt_block_the_wake_word(
         await ws.close()
 
 
-def test_the_designed_hub_speaks_a_second_greeting_at_once():
-    """Quick job 42 (lab check 9.2): back from the start screen, the startup has been seen, so the
-    greeting plays when it arrives instead of after the jump (checked in headless Chrome: 0.15 s
-    after the press instead of 6.5 s)."""
+def test_every_greeting_waits_for_the_jump():
+    """Quick job 84 (replaces quick job 42's "at once"): back from the start screen, the greeting
+    is held and plays while it's typed after the jump, as after the first start."""
     page = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/design.html").read_text()
-    assert "if (VS.greeting && S.startedBefore) V.playHeld();" in page
-    assert "S.startedBefore = true;" in page.split("function toStart(why) {", 1)[1][:200]
+    assert "startedBefore" not in page
+    assert "if (VS.greeting) { V.playHeld();" in page
 
 
 def test_the_nearest_microphone_wins_a_tie():
