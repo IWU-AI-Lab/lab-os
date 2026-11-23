@@ -1,4 +1,5 @@
-"""The wake word (focus step 7): "hey jarvis" heard on the brain's own CPU, nothing sent anywhere.
+"""The wake word (focus step 7): the persona's phrase ("hey Jarvis", "OK computer", …) heard on
+the brain's own CPU, nothing sent anywhere.
 
 openWakeWord's models (models/openwakeword/, Apache 2.0 code, CC BY-NC-SA 4.0 models) run here
 with onnxruntime, the way openWakeWord 0.6 runs them in streaming mode, without its package (on

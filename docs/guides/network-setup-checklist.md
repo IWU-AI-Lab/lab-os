@@ -1,6 +1,6 @@
 # Network setup checklist: get every device onto the network
 
-> **The plan changed (2026-10-23).** The lab will not register every device with campus IT. It will use **its own travel router**, connected to the lab's wall Ethernet port, with the professor's OK (`docs/plan/lab-jarvis-log.md` → "Network plan"). With the router, devices join the router's Wi-Fi with a password. So **Steps 1, 3 and 5 apply only if you register devices one at a time.** **Steps 0, 2 (find the Wi-Fi hardware), 4 and 6 still apply.** Teleop needs none of this (it uses USB).
+> **The plan changed (2026-10-23).** The lab will not register every device with campus IT. It will use **its own travel router**, connected to the lab's wall Ethernet port, with the professor's OK (`docs/plan/log.md` → "Network plan"). With the router, devices join the router's Wi-Fi with a password. So **Steps 1, 3 and 5 apply only if you register devices one at a time.** **Steps 0, 2 (find the Wi-Fi hardware), 4 and 6 still apply.** Teleop needs none of this (it uses USB).
 
 The goal: every robot and device joins the network, has its own name, and the Linux "brain" desktop can reach it with `ssh <name>`. Then Claude Code can do the rest.
 

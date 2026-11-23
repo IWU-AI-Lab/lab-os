@@ -1,4 +1,4 @@
-"""Visitor mode (quick job 35): "Hey Jarvis, it's demo time" on the brain's own screen.
+"""Visitor mode (quick job 35): "It's demo time" on the brain's own screen.
 
 The hub's assistant gets three tools, and the AI decides when to use them (no fixed phrases):
 - `start_visitor_mode`: when told visitors are here, a demo or tour is starting, guests arrived…

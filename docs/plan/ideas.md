@@ -1,12 +1,12 @@
 # Ideas backlog
 
-**The single source of truth for ideas.** New ideas land here, **not in code** and not in other docs, unless they're part of the current focus (`docs/plan/current-focus.md`). This keeps the project finishable and nothing gets lost. When an idea becomes the focus, move it into `docs/plan/current-focus.md` and delete it here. When an idea is decided (but not yet scheduled), record the decision in `docs/plan/lab-jarvis-log.md` and keep or delete the entry here.
+**The single source of truth for ideas.** New ideas land here, **not in code** and not in other docs, unless they're part of the current focus (`docs/plan/current-focus.md`). This keeps the project finishable and nothing gets lost. When an idea becomes the focus, move it into `docs/plan/current-focus.md` and delete it here. When an idea is decided (but not yet scheduled), record the decision in `docs/plan/log.md` and keep or delete the entry here.
 
-**The long-term direction** (a real JARVIS, the lab unplugging it cleanly after May 2027) is in `docs/plan/vision.md`; concrete pieces of it come here as ideas.
+**The long-term direction** (an assistant like the films' JARVIS, the lab unplugging it cleanly after May 2027) is in `docs/plan/vision.md`; concrete pieces of it come here as ideas.
 
-Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `docs/plan/lab-jarvis-log.md` → "Architecture sketch"). "—" = not recorded yet.
+Each idea: what it is · why · where it plugs in (slot/module, if known; slots are in `docs/plan/log.md` → "Architecture sketch"). "—" = not recorded yet.
 
-**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`docs/plan/lab-jarvis-log.md` → "Mobility, portability & remote access").
+**Not here because they're already decided plans:** the teleop second act (Gemini Robotics-ER "look, then reach" → SmolVLA → bigger VLAs via rented GPU; options table in `docs/archive/focus-2026-10-teleop-demo.md`) and teleop as data collection for the training project. Also offline lite mode, the portable demo kit, and the staged remote-access plan (`docs/plan/log.md` → "Mobility, portability & remote access").
 
 ---
 
@@ -158,7 +158,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm
-- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Jarvis, hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4). **Built 2026-11-20:** a named pose, the cube's hand-over and "let go", off unless ⚙ → Robots → The Assistant May Move the Arm, never on a public venue, the brain's own computer only (`docs/guides/hub.md`). Still an idea: other moves ("pick up the cube" and put it somewhere).
+- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4). **Built 2026-11-20:** a named pose, the cube's hand-over and "let go", off unless ⚙ → Robots → The Assistant May Move the Arm, never on a public venue, the brain's own computer only (`docs/guides/hub.md`). Still an idea: other moves ("pick up the cube" and put it somewhere).
 - **What:** someone asks the hub's assistant (typed or by voice) to move the arm ("wave", "pick up the cube"), not only a developer's AI tool (the builder, 2026-11-13).
 - **Watch out:** today the hub's chat stays in the read tier because anyone in the room can talk to it (current focus, "A public screen"). Needs: which venues allow it (never `public: true`), one controller at a time, STOP on every screen, and probably a person nearby.
 - **Plugs into:** the move tools (same safety layer), voice, the persona.
@@ -305,7 +305,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** Quest client + devices (status) + cameras/vision (methods 2–3).
 
 ### Brain as an MCP server
-- **Decided 2026-11-09** (`docs/plan/lab-jarvis-log.md` → "AI-assisted development"; focus steps 2, 6): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
+- **Decided 2026-11-09** (`docs/plan/log.md` → "AI-assisted development"; focus steps 2, 6): the brain offers MCP tools (one definition, used by the hub chat and by any developer's Claude Code / Codex / LM Studio); a small fast chat of our own for quick questions; a **"send to harness" toggle** on the chat line + a "send everything" setting; permission tiers read / act / move / admin.
 - **What's left here:** the act and move tiers; per-developer access tokens; reaching the MCP server from laptops (needs the router + remote access); LM Studio as a local harness.
 
 ### LLMs/VLMs driving the green SO-101s
@@ -316,7 +316,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 ## Recent ideas (2026-10-30)
 
 ### Assistant pictures beyond the plain circle
-- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`docs/plan/lab-jarvis-log.md` → "How it fits together"):
+- **What:** more picture styles per persona, plugged in as decorative renderers of the assistant's state (`docs/plan/log.md` → "How it fits together"):
   - **Orbs inspired by other assistants** (e.g. the feel of ChatGPT's voice-mode orb for a GPT persona, a Claude-feel one for a Claude persona). Our own designs, **no logos or brand assets**. A persona's look should match the model really behind it.
   - **A 3D character in VRM format** (open format; the `three-vrm` library runs on the three.js we already vendor): blinking, breathing, mouth moving with the voice.
 - **Not Live2D** (the Neuro-sama look): its runtime isn't open source (license to check before vendoring), it needs a paid/licensed character model, and nobody here knows it. VRM gives a similar result with open tools.
@@ -388,7 +388,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** outputs/clients (display) + cameras/vision (first-person camera, like "Quest vision Q&A").
 - **Honest caveats:** 2013 hardware, long discontinued, runs a very old Android (4.4). Apps are built with old tools, and the battery is likely worn. Camera privacy is still deferred (log). Much later.
 - **Status (2026-10-27):** it boots; built-in voice commands (e.g. take a picture) work. No use picked yet ("I just want to use it for something").
-- **Candidate uses (pick one later):** (1) teleop status HUD (FOLLOWING / FROZEN / gripper %) while driving the arm with a phone or leader arm; (2) "what am I looking at?": a photo from the Glass → JARVIS answers on its display; (3) alerts from the troubleshooting suite.
+- **Candidate uses (pick one later):** (1) teleop status HUD (FOLLOWING / FROZEN / gripper %) while driving the arm with a phone or leader arm; (2) "what am I looking at?": a photo from the Glass → the assistant answers on its display; (3) alerts from the troubleshooting suite.
 - **Next check (cheap, when curious):** which firmware is it on, and can a computer install apps on it over USB?
 
 ### The phone as a microphone for the hub (2026-11-11)
@@ -414,7 +414,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Why:** fun to show off. Usually kept **off** (loud noises could set it off), switched on occasionally.
 - **Plugs into:** Triggers slot (one trigger plug-in, off by default, switchable per venue profile).
 
-### "Jarvis, log out" (and similar phrases) to deactivate
+### "Log out" (and similar phrases) to deactivate
 - **What:** spoken phrases that put the system to sleep or log out.
 - **Why:** a natural way to end a session, matching the wake word for starting one.
 - **Plugs into:** Triggers slot (phrase triggers, fed by the voice pipeline).
@@ -425,14 +425,14 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** Conversation manager (one component owns interrupt / queue / turn-taking).
 
 ### Coding agent ("ask for a feature, it gets built")
-- **Direction decided 2026-10-30** (`docs/plan/lab-jarvis-log.md` → "AI-assisted development"): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from docs/plan/ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
+- **Direction decided 2026-10-30** (`docs/plan/log.md` → "AI-assisted development"): an agent that works like Claude Code, paid by the lab's API account (no personal subscription); ask "add the touchscreen page from docs/plan/ideas.md" and it builds it **on its own branch** (`agent/<task>`) → tests → PR → the builder approves. Never modifies the running system. Same path for system updates. The read-only first half (project helper) is in the current focus.
 - **Candidates (2026-10-30: keys are OpenAI's; Anthropic out of credits):** OpenAI's Codex (open-source coding agent, OpenAI API key; to verify), or the Claude Agent SDK (Claude Code's engine with an API key) if Anthropic credits are refilled. Reference: https://github.com/ehteshambuildagents/jarvis (runs it headless; tools default-deny); it reuses a personal subscription login, which we won't do.
 - **Open questions:** cost per task vs. the budget (coding tasks cost far more than chat); which tools it gets (default-deny); how it reports progress in the hub.
 - **Plugs into:** agent harness slot (slow path) + the normal git / CI / tag workflow; robot motion only through our safety layer.
 
 ---
 
-## Earlier ideas (moved here 2026-10-24 from docs/plan/lab-jarvis-log.md and docs/plan/current-focus.md)
+## Earlier ideas (moved here 2026-10-24 from docs/plan/log.md and docs/plan/current-focus.md)
 
 ### Triggers & sign-in
 | Idea | Why | Plugs into |

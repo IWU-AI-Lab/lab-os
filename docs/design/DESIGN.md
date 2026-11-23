@@ -1,4 +1,4 @@
-# Lab JARVIS: design language
+# lab-os: design language
 
 **In one line:** a calm, dark control room. Thin cyan light-lines float in front of a slowly drifting network of dots. They draw themselves in, turn slowly while idle, and get bright only where something is actually happening.
 

@@ -1,4 +1,4 @@
-# The long-term vision: a real JARVIS
+# The long-term vision: an assistant like the films' JARVIS
 
 **What this is:** where lab-os is heading over years, not a list of tasks. Concrete pieces become ideas in `docs/plan/ideas.md` (one entry each) and then focus steps, one small win at a time. Written 2026-11-14 from a spec the builder drafted with ChatGPT, shortened and checked against what exists.
 
@@ -21,10 +21,10 @@ One AI brain, today's `lab-os serve`, that understands the place it's in, works 
 ## The parts, and where they stand
 1. **Personal assistant:** long-term memory of the lab, projects, people and decisions; tasks and reminders; calendar and email (with permission); research and summaries; a daily briefing. Can tell a chat from a project question from a command that changes real things. *Today:* the hub's chat with the project read tools, personas, the greeting with real facts.
 2. **The room itself:** lights, plugs, displays, speakers, sensors; modes like "demo", "shutdown", "maintenance". "Get the lab ready for a demo" switches things on and checks the robots. Built on `devices.yaml`, never a separate device system. *Today:* the device list; smart plugs are an idea.
-3. **Computers and software:** opening apps and pages, files, documents, code, installing with permission, watching performance, handing big jobs to coding agents and following their progress. *Today:* the project tools, `/perf`; the "send to harness" direction (`lab-jarvis-log.md` → "AI-assisted development").
+3. **Computers and software:** opening apps and pages, files, documents, code, installing with permission, watching performance, handing big jobs to coding agents and following their progress. *Today:* the project tools, `/perf`; the "send to harness" direction (`log.md` → "AI-assisted development").
 4. **Seeing:** reading camera pictures, labels, screens and drawings; noticing changes; helping troubleshoot from a photo ("what's wrong with this arm?"). Continuous watching only step by step, with privacy, cost and bandwidth in mind. *Today:* `camera_snapshot`, `pose_view`.
 5. **Engineering partner** (one of the most important): from requirements to calculations, parts, CAD, wiring, code, simulation and a working build, with a person approving each stage. Uses the robot list, models, calibration and MCP tools. *Today:* the robot tools; the rest is ahead.
-6. **Status and health:** devices that go offline, unusual behaviour, events over time, "JARVIS, give me a lab status report". Real safety and security stay with dedicated hardware; the AI only adds awareness. *Today:* the status strip, servo health logs, AI spend.
+6. **Status and health:** devices that go offline, unusual behaviour, events over time, "give me a lab status report". Real safety and security stay with dedicated hardware; the AI only adds awareness. *Today:* the status strip, servo health logs, AI spend.
 7. **Outside devices** (low priority): e.g. a car's diagnostics through an OBD-II adapter.
 8. **Research and many agents:** bigger jobs broken into pieces, handed to agents, checked, and written up. *Today:* MCP, Claude Code, the planning/coding session workflow.
 9. **The command center:** the hub grows into one place for all of the above: status, robots, cameras, agents, projects, events. It's reachable by voice, touch, phone, other computers and the Quest, with one source of truth. *Today:* the hub, the VR hub, voice, devices (step 8).

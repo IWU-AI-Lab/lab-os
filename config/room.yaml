@@ -1,4 +1,4 @@
-# The room's layout (quick job 71): which device shows which page. Say "Hey Jarvis, set up the
+# The room's layout (quick job 71): which device shows which page. Say the wake word and "set up the
 # room", press ⚙ → The Lab → Set Up the Room, or run `uv run lab-os room`, and each page opens on
 # its device, as with "Open on…". A device that doesn't have the hub open is skipped and named.
 #

@@ -71,8 +71,9 @@ SPEAK_MAX_CHARS = 900  # longer answers: the rest is on the screen
 # this much (a held greeting waits for the startup), so a page that never says so blocks the wake
 # word on every screen for seconds, not minutes (quick job 42; it was a flat 120 s)
 PLAYBACK_MARGIN_S = 10.0
-# The answer says the wake word itself (the greeting's hint "say hey Jarvis"): the microphones hear
-# it from the speaker, so the phrase is ignored until that piece has played, plus this much
+# The answer says the wake word itself (the greeting's hint "say hey Jarvis", or another persona's
+# word): the microphones hear it from the speaker, so the phrase is ignored until that piece
+# has played, plus this much
 SAID_PHRASE_MARGIN_S = 1.5
 # Conversation mode (quick job 68): after each answer the brain listens again by itself, as after
 # the wake word, until one of these is said, the button ends it, or voice stops working
@@ -84,7 +85,7 @@ CONVERSE_END = (
     "stop the conversation",
     "stop listening",
     "goodbye",
-    "bye jarvis",
+    "bye",  # was "bye jarvis": every persona (quick job 92)
 )
 CONVERSE_NEXT_S = 0.3  # after the answer has played: the next question's listening starts
 PLAYING_HOLD_S = 3.0  # "still playing" from the page holds this much longer

@@ -8,7 +8,7 @@ What the repo should contain. Solo project → keep everything **short and usefu
 | File / folder | What it's for |
 |---|---|
 | `README.md` | What this is (one paragraph + a photo/GIF later), how to install, how to run the demo, where the docs are. The first thing a future student reads. |
-| `AGENTS.md` | Instructions for every AI coding agent (Claude Code, Codex, …), every session: read `docs/plan/current-focus.md` and `docs/plan/lab-jarvis-log.md` first; project rules (robots stay thin, edit-in-repo-then-deploy, fake robot first, hacks labeled, safety rules, ask before robot motion/sudo/deletes/reboots); coding style; how to run tests. Keep it short and point to docs rather than copying them. |
+| `AGENTS.md` | Instructions for every AI coding agent (Claude Code, Codex, …), every session: read `docs/plan/current-focus.md` and `docs/plan/log.md` first; project rules (robots stay thin, edit-in-repo-then-deploy, fake robot first, hacks labeled, safety rules, ask before robot motion/sudo/deletes/reboots); coding style; how to run tests. Keep it short and point to docs rather than copying them. |
 | `CLAUDE.md` | Points Claude Code to `AGENTS.md` (one copy of the rules), plus the notes that apply only to Claude Code (the hook, the permissions). |
 | `docs/` | In folders by who reads them: `plan/` (the log, the current focus, ideas), `guides/` (using it), `dev/` (working on it), `archive/` (history). The list: README → "Docs". |
 | `SAFETY.md` | Stop procedures, speed/workspace limits, dead-man rule, visitor rules, remote-mode rule, drone rule. Short and printable. |

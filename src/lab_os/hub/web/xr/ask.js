@@ -138,7 +138,7 @@ export class Ask {
     this.replyAt = this.now?.() ?? performance.now();
   }
 
-  /** The brain's conversation: a turn asked on another screen (e.g. the desktop heard "hey Jarvis"). */
+  /** The brain's conversation: a turn asked on another screen (e.g. the desktop heard the wake word). */
   async pollChat(now) {
     if (this.voiced) return;
     try {

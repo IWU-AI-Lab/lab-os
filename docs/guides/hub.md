@@ -67,7 +67,7 @@ Type anywhere on the hub: the letters go to "Ask anything" under the core. Press
 
 **Asking it to show something:** ask, typed or by voice: "pull up the teleop page", "show me the AI spend", "open the settings", "go back to the hub". It opens that page **on the screen that you asked** and says so in a few words ("Here's Teleop."). It knows what each screen can show: the module buttons, Settings, the panels' pages (designed hub), the conversation. Details: `docs/dev/chat.md` → "It opens pages".
 
-**The core on an open page:** while a module or a panel's page is open, the core is small in the bottom right corner. It still works: **hold it to talk** (like the mic). What it hears and says shows next to it for a while. With the wake word on, "hey Jarvis" also works with a page open, so "hey Jarvis, go back to the hub" works without hands.
+**The core on an open page:** while a module or a panel's page is open, the core is small in the bottom right corner. It still works: **hold it to talk** (like the mic). What it hears and says shows next to it for a while. With the wake word on, the wake word also works with a page open, so the wake word and "go back to the hub" work without hands.
 
 ## The designed hub (`/design`)
 The design's look, motion and sound, on the brain's real facts:
@@ -124,8 +124,8 @@ The AI Spend panel shows "Estimated · this computer's brain only" under the tot
 
 An Admin key can read the costs of all projects in the organization. With a key, a later session can add the check (off by default) and show "from OpenAI" in place of "estimated".
 
-## Visitor mode: "hey Jarvis, it's demo time" (2026-11-18, quick job 35)
-On the brain's own screen, tell the assistant that visitors are here, typed or by voice, in any words: "hey Jarvis, it's demo time", "say hello to our visitors", "we have guests". The AI decides; there are no fixed phrases. Its tool to start visitor mode does three things:
+## Visitor mode: "it's demo time" (2026-11-18, quick job 35)
+On the brain's own screen, tell the assistant that visitors are here, typed or by voice, in any words: "it's demo time" (after the wake word), "say hello to our visitors", "we have guests". The AI decides; there are no fixed phrases. Its tool to start visitor mode does three things:
 - It switches the running brain to the place's venue for visitors (the one with `visitors: true`: `visit-day` in the lab). That venue has the lab's robots, speed and 1:1, and its limits can be switched off as in the lab (the builder, 2026-11-18: no extra restrictions for visitors). The hub hides Settings (⚙ shows only **Visitor Mode**) and the AI spend.
 - It gives the assistant facts for a short welcome. The assistant says the welcome in its own words. The facts are the place's name, what the place is (`about:` in `place.yaml`), and the robot arms that are really plugged in now: the arm that the brain drives, and any other arm whose USB port is there. If no arm is plugged in, the welcome does not mention robots. A typed welcome is also spoken.
 - It shows the venue's **"try this" cards** above the core (`try_this:` in the venue file). Tapping a card that asks something asks it, as if you said it. In the lab: "Ask me to wave" and "Open the VR hub" (in the headset's browser, the assistant opens the VR hub when asked). "What's on the table?" is in the file but off until that preview exists.
@@ -140,8 +140,8 @@ The assistant gets these tools only for a question asked on the brain's own comp
 **It is off by default.** To turn it on, set ⚙ → Robots → **The Assistant May Move the Arm** (`assistant_moves_arm: true` in `place.yaml`). It then works in every venue, visitor mode too, but never in a venue with `public: true`. It applies from the next question, with no restart.
 
 When it is on, ask the assistant on the brain's own computer, typed or by voice, in any words:
-- **"Hey Jarvis, move the arm to home."** The arm goes to a named pose: `home` (folded), `ready` (the working pose) or `handover` (held out to a person).
-- **"Jarvis, hand me the cube."** The brain takes a picture with the stand camera and finds the blue cube by its colour. The arm picks the cube up and holds it out to you at the `handover` pose, about 28 cm in front of the base and 20 cm up. This takes about half a minute.
+- **"Move the arm to home."** The arm goes to a named pose: `home` (folded), `ready` (the working pose) or `handover` (held out to a person).
+- **"Hand me the cube."** The brain takes a picture with the stand camera and finds the blue cube by its colour. The arm picks the cube up and holds it out to you at the `handover` pose, about 28 cm in front of the base and 20 cm up. This takes about half a minute.
 - **"Let go."** (or "I have it", "open"): the gripper opens.
 
 The AI decides when to use these tools; it never chooses the motion. Each move is a robot tool call, with the same checks as an AI tool's move (`docs/guides/ai-control.md` → "Limits"), at the venue's speed. AI Control (`/ai`) shows each call. STOP on any page stops the move, and the rest of the request ends. While teleop drives the arm or another move runs, the assistant says that the arm cannot move now.
@@ -230,7 +230,7 @@ A **device** is a computer or screen with the hub open under a name in its addre
 
 ### Set up the room (quick job 71)
 `room.yaml` in the place's config says which device shows which page (the recommended layout of `docs/plan/current-focus.md` → item 10). Each line is a device's name and a page: `core` (the hub itself) or any view (since 2026-11-21): a module page, `webcam`, a details page (`project`, `spend`, `commits`, `devices`), `system` (the system diagram), `chat`, `settings` or `xr` (only on a headset). The list with comments is in the file. Three ways open each page on its device, as "Open on…" does:
-- Say "Hey Jarvis, set up the room".
+- Say the wake word, then "set up the room".
 - Press ⚙ → The Lab → **Set Up the Room**.
 - Run `uv run lab-os room` while the brain runs.
 

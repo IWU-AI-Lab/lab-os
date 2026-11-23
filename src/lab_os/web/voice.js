@@ -318,7 +318,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     });
     const node = new AudioWorkletNode(ctx, "lab-os-mic");
     node.port.onmessage = (e) => {
-      // pressed, or the wake word. Also while an answer plays (quick job 83): "hey Jarvis" stops it.
+      // pressed, or the wake word. Also while an answer plays (quick job 83): the wake word stops it.
       // The browser's echo cancellation keeps most of its own voice out, and the brain ignores the
       // phrase while an answer that says it plays (the greeting's hint).
       const forWake = st.wakeOn && st.ws?.readyState === WebSocket.OPEN;

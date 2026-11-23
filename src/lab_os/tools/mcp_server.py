@@ -3,7 +3,7 @@
 
 Listens on this computer only (127.0.0.1), on its own port next to the hub (default 8081, path
 /mcp), in the brain's event loop, so the tools drive the same teleop loop as the pages. How to
-connect: docs/guides/ai-control.md. Permission tiers (docs/plan/lab-jarvis-log.md): arm_status,
+connect: docs/guides/ai-control.md. Permission tiers (docs/plan/log.md): arm_status,
 list_poses, pose_view, camera_snapshot and the project tools (project_status, list_docs, read_doc,
 search_docs, git_status, git_log, list_devices) are read; stop is always allowed; move_joints,
 gripper, move_to and go_to_pose are move (never allow-list them: each one should ask).
@@ -239,7 +239,7 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
     def list_docs() -> dict:
         """The project's docs: name, file, title. In folders by who reads them: plan/
         (current-focus: what's being worked on; quick-jobs; ideas: the backlog, incl. "On hold";
-        lab-jarvis-log: plan, decisions, devices), guides/ (hub, voice, ai-control, lab-checklist,
+        log: plan, decisions, devices), guides/ (hub, voice, ai-control, lab-checklist,
         …), dev/ (GOTCHAS: surprises and fixes; protocol, places, chat, personas, …), design/DESIGN
         (the hub's design), archive/ (history); plus README, CHANGELOG, SAFETY, AGENTS."""
         return run("list_docs")

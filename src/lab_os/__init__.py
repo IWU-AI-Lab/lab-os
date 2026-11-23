@@ -1,4 +1,4 @@
-"""lab-os: Lab JARVIS, a portable brain for the AI lab's robots."""
+"""lab-os: a portable brain for the AI lab's robots."""
 
 from pathlib import Path
 
