@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-22 — Webcam teleop: the arm can't reach down, and MediaPipe's label is right on a webcam (quick job 88)
+**What:** lab check W on the laptop. (1) MediaPipe's left and right labels were right for the webcam's plain picture, though its documents say they assume a mirrored one; the 2026-11-19 choice came from a sample photo. (2) "Can't reach down": the brain's mapping reaches the table in a test with the fake arm's numbers, so the limit is the picture. At 60 cm from a 78° camera the picture is about 48 cm high, and MediaPipe loses the hand before the wrist reaches the edge. (3) MediaPipe's default confidences (0.5) let a hand that wasn't there show for seconds.
+**Fix:** the label as it is; hand moves count 1.5 times and the page says to grab again to go further; confidences 0.7 and 5 frames in a row before a hand counts; the hand's turn is sent, so tilting the hand can also point the gripper down. Smoothing chosen with simulated noise (`OneEuro` 0.3 Hz, β 5; 0.2 Hz, β 3 for toward/away): not yet checked on a real hand.
+
 ### 2026-11-22 — The WebXR emulator gives the page a Quest's browser name (quick job 87)
 **What:** lab check L.5: with Meta's Immersive Web Emulator in the desktop's Chrome, Teleop's **Desktop control** was grey. The page already told a headset by its browser (`OculusBrowser` in `navigator.userAgent`), not by WebXR support. But the emulator also changes `navigator.userAgent` to a Quest's, so the page took the desktop for a headset. The brain's own check (`hub/server.py`, the HTTP `User-Agent`) and the VR hub's (`xr-hub.js`) use the same name.
 **Fix:** `teleop/web/headset.js`: a Quest's browser name is a headset only when `navigator.xr` is the browser's own code (the emulator puts a JavaScript copy in its place) and `userAgentData` doesn't name a desktop system. The other two checks are unchanged.
@@ -97,7 +101,7 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 **What:** (preview 2, the webcam page, tried with MediaPipe's own sample photo of two hands as Chrome's camera.)
 - MediaPipe's handedness label assumes a mirrored (selfie) picture. For a camera's plain picture it names the other hand. The labels do follow crossed arms: "the hand on the picture's left is the right hand" chose wrong on the photo, the labels chose right.
 - With the Quest's pinch scale (tips 6–7 cm apart = 0), the photo's relaxed open hands read 72–87 % pinch: enough to hold the clutch (over 60 %). A hand with its thumb along the index finger still reads about 60 % at 5 cm.
-**Fix:** the page uses the opposite label, and the position in the picture only when both hands carry the same label; a **Swap left and right hands** box for the lab. Pinch is now 5 cm apart = 0, 2 cm = 1 (`webcam-hands.js`). Lab check W.3 and W.4 say if that is right for a real hand.
+**Fix:** the page uses the opposite label, and the position in the picture only when both hands carry the same label; a **Swap left and right hands** box for the lab. Pinch is now 5 cm apart = 0, 2 cm = 1 (`webcam-hands.js`). Lab check W.3 and W.4 say if that is right for a real hand. (2026-11-22, quick job 88: on a real webcam the opposite label swapped the hands, lab check W on the laptop. The page now uses MediaPipe's label as it is.)
 
 ### 2026-11-19 — The teleop pages say "frozen: release grip" while the grip is already released
 **What:** after any freeze (also the brain's first input), `status.needs_release` stays true until the arm moves again, even with the clutch let go: it is the mapper's flag *or* the jog's (`loop.py` `status()`), and the jog's flag clears only with keyboard jogging. So with a Quest or the webcam, the Arm chip says "frozen: release grip" (the webcam page: "frozen: let go of the clutch") until the next grab, though the release already happened. Nothing moves wrongly; only the words are off.
