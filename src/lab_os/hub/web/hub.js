@@ -689,7 +689,7 @@ const voice = createVoice({
 let VW = null;
 function syncWake() {
   const w = S.status?.voice?.wake;
-  // with a module or the conversation open too (2026-11-14, the builder): "hey Jarvis, go back to the hub"
+  // with a module or the conversation open too (2026-11-14, the builder): the wake word, then "go back to the hub"
   const want =
     wayIn() === "wake_word" && voice.can().ok && !!w?.available && S.screen === "hub" &&
     document.visibilityState === "visible";

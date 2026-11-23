@@ -29,7 +29,7 @@ so101:
     wrist_flex: 55
     wrist_roll: 87.4
     gripper: 16.5
-  handover:   # "Jarvis, hand me the cube" (preview 4, 2026-11-20): the cube held out to the person,
+  handover:   # "Hand me the cube" (preview 4, 2026-11-20): the cube held out to the person,
               # gripper point ~28 cm out and ~20 cm up, pointing forward. No gripper here, so the
               # jaws keep their grip on the way. Computed on the 3D model, not yet on the real arm.
     shoulder_pan: 0

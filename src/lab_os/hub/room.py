@@ -1,5 +1,5 @@
 """The room's layout (quick job 71): which device shows which page, from the place's `room.yaml`.
-"Hey Jarvis, set up the room", ⚙ → The Lab → Set Up the Room and `lab-os room` all open each page
+"Set up the room" (by voice), ⚙ → The Lab → Set Up the Room and `lab-os room` all open each page
 on its device, the same way as "Open on…". A device that doesn't have the hub open is skipped and
 named. Change the layout by editing the file."""
 
@@ -88,7 +88,7 @@ def room_sentence(opened: list[dict], skipped: list[dict]) -> str:
 
 
 class RoomDesk:
-    """The assistant's tool for it ("Hey Jarvis, set up the room"), from any screen: it only
+    """The assistant's tool for it ("set up the room"), from any screen: it only
     changes what the screens show."""
 
     def __init__(self, devices):

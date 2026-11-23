@@ -188,6 +188,6 @@ The brain writes every call (time, tool, arguments, result `ok`, `clipped`, `sho
 Any tool that speaks MCP over "streamable HTTP" can connect to `http://127.0.0.1:8081/mcp` on this computer (Codex, Claude Desktop, and others). Its own permission settings decide if it asks before a move tool. The brain's limits and STOP apply in all cases.
 
 ## Later
-- Access from other computers with a token (`docs/plan/lab-jarvis-log.md` → "AI-assisted development").
+- Access from other computers with a token (`docs/plan/log.md` → "AI-assisted development").
 
 The code: `src/lab_os/tools/robot.py` (the tools and their limits), `tools/table_map.py` (the cm grid), `tools/mcp_server.py` (MCP), `tools/calllog.py`. The tests: `tests/test_robot_tools.py`.

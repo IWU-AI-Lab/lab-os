@@ -374,7 +374,7 @@ async function poll(show) {
     if (show.off.lost && (await getJSON("/api/status"))) location.reload();
     return;
   }
-  show.hub.ask.syncWake(show.phase === "hub"); // in a module or a page too: "hey Jarvis, back to the hub"
+  show.hub.ask.syncWake(show.phase === "hub"); // in a module or a page too: the wake word, then "back to the hub"
   if (show.phase === "hub") show.hub.ask.pollChat(clockNow());
   const [st, arm] = await Promise.all([getJSON("/api/status"), getJSON("/api/arm")]);
   if (show.off) return;

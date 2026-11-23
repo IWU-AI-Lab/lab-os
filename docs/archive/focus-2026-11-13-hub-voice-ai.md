@@ -1,8 +1,8 @@
 # Focus as of 2026-11-13: the JARVIS hub, voice, and AI driving the SO-101 arms
 
-**Archived 2026-11-13, as it was,** when `docs/plan/current-focus.md` was rewritten around what's left before the 2026-11-19 demo. The focus itself goes on there. Kept here for each step's history and details (the voice routes and prices, the Newline measuring plan). Its "How it fits together" and "After this focus" sections moved to `docs/plan/lab-jarvis-log.md`, "Secure pages" to `docs/guides/voice.md`. Paths below are as of the folder move (2026-11-13).
+**Archived 2026-11-13, as it was,** when `docs/plan/current-focus.md` was rewritten around what's left before the 2026-11-19 demo. The focus itself goes on there. Kept here for each step's history and details (the voice routes and prices, the Newline measuring plan). Its "How it fits together" and "After this focus" sections moved to `docs/plan/log.md`, "Secure pages" to `docs/guides/voice.md`. Paths below are as of the folder move (2026-11-13).
 
-**Read this at the start of every Claude Code session.** It says what to work on *now*. The long-term plan, decisions and module list live in **docs/plan/lab-jarvis-log.md**; this file only sets the current priority. When this focus is done, move it to `docs/archive/` and write the next one. Previous focus: the teleop demo, closed 2026-10-30 (`docs/archive/focus-2026-10-teleop-demo.md`; what's left of it is in `docs/plan/ideas.md` → "On hold"). What already works: `FEATURES.md`. Small decided jobs any session can build: `docs/plan/quick-jobs.md`.
+**Read this at the start of every Claude Code session.** It says what to work on *now*. The long-term plan, decisions and module list live in **docs/plan/log.md**; this file only sets the current priority. When this focus is done, move it to `docs/archive/` and write the next one. Previous focus: the teleop demo, closed 2026-10-30 (`docs/archive/focus-2026-10-teleop-demo.md`; what's left of it is in `docs/plan/ideas.md` → "On hold"). What already works: `FEATURES.md`. Small decided jobs any session can build: `docs/plan/quick-jobs.md`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Early notes from the log (2026-10-20 to 2026-10-23)
 
-**Archived 2026-11-13** from `docs/plan/lab-jarvis-log.md`, as they were: the first planning notes, now history. What they decided is in the log's decisions table (2026-10-20 to 2026-10-23); the teleop they shaped is built (`docs/guides/quest-setup.md`), and the goals they set are in the log's "The goal".
+**Archived 2026-11-13** from `docs/plan/log.md`, as they were: the first planning notes, now history. What they decided is in the log's decisions table (2026-10-20 to 2026-10-23); the teleop they shaped is built (`docs/guides/quest-setup.md`), and the goals they set are in the log's "The goal".
 
 ## Quest teleop input & display (2026-10-23) — details in archive/focus-2026-10-teleop-demo.md
 Inputs: **controllers first** (grip = clutch, analog trigger = gripper, button = stop), **then hand tracking** (wow); keep both. Display: passthrough + minimal overlay (status, stop, workspace box, visitor hint); later ghost arm + camera feed; cast to a monitor.

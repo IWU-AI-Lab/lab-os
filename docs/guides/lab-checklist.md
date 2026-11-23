@@ -12,6 +12,8 @@ Rules:
 - The green arms have their own rules (`AGENTS.md` → "Hard rules"). Never start lab-os on them while LeLab runs.
 - The voice is OpenAI's (the professor's key, in `.env`). After you change `.env`, restart the brain. Without that key, the free Gemini key speaks (about 15 to 20 answers a day).
 
+**(wake word)** in a step means the active persona's wake word: "hey Jarvis" for J.A.R.V.I.S., "OK computer" for the Lab Assistant (⚙ → Assistant).
+
 You need no ruler. Measure with these:
 - a sheet of letter paper (short edge 21.6 cm, long edge 27.9 cm);
 - a bank card (8.6 cm long, 5.4 cm wide);
@@ -42,27 +44,28 @@ uv run pytest -q
 - **0.2** Quick job 85. After the brain has run today, run `uv run lab-os logs`. → does it print the brain's lines, each with today's date? (yes / no)
 - **0.3** Quick job 82. Open ⚙. Scroll to the bottom. Change **Keep a Conversation For** from 30 to 35. → did the amber Restart bar show at the bottom of the window? (yes / no) Did the value box stay in place under the pointer? (yes / no) Set it back to 30.
 - **0.4** In ⚙ → Assistant, read the first rows and **Assistant Language**. → do they say **Persona**, **Persona in This Venue**, and Expects above Answers? (yes / no) Close ⚙. Press the link icon next to ⚙. → did All Pages open? (yes / no)
+- **0.5** Quick job 92. Set ⚙ → Assistant → **Persona** to Lab Assistant. Open the hub, ⚙ and All Pages. → does any page say "Jarvis"? (no / yes: where)
 
 ## V. The wake word and the greeting (25 min)
-Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
+Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores the wake word, and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
 - **V.1** Quick job 84. Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting wait until the jump ended? (yes / no)
 - **V.20** Quick job 84. Set ⚙ → Assistant → **Persona** to Lab Assistant. Press ⏻ → **Back to the start screen**, and tap to start. → did the greeting show the Lab Assistant's line (or news), not "All local systems are up"? (yes / no) Write the time.
 - **V.21** Quick job 90. Set ⚙ → Assistant → **Persona** to Lab Assistant, and **Wake Word: Lab Assistant** to OK Computer. Sit in the chair. Say "OK computer, what time is it?" 5 times, at a normal voice. → how many times did it answer? (0 to 5)
 - **V.22** Set **Wake Word: Lab Assistant** to TARS. Say "TARS, what time is it?" 5 times. Then set it to Hey Friday, and say "Hey Friday, what time is it?" 5 times. → how many answers for TARS? For Hey Friday? (0 to 5 each)
 - **V.23** Set **Persona** to J.A.R.V.I.S. Say "Hey Jarvis, what time is it?" 5 times. → how many answers? (0 to 5) Set the Lab Assistant's word back to OK Computer.
 - **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
-- **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
-- **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, write the time.
-- **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, write the time.
+- **V.2** Say "(wake word), what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
+- **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "(wake word), what's next?". → did it answer? (yes / no) If no, write the time.
+- **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say the wake word again. → did the desktop answer at once? (yes / no) If no, write the time.
 - **V.5** Each time during the day that the wake word does not answer: write the time. → how many times did it stop today? (a number)
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
-- **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "Hey Jarvis, what time is it?". → did only the Newline answer? (yes / no) Write the time.
-- **V.14** Say "Hey Jarvis, start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
-- **V.15** Quick job 83. Ask a question that has a long answer. While the answer plays, say "Hey Jarvis". → did the answer stop, and did it listen? (yes / no)
-- **V.16** Say "Hey Jarvis, start a conversation". Ask one question. Then say "That's all". → did the core go back to rest (not thinking)? (yes / no)
+- **V.12** Quick job 70. Open the hub on the Newline and on the desktop, both with Wake Word. Stand next to the Newline. Say "(wake word), what time is it?". → did only the Newline answer? (yes / no) Write the time.
+- **V.14** Say "(wake word), start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
+- **V.15** Quick job 83. Ask a question that has a long answer. While the answer plays, say the wake word. → did the answer stop, and did it listen? (yes / no)
+- **V.16** Say "(wake word), start a conversation". Ask one question. Then say "That's all". → did the core go back to rest (not thinking)? (yes / no)
 - **V.17** Press and hold the mic for 1 second. Say nothing. → did it answer something? (yes / no) Write the time.
-- **V.18** Say "Hey Jarvis, calculate 37 times 48," then wait a moment, then say "then add 199". → did it hear the whole question? (yes / no)
-- **V.19** Set ⚙ → Answers to **Any**. Say "Hey Jarvis, hi". → which language was the answer? Ask three more questions. → did the voice sound like the same person each time? (yes / no)
+- **V.18** Say "(wake word), calculate 37 times 48," then wait a moment, then say "then add 199". → did it hear the whole question? (yes / no)
+- **V.19** Set ⚙ → Answers to **Any**. Say "(wake word), hi". → which language was the answer? Ask three more questions. → did the voice sound like the same person each time? (yes / no)
 
 ---
 
@@ -94,7 +97,7 @@ After part N, or on the campus network for the computers that are already on it 
 - **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Newline), open Chrome at `http://<the brain's address>:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
 - **M.2** On each computer with a USB microphone (the 2 Windows desktops) and on the Newline: open `chrome://flags`, search for "Insecure origins treated as secure", type `http://<the brain's address>:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
 - **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
-- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "Hey Jarvis, set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
+- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
 - **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
 
 ## For Tuesday 2026-11-24: the previews
@@ -144,8 +147,8 @@ Connect the Quest by USB. The brain runs `adb reverse` by itself.
 ## D. STOP from another device (10 min)
 Setup: `so101-white` connected, the brain running (part T's command without `--left-arm`). A second device (a phone or a laptop) on the brain's network, or the Quest's browser.
 - **D.1** On the second device, open `http://<address>:8080/monitor`. → does Monitor show the arm and a STOP button? (yes / no)
-- **D.2** On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
-- **D.3** Say `Hey Jarvis, the visitors have left`. → nothing to report.
+- **D.2** On the desktop's hub, say `(wake word), it's demo time`, then tap **Ask me to wave**. During the wave, press STOP on the second device. → did the arm stop at once? (yes / no)
+- **D.3** Say `(wake word), the visitors have left`. → nothing to report.
 
 ## W. Teleop with a webcam (25 min)
 Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
@@ -191,7 +194,7 @@ uv run --extra so101 lab-os serve --speed 0.3
 - **G.4** Play to the end of the game. → did the AI read the board right each time? (yes / no: which turn) Did it say the right result? (yes / no) About how many minutes did the game take?
 - **G.5** During the game, did the arm go low over the board at a time when it did not put a piece down? (no / yes: when) Clear the board. Tell the AI to go home. Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
-## H. "Jarvis, hand me the cube" (25 min)
+## H. "Hand me the cube" (25 min)
 Preview 4: the hub's assistant moves the arm to a named pose, and hands you the blue cube. How it works: `docs/guides/hub.md` → "The assistant moves the arm". You need the blue cube and the stand camera's table map. Stand in front of the arm, across the table, with a hand near STOP on a second device (Monitor).
 
 Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
@@ -199,9 +202,9 @@ Plug in `so101-white` (its USB cable and its power supply) and its stand camera 
 uv run --extra so101 lab-os serve --speed 0.3 --open desk
 ```
 - **H.1** The switch is off by default. On the hub, ask "move the arm to home" (typed). → did the arm stay still? (yes / no)
-- **H.2** Select ⚙ → Robots → **The Assistant May Move the Arm**. Ask "Hey Jarvis, move the arm to ready" by voice. → did the arm go to `ready`, slowly? (yes / no) Did AI Control show the moves? (yes / no)
+- **H.2** Select ⚙ → Robots → **The Assistant May Move the Arm**. Ask "(wake word), move the arm to ready" by voice. → did the arm go to `ready`, slowly? (yes / no) Did AI Control show the moves? (yes / no)
 - **H.3** Ask "move the arm to the hand-over pose". → is the gripper held out toward you, at a height you can reach easily? (yes / too low / too high / not toward me)
-- **H.4** Put the cube about 20 cm straight in front of the arm. Ask "Jarvis, hand me the cube". → did the assistant say that it found the cube? (yes / no: what did it say) Did the arm pick it up? (yes / no / it missed)
+- **H.4** Put the cube about 20 cm straight in front of the arm. Ask "Hand me the cube". → did the assistant say that it found the cube? (yes / no: what did it say) Did the arm pick it up? (yes / no / it missed)
 - **H.5** → did the arm hold the cube out to you at the hand-over pose? (yes / no) Was it easy to take? (yes / no) Say "let go". → did the gripper open? (yes / no)
 - **H.6** Put the cube about 35 cm in front of the arm. Ask for the cube again. → did the assistant say that it can't reach it, with nothing moved? (yes / no) Move the cube to a place the camera can't see. Ask again. → did it say that it can't see the cube? (yes / no)
 - **H.7** Put the cube back 20 cm in front. Ask for the cube, and press STOP on Monitor while the arm moves. → did the arm stop at once, and stay still? (yes / no) Ask "move the arm to home". Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
@@ -245,8 +248,8 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.11** Quick job 63. Plug in `so101-white` and its two cameras (sockets 7 and 8). Open Teleop on the desktop. → under the joint angles, do you see the stand and the wrist picture, moving? (yes / no) Close Teleop and wait 10 seconds. Start LeLab's camera view of the green set (it uses the same sockets). Open Teleop again. → does each picture say that the camera is in use? (yes / no)
 - **U.12** Quick job 49. Connect the Quest by USB. On the desktop's hub, press the Quest view button. Close the window with its own X. → does the button go dark within a second or two? (yes / no) Press it once. → does the window open again? (yes / no)
 - **U.13** Quick job 50. Keep a hand at STOP. With `so101-white` and AI Control open, ask the hub's assistant "move the arm to home" (⚙ → Robots → The Assistant May Move the Arm on). → does AI Control show the move without "clipped"? (yes / no) → is the arm folded where it was before? (yes / no)
-- **U.14** Quick job 51. Keep a hand at STOP. Put the cube about 20 cm straight in front of `so101-white`. Ask the hub's assistant "Jarvis, hand me the cube". → when the jaws closed, did they hold the cube with most of their length, not only the tips? (yes / no) Did the gripper touch the table? (yes / no)
-- **U.15** Quick job 52. Keep a hand at STOP. Clear the space to the right of `so101-white` and above it. On the desktop's hub, say `Hey Jarvis, it's demo time`, then tap **Ask me to wave**. → does it look like a wave from where the visitors stand? (yes / no) Did the arm touch anything? (yes / no) Say `Hey Jarvis, the visitors have left`.
+- **U.14** Quick job 51. Keep a hand at STOP. Put the cube about 20 cm straight in front of `so101-white`. Ask the hub's assistant "Hand me the cube". → when the jaws closed, did they hold the cube with most of their length, not only the tips? (yes / no) Did the gripper touch the table? (yes / no)
+- **U.15** Quick job 52. Keep a hand at STOP. Clear the space to the right of `so101-white` and above it. On the desktop's hub, say `(wake word), it's demo time`, then tap **Ask me to wave**. → does it look like a wave from where the visitors stand? (yes / no) Did the arm touch anything? (yes / no) Say `(wake word), the visitors have left`.
 - **U.16** In the hub in VR, point at ⏻ (top right) and pull the trigger. → does a menu open with "Back to the start screen" and "Exit"? (yes / no) Open **Teleop**, then press ⏻ beside ← on its tab, then **Exit**. → are you back on the browser page? (yes / no)
 - **U.17** In the Quest's browser, open the hub's address. → do you see three choices in the middle (Enter VR, Enter AR, the hub in the browser)? (yes / no) Press **Enter AR**, start, then **Teleop**. → does the Teleop page open, with Desktop control grey? (yes / no)
 - **U.18** On the Teleop page, select 1:1, then **Enter AR**. Drive the fake arm. → does it work? (yes / no) Leave AR, then press **Back to the hub in AR**. → are you back at the hub in AR? (yes / no) In the browser's menu, is there an Install choice? (yes / no)

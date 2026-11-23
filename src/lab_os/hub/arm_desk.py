@@ -1,5 +1,5 @@
-"""The hub's assistant moves the arm (preview 4, 2026-11-20): "Hey Jarvis, move the arm to home" and
-"Jarvis, hand me the cube".
+"""The hub's assistant moves the arm (preview 4, 2026-11-20): "Move the arm to home" and "Hand me
+the cube".
 
 Off unless place.yaml has `assistant_moves_arm: true` (Settings → Robots), never on a public venue,
 and only for a question asked on the brain's own computer, like visitor mode (other screens may be
