@@ -46,6 +46,15 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ## Recent ideas (2026-11-21)
 
+### Voice: an existing framework instead of our own pipeline?
+- **What:** our voice is our own pipeline (the browser's microphone and wake word → `gpt-4o-mini-transcribe` → `gpt-6-luna` → `gpt-4o-mini-tts`), and each fix finds the next small problem (lab check L, 2026-11-21). Compare maintained voice-agent frameworks and live speech-to-speech models (for example Pipecat, LiveKit Agents, OpenAI's and Google's live models) with keeping ours. A separate research session, not Claude (the builder, 2026-11-21).
+- **Why:** interruptions, one steady voice and a shorter wait (now about 4 s) come built in with a live model; developing it piece by piece is cumbersome (the builder).
+- **Watch out:** many screens in one room, each a browser with its own microphone and speaker; the nearest one answers (quick job 70); wake word in the browser; push-to-talk, dictation and conversation mode; the persona's voice; the AI spend count; works with the free Gemini key as a fallback; an offline mode later. A switch 10 days before the demo is a risk: decide after the research, probably after the demo.
+
+### A wake word for the Lab Assistant
+- **What:** the Lab Assistant persona uses "hey Jarvis" (`wake_word: hey_jarvis` in `config/personas/lab-assistant.yaml`), because openWakeWord has a ready model only for a few phrases. Its own name needs its own model: openWakeWord can train one from synthetic speech (about an hour on a free Colab GPU). Waits for the builder: the name to train.
+- **Why:** the builder, 2026-11-21: with the Lab Assistant, the startup shouldn't say "hey Jarvis".
+
 ### Faster AI arm control (fewer, bigger model calls)
 - **What:** the AI's arm moves are slow because each small move is one round trip to a frontier model. **Chosen first step (2026-11-21): quick job 81, "Code as Policies"** ([project](https://code-as-policies.github.io/)): the model writes one short program over the brain's own tools, and the brain runs it with no model call between steps. Picked from the builder's search (Gemini and ChatGPT, 2026-11-21) because it needs no training, no GPU and no new hardware.
 - **Later steps, still ideas:**

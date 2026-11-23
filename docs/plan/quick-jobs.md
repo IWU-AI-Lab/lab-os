@@ -8,6 +8,25 @@ Not decided yet? It goes in `docs/plan/ideas.md`, not here. Bigger work is a foc
 Two coding sessions may run at the same time, one for each lane (the builder, 2026-11-20). The prompt for lane 1: "Read AGENTS.md, then docs/plan/quick-jobs.md. Do the jobs in Lane 1 from the top, one at a time, until the lane is empty. Do not stop to ask between jobs." For lane 2, the same with "Lane 2". Each job moves to "Done" with its date and pull request. Each job adds its lab steps to `docs/guides/lab-checklist.md` (its rules: at most 3 questions in one step). Until Tuesday 2026-12-01, the builder wants as many jobs done as possible; after that, only fixes.
 
 ### Lane 1: voice and the hub pages
+- 83. **Voice fixes from the laptop checks** (the builder, 2026-11-21, lab check L). The terminal log of one case is in `docs/dev/GOTCHAS.md` (2026-11-21).
+  - **"Hey Jarvis" stops an answer while it plays** (L.8). It stops one that is thinking, but not one that is speaking. Probably the page pauses the wake word while it plays audio (the log says "sent no audio for the wake word" during answers).
+  - **Stuck on the thinking core** after "That's all" ended conversation mode (L.11).
+  - **Silence became a question** (L.11): a push-to-talk press with nothing said sent the transcriber's hint, "The speaker talks English to a lab assistant called Jarvis.", as the question, and the AI answered it. A transcriber can return its prompt for silence. Send no recording that is only silence, and drop a transcript that repeats the hint. The hint names the persona that is active, not always Jarvis.
+  - **The end of a question comes too early** (L.12): "calculate 37 times 48, … then add 199" was cut at the short pause. Wait longer for a pause in the middle of a sentence.
+  - **"Hi" alone gets an answer in another language** (L.13; the Newline too), with Answers set to Any. A question of one or two words gets its answer in the conversation's language so far, else English.
+  - **The voice still changes now and then** (L.7, L.10): the log names the same model and voice every time (`gpt-4o-mini-tts`, `fable`). That is case (2) in GOTCHAS (2026-11-20): use `tts-1-hd` with `fable` and no style text, unless a better fix is found.
+- 85. **The brain's log in a file that sessions read** (the builder, 2026-11-21: "or you can add a way for you to see it automatically"). The brain writes its terminal log to a file too (a folder outside git, a few days kept). `lab-os logs` prints the last part, or the minutes around a time (`--at 18:14`). A line in `AGENTS.md` tells a session to read it when a lab result says something went wrong. The lab checklist's "copy the terminal's lines" becomes "write the time" where that is enough.
+- 82. **Settings and small hub fixes** (the builder, 2026-11-21, lab check L).
+  - **The "restart" notice where you look** (L.2): the amber bar is at the top, out of sight when you scroll down. Keep it in view (for example fixed to the bottom of the window while it applies).
+  - **No jump when the row's note shows** (L.2): "Applies when the brain restarts" makes the row taller, and the value box and its arrows move down under the pointer. The controls stay in place.
+  - **Assistant Language moves to the Assistant group.** It still applies to this device only: its description says so. Put **Expects** above **Answers** (stacked), so that they don't touch the description text on a laptop screen.
+  - **New names:** "Who It Is" → **Persona**, "Who It Is in This Venue" → **Persona in This Venue**.
+  - **All Pages leaves Settings** (they aren't settings): a button in the hub's strip, next to ⚙.
+  - **AI Spend names the computer by its short name** ("the brain on Mac", or the device's name), not the network's long name: on the Mac's home network it said "Mac.indy.rr.com", which looked like a website.
+- 84. **The greeting follows the persona, and waits for the jump** (the builder, 2026-11-21).
+  - With the Lab Assistant as the persona (both settings), the startup still said JARVIS's welcome and "say hey Jarvis". The greeting and its hint come from the persona that is active.
+  - The Lab Assistant's own wake word: see `docs/plan/ideas.md` → "A wake word for the Lab Assistant" (waits for the builder's choice of name). Until then the hint says the wake word that really works.
+  - After ⏻ → Restart, the greeting started at once, over the jump. It waits as it does after the first start.
 - 80. **Full access for the hub's assistant, and the whole system as tools** (the builder, 2026-11-21). The builder wants to see everything the assistant can do first; safety for it comes later.
   - A switch in ⚙ → Assistant: **Full Access**, off by default. It replaces nothing: The Assistant May Move the Arm stays as it is.
   - With Full Access on, the hub's assistant gets every MCP tool of the brain: the move tools (`move_to`, `pick_at`, `move_joints`, `gripper`, `go_to_pose`, `stop`) and the picture tools (`camera_snapshot`, `pose_view`, `table_point`: the picture goes to the model as an image). For every connected arm and camera, the green set included.
@@ -20,12 +39,23 @@ Two coding sessions may run at the same time, one for each lane (the builder, 20
   - **Limits on the program:** only those functions, no imports, no files, no network; a time limit. Every call goes through the existing safety layer. STOP ends the program at once. Look first for a maintained restricted Python runner (for example the local executor of Hugging Face's `smolagents`, or `RestrictedPython`) instead of writing one.
   - The hub's assistant gets `run_program` with Full Access on (job 80). Tell the AI in the MCP server's instructions to prefer one program over many single moves.
   - Fake arm first: a test where one program picks up the cube and holds it at the hand-over pose. Lab step: Claude Code picks up the cube with one `run_program` call; compare the time with single moves.
+- 86. **Real calculations** (the builder, 2026-11-21, after L.12). Quick job 69 sends hard questions to the stronger model; that is not what the builder meant. "Calculate" means math that is hard for a person, or that uses numbers the person can't see: for example the time a flight takes, the arm's reach to a point, a unit change with many steps. The hub's assistant gets a `calculate` tool that runs Python math (`math`, `statistics`, units if a small library fits) in the limited runner of quick job 81, and it says the result with its steps short. After job 81.
 
 ### Lane 2: arms, teleop and VR
+- 87. **The Teleop page: the buttons and their order** (the builder, 2026-11-21, lab check L.5).
+  - With the WebXR emulator extension in the desktop's browser, **Desktop control** was grey: the page took the browser for a headset. Tell a headset by its browser, not by WebXR support, and show all three choices on a desktop.
+  - The order: **Desktop control** first, then **Enter AR** (passthrough), then **Enter VR**. Under them, **Controls** in its own box, with the control settings. (A redesign of this page and others comes later.)
+- 88. **Webcam teleop fixes** (the builder, 2026-11-21, lab check W on the laptop).
+  - The hands are swapped on a normal webcam (the left hand is cyan). Make the right hand cyan by default; keep **Swap left and right hands**.
+  - The 3D arm shakes a little while the hand is still: smooth the hand's position (for example a One Euro filter), without much more delay.
+  - The arm can't reach all the way down.
+  - Turning or tilting the hand doesn't clearly move the wrist. Map them as the Quest does (hand roll → `wrist_roll`, hand tilt → `wrist_flex`), or say on the page that the wrist doesn't follow.
+  - For a few seconds the page sometimes sees a left hand that isn't there: accept a hand only after a few frames in a row, with a higher confidence.
 - 72. **Raspbot teleop as a page** (the builder, 2026-11-20). **Only after lab check N.11 says that raspbot1 joined the router; until then, skip this job.** A page drives raspbot1 (forward, back, turn, stop; its camera if easy) through the brain, with STOP and a freeze when input stops. Look first at Yahboom's own Raspbot v2 software and examples. Robots stay thin: a small program on the Raspbot, deployed from this repo.
 
 ### Last, when both lanes are empty
 - 53. **Capital letters in content text.** A lot of text is all lowercase, for example on AI Control ("clipped", "arrived · clipped: …", "name home") and the status words. `docs/design/DESIGN.md` says labels are small CAPS and content is normal case. Start sentences and status words with a capital letter on every page. Names of commands, files, poses and settings stay as they are.
+- 89. **A polish sweep of every page** (the builder, 2026-11-21: "a lot of minor issues… iron these out in one fell swoop"). After 53. On the fake arm, open every page in a headless browser at the laptop's size, 1920×1080 and the Newline's 1600×900 (and the VR hub's preview). Look for text that overlaps or almost touches, controls that move when a value changes, words that don't match the names elsewhere, and what `docs/design/DESIGN.md` says. Fix the small ones. List the bigger ones as one line each at the end of the report. Sound, voice timing and how a control feels can't be checked this way: those stay in the lab checklist.
 
 ## Done
 - **Two arms without naming them** (the builder, 2026-11-21; PR #206, left open: it changes the green arms' rules). With no `--arm`, a plugged-in green set becomes the left arm beside another SO-101 (it was taken only when named); alone it still needs `--arm so101-green`, so the AI tools never drive it unasked. Its port is still checked: LeLab or a run using it means one arm only. The teleop page's options already apply to both arms (Hand → arm, the 3D arm's look, putting both 3D arms back). An arm plugged in after the start becomes only the main arm.
