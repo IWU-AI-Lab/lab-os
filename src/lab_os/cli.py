@@ -10,7 +10,7 @@ import socket
 import sys
 from pathlib import Path
 
-from lab_os import config, term
+from lab_os import brainlog, config, term
 from lab_os.hub import launch
 from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
@@ -210,7 +210,20 @@ def main(argv: list[str] | None = None) -> None:
         'it, as "Open on…"; docs/guides/hub.md → Devices)',
     )
     rm.add_argument("--port", type=int, default=8080, help="the brain's port (default 8080)")
+    lg = sub.add_parser(
+        "logs",
+        help="print the brain's log from its file (the last entries, or --at a time): what the "
+        "terminal said, kept for a few days (quick job 85)",
+    )
+    lg.add_argument(
+        "--at",
+        metavar="TIME",
+        help='the minutes around this time: 18:14 (the last 18:14) or "2026-11-21 18:14"',
+    )
+    lg.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
     args = parser.parse_args(argv)
+    if args.command == "logs":
+        return _logs(args)
     if args.command == "room":
         return _room(args.port)
     if args.command == "quest-view":
@@ -259,6 +272,7 @@ def main(argv: list[str] | None = None) -> None:
     args.quiet = args.quiet or not args.status_line  # the brain's terminal is for its log
     term.setup_logging()
     use_config(args)
+    brainlog.log_to_file()  # the terminal's log in a file too, for `lab-os logs` (quick job 85)
     drive_from = _addresses(args.drive_from)
     # no --arm: the arms plugged in (quick job 61). Stops with a message if the venue or a named
     # arm doesn't fit this place.
@@ -317,6 +331,15 @@ def main(argv: list[str] | None = None) -> None:
         os.execv(sys.executable, [sys.executable, "-m", "lab_os.cli", *_without_open(sys.argv[1:])])
     if app[SHUTDOWN].is_set():
         print(f"lab-os was shut down from the hub; {loop.arm.name} was let go.")
+
+
+def _logs(args) -> None:
+    """`lab-os logs`: the brain's log file, the end or the minutes around a time."""
+    use_config(args)
+    try:
+        print(brainlog.show(args.at))
+    except ValueError as e:
+        raise SystemExit(str(e)) from None
 
 
 def _room(port: int) -> None:

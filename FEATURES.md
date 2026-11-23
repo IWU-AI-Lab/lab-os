@@ -27,6 +27,7 @@ This page lists the features that work today, and some lab robot projects that a
 | A Full screen button on every page; Esc = Back without leaving full screen (Chrome, Edge) | ✅ | |
 | A card swipe on the designed hub's start screen starts it, with its own unlock and sound; only a plain number (a student ID), never stored, logged or sent (2026-11-20, quick job 79) | 🧪 | Typed card data in headless Chrome; lab check I.11. |
 | Every view opens on a device with "Open on…" and in the room's layout: the module pages, webcam teleop, the details pages, the system diagram, the conversation (the builder, 2026-11-21) | 🧪 | Checked in headless Chrome; lab check M.5. |
+| The brain's log in a file too (`config/local/logs/`, 4 days kept): `lab-os logs` prints the end, `lab-os logs --at 18:14` the minutes around a time, so a session reads what happened in the lab (quick job 85) | ✅ | Tested on the Mac. |
 | The room's layout (`room.yaml`): "Hey Jarvis, set up the room", ⚙ → Set Up the Room or `lab-os room` open each page on its device; a device not connected is skipped and named (2026-11-20, quick job 71) | 🧪 | Tested with fake hub pages; lab check M.4. |
 | Every page opens from the hub in two taps: ⚙ → All Pages (2026-11-20, quick job 67) | 🧪 | Tested without hardware; lab check I.14. |
 | No long-press menu on the hub pages on a touch screen; the ask line keeps it (2026-11-20, quick job 65) | 🧪 | Tested with touch events in headless Chrome; lab check I.10. |
