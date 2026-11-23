@@ -353,7 +353,12 @@ async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):
 
 
 async def voice_app(
-    aiohttp_server, tmp_path, words=("It is. ", "Step seven", ": voice."), ai_delay=0.0, **kw
+    aiohttp_server,
+    tmp_path,
+    words=("It is. ", "Step seven", ": voice."),
+    ai_delay=0.0,
+    persona=None,
+    **kw,
 ):
     from lab_os.hub.server import create_brain_app
     from lab_os.robots.fake import FakeArm
@@ -371,7 +376,8 @@ async def voice_app(
         TeleopLoop(arm=arm, inputs=InputState()),
         Venue("v", ("fake-arm",), True, 0.5),
         chat=conv,
-        persona=lambda: Persona(id="p", display_name="P", voice="test", wake_word="hey_jarvis"),
+        persona=persona
+        or (lambda: Persona(id="p", display_name="P", voice="test", wake_word="hey_jarvis")),
         voices=lambda: {"test": setup},
     )
     return app, conv, assistant
@@ -1052,3 +1058,27 @@ def test_the_wake_word_listens_while_an_answer_plays():
     src = Path(__file__).resolve().parents[1] / "src/lab_os/hub/web"
     for page in ("hub.js", "design.html", "xr/ask.js"):
         assert "ev.command" in (src / page).read_text(), page
+
+
+async def test_the_greeting_follows_the_persona(aiohttp_client, aiohttp_server, key, tmp_path):
+    """Quick job 84: the spoken greeting's hint says the active persona's wake word, at once after
+    a switch, and each persona has its own recording."""
+    from lab_os.hub.voice import greeting_file
+
+    now = {"p": Persona(id="jarvis", display_name="J", voice="test", wake_word="hey_jarvis")}
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, persona=lambda: now["p"])
+    conv.clear(opening="Good evening.")
+    client = await aiohttp_client(app)
+    said = []
+    for p in (now["p"], Persona(id="lab", display_name="L", voice="test", wake_word="ok_computer")):
+        now["p"] = p
+        ws = await client.ws_connect("/ws/voice")
+        await ws.send_json({"type": "greet", "way": "wake_word"})
+        events = []
+        await until(ws, "audio_end", events)
+        said.append(" ".join(e["text"] for e in events if e["type"] == "audio"))
+        await ws.close()
+    assert said[0] == "Good evening. You can talk to me: say hey Jarvis."
+    assert said[1] == "Good evening. You can talk to me: say ok computer."
+    setup = VoiceSetup("main", "openai", "http://x/v1", "h", "tts-1", speaker="fable")
+    assert greeting_file(tmp_path, setup, "Hi.", "a") != greeting_file(tmp_path, setup, "Hi.", "b")

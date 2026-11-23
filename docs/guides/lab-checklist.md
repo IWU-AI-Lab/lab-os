@@ -45,7 +45,8 @@ uv run pytest -q
 
 ## V. The wake word and the greeting (25 min)
 Quick job 42. The cause of the stops was not found on the Mac. The brain's log now says when it ignores "hey Jarvis", and why. The sessions read the log from its file (`lab-os logs`), so write the time when something goes wrong. Setup: the desktop's hub with ⚙ → This Device → Talking to It → **Wake Word**, the USB microphone in its front port, and no roof fan if possible.
-- **V.1** Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting start at once, before the jump ended? (yes / no)
+- **V.1** Quick job 84. Press ⏻ → **Back to the start screen**. Tap to start. → did the greeting wait until the jump ended? (yes / no)
+- **V.20** Quick job 84. Set ⚙ → Assistant → **Persona** to Lab Assistant. Press ⏻ → **Back to the start screen**, and tap to start. → did the greeting show the Lab Assistant's line (or news), not "All local systems are up"? (yes / no) Write the time.
 - **V.2** Say "Hey Jarvis, what time is it?". Wait for the answer. Say it again. → did it answer both times? (yes / no)
 - **V.3** Open ⚙. Move **Wake Word Sensitivity** from 5 to 7. Close ⚙. Say "Hey Jarvis, what's next?". → did it answer? (yes / no) If no, write the time.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say "Hey Jarvis" again. → did the desktop answer at once? (yes / no) If no, write the time.

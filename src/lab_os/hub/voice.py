@@ -126,13 +126,15 @@ def spoken_greeting(opening: str, hint: str, now: datetime | None = None) -> str
     return f"{hello or time_of_day(now or datetime.now())} {hint}".strip()
 
 
-def greeting_file(folder: Path, setup: VoiceSetup, text: str) -> Path:
-    """Where this voice's recording of `text` is kept: the name is a hash of the voice and the
-    words, so a new voice or a changed line makes a new file."""
+def greeting_file(folder: Path, setup: VoiceSetup, text: str, persona: str = "") -> Path:
+    """Where this voice's recording of `text` is kept: the name is a hash of the persona, the
+    voice and the words, so another persona, a new voice or a changed line makes a new file (a
+    persona never plays another's recording, quick job 84)."""
     voice = [setup.service, setup.base_url, setup.speak, setup.speaker, setup.style, setup.speed]
     # "v2": recordings from before quick job 47 may come from a fallback model (another person's
     # sound): they are made again once, by the first model
-    digest = hashlib.sha256(json.dumps(["v2", voice, text]).encode()).hexdigest()[:16]
+    key = ["v2", voice, text] + ([persona] if persona else [])
+    digest = hashlib.sha256(json.dumps(key).encode()).hexdigest()[:16]
     return folder / f"{setup.name}-{digest}.wav"
 
 
@@ -1176,7 +1178,8 @@ class VoiceLink:
         hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
         text = spoken_greeting(self.desk.greeting(), hint)
         folder = self.desk.recordings()
-        saved = greeting_file(folder, setup, text) if folder else None
+        # the active persona's: its wake word in the hint, its own recording (quick job 84)
+        saved = greeting_file(folder, setup, text, self.desk.persona().id) if folder else None
         if saved and saved.is_file():
             self.last_greet = time.monotonic()
             log.info("voice: the greeting, from its recording by %s", voice_words(setup, []))
