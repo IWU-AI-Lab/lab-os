@@ -261,3 +261,53 @@ async def test_the_speed_slider_from_none_to_the_cap(aiohttp_client):
         assert app[RASPBOT].speed == 0.25
     html = (SRC / "hub" / "web" / "raspbot.html").read_text()
     assert 'id="speed"' in html and '"set_speed"' in html
+
+
+# ---- the Raspbot's Wi-Fi at start ----
+
+
+def _run_wifi(tmp_path, seen: str, active: str = "", up_fails: bool = False):
+    """lab-os-wifi.sh with a fake nmcli: `seen` = the Wi-Fi names it finds."""
+    import os
+    import subprocess
+
+    calls = tmp_path / "calls"
+    fake = tmp_path / "nmcli"
+    fake.write_text(
+        "#!/bin/sh\n"
+        f'echo "$*" >> {calls}\n'
+        'case "$*" in\n'
+        f'  *"show --active"*) printf "{active}\\n" ;;\n'
+        f'  *"wifi list"*) printf "{seen}\\n" ;;\n'
+        f'  *"connection up"*) exit {1 if up_fails else 0} ;;\n'
+        "esac\n"
+    )
+    fake.chmod(0o755)
+    env = os.environ | {"PATH": f"{tmp_path}:{os.environ['PATH']}", "WAIT_S": "2", "STEP_S": "1"}
+    script = raspbot.ONBOARD_DIR / "lab-os-wifi.sh"
+    out = subprocess.run(["sh", str(script)], env=env, capture_output=True, text=True, timeout=20)
+    return out.stdout, calls.read_text().splitlines()
+
+
+def test_wifi_joins_the_router_when_it_is_there(tmp_path):
+    out, calls = _run_wifi(tmp_path, seen="Yahboom3\\nGL-B7-5G")
+    assert "joined GL-B7-5G" in out and "connection up GL-B7-5G" in calls
+    assert not any("Raspbot" in c for c in calls)
+
+
+def test_wifi_already_on_the_router_does_nothing(tmp_path):
+    out, calls = _run_wifi(tmp_path, seen="GL-B7-5G", active="GL-B7-5G\\nlo")
+    assert "on GL-B7-5G" in out and not any("up" in c for c in calls)
+
+
+def test_wifi_starts_the_hotspot_only_when_the_router_is_not_found(tmp_path):
+    out, calls = _run_wifi(tmp_path, seen="GL-B7-5G-other\\nYahboom3")
+    assert "starting the hotspot Raspbot" in out
+    assert calls[-1] == "connection up Raspbot" and "connection up GL-B7-5G" not in calls
+
+
+def test_wifi_install_turns_off_the_hotspots_own_start():
+    src = (raspbot.ONBOARD_DIR / "install-wifi.sh").read_text()
+    assert "modify Raspbot connection.autoconnect no" in src
+    assert "systemctl enable lab-os-wifi.service" in src
+    assert all(Path(f).is_file() for f in raspbot.deploy_commands("raspbot1")[1][2:-1])

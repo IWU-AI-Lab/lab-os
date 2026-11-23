@@ -1,0 +1,12 @@
+# lab-os on the Raspbot: the router's Wi-Fi at start, else the hotspot (install-wifi.sh installs it).
+[Unit]
+Description=lab-os: join the router's Wi-Fi, else start the Raspbot hotspot
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/local/lib/lab-os/lab-os-wifi.sh
+
+[Install]
+WantedBy=multi-user.target
