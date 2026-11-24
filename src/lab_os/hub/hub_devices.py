@@ -9,6 +9,9 @@ after it closes: when the brain restarts, the pages reconnect and the list fills
 - **"Open on…"**: a module page opened from one device on another one's hub (inside its hub, like a
   module opened there); Back there, or "bring it back" here, closes it. Only windows with the hub
   open are offered, so a device used for something else is never taken over.
+- **No name** (quick job 101): a hub page opened without `?device=` is listed too, by its address
+  (`addr-192-168-8-167`, shown as "192.168.8.167 (no device name)"), so "Open on…" can reach it.
+  It keeps no settings: those need a name.
 - **Monitors**: a device with the hub open on two monitors has two windows. "Open on desk" picks
   the free one (no module open); when two are free, or none, the sender is asked which.
 - **Each device's settings** ("This device": level of detail, drawing resolution, sound, full
@@ -20,6 +23,7 @@ Not here (milestone 1, "Connected lab"): robots reporting in, one brain per netw
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
@@ -177,6 +181,11 @@ class Window:
     screen: dict = field(default_factory=dict)  # label, left, top, width, height (as the page saw)
     since: float = field(default_factory=time.time)
 
+    @property
+    def key(self) -> str:
+        """The name it is listed and opened under: its device name, else one from its address."""
+        return self.device or address_key(self.address)
+
 
 class HubDevices:
     """The windows connected right now, by id. `modules()` gives the module ids and titles that may
@@ -189,7 +198,7 @@ class HubDevices:
 
     # ---------- the list ----------
     def of(self, device: str) -> list[Window]:
-        wins = [w for w in self.windows.values() if w.device == device]
+        wins = [w for w in self.windows.values() if w.key == device]
         return sorted(wins, key=_place)  # left to right, so the labels stay put
 
     def labels(self, device: str) -> dict[str, str]:
@@ -213,15 +222,19 @@ class HubDevices:
         return out
 
     def listing(self) -> list[dict]:
-        """The named devices with the hub open, each with its windows (what they show)."""
+        """The devices with the hub open, each with its windows (what they show). A page with no
+        device name is listed by its address (`title` says so)."""
         titles = self.modules()
         out = []
-        for name in sorted({w.device for w in self.windows.values() if w.device}):
+        for name in sorted({w.key for w in self.windows.values()}):
             labels = self.labels(name)
             wins = self.of(name)
+            named = bool(wins[0].device)
             out.append(
                 {
                     "name": name,
+                    "title": name if named else f"{wins[0].address or 'unknown'} (no device name)",
+                    "named": named,
                     "address": wins[0].address,
                     "windows": [
                         {
@@ -329,7 +342,8 @@ class HubDevices:
         target.stage = "hub"
         await self.broadcast()
         label = self.labels(device).get(target.id, "")
-        where = f"{device} ({label})" if label else device
+        shown = device if target.device else f"{target.address} (no device name)"
+        where = f"{shown} ({label})" if label else shown
         return {
             "ok": True,
             "device": device,
@@ -414,6 +428,16 @@ class HubDevices:
             log.info("device %s left (window %s)", name or "(no name)", wid)
             await self.broadcast()
         return ws
+
+
+def address_key(address: str) -> str:
+    """A device name for a page with none, from its address: `addr-192-168-8-167` (a device name's
+    rules: lower case, digits and dashes, at most 32 characters; a long IPv6 address is hashed)."""
+    plain = re.sub(r"[^a-z0-9]+", "-", (address or "unknown").lower()).strip("-")
+    key = f"addr-{plain}"
+    if len(key) > 32:
+        key = "addr-" + hashlib.sha256(address.encode()).hexdigest()[:12]
+    return key
 
 
 def clean_name_error(raw: str) -> str:

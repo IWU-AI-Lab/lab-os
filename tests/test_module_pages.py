@@ -388,7 +388,7 @@ def test_settings_fixes_from_the_laptop_check():
     html = (SRC / "hub" / "web" / "settings.html").read_text()
     js = (SRC / "hub" / "web" / "settings.js").read_text()
     assert "position: fixed" in html.split("#restart-bar {")[1].split("}")[0]
-    assert ".row.may-restart .rs[hidden]" in html and '"may-restart"' in js
+    assert ".row.may-restart .rs:not(.on)" in html and '"may-restart"' in js
     assert 'if (s.id === "assistant") rows.append(languageRow());' in js
     assert '"pair stack"' in js and "This device only" in js
     labels = [f.label for s in SECTIONS for f in s.fields]

@@ -3568,28 +3568,23 @@ addEventListener("pointerdown", (e) => { if (!PM.hidden && !PM.contains(e.target
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !PM.hidden) { e.stopImmediatePropagation(); closePower(); } }, { capture: true });
 $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
 $("#pages-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#pages-btn")); });
-// A module page full screen on another monitor of this computer (HDMI/DP): Chrome's Window Management
-// API places the window there (it asks once for permission; localhost or https only). The page then asks
-// for one click to go full screen (browsers' rule). Elsewhere: a new window to drag over.
-let screenDetails = null;
+// A view full screen on another monitor of this computer (HDMI/DP; device.js → openOnMonitor). The page then
+// asks for one click to go full screen (browsers' rule). A view with its own page opens that page; the hub's
+// own views (a details page, the system diagram, the conversation) open as a hub window that shows only that
+// view (?view=, quick job 101).
+function viewUrl(id) {
+  if (S.page[id]) return `${S.page[id]}?screen=1`;
+  const u = new URL("/design", location.origin);
+  u.searchParams.set("view", id);
+  if (myName()) u.searchParams.set("device", myName());
+  return u.pathname + u.search;
+}
 async function sendToScreen(id, say) {
-  const url = `${S.page[id]}?screen=1`;
-  let place = "";
-  if ("getScreenDetails" in window) {
-    try {
-      screenDetails ||= await window.getScreenDetails();
-      const others = screenDetails.screens.filter((s) => s !== screenDetails.currentScreen);
-      const s = others.find((o) => !o.isPrimary) || others[0];
-      if (!s) return say("Only one monitor is connected to this computer.");
-      place = `popup,left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight}`;
-    } catch (e) {
-      say(`The browser didn't allow placing windows (${e.message}); dragging the new window works too.`);
-    }
-  }
+  const { openOnMonitor } = await import("/web/device.js");
   const wasFull = !!document.fullscreenElement || matchMedia("(display-mode: fullscreen)").matches;
-  const w = window.open(url, `lab-os-${id}`, place || "popup,width=1280,height=800");
-  if (!w) return say("The browser blocked the new window: press the button again.");
-  say(place ? "Opened on the other monitor." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
+  const done = await openOnMonitor(viewUrl(id), `lab-os-${id}`, say);
+  if (!done) return;
+  const place = done === "placed";
   // the browser takes this page out of full screen when it opens a window: the brain puts it back
   // (lab-os's own window only; elsewhere the full screen button shows, quick job 74)
   if (wasFull) setTimeout(async () => {
@@ -3607,14 +3602,14 @@ function fillMenu() {
   DM.fillOpenOn($("#open-on"), D, id, {
     title: (MODULES[id] || DETAILS[id] || (id === "chat" ? ["The Conversation"] : [id]))[0],
     onSent: () => setTimeout(() => S.showing === id && closeModule(), 900),  // it lives there now
-    extra: S.page[id] ? [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }] : [],
+    extra: [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }],
   });
 }
 $("#mod-send").addEventListener("click", (e) => {
   e.stopPropagation();
   if (!S.showing) return;
   if (!$("#open-on").hidden) return closeOpenOn();
-  if (!D) return S.page[S.showing] && sendToScreen(S.showing, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
+  if (!D) return sendToScreen(S.showing, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
   SFX.blip(); fillMenu();
   $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
 });
@@ -3733,7 +3728,12 @@ setMoney();
 document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); if (S.booted) { layoutTraces(); showTraces(); } });
 // start: the theme and the brain's facts load while the start screen waits
 if ($("#ignite")) body.classList.add("waiting");
-S.readyP = init().then(() => { S.ready = true; prepareVideo(); });
+S.readyP = init().then(() => {
+  S.ready = true; prepareVideo();
+  // ?view=<id>: a window that shows one view (Open on… → "Another monitor of this computer", quick job 101)
+  const view = params.get("view");
+  if (view) openHere(view, null);
+});
 setInterval(pollStatus, 3000);
 setInterval(() => { if (S.booted && !S.sleeping) pollArm(); }, 250);
 setInterval(() => { if (S.booted) refreshFacts(); }, 60_000);
