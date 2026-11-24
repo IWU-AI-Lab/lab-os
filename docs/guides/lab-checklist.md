@@ -45,11 +45,12 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 
-## S. The start and the voice (10 min)
+## S. The start and the voice (20 min)
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port.
 - **S.1** Tap **Start lab-os**. Tap the start screen. → did the hub open full screen, with the startup's sound and a spoken greeting? (yes / no)
 - **S.2** Say "(wake word), what time is it?". → did it answer aloud? (yes / no) Type a question in the ask line. → did it answer? (yes / no)
 - **S.3** Quick job 98. Say fast, in one breath: "(wake word), how many minutes does a 1200 km flight take at 850 km per hour?" → did it hear the whole question? (yes / no) Say "(wake word), calculate 37 times 48," stop for one breath, then say "then add 199". → did it say 1975? (yes / no) → did the answer start about 2 s after you stopped? (yes / slower: how many seconds?)
+- **S.4** Quick job 99. On the desktop, open All Pages → **Wake Word**. Select the active word. Record 8 tries in the tones the page shows, and 20 s of talk. Press **Train**. → copy the result line. Say "(wake word), what time is it?" 5 times, with a new tone each time (once like a question). → how many times did it answer? (0 to 5)
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
 How it works: `docs/guides/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.

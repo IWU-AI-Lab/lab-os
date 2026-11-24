@@ -378,6 +378,13 @@ Focus step 8 (`docs/guides/hub.md` → "Devices"). Every hub page (both looks) k
 
 Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "speed": 0.5, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
 
+### The Wake Word page (quick job 99, `hub/wake_clips.py`)
+Only from the brain's computer (else `403`). `{word}` is a key of `PHRASES` in `ai/wake.py` (else `404`).
+- `GET /api/wake-word` → `{"active": "hey_jarvis", "here": true, "need_word": 8, "need_other_s": 20, "words": [{"id", "phrase", "word_clips", "other_s", "trained": null | {training result}}]}`.
+- `POST /api/wake-word/{word}/clip?kind=word|other`, the body raw 16-bit 16 kHz mono PCM (0.5 to 4 s for `word`, to 15 s for `other`) → the word's summary plus `"score"` (the word model's best score in the clip).
+- `POST /api/wake-word/{word}/train?sensitivity=9` → `{"ok", "tries", "word_before", "word_now", "other_s", "other_before", "other_now", "checked_other", "sensitivity", "at", "summary"}` (the counts are held-out checks), or `400` with `"message"` when there are too few clips.
+- `POST /api/wake-word/{word}/clear` → the clips and the verifier are deleted; the summary.
+
 `GET /api/raspbot/camera.mjpg`: the Raspbot's camera (`multipart/x-mixed-replace` JPEGs), relayed from the Raspbot's port 8766; `404` without a camera.
 
 Brain → the program on the Raspbot (`robots/raspbot/lab_os_raspbot.py`, TCP port 8765), one JSON line each: `{"drive": [left, right]}` (-1.0 … 1.0 of its speed cap) or `{"stop": true}`. The program answers once at connect: `{"hello": "<hostname>", "camera_port": 8766 | 0}`. It stops the motors after 0.5 s without a command, when the connection drops, and for a line it does not understand. A new connection replaces the old one.

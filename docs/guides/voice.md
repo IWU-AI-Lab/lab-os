@@ -65,7 +65,18 @@ Measured on recordings (`tests/test_wake.py`, with added white noise, harder tha
 - **Noise is the problem.** "Hey Jarvis" at 10 % loudness under loud noise scored about 0.40: missed at 5, heard at 8.
 - Other speech under noise never scored above about 0.26, and noise alone up to about 0.2. So 8 and 9 also need two steps in a row.
 
-The brain's terminal shows near misses: `voice: desk heard something like "hey Jarvis" (0.38; it takes 0.50 at sensitivity 5)`. If you see these while you say the phrase, make the slider higher.
+The brain's log shows each second that did not wake it, with the best score of that second, when the score was 0.05 or more or the sound was 10 dB over the room (quick job 99): `voice: desk missed "hey Jarvis"? best 0.38 in this second (it takes 0.50 at sensitivity 5; 18 dB over the room)`. Run `uv run lab-os logs --at 18:14` with the time of a try that did not wake it. A score near the threshold: make the slider higher. A score near 0: the word model does not hear that way of saying it. Teach it your voice (below). Lines are not logged while an answer plays.
+
+### Teach the wake word your voice (quick job 99)
+Some ways of saying the word score low: "hey Jarvis" said like a question, or the community words (OK computer, TARS, hey Friday). The **Wake Word** page (`/wake-word`, in All Pages) trains a small model on your own voice: openWakeWord's "custom verifier model". Open it on the brain's computer.
+1. Select the word.
+2. Press **Record**, then say the word once. The page shows a tone for each try ("like a question", "fast", "quietly"). Record at least 8 tries.
+3. Press **Record 10 s**, then talk without the word. Record at least 20 s.
+4. Press **Train**. The page says how many of your tries it now hears, checked on tries it did not learn from, and how often your other talk woke it.
+
+After Train, a score from 0.1 up to the threshold also wakes it, when the verifier takes it for your voice saying the word. A score at the threshold still wakes it without the verifier, so other people wake it as before. Each try shows the word model's score: under 0.1 (amber), the verifier is not asked, so say that try again a little clearer. The clips and the verifier are in `config/local/wake/<word>/` (not in git). **Start Over** deletes them. The hub uses a new verifier within 2 s, with no restart. When a verifier helps, the log says `the verifier took it for the word`.
+
+Not chosen: a lower threshold for each word only (it also wakes on other speech: there is no data yet to choose one), and other trained models (none better was found for the three community words, 2026-11-23).
 
 **openWakeWord's other options, tried and not used (2026-11-14):**
 - Its **Silero voice-activity filter** (`vad_threshold`) is to stop false wakes from noise that is not speech. But on the recordings it removed a real "hey Jarvis" in loud noise (0.98 → 0.00). A noisy room needs the opposite.

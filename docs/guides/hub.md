@@ -25,6 +25,7 @@ Then open **http://localhost:8080/** in a browser on the same computer. In VS Co
 | `/webcam` | teleop with a webcam (preview): your bare hand in front of a webcam drives the arm, on the brain's computer (`docs/guides/webcam-teleop.md`) |
 | `/cameras` | the live picture of every camera, with a switch for each camera ("The Cameras page" below) |
 | `/raspbot` | drive raspbot1: forward, back, turn, STOP, and its camera (`docs/guides/raspbot.md`) |
+| `/wake-word` | teach the wake word your voice: record tries of the word and other talk, then Train (`docs/guides/voice.md` → "Teach the wake word your voice") |
 
 **Options** (the same as `lab-os-teleop`'s):
 - `--arm` (for example `fake`, `fake-xarm1`, `so101-white`). Without `--arm`, the brain drives the SO-101s that are plugged in when it starts: one arm, or two arms as `--arm` and `--left-arm`. It takes the green set by itself only as the left arm, beside another arm (since 2026-11-21), and only when no other program (LeLab, a training run) has its port. Alone, the green set needs `--arm so101-green`. With no arm plugged in, it drives the fake arm. When a plugged-in arm cannot open (another program has its port, it has no calibration, or its motors do not answer because their power is off), the brain says why and drives the fake arm. When it drives the fake arm this way, it takes an SO-101 that you plug in later, with the same rules: only while nobody drives the fake arm (for 5 seconds), and the pages then show the new arm. `--arm fake` always drives the fake arm. An unplugged SO-101 or xArm freezes, every page says "disconnected", and it connects again by itself when you plug it back in.
@@ -178,6 +179,7 @@ Each page opens from the hub in two taps: **All Pages** (the button next to ⚙ 
 | `/webcam` | Webcam Teleop | Your bare hand in front of the webcam drives the arm (preview). |
 | `/cameras` | Cameras | Every camera's live picture, with a switch for each (kept per device). |
 | `/raspbot` | Raspbot | Drive raspbot1: forward, back, turn, STOP, and its camera. |
+| `/wake-word` | Wake Word | Teach the wake word your voice: say it in many tones, then Train (this computer only). |
 | `/xr` | VR Hub | The hub in the headset (opens only in a VR browser). |
 | `/settings` | Settings | ⚙ on the hub. |
 | `/pages` | All Pages | This list: the button next to ⚙ on the hub. |

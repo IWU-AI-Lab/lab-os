@@ -81,7 +81,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import load_registry
-from lab_os.hub import launch
+from lab_os.hub import launch, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
@@ -150,6 +150,11 @@ PAGES = (
         "Every camera's live picture, with a switch for each (kept per device).",
     ),
     ("/raspbot", "Raspbot", "Drive raspbot1: forward, back, turn, STOP, and its camera."),
+    (
+        "/wake-word",
+        "Wake Word",
+        "Teach the wake word your voice: say it in many tones, then Train (this computer only).",
+    ),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
@@ -336,6 +341,10 @@ async def xr_page(request: web.Request) -> web.FileResponse:
 
 async def cameras_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "cameras.html")
+
+
+async def wake_word_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "wake-word.html")
 
 
 async def training_page(request: web.Request) -> web.FileResponse:
@@ -1520,6 +1529,10 @@ def create_brain_app(
     app.router.add_get("/ai", ai_page)
     app.router.add_get("/training", training_page)
     app.router.add_get("/cameras", cameras_page)
+    app.router.add_get("/wake-word", wake_word_page)
+    wake_clips.add_routes(
+        app, lambda a: a[BRAIN].voice.wake_models, lambda a: a[BRAIN].voice.wake_word()
+    )
     app.router.add_get("/xr", xr_page)
     app.router.add_get("/manifest.webmanifest", web_manifest)
     app.router.add_get("/api/green", api_green)

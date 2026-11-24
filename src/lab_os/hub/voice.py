@@ -56,6 +56,7 @@ from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.ai.wake import (
     DEFAULT_SENSITIVITY,
     PHRASES,
+    VERIFY_FROM,
     WakeDetector,
     WakeModels,
     sensitivity_level,
@@ -108,8 +109,11 @@ WAKE_MID_HOLD_S = 1.6
 STANDBY_MAX_S = 240.0  # a hearing kept connected ahead of time is renewed after this long
 STANDBY_RETRY_S = 30.0  # it couldn't connect: try again after this long
 WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
-NEAR_MISS = 0.25  # a score this high but under the threshold is logged (sensitivity, the Quest)
-NEAR_MISS_EVERY_S = 3.0
+# quick job 99: each second that didn't wake it is logged with its best score, when the score was at
+# least NEAR_MISS or the sound was MISS_LOUD_DB over the room (a try that scored near 0 shows too)
+NEAR_MISS = 0.05
+MISS_LOUD_DB = 10.0
+MISS_EVERY_S = 1.0
 AUDIO_GAP_S = 2.0  # a screen listening for the phrase sent no audio this long: logged
 WORD_CHECK_S = 2.0  # how often a listening screen checks that the persona's wake word is the same
 TIMINGS_KEPT = 20
@@ -695,7 +699,7 @@ class VoiceLink:
         self._floor = 0.0  # this microphone's room noise (loudness, slowly followed)
         self._last_audio = 0.0
         self._next_warm = 0.0
-        self._near_logged = 0.0
+        self._second: list = [0.0, 0.0, 0.0, False]  # this second: start, best score, loudest, woke
         self._word_checked = 0.0
         self._rewaking: asyncio.Task | None = None
         self.timing: TurnTiming | None = None  # this turn's steps
@@ -838,22 +842,46 @@ class VoiceLink:
         while self._ring and self._ring[0][0] + WAKE_RING_BYTES < self._ring_total:
             self._ring.popleft()
         score = self.detector.feed(pcm)
+        rms = pcm_rms(pcm)
         if not self.detector.fired:
-            self._follow_floor(pcm_rms(pcm))
+            self._follow_floor(rms)
+        self._log_second(now, score, rms, self.detector.fired)
         if self.detector.fired:
             if self._detected_at is None or now - self._detected_at[0] > 1.0:
                 self._detected_at = (now, self._ring_total)
+            if self.detector.verified:
+                log.info(
+                    'voice: %s heard "%s" at %.2f, under %.2f: the verifier took it for the word',
+                    self.device or "a screen",
+                    self.desk.wake_phrase(),
+                    score,
+                    self.detector.threshold,
+                )
             self.desk.wake_heard(self, score, self._snr_db())
-        elif score >= NEAR_MISS and now - self._near_logged > NEAR_MISS_EVERY_S:
-            self._near_logged = now
-            log.info(
-                'voice: %s heard something like "%s" (%.2f; it takes %.2f at sensitivity %d)',
-                self.device or "a screen",
-                self.desk.wake_phrase(),
-                score,
-                self.detector.threshold,
-                self.detector.sensitivity,
-            )
+
+    def _log_second(self, now: float, score: float, rms: float, fired: bool) -> None:
+        """Each second: if it didn't wake, its best score in the log (quick job 99: how close a
+        missed try came)."""
+        sec = self._second
+        if now - sec[0] >= MISS_EVERY_S:
+            start, best, loudest, woke = sec
+            db = 20 * math.log10(max(loudest, 1.0) / max(self._floor, 1.0))
+            playing = now < self.playing_until  # its own answer, not a try of the word
+            if start and not woke and not playing and (best >= NEAR_MISS or db >= MISS_LOUD_DB):
+                log.info(
+                    'voice: %s missed "%s"? best %.2f in this second (it takes %.2f at '
+                    "sensitivity %d%s; %.0f dB over the room)",
+                    self.device or "a screen",
+                    self.desk.wake_phrase(),
+                    best,
+                    self.detector.threshold,
+                    self.detector.sensitivity,
+                    f", or the verifier from {VERIFY_FROM:.2f}" if self.detector.verifier else "",
+                    db,
+                )
+            sec[:] = [now, 0.0, 0.0, False]
+        sec[1], sec[2] = max(sec[1], score), max(sec[2], rms)
+        sec[3] = sec[3] or fired
 
     def _follow_floor(self, rms: float) -> None:
         """The room's noise at this microphone: down fast, up slowly (speech doesn't count much)."""
