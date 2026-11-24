@@ -404,3 +404,14 @@ async def test_the_unused_pages_are_gone(aiohttp_client):
     for path in ("/classic/teleop", "/classic/monitor", "/plain", "/perf"):
         assert (await client.get(path)).status == 404, path
     assert "hub.js" in await (await client.get("/")).text()
+
+
+def test_settings_has_a_search_bar():
+    """Quick job 104: a search bar at the top of ⚙; only the rows whose name or hint has every word
+    show, their groups open (a folded one too); the VR hub's Settings have none."""
+    html = (SRC / "hub" / "web" / "settings.html").read_text()
+    js = (SRC / "hub" / "web" / "settings.js").read_text()
+    assert 'id="search" type="search"' in html and 'id="no-hits"' in html
+    assert ".group.searching.folded .rows { display: block; }" in html
+    assert "function applySearch()" in js and "want.every((w) => rowText(r).includes(w))" in js
+    assert 'type="search"' not in (SRC / "hub" / "web" / "xr-hub.js").read_text()

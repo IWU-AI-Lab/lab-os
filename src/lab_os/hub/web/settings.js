@@ -171,6 +171,35 @@ function group(id, title, note = "", { icon = "i-gear", risky = false } = {}) {
   spy.observe(g);
   return g.querySelector(".rows");
 }
+/* ---------- the search bar (quick job 104): only the settings whose name or hint has every word ---------- */
+const words = () => $("#search").value.toLowerCase().split(/\s+/).filter(Boolean);
+function rowText(r) {  // the setting's name and its hint (not the restart note or the value)
+  return `${r.querySelector(".lbl label")?.textContent || ""} ${r.querySelector(".lbl .help")?.textContent || ""}`.toLowerCase();
+}
+function applySearch() {
+  const want = words(), on = want.length > 0;
+  let hits = 0;
+  for (const g of document.querySelectorAll("#list .group")) {
+    let n = 0;
+    for (const r of g.querySelectorAll(".rows > .row")) {
+      const hit = !on || want.every((w) => rowText(r).includes(w));
+      r.classList.toggle("no-match", !hit);
+      n += hit;
+    }
+    g.querySelectorAll(".rows > .sub, .rows > .note").forEach((e) => e.classList.toggle("no-match", on));
+    g.classList.toggle("searching", on);
+    g.classList.toggle("no-match", on && !n);
+    document.querySelector(`.navb[data-g="${g.id.slice(2)}"]`)?.classList.toggle("no-hits", on && !n);
+    hits += n;
+  }
+  $("#no-hits").hidden = !on || hits > 0;
+  const say = on && !hits ? `No setting has "${$("#search").value.trim()}" in its name or hint.` : "";
+  if ($("#no-hits").textContent !== say) $("#no-hits").textContent = say;  // (the observer below sees text changes)
+}
+$("#search").addEventListener("input", () => { applySearch(); $("#list").scrollTop = 0; });
+// rows that come later (the voice rows load on their own) are searched too
+new MutationObserver(() => words().length && applySearch()).observe($("#list"), { childList: true, subtree: true });
+
 // the sidebar lights the group at the top of the list
 const spy = new IntersectionObserver((seen) => {
   for (const e of seen) if (e.isIntersecting) document.querySelectorAll(".navb").forEach((b) => b.classList.toggle("on", b.dataset.g === e.target.id.slice(2)));

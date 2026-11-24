@@ -21,6 +21,20 @@
     .navb.risky { color: color-mix(in srgb, var(--danger) 70%, var(--text)); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
     .navb.risky .ico { color: var(--danger); }
     .navb.risky.on { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+    /* the search bar (quick job 104): a thin line box like the inputs, its icon in the main color */
+    .search { display: flex; align-items: center; gap: 0.55rem; padding: 0 0.7rem; min-height: 2.6rem; margin-bottom: 0.3rem; border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 60%, transparent); clip-path: polygon(0.5rem 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%, 0 0.5rem); }
+    .search:focus-within { border-color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
+    .search .ico { width: 1.1rem; height: 1.1rem; color: var(--c); }
+    .search input { flex: 1; min-width: 0; border: 0; padding: 0.5rem 0; background: none; color: var(--text); font: 500 0.98rem/1.2 var(--f-ui); outline: none; }
+    .search input::placeholder { color: var(--text-dim); }
+    .search input::-webkit-search-cancel-button { filter: grayscale(1) brightness(1.6); cursor: pointer; }
+    /* while searching: the rows, notes and groups with no match hide; a folded group with a match opens */
+    .no-match { display: none !important; }
+    .group.searching.folded .rows { display: block; }
+    .group.searching.folded .chev { transform: none; }
+    .navb.no-hits { opacity: 0.35; }
+    #no-hits { margin: 0 0 1rem; font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
     nav.groups .foot { margin: 0.8rem 0 0; font: var(--w-lines) 0.8rem/1.45 var(--f-lines); color: var(--text-dim); }
     #list { overflow-y: auto; padding-right: 1rem; max-width: 64rem; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; }
     .group { margin-bottom: 1.8rem; scroll-margin-top: 0.4rem; }
@@ -72,6 +86,7 @@
       .wrap { grid-template-columns: minmax(0, 1fr); }
       nav.groups { flex-direction: row; flex-wrap: wrap; } nav.groups .nav-main, nav.groups .nav-risky { flex-direction: row; flex-wrap: wrap; margin: 0; } nav.groups .foot { display: none; }
       .navb { width: auto; }
+      .search { flex-basis: 100%; }
       .row { grid-template-columns: minmax(0, 1fr) auto; } .row .lbl { grid-column: 1 / -1; } .row > .unit:empty { display: none; }
     }
     /* the controls */
@@ -155,11 +170,13 @@
   </header>
   <div class="wrap">
     <nav class="groups" aria-label="Settings groups">
+      <label class="search"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><input id="search" type="search" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false"></label>
       <div class="nav-main" id="nav-main"></div>
       <div class="nav-risky" id="nav-risky"></div>
       <p class="foot">Changes save at once. Only the brain's computer can change the lab, robot and safety settings.</p>
     </nav>
     <main id="list">
+      <p id="no-hits" aria-live="polite" hidden></p>
       <div id="problems" role="alert" hidden><b>A settings file can't be read</b></div>
       <div id="restart-bar" role="status" hidden><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-warn"/></svg><span class="what"></span><span class="act"></span><span class="st"></span><span class="err" aria-live="polite"></span></div>
     </main>
