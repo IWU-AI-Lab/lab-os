@@ -102,8 +102,9 @@ WAKE_QUIET_S = 2.0  # after a wake, ignore the phrase for this long (the same wo
 WAKE_PREROLL_BYTES = 9_600  # 0.3 s of audio from before the phrase was detected goes to the hearing
 WAKE_RING_BYTES = 32_000  # 1 s of the latest audio kept while listening for the phrase
 WAKE_END_HOLD_S = 0.35  # the service heard a pause after the question: end if it stays quiet
-# ... but the words so far don't end a sentence ("37 times 48, then"): wait longer (quick job 83)
-WAKE_MID_HOLD_S = 1.2
+# ... but the words so far don't end a sentence ("37 times 48, then"): wait longer (quick job 83;
+# 1.2 s until quick job 98)
+WAKE_MID_HOLD_S = 1.6
 STANDBY_MAX_S = 240.0  # a hearing kept connected ahead of time is renewed after this long
 STANDBY_RETRY_S = 30.0  # it couldn't connect: try again after this long
 WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing

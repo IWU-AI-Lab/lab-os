@@ -385,7 +385,8 @@ def test_the_pages_have_the_wake_word():
     assert "syncWake" in (src / "hub/web/hub.js").read_text()
     assert '"wake word"' in (src / "hub/web/settings.js").read_text()
     js = (src / "web/voice.js").read_text()
-    assert '"wake word": "wake_word"' in js and "export function silenceWatch" in js
+    assert '"wake word": "wake_word"' in js and "silenceWatch } from" in js
+    assert "export function silenceWatch" in (src / "web/silence.js").read_text()
     # snappier (2026-11-14): the sensitivity, the Quest's stalled microphone, the brain's "ended"
     assert "wakeSensitivity()" in js and "watchMic" in js and '"ended"' in js
     assert "wake_sensitivity" in (src / "hub/web/settings.js").read_text()
