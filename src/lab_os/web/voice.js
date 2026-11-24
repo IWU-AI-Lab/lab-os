@@ -35,6 +35,9 @@
 
 import { deviceName, prefs } from "/web/device.js";
 
+// the end of a spoken question (no imports there, so the tests run it with node)
+export { WAKE_QUIET_MS, silenceWatch } from "/web/silence.js";
+
 // The way in, chosen per device (Settings → This device, kept by the brain under its name): push-to-talk
 // (the default), dictation or the wake word. The setting's words → the brain's names (the greeting's hint).
 export const WAYS = { "push-to-talk": "push_to_talk", dictation: "dictation", "wake word": "wake_word" };
@@ -55,10 +58,6 @@ export function assistantLanguage() {
   const p = prefs();
   return { hear: p.hear_in || "", answer: p.answer_in || "" };
 }
-
-// The question after the wake word ends after this much quiet (1.5 s, then 1 s, now 1.6 s; the brain may end
-// it sooner, when the voice service hears the pause at the end of a sentence).
-export const WAKE_QUIET_MS = 1600; // quick job 83: 1 s cut "37 times 48, … then add 199" at the pause
 
 // Can this screen hear at all? (A secure page and a microphone; the brain's side is in /api/status.)
 export async function screenCanHear() {
@@ -106,26 +105,6 @@ export function revealPacer(length, render) {
       free = true;
     },
     finished,
-  };
-}
-
-// Stop listening after a short silence once something was said, or after a while with nothing said.
-// level(l): the microphone's level (onLevel); words(): the brain heard words (counts as speech).
-// floor: the room's level so far (v.noiseFloor): in a noisy room, its hum isn't taken for talking. The floor
-// also creeps up while it's "loud" (a steady noise is the room, not a voice).
-export function silenceWatch(onStop, { quietMs = 1600, idleMs = 8000, maxMs = 45_000, floor: floor0 = 0.005 } = {}) {
-  const t0 = performance.now();
-  let spoke = false, quietSince = t0, floor = Math.max(0.005, floor0 || 0), done = false;
-  const stop = () => { if (!done) { done = true; onStop(spoke); } };
-  return {
-    level(l) {
-      if (done) return;
-      const now = performance.now();
-      if (l > Math.max(0.02, floor * 3)) { spoke = true; quietSince = now; floor = floor * 0.99 + l * 0.01; } else floor = floor * 0.95 + l * 0.05;
-      if ((spoke && now - quietSince > quietMs) || (!spoke && now - t0 > idleMs) || now - t0 > maxMs) stop();
-    },
-    words() { spoke = true; quietSince = performance.now(); },
-    cancel() { done = true; },
   };
 }
 
