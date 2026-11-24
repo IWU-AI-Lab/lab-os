@@ -30,6 +30,7 @@ timing is logged ("voice timing …") and kept for `GET /api/voice/timings`.
 import asyncio
 import base64
 import contextlib
+import dataclasses
 import hashlib
 import json
 import logging
@@ -325,7 +326,12 @@ class VoiceDesk:
     _closing: set = field(default_factory=set)  # warm hearings being let go
 
     def setup(self) -> VoiceSetup:
-        return pick_voice(self.persona().voice, self.voices())
+        """The persona's voice setup, with the persona's own speaker for that service (quick job
+        100: J.A.R.V.I.S. a male voice, the Lab Assistant a female one)."""
+        persona = self.persona()
+        setup = pick_voice(persona.voice, self.voices())
+        speaker = persona.speakers.get(setup.service)
+        return dataclasses.replace(setup, speaker=speaker) if speaker else setup
 
     def why_not(self) -> str | None:
         """Why there's no voice right now (a sentence), or None."""

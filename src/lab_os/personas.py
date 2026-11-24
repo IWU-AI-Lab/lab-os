@@ -37,6 +37,7 @@ KNOWN = {
     "personality",
     "model",
     "voice",
+    "speakers",
     "wake_word",
     "picture",
     "lines",
@@ -51,6 +52,9 @@ class Persona:
     personality: str = ""  # the text of the personality file: how it talks
     model: str = "main"  # which AI setup (models.yaml)
     voice: str = "none"  # step 7
+    # the voice's speaker for each service (quick job 100): {"openai": "onyx", "gemini": "Charon"};
+    # a service not named here uses the voice setup's own `speaker`
+    speakers: dict = field(default_factory=dict)
     wake_word: str = "none"  # later
     picture: dict = field(default_factory=lambda: {"type": "orb", "style": "plain"})
     lines: dict = field(default_factory=dict)  # things it says, e.g. greeting
@@ -102,6 +106,10 @@ def load_persona(persona_id: str | None = None, path: Path | None = None) -> Per
             personality = text_file.read_text().strip()
         else:
             _warn("%s: personality file %s is missing", path, text_file.name)
+    speakers = raw.get("speakers") or {}
+    if not isinstance(speakers, dict):
+        _warn("%s: speakers should be a section (service: voice name); ignored", path)
+        speakers = {}
     picture = raw.get("picture") or {"type": "orb", "style": "plain"}
     lines = raw.get("lines") or {}
     if not isinstance(picture, dict) or not isinstance(lines, dict):
@@ -114,6 +122,7 @@ def load_persona(persona_id: str | None = None, path: Path | None = None) -> Per
         personality=personality,
         model=str(raw.get("model") or "main"),
         voice=str(raw.get("voice") or "none"),
+        speakers={str(k): str(v) for k, v in speakers.items() if v},
         wake_word=str(raw.get("wake_word") or "none"),
         picture=dict(picture),
         lines={str(k): str(v) for k, v in lines.items()},
