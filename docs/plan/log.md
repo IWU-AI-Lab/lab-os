@@ -172,6 +172,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-23 | **The lab checklist is a short demo run until the demo** (`docs/guides/lab-checklist.md`, about 2 hours); the edge cases, errors and details move to `docs/guides/lab-checklist-after-demo.md`, for after 2026-12-03. | The builder: the full list with the reports got too long. |
 | 2026-11-23 | **Each persona has a voice of its own gender:** J.A.R.V.I.S. male, the Lab Assistant female (quick job 100). The assistants never say which language they answer in. | The builder: the voice should match the persona. |
 | 2026-11-23 | **Teleop on the Quest stays inside the hub in VR and AR** (the builder), as a module like the others (quick job 97). Replaces the part of the 2026-11-21 start flow (PR #204) that opened the whole Teleop page from the hub in VR. | On the Quest, leaving the hub for a full page is one step too many; the other modules stay in the hub. |
 | 2026-11-21 | **Lab results and small issues become quick jobs by area** (82–88), not one job each; a polish sweep of every page in a headless browser (89) catches the look and layout ones. (Removed from the queue 2026-11-22: the builder says when.) Sound, voice timing and feel still need the lab. The brain's log goes to a file that sessions read (85). The builder adds small issues to lab reports with "Also,". | The builder: "a lot of minor issues… iron these out in one fell swoop". |
