@@ -4,6 +4,7 @@ The scene itself is tested in a browser with Meta's emulated Quest (iwer; docs/g
 → "Testing without a headset"). These checks catch a broken import or a CDN link before that.
 """
 
+import json
 import re
 
 from test_hub_server import SRC, make_app
@@ -104,7 +105,7 @@ async def test_the_vr_modules(aiohttp_client):
     mods = await (await client.get("/hub/xr/modules.js")).text()
     module = mods.split("export class TeleopModule", 1)[1].split("\n}\n", 1)[0]
     assert 'import("/static/xr.js")' in module and 'getLink("input")' in module
-    assert "new TeleopSession(link" in module and "style: armStyle()" in module
+    assert "new TeleopSession(link" in module and "this.style = armStyle()" in module
     assert 'type: "hello"' in module and "deviceName()" in module  # who has control, by name
     assert "this.tele?.end()" in module  # closing it: session_end, the arm freezes
     vr_list = mods.split("export const VR_MODULES = {", 1)[1].split("};", 1)[0]
@@ -266,3 +267,79 @@ def test_the_teleop_page_has_the_headset_options():
     assert "STYLE_KEY" in xr and "localStorage.removeItem(PLACE_KEY)" in xr
     tp = (web / "teleop-page.js").read_text()
     assert "if (isHeadset())" in tp and 'd.dataset.unavailable = "1"' in tp  # test_teleop_buttons
+
+
+def _options(call: str):
+    """Run xr/teleop-options.js (no imports) with node and return what `call` gives."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node isn't installed")
+    url = (SRC / "hub/web/xr/teleop-options.js").as_uri()
+    script = f"import({json.dumps(url)}).then(m => console.log(JSON.stringify({call})))"
+    out = subprocess.run([node, "-e", script], capture_output=True, text=True, check=True)
+    return json.loads(out.stdout)
+
+
+STATUS = {"speed_scale": 0.5, "max_speed_scale": 0.8, "mode": "relative",
+          "modes": ["relative", "one_to_one"], "one_to_one_deg_per_s": 180}  # fmt: skip
+
+
+def test_the_vr_teleop_options_are_the_teleop_pages():
+    """Quick job 102: the hub's VR and AR Teleop has the Teleop page's options for the headset:
+    the speed (5 % a step, up to the venue's cap), relative or 1:1 (only where the brain offers
+    it), the 3D arm's look, and putting the 3D arm back."""
+    rows = _options(f"m.optionRows({json.dumps(STATUS)}, 'stick')")
+    assert [r["key"] for r in rows] == ["speed", "mode", "style", "place"]
+    speed, mode, style, _ = rows
+    assert speed["value"] == "50%" and speed["can"] == {"minus": True, "plus": True}
+    assert [c["value"] for c in mode["choices"] if c["enabled"]] == ["relative", "one_to_one"]
+    assert style["value"] == "stick"
+    only = _options(f"m.optionRows({json.dumps(STATUS | {'modes': ['relative']})})")
+    assert [c["enabled"] for c in only[1]["choices"]] == [True, False]
+    assert "1:1 is off in this venue" in only[1]["help"]
+    at_cap = _options(f"m.optionRows({json.dumps(STATUS | {'speed_scale': 0.8})})")
+    assert at_cap[0]["can"]["plus"] is False
+    msg = _options(f"m.optionMessage('speed', 'plus', null, {json.dumps(STATUS)})")
+    assert msg == {"type": "set_speed", "speed_scale": 0.55}
+    capped = STATUS | {"speed_scale": 0.78}
+    assert _options(f"m.optionMessage('speed', 'plus', null, {json.dumps(capped)})") == {
+        "type": "set_speed",
+        "speed_scale": 0.8,
+    }
+    assert _options(f"m.optionMessage('mode', 'pick', 'one_to_one', {json.dumps(STATUS)})") == {
+        "type": "set_mode",
+        "mode": "one_to_one",
+    }
+    no_1to1 = STATUS | {"modes": ["relative"]}
+    assert _options(f"m.optionMessage('mode', 'pick', 'one_to_one', {json.dumps(no_1to1)})") is None
+    assert _options("m.optionMessage('speed', 'plus', null, null)") is None  # no brain yet
+
+
+async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client):
+    """Quick job 102 (the builder did not find a way out): in the VR and AR Teleop, STOP, Options,
+    Back and Exit sit under the status box, in the teleop room, where you look while you drive. The
+    right controller or right hand points at them (its beam shows while it is on one); the floating
+    tab and the Exit at the floor are not shown there. B still closes Teleop."""
+    client = await aiohttp_client(make_app())
+    graph = await _module_graph(client, "/hub/xr-hub.js")
+    assert "/hub/xr/teleop-panel.js" in graph and "/hub/xr/teleop-options.js" in graph
+    panel = graph["/hub/xr/teleop-panel.js"]
+    for kind in ('kind: "stop"', 'op: "options"', 'kind: "back"', 'kind: "exit"'):
+        assert kind in panel, kind
+    mods = graph["/hub/xr/modules.js"]
+    module = mods.split("export class TeleopModule", 1)[1].split("\n}\n", 1)[0]
+    assert "sc.root.add(m)" in module  # in the teleop room, beside the status box
+    assert "this.link = link" in module  # STOP on the bar
+    assert "this.tele.xrScene.setStyle(" in module and "this.tele.putBack()" in module
+    hub = graph["/hub/xr/hub.js"]
+    assert 'this.tab.mesh.visible = inModule && this.module?.id !== "teleop"' in hub
+    assert 'if (w.kind === "tele")' in hub
+    main = graph["/hub/xr-hub.js"]
+    assert 'this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop"' in main
+    assert 'teleop ? "on-hit" : true' in main
+    assert 'show === "on-hit" ? !!found : show' in graph["/hub/xr/pointer.js"]

@@ -5,6 +5,8 @@
 //     teleop page instead): the teleop page's own session (TeleopSession, /static/xr.js: the arm on its
 //     table, its status box, controllers or hands, the same messages to the brain) inside the hub's
 //     session. STOP is A/X; the brain freezes the arm when input stops, and one page drives at a time.
+//     Under its status box: STOP, Options (the Teleop page's options), Back and Exit (xr/teleop-panel.js,
+//     quick job 102), in place of the tab.
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
@@ -19,6 +21,8 @@ import { getLink } from "/static/link.js";
 import { deviceName } from "/web/device.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
+import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
+import { optionMessage } from "./teleop-options.js";
 
 export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"] };
 const PX = 900; // canvas pixels per metre
@@ -366,15 +370,52 @@ export class TeleopModule {
     this.tele = null;
   }
   async open() {
-    const { TeleopSession, armStyle } = await import("/static/xr.js");
+    const { TeleopSession, armStyle, STYLE_KEY } = await import("/static/xr.js");
+    this.styleKey = STYLE_KEY; // the same as the Teleop page's "3D arm in the headset"
     const link = getLink("input");
     // its device name, so the other pages say who has control (quick job 76); again after a reconnect
     const hello = () => link.send({ type: "hello", agent: navigator.userAgent, device: deviceName() });
     if (!this.helloOn) { link.on("open", hello); this.helloOn = true; }
     hello(); // dropped when the link isn't open yet: then "open" sends it
     // the teleop page's "3D arm in the headset" (or ?xrarm=stick): the light model if frames drop
-    this.tele = new TeleopSession(link, { ar: this.ar, style: armStyle(), refType: this.refType });
+    this.style = armStyle() || "";
+    this.tele = new TeleopSession(link, { ar: this.ar, style: this.style, refType: this.refType });
+    this.link = link; // STOP on the bar (hub.js sends it)
+    // the buttons under the status box and the options over it (quick job 102), in the teleop room's
+    // space like the status box (xr-scene.js: 0.42 × 0.197 m at 0.48, 1.12, -0.62, turned -0.35)
+    const sc = this.tele.xrScene, at = sc.panel.mesh;
+    this.bar = new TeleopBar();
+    this.opts = new TeleopOptions();
+    this.bar.mesh.position.set(at.position.x, at.position.y - 0.197 / 2 - 0.012 - this.bar.p.h / 2, at.position.z);
+    this.opts.mesh.position.set(at.position.x, at.position.y + 0.197 / 2 + 0.012 + this.opts.h / 2, at.position.z);
+    for (const m of [this.bar.mesh, this.opts.mesh]) { m.rotation.y = at.rotation.y; sc.root.add(m); }
+    this.opts.mesh.visible = false;
+    this.said = { text: "", t: 0 };
     return this.tele.scene;
+  }
+  /** What the pointer can land on: the bar, and the options while they're open. */
+  targets() { return this.tele ? [this.bar.mesh, ...(this.opts.mesh.visible ? [this.opts.mesh] : [])] : []; }
+  /** A press on the bar's Options or on an option (`what`: {kind: "tele", op, key?, value?}). */
+  press(what) {
+    if (!this.tele) return;
+    if (what.op === "options") { this.opts.mesh.visible = !this.opts.mesh.visible; return; }
+    const s = this.tele.feed.status;
+    const msg = optionMessage(what.key, what.op, what.value, s);
+    if (msg) this.link.send(msg);
+    if (what.key === "style" && what.op === "pick") {
+      this.style = what.value;
+      try { localStorage.setItem(this.styleKey, what.value); } catch { /* private window: this session only */ }
+      this.tele.xrScene.setStyle(what.value);
+    }
+    if (what.key === "place") { this.tele.putBack(); this.said = { text: "The 3D arm is back at its first place.", t: performance.now() }; }
+  }
+  step(dt, now, cameraPos, hits) {
+    if (!this.tele) return;
+    this.bar.hover = hits.find((h) => h.obj === this.bar.mesh)?.what || null;
+    this.opts.hover = hits.find((h) => h.obj === this.opts.mesh)?.what || null;
+    this.bar.open = this.opts.mesh.visible;
+    this.bar.paint();
+    if (this.opts.mesh.visible) this.opts.paint(this.tele.feed.status, this.style, performance.now() - this.said.t < 4000 ? this.said.text : "");
   }
   frame(t, xrFrame, refSpace) { return this.tele?.frame(t, xrFrame, refSpace); }
   close() { this.tele?.end(); this.tele = null; } // session_end: the arm freezes, control is free

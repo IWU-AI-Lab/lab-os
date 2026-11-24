@@ -83,6 +83,15 @@ export class XRScene {
     return this.root.worldToLocal(holder.getWorldPosition(new THREE.Vector3()));
   }
 
+  /** The 3D arm's look ("stick" = the light model, else the full one), changed during a session (the hub's
+   * Teleop options, quick job 102): the models load again in the new look. */
+  setStyle(style) {
+    if ((style || "") === (this.style || "")) return;
+    this.style = style;
+    if (this.armKind) this._loadArm(this.armKind);
+    if (this.leftKind) this._loadLeft(this.leftKind);
+  }
+
   /** "local" reference spaces put y = 0 at the head; move the content down to roughly the floor. */
   setFloorOffset(y) {
     this.root.position.y = y;

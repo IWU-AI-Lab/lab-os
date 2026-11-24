@@ -69,6 +69,7 @@ Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plu
 Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --speed 0.3`. The Quest is on the router's Wi-Fi.
 - **T.1** On the Quest, open the hub, then **Enter VR**, then **Teleop**. Hold the right grip and move your hand. → did `so101-white` follow? (yes / no) Hold the left grip and move your hand. → did `so101-green` follow? (yes / no)
 - **T.2** Hold both grips and move both hands slowly. → did both arms follow, each with its own hand? (yes / no) Is it good enough to show? (yes / no: what is wrong)
+- **T.3** Quick job 102. In the hub in VR, open **Teleop**. Point the right controller at **OPTIONS** under the status box, then pull the trigger. Press **+** for the speed and select **1:1**, then **Relative**. → did each change at once? (yes / no) Point at **BACK** and pull the trigger. → are you back on the hub? (yes / no) Open Teleop again in AR, put the controllers down, then point your right hand at **EXIT** and pinch. → did it leave AR? (yes / no)
 
 ## R. The Raspbot (10 min)
 raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`.

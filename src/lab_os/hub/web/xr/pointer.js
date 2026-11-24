@@ -35,7 +35,8 @@ export class Pointer {
 
   /**
    * One pointer's ray this frame (world space). Returns what it's on: {obj, what, point} or null.
-   * key: "left" / "right" / "mouse". show: draw the beam (not for the mouse).
+   * key: "left" / "right" / "mouse". show: draw the beam (not for the mouse); "on-hit": only while it is on
+   * something (Teleop: the beam would be in the way of the arm).
    */
   update(key, origin, dir, show = true) {
     const v = this._visuals(key);
@@ -51,7 +52,7 @@ export class Pointer {
     const end = origin.clone().addScaledVector(dir, len);
     const pos = v.beam.geometry.attributes.position;
     pos.setXYZ(0, origin.x, origin.y, origin.z); pos.setXYZ(1, end.x, end.y, end.z); pos.needsUpdate = true;
-    v.beam.visible = show;
+    v.beam.visible = show === "on-hit" ? !!found : show;
     v.reticle.visible = !!found;
     if (found) {
       v.reticle.position.copy(found.point);
