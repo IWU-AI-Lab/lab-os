@@ -67,14 +67,14 @@ def test_starts_the_connected_headset_with_the_system_adb(scrcpy):
     s = v.status()
     assert s["installed"] and not s["running"] and s["why_not"] is None
     assert s["headsets"] == [
-        {"name": "quest-a", "connected": False},
-        {"name": "quest-b", "connected": True},
+        {"name": "quest-a", "connected": False, "via": None, "host": ""},
+        {"name": "quest-b", "connected": True, "via": "usb", "host": ""},
     ]
     assert v.start() == "quest-b"
     cmd = started[0].cmd
     assert cmd[0].endswith("scrcpy") and "--serial=SERIAL_B" in cmd
     assert {"--no-control", "--no-audio"} <= set(cmd)  # watch only, the headset keeps its sound
-    assert "--window-title=Quest view (quest-b)" in cmd
+    assert "--window-title=Quest view (quest-b)" in cmd and "--video-bit-rate=8M" in cmd
     assert started[0].env["ADB"] == "/usr/bin/adb"  # the same adb server as teleop's adb reverse
     assert v.status()["running"] and v.status()["headset"] == "quest-b"
     assert v.start() == "quest-b" and len(started) == 1  # one window at a time
@@ -233,3 +233,96 @@ def test_the_button_follows_the_window():
         assert "q?.running ? 1000 : 5000" in src, page
         click = src.split('$("#qv-btn").addEventListener("click"', 1)[1].split("});", 1)[0]
         assert "await pollQuestView()" in click and "q.running" in click, page
+
+
+WIFI_REG = Registry(
+    {
+        "quest-a": Device("quest-a", "quest", serial="SERIAL_A", host="192.168.8.180"),
+        "quest-b": Device("quest-b", "quest", serial="SERIAL_B"),
+    }
+)
+
+
+def wifi_view(folder, seen=(), answers=True):
+    """Quest view, quest-a on the router's Wi-Fi (quick job 103). `answers`: adb connect works."""
+    started, tried = [], []
+
+    def popen(cmd, env=None, **kw):
+        started.append(FakeProc(cmd, env))
+        return started[-1]
+
+    def connect(adb, address):
+        tried.append(address)
+        return answers
+
+    v = qv.QuestView(folder=folder, registry=lambda: WIFI_REG, devices=lambda adb: list(seen),
+                     popen=popen, connect=connect)  # fmt: skip
+    return v, started, tried
+
+
+def test_usb_stays_the_first_choice(scrcpy):
+    """Quick job 103: plugged in, the view comes over USB even when Wi-Fi also reaches it."""
+    v, started, tried = wifi_view(scrcpy, seen=("192.168.8.180:5555", "SERIAL_A"))
+    assert v.status()["headsets"][0] == {"name": "quest-a", "connected": True, "via": "usb",
+                                         "host": "192.168.8.180"}  # fmt: skip
+    v.start()
+    assert "--serial=SERIAL_A" in started[0].cmd and not tried
+    assert v.status()["via"] == "usb"
+
+
+def test_quest_view_on_wifi_without_the_cable(scrcpy):
+    """Quick job 103: no cable, and adb already reaches the headset at its address: the view
+    comes over Wi-Fi, at a lower bit rate."""
+    v, started, tried = wifi_view(scrcpy, seen=("192.168.8.180:5555",))
+    s = v.status()
+    assert s["why_not"] is None and s["headsets"][0]["via"] == "wifi"
+    assert v.start() == "quest-a"
+    cmd = started[0].cmd
+    assert "--serial=192.168.8.180:5555" in cmd and "--video-bit-rate=4M" in cmd and not tried
+    assert v.status()["via"] == "wifi"
+    assert v.stop() and v.status()["via"] == ""
+
+
+def test_the_press_reaches_the_headset_on_wifi(scrcpy):
+    """Not seen yet: the button stays usable (a headset has an address), and the press runs adb
+    connect first."""
+    v, started, tried = wifi_view(scrcpy)
+    assert v.status()["why_not"] is None
+    assert v.start() == "quest-a"
+    assert tried == ["192.168.8.180:5555"] and "--serial=192.168.8.180:5555" in started[0].cmd
+
+
+def test_says_why_wifi_did_not_reach_it(scrcpy):
+    v, started, tried = wifi_view(scrcpy, answers=False)
+    with pytest.raises(qv.QuestViewError) as e:
+        v.start()
+    msg = str(e.value)
+    assert "quest-a at 192.168.8.180:5555" in msg and "uv run lab-os quest-view --wifi" in msg
+    assert not started
+
+
+def test_wifi_switches_a_usb_headset_to_tcp_mode(scrcpy):
+    """`lab-os quest-view --wifi`: adb tcpip 5555 for a headset on USB with an address, then adb
+    connect; one sentence for each headset on USB."""
+    ran = []
+
+    class Done:
+        returncode, stdout, stderr = 0, "restarting in TCP mode port: 5555", ""
+
+    def run(cmd, **kw):
+        ran.append(cmd)
+        return Done()
+
+    reg = Registry(WIFI_REG.devices | {"quest-c": Device("quest-c", "quest", serial="SERIAL_C")})
+    said = qv.wifi(registry=lambda: reg, devices=lambda adb: ["SERIAL_A", "SERIAL_C"], run=run,
+                   connect=lambda adb, address: address == "192.168.8.180:5555")  # fmt: skip
+    assert ran == [["/usr/bin/adb", "-s", "SERIAL_A", "tcpip", "5555"]]
+    assert said[0].startswith("quest-a: ready on Wi-Fi at 192.168.8.180:5555")
+    assert said[1].startswith("quest-c: no address")
+    with pytest.raises(qv.QuestViewError, match="by USB first"):
+        qv.wifi(registry=lambda: reg, devices=lambda adb: [], run=run)
+
+
+def test_the_lab_quest_has_its_wifi_address():
+    d = load_registry().devices["quest-a"]
+    assert d.host == "192.168.8.180"  # reserved in the router; config/place.yaml drive_from too
