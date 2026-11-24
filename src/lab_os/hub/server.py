@@ -56,7 +56,7 @@ GET /api/spend           this month's AI spend and budget (hidden on a public ve
 GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
 GET /api/cameras         every camera in devices.yaml, one per USB socket (the Cameras page)
 GET /api/camera-feed/{name}   that camera's newest picture (JPEG); opened while asked for, closed
-                         5 s after (lab_os/camera_feed.py)
+                         5 s after (lab_os/camera_feed.py); ?board=1: the tic-tac-toe board on it
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
@@ -114,10 +114,12 @@ from lab_os.teleop.server import (
     is_local,
 )
 from lab_os.theme import load_theme
+from lab_os.tools import table_map, tic_tac_toe
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
 from lab_os.tools.project import ProjectTools
 from lab_os.tools.robot import Refused, RobotTools
+from lab_os.tools.table_map import TableMap
 from lab_os.venues import Venue, load_venue, visitors_venue_name
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
@@ -1031,7 +1033,20 @@ async def api_cameras(request: web.Request) -> web.Response:
         cams = await asyncio.to_thread(camera_feed.all_cameras)
     except config.ConfigError:
         cams = []
+    game = await asyncio.to_thread(_board_game)
+    for c in cams:  # the camera that sees the tic-tac-toe board gets a Board button
+        c["board"] = game is not None and game[1].camera in c["names"]
     return web.json_response({"cameras": cams})
+
+
+def _board_game() -> tuple[TableMap, tic_tac_toe.Layout] | None:
+    """The tic-tac-toe layout and its camera's table map, or None if either is missing."""
+    try:
+        game = tic_tac_toe.load()
+    except tic_tac_toe.NoGame:
+        return None
+    m = table_map.load(game.camera)
+    return (m, game) if m is not None else None
 
 
 async def api_camera_feed(request: web.Request) -> web.Response:
@@ -1042,7 +1057,23 @@ async def api_camera_feed(request: web.Request) -> web.Response:
         jpeg = await asyncio.to_thread(request.app[FEEDS].jpeg, name)
     except camera_feed.CameraError as e:
         return web.Response(status=409, text=f"{e}")
+    if request.query.get("board") == "1":  # the board's cells and numbered start spots on it
+        jpeg = await asyncio.to_thread(_draw_board, name, jpeg)
     return web.Response(body=jpeg, content_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+def _draw_board(name: str, jpeg: bytes) -> bytes:
+    """`jpeg` of camera `name` with the tic-tac-toe board drawn on it, as camera_snapshot draws it
+    for the AI. Unchanged if `name` isn't the board's camera (or another name for its socket)."""
+    game = _board_game()
+    if game is None:
+        return jpeg
+    m, layout = game
+    try:
+        names = next(c["names"] for c in camera_feed.all_cameras() if name in c["names"])
+    except (StopIteration, config.ConfigError):
+        return jpeg
+    return tic_tac_toe.draw(jpeg, m, layout) if layout.camera in names else jpeg
 
 
 async def _camera_feeds_task(app: web.Application):

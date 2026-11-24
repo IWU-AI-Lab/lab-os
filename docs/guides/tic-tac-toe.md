@@ -18,6 +18,7 @@ The layout is in `config/games/tic-tac-toe.yaml`: where the board is, the size o
 3. Put the sheet flat in front of the arm, with the edge marked "This edge toward the arm" toward the arm.
 4. Put that edge 12 cm (four cube lengths) in front of the middle of the arm's base. Put the cross in cell B2 straight in front of the base.
 5. Put the 5 red pieces at their start spots: three on the arm's left and two on its right, about 16 cm to the side of the base. Step 4 below shows the exact spots as green rings.
+   To see the spots while you put the pieces, open **http://localhost:8080/cameras**. On the `so101-white-cam-stand` picture, press **Board**. The live picture shows the cells and the numbered green rings.
 6. Keep the 5 blue pieces next to you.
 7. If the camera or the arm moved since the last table map, make the table map again (`docs/guides/ai-control.md` → "Table map").
 
@@ -39,7 +40,7 @@ Type this in Claude Code:
 
 The picture shows the board's cells as magenta squares, each with its name (A1 at the top left), and the robot's start spots as green numbered rings.
 - If the magenta squares are not on the printed lines, move the paper until they are. Take the picture again.
-- If a red piece is not in its green ring, move the piece.
+- If a red piece is not in its green ring, move the piece. Watch the Cameras page with **Board** on (step 1) while you move it.
 
 ## 5. Play
 Copy this prompt into Claude Code:
