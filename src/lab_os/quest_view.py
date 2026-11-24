@@ -142,6 +142,27 @@ def adb_devices(adb: str) -> list[str]:
     return [p[0] for p in lines if len(p) >= 2 and p[1] == "device"]
 
 
+def adb_states(adb: str) -> dict[str, str]:
+    """Each device adb lists, with its state ("device", "unauthorized", "no permissions", …)."""
+    try:
+        out = subprocess.run([adb, "devices"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return {}
+    lines = [line.split(None, 1) for line in out.splitlines()[1:]]
+    state = {}
+    for p in lines:
+        if len(p) == 2:
+            two = " ".join(p[1].split()[:2])  # "no permissions (…)" is the one with a space
+            state[p[0]] = two if two == "no permissions" else p[1].split()[0]
+    return state
+
+
+NOT_READY = {
+    "unauthorized": "Put the headset on and allow USB debugging. Then run this again.",
+    "no permissions": "Wait 5 s, or connect the USB cable again. Then run this again.",
+}
+
+
 def adb_connect(adb: str, address: str) -> bool:
     """`adb connect <address>`: does adb reach the headset over the network now?"""
     try:
@@ -335,6 +356,7 @@ def wifi(
     run: Callable = subprocess.run,
     connect: Callable[[str, str], bool] = adb_connect,
     wait: Callable[[float], None] = time.sleep,
+    states: Callable[[str], dict[str, str]] = adb_states,
 ) -> list[str]:
     """`lab-os quest-view --wifi`: each headset on USB that has a `host` gets adb's TCP mode
     (`adb tcpip 5555`), then `adb connect`. Then Quest view also works without the cable, until
@@ -348,6 +370,11 @@ def wifi(
     said = []
     for d in quests:
         if d.serial not in seen:
+            if d.host and wifi_address(d.host) in seen:
+                said.append(f"{d.name}: already ready on Wi-Fi at {wifi_address(d.host)}.")
+            elif state := states(adb).get(d.serial):
+                fix = NOT_READY.get(state, "Connect the USB cable again. Then run this again.")
+                said.append(f'{d.name}: adb sees it by USB, but as "{state}". {fix}')
             continue
         if not d.host:
             said.append(f"{d.name}: no address in devices.yaml (host), so no Wi-Fi.")
