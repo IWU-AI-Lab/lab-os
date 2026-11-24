@@ -52,7 +52,7 @@ class Persona:
     personality: str = ""  # the text of the personality file: how it talks
     model: str = "main"  # which AI setup (models.yaml)
     voice: str = "none"  # step 7
-    # the voice's speaker for each service (quick job 100): {"openai": "onyx", "gemini": "Charon"};
+    # the voice's speaker for each service (quick job 100): {"openai": "fable", "gemini": "Charon"};
     # a service not named here uses the voice setup's own `speaker`
     speakers: dict = field(default_factory=dict)
     wake_word: str = "none"  # later
