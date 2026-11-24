@@ -347,6 +347,45 @@ def test_wifi_waits_while_the_headset_restarts_adb(scrcpy):
     assert "can't reach 192.168.8.180:5555" in said[0]
 
 
+def test_wifi_says_why_a_usb_headset_is_not_ready(scrcpy):
+    """Lab check T.4 (2026-11-24): adb listed the headset, but not as "device". Say the state,
+    and say when the headset is already on Wi-Fi."""
+
+    def wifi(seen, states):
+        return qv.wifi(registry=lambda: WIFI_REG, devices=lambda adb: seen,
+                       run=lambda cmd, **kw: None, states=lambda adb: states)  # fmt: skip
+
+    said = wifi([], {"SERIAL_A": "unauthorized"})
+    assert said == ['quest-a: adb sees it by USB, but as "unauthorized". Put the headset on and '
+                    "allow USB debugging. Then run this again."]  # fmt: skip
+    assert "Wait 5 s" in wifi([], {"SERIAL_A": "no permissions"})[0]
+    assert wifi(["192.168.8.180:5555"], {}) == [
+        "quest-a: already ready on Wi-Fi at 192.168.8.180:5555."
+    ]
+    with pytest.raises(qv.QuestViewError, match="by USB first"):
+        wifi([], {})
+
+
+def test_adb_states_reads_each_state(monkeypatch):
+    out = (
+        "List of devices attached\n"
+        "2G97C5ZHB300FG         no permissions (missing udev rules? user is in the plugdev "
+        "group); see [http://developer.android.com/tools/device.html] usb:1-6\n"
+        "2G97C5ZHB3053L\tunauthorized usb:1-7\n"
+        "192.168.8.180:5555\tdevice\n"
+    )
+
+    class Out:
+        stdout = out
+
+    monkeypatch.setattr(qv.subprocess, "run", lambda *a, **kw: Out())
+    assert qv.adb_states("adb") == {
+        "2G97C5ZHB300FG": "no permissions",
+        "2G97C5ZHB3053L": "unauthorized",
+        "192.168.8.180:5555": "device",
+    }
+
+
 def test_the_lab_quest_has_its_wifi_address():
     d = load_registry().devices["quest-a"]
     assert d.host == "192.168.8.180"  # reserved in the router; config/place.yaml drive_from too
