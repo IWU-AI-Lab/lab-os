@@ -62,7 +62,8 @@ How it works: `docs/guides/hub.md` → "The assistant moves the arm". Plug in `s
 
 ## G. Tic-tac-toe (30 min)
 Claude Code plays against you with `so101-white`. Set up as in `docs/guides/tic-tac-toe.md` (the printed sheet, the pieces, the stand camera). Run `uv run --extra so101 lab-os serve --speed 0.3`.
-- **G.1** In Claude Code, type the prompts in sections 4 and 5 of the guide. Play one game to the end. → did the AI read the board right each time? (yes / no: which turn) Did each red piece go inside its cell? (yes / no) About how many minutes did the game take?
+- **G.1** Open the Cameras page. Press **Board** on the stand camera's picture. → do the magenta squares sit on the printed lines? (yes / no) Put the 5 red pieces in the green rings while you watch. → was each place easy to find? (yes / no: which ring)
+- **G.2** In Claude Code, type the prompts in sections 4 and 5 of the guide. Play one game to the end. → did the AI read the board right each time? (yes / no: which turn) Did each red piece go inside its cell? (yes / no) About how many minutes did the game take?
 
 ## W. Teleop with a webcam (10 min)
 Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plug in `so101-white`. Run `uv run --extra so101 lab-os serve --speed 0.3`. **X** is STOP on the webcam page.

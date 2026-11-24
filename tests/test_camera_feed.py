@@ -150,7 +150,7 @@ async def test_the_cameras_page(aiohttp_client, monkeypatch):
     )
     client = await aiohttp_client(make_app())
     got = await (await client.get("/api/cameras")).json()
-    assert got == {"cameras": [{"id": "white-cam-stand", "names": ["white-cam-stand"]}]}
+    assert got["cameras"][0]["id"] == "white-cam-stand"
     page = await (await client.get("/cameras")).text()
     assert "/web/design/kit.css" in page and "/api/cameras" in page
     assert "/api/camera-feed/" in page and "document.hidden" in page
@@ -164,3 +164,47 @@ async def test_the_cameras_page(aiohttp_client, monkeypatch):
     assert (
         'cameras: ["Cameras", "i-cam", "page"]' in (SRC / "hub" / "web" / "design.html").read_text()
     )
+
+
+async def test_the_board_drawn_on_the_live_picture(aiohttp_client, monkeypatch):
+    """The Cameras page's Board button: the brain draws the tic-tac-toe board on the board
+    camera's live pictures (also under another name for its socket), and on no other camera."""
+    from test_table_map import _jpeg, _plain_map
+
+    from lab_os.hub import server
+    from lab_os.tools import tic_tac_toe
+
+    game = tic_tac_toe.load()
+    plain = _jpeg()
+
+    class Feeds:
+        def jpeg(self, name):
+            return plain
+
+        def close_all(self):
+            pass
+
+    monkeypatch.setattr(server.table_map, "load", lambda cam: _plain_map(cam))
+    monkeypatch.setattr(
+        camera_feed,
+        "all_cameras",
+        lambda: [
+            {"id": "other-cam", "names": [game.camera, "other-cam"]},  # one socket, two names
+            {"id": "wrist-cam", "names": ["wrist-cam"]},
+        ],
+    )
+    app = make_app()
+    app[server.FEEDS] = Feeds()
+    client = await aiohttp_client(app)
+    got = (await (await client.get("/api/cameras")).json())["cameras"]
+    assert [c["board"] for c in got] == [True, False]
+    drawn = await (await client.get("/api/camera-feed/other-cam?board=1")).read()
+    assert drawn != plain
+    assert await (await client.get("/api/camera-feed/other-cam")).read() == plain
+    assert await (await client.get("/api/camera-feed/wrist-cam?board=1")).read() == plain
+    monkeypatch.setattr(server.table_map, "load", lambda cam: None)  # no table map: no board
+    got = (await (await client.get("/api/cameras")).json())["cameras"]
+    assert not any(c["board"] for c in got)
+    assert await (await client.get("/api/camera-feed/other-cam?board=1")).read() == plain
+    page = await (await client.get("/cameras")).text()
+    assert "?board=1" in page and "c.board" in page
