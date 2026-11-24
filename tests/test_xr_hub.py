@@ -338,7 +338,7 @@ async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client)
     assert "this.tele.xrScene.setStyle(" in module and "this.tele.putBack()" in module
     hub = graph["/hub/xr/hub.js"]
     assert 'this.tab.mesh.visible = inModule && this.module?.id !== "teleop"' in hub
-    assert 'if (w.kind === "tele")' in hub
+    assert 'if (w.kind === "tele" || w.kind === "rasp")' in hub
     main = graph["/hub/xr-hub.js"]
     assert 'this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop"' in main
     assert 'teleop ? "on-hit" : true' in main

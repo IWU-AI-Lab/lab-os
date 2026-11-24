@@ -364,7 +364,8 @@ async function getJSON(url) {
 async function loadFacts(show) {
   const [hub, hello, st, arm] = await Promise.all([getJSON("/api/hub"), getJSON("/api/greeting"), getJSON("/api/status"), getJSON("/api/arm")]);
   if (hub?.title) { show.facts.title = hub.title; show.title.text = hub.title; }
-  show.hub.setModules((hub?.modules || []).map((m) => m.id));
+  // the Raspbot module is in VR and AR only (quick job 107): the screen hub has the Raspbot page in All Pages
+  show.hub.setModules([...(hub?.modules || []).map((m) => m.id), "raspbot"]);
   if (hello?.text) show.facts.greeting = hello.text;
   show.facts.status = st; show.facts.arm = arm;
   if (st) show.heard();
@@ -403,6 +404,7 @@ function xrPointers(show, frame, r, now) {
   // 102), its beam drawn only while it is on one, so it isn't in the way (its trigger or pinch only grips while
   // the clutch is held)
   if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
+  if (on && !show.off && show.hub.module?.id === "raspbot") show.hub.module.view.input(frame, ref, now); // its sticks and your head
   for (const src of frame.session.inputSources) {
     const key = src.handedness;
     if (key !== "left" && key !== "right") continue;

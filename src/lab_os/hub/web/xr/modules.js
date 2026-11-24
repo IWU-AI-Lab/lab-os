@@ -13,6 +13,7 @@
 //     like their pages (it works from any screen).
 //   - ModuleTab: the open module's title and Back, floating at the left.
 //   - ExitButton: leaves VR or AR (quick job 78), under the hub on every page and on the off card.
+//   - RaspbotModule (xr/raspbot.js, quick job 107): drive raspbot1 with its camera as your eyes.
 // Training (LeLab on the desktop) has no VR version, so no button in VR.
 import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
@@ -24,7 +25,7 @@ import { wrap } from "./panels.js";
 import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
 import { optionMessage } from "./teleop-options.js";
 
-export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"] };
+export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"], raspbot: ["Raspbot", "i-cam"] };
 const PX = 900; // canvas pixels per metre
 
 /* ---------- the module button ---------- */

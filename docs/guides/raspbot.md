@@ -3,7 +3,7 @@
 The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold a button to drive: forward, back, turn left or turn right. Let go, and the car stops. The **Speed** slider sets the speed, from 0 % (the wheels do not turn) to 100 % (the top speed). The page also shows the Raspbot's camera. Quick job 72 (2026-11-23).
 
 ## How it works
-- A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
+- A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor and servo library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
 - The brain connects to the program on port 8765. The program sends the camera's picture on port 8766. The brain passes the picture on to the page, so the page needs no route to the Raspbot.
 - The Raspbot's address and the slider's speed when the brain starts are in `config/devices.yaml` → `raspbot1` (`host`, `speed`).
 - Without a Raspbot in `devices.yaml`, the page drives a fake Raspbot. The fake Raspbot has no camera.
@@ -41,6 +41,17 @@ The service works only at start. When the router's Wi-Fi goes away later, raspbo
 4. Hold a button, or an arrow key (or W, A, S, D). Let go to stop.
 
 raspbot1 logs in by itself when it starts, so the program starts with it (a systemd user service). On a Raspbot that does not log in by itself, run `sudo loginctl enable-linger pi` once.
+
+## Drive it from the Quest (quick job 107)
+In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.
+- **Left stick:** push it to drive (forward, back, turn). Let go, and the car stops.
+- **Your head:** the camera's picture is a large view in front of you. Turn your head, and the camera turns the same way (left, right, up, down).
+- **Right stick:** turns the camera too, on top of your head.
+- **CENTRE** (or press the right stick): the direction you look at now becomes the camera's centre. When the module opens, the direction you look at is the centre.
+- **PICTURE** saves one picture. **RECORD** starts a recording, and **END REC** stops it. They are saved on the brain's computer in `recordings/raspbot/` (not in git). The status line under the buttons gives the file's full name. A recording is a `.mjpeg` file: open it with VLC.
+- **STOP** (or A / X) stops the car. **B** or **Y**, **Back** and **Exit** close the module. When the module closes, the car stops and a recording ends.
+
+The camera's mount has two servos: servo 1 turns left and right (0° to 180°, centre 90°), servo 2 up and down (0° to 110°, centre 25°). These are the numbers in Yahboom's own code. The program on the Raspbot keeps each servo inside these limits. If a servo turns the wrong way, change `PAN_SIGN` or `TILT_SIGN` in `robots/raspbot/lab_os_raspbot.py`, then run `uv run lab-os raspbot deploy`.
 
 ## When something is wrong
 - raspbot1 stops (black screen, keyboard and mouse off): switch it off and on. Then run `ssh raspbot1 tail -n 20 lab-os/health.log`. The health log writes a line every 10 seconds: the power flags, the 5 V input, the core's current, the temperature, the Wi-Fi link, the load, free memory and free disk. The lines before the "--- start" line show the last minute before the stop. `throttled=0x0` means no power or temperature problem.

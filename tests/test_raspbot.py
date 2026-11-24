@@ -349,3 +349,117 @@ def test_health_log_is_kept_small(tmp_path):
         "systemctl --user restart lab-os-raspbot lab-os-health"
         in raspbot.deploy_commands("r")[2][-1]
     )
+
+
+# ---- quick job 107: the hub's VR Raspbot (a stick, the camera's servos, pictures, recordings) ----
+
+
+async def test_a_stick_drives_and_turns_slower():
+    bot = FakeRaspbot()
+    desk = RaspbotDesk(bot, speed=1.0)
+    page = object()
+    assert await desk.press(page, "stick", (1.0, 0.0)) == ""
+    assert bot.last == ("drive", 1.0, 1.0)
+    await desk.press(page, "stick", (0.0, 1.0))  # full right: spins like the "right" button
+    assert bot.last == ("drive", 0.6, -0.6)
+    await desk.press(page, "stick", (1.0, 1.0))  # never past the cap
+    assert bot.last == ("drive", 1.0, 0.25)
+    assert raspbot.stick_speeds(5, 0) == (1.0, 1.0)
+
+
+async def test_look_turns_the_camera_but_never_takes_control():
+    bot = FakeRaspbot()
+    desk = RaspbotDesk(bot)
+    a, b = object(), object()
+    assert await desk.look(a, 30, -10) == "" and bot.looked == (30, -10)
+    assert desk.driver is None
+    await desk.look(a, 500, 0)
+    assert bot.looked == (raspbot.LOOK_MAX, 0)
+    await desk.press(a, "forward")
+    assert await desk.look(b, 0, 0) == "Another page has control."
+    await desk.stop()
+    assert "STOP" in await desk.look(a, 0, 0)
+    await desk.release(a)
+    assert await desk.look(a, 0, 0) == ""
+
+
+def test_onboard_look_keeps_the_servo_limits():
+    mod = onboard()
+    board = mod.FakeBoard()
+    car = mod.Car(board)
+    car.handle({"drive": [1, 1]})
+    car.handle({"look": [0, 0]})
+    assert board.servos == {1: mod.PAN_CENTRE, 2: mod.TILT_CENTRE}
+    assert board.speeds[0] == mod.SPEED_CAP  # a look keeps the wheels as they are
+    car.handle({"look": [200, 200]})
+    assert board.servos == {1: mod.PAN_RANGE[1], 2: mod.TILT_RANGE[1]}
+    car.handle({"look": [-200, -200]})
+    assert board.servos == {1: mod.PAN_RANGE[0], 2: mod.TILT_RANGE[0]}
+
+
+def test_split_jpegs_keeps_a_part_picture_for_the_next_read():
+    from lab_os.hub.raspbot_page import split_jpegs
+
+    one, two = b"\xff\xd8one\xff\xd9", b"\xff\xd8two\xff\xd9"
+    frames, rest = split_jpegs(b"--frame\r\n" + one + b"\r\n--frame\r\n" + two[:4])
+    assert frames == [one] and rest == two[:4]
+    frames, rest = split_jpegs(rest + two[4:])
+    assert frames == [two]
+
+
+async def test_pictures_and_recordings_are_saved_here(aiohttp_client, tmp_path):
+    from lab_os.hub.raspbot_page import CAMERA
+
+    jpeg = b"\xff\xd8pic\xff\xd9"
+
+    async def frames(url):
+        assert url == "http://127.0.0.1:8766/camera.mjpg"
+        while True:
+            yield jpeg
+            await asyncio.sleep(0.01)
+
+    bot = TcpRaspbot("raspbot1", "127.0.0.1", 9)
+    bot.camera_port = 8766
+    bot._writer = type("W", (), {"is_closing": lambda self: False})()  # connected
+    bot.run = lambda: asyncio.Event().wait()  # no reconnect tries in this test
+    app = make_app(raspbot=RaspbotDesk(bot))
+    cam = app[CAMERA]
+    cam.folder, cam.frames = (lambda: tmp_path), frames
+    client = await aiohttp_client(app)
+    async with client.ws_connect("/ws/raspbot") as ws:
+
+        async def answer():
+            while (m := await ws.receive_json())["type"] == "raspbot_status":
+                pass
+            return m
+
+        await ws.send_json({"type": "picture"})
+        m = await answer()
+        assert m["what"] == "picture" and Path(m["path"]).read_bytes() == jpeg
+        assert Path(m["path"]).parent == tmp_path and m["path"].startswith(str(tmp_path))
+        await ws.send_json({"type": "record", "on": True})
+        m = await answer()
+        assert m["on"] and m["path"].endswith(".mjpeg")
+        await asyncio.sleep(0.1)
+        assert cam.status()["recording"]
+        await ws.send_json({"type": "record", "on": False})
+        m = await answer()
+        assert not m["on"] and Path(m["path"]).read_bytes().startswith(jpeg * 2)
+        assert cam.status()["recording"] == ""
+        await ws.send_json({"type": "record", "on": True})
+        await answer()
+    for _ in range(50):  # the page closed: its recording ends
+        if not cam.recording:
+            break
+        await asyncio.sleep(0.01)
+    assert cam.recording is None
+    bot._writer = None
+
+
+async def test_the_fake_raspbot_has_no_camera_to_save(aiohttp_client):
+    client = await aiohttp_client(make_app())
+    async with client.ws_connect("/ws/raspbot") as ws:
+        await ws.send_json({"type": "picture"})
+        while (m := await ws.receive_json())["type"] == "raspbot_status":
+            pass
+        assert m == {"type": "error", "message": "The Raspbot's camera is not there now."}
