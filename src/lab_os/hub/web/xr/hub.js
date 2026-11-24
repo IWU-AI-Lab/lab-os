@@ -14,6 +14,7 @@
 import * as THREE from "three";
 import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
 import { Ask } from "./ask.js";
+import { RaspbotModule } from "./raspbot.js";
 import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 import { SettingsPage } from "./settings.js";
@@ -231,7 +232,7 @@ export class HubView {
     if (w.kind === "set") { this.sfx.blip(); this.settings.press(w); return null; }
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
-    if (w.kind === "tele") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Teleop's options
+    if (w.kind === "tele" || w.kind === "rasp") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Teleop's options, the Raspbot's bar
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
     if (w.kind === "page" || w.kind === "card") return null;
@@ -291,7 +292,7 @@ export class HubView {
       this.module.scene = scene;
       this.scene.add(scene);
     } else {
-      view = this.views[id] ||= new ArmHologram(id);
+      view = this.views[id] ||= id === "raspbot" ? new RaspbotModule() : new ArmHologram(id);
       view.group.position.set(0, -0.62, -1.55);
       this.group.parent.add(view.group);
       view.open(now);

@@ -6,7 +6,9 @@ Robots stay thin: this one file, the Python 3 of the Raspbot and Yahboom's own `
 never edit it on the Raspbot.
 
     TCP  :8765   the brain's commands, one JSON line each (lab_os/robots/raspbot.py):
-                 {"drive": [left, right]} (-1.0 … 1.0), {"stop": true}
+                 {"drive": [left, right]} (-1.0 … 1.0), {"stop": true},
+                 {"look": [pan, tilt]}: the camera's two servos, degrees from their centre
+                 (pan + = left, tilt + = up), kept inside PAN_RANGE and TILT_RANGE (quick job 107)
     HTTP :8766   /camera.mjpg, the camera's picture (only when OpenCV and a camera are there)
 
 Safety on the car itself: the motors stop when no command came for WATCHDOG_S, when the brain's
@@ -38,6 +40,13 @@ CAMERA_IDLE_S = 5.0  # the camera closes this long after the last viewer left
 # Yahboom's motor numbers (Raspbot_Lib.Ctrl_Muto): 0 front left, 1 back left, 2 front right,
 # 3 back right
 LEFT, RIGHT = (0, 1), (2, 3)
+# The camera's pan-and-tilt mount (Raspbot_Lib.Ctrl_Servo): servo 1 turns left and right, servo 2 up
+# and down. Yahboom's own code centres them at 90 and 25, and keeps servo 2 at 110 or less. Its
+# library checks the angle only after it has made the I2C data, so lab-os keeps the limits itself.
+PAN_SERVO, TILT_SERVO = 1, 2
+PAN_CENTRE, TILT_CENTRE = 90, 25
+PAN_RANGE, TILT_RANGE = (0, 180), (0, 110)
+PAN_SIGN, TILT_SIGN = 1, 1  # -1 turns that servo the other way (lab check R, quick job 107)
 
 log = logging.getLogger("lab_os_raspbot")
 
@@ -54,17 +63,26 @@ class YahboomBoard:
     def set_motor(self, motor: int, speed: int) -> None:
         self._bot.Ctrl_Muto(motor, speed)
 
+    def set_servo(self, servo: int, angle: int) -> None:
+        self._bot.Ctrl_Servo(servo, angle)
+
 
 class FakeBoard:
     """No car: keeps the speeds, for tests and `--fake`."""
 
     def __init__(self) -> None:
         self.speeds = {m: 0 for m in LEFT + RIGHT}
+        self.servos = {}
 
     def set_motor(self, motor: int, speed: int) -> None:
         if self.speeds.get(motor) != speed:
             log.info("motor %d: %d", motor, speed)
         self.speeds[motor] = speed
+
+    def set_servo(self, servo: int, angle: int) -> None:
+        if self.servos.get(servo) != angle:
+            log.info("servo %d: %d", servo, angle)
+        self.servos[servo] = angle
 
 
 class Car:
@@ -103,8 +121,24 @@ class Car:
             return True
         return False
 
+    def look(self, pan: float, tilt: float) -> tuple[int, int]:
+        """The camera's servos, in degrees from their centre. Returns the servo angles sent."""
+
+        def angle(centre: int, sign: int, deg: float, lo_hi: tuple[int, int]) -> int:
+            return int(round(max(lo_hi[0], min(centre + sign * float(deg), lo_hi[1]))))
+
+        a = angle(PAN_CENTRE, PAN_SIGN, pan, PAN_RANGE)
+        b = angle(TILT_CENTRE, TILT_SIGN, tilt, TILT_RANGE)
+        with self._lock:
+            self.board.set_servo(PAN_SERVO, a)
+            self.board.set_servo(TILT_SERVO, b)
+        return a, b
+
     def handle(self, msg: dict) -> None:
-        if "drive" in msg:
+        if "look" in msg:  # the camera only: the wheels keep what they do
+            pan, tilt = msg["look"]
+            self.look(pan, tilt)
+        elif "drive" in msg:
             left, right = msg["drive"]
             self.drive(left, right)
         else:  # {"stop": true}, and anything not understood

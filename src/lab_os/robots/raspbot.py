@@ -5,6 +5,8 @@ The Raspbot runs one small program, `robots/raspbot/lab_os_raspbot.py` (deployed
 
     {"drive": [left, right]}   wheel speeds, -1.0 … 1.0 (a fraction of the Raspbot's own cap)
     {"stop": true}             all motors off
+    {"look": [pan, tilt]}      the camera's pan-and-tilt servos, degrees from their centre
+                               (pan + = left, tilt + = up); the Raspbot keeps their limits
 
 The Raspbot answers once, at connect: {"hello": "<hostname>", "camera_port": 8766 or 0}. It stops
 the motors by itself when no command came for WATCHDOG_S, or when the connection drops, so a brain
@@ -36,6 +38,7 @@ class FakeRaspbot:
     connected: bool = True
     camera_port: int = 0
     sent: list = field(default_factory=list)
+    looked: tuple = (0.0, 0.0)  # the camera's last look
 
     @property
     def is_fake(self) -> bool:
@@ -49,6 +52,9 @@ class FakeRaspbot:
 
     async def stop(self) -> None:
         self.sent.append(("stop",))
+
+    async def look(self, pan: float, tilt: float) -> None:
+        self.looked = (round(pan, 1), round(tilt, 1))
 
     @property
     def last(self) -> tuple:
@@ -113,6 +119,9 @@ class TcpRaspbot:
     async def stop(self) -> None:
         await self._send({"stop": True})
 
+    async def look(self, pan: float, tilt: float) -> None:
+        await self._send({"look": [round(pan, 1), round(tilt, 1)]})
+
 
 # Each button → (left, right) wheel speeds, before the speed cap. Turns spin in place, slower.
 DIRECTIONS = {
@@ -121,6 +130,16 @@ DIRECTIONS = {
     "left": (-0.6, 0.6),
     "right": (0.6, -0.6),
 }
+TURN = 0.6  # a stick turns as slowly as the buttons: full sideways = "left" or "right"
+LOOK_MAX = 90.0  # degrees from the centre a look may ask; the Raspbot keeps each servo's own limits
+
+
+def stick_speeds(forward: float, turn: float) -> tuple[float, float]:
+    """A stick (forward + = ahead, turn + = right; -1 … 1) → (left, right) wheel speeds, -1 … 1."""
+    f, t = (max(-1.0, min(float(v), 1.0)) for v in (forward, turn))
+    left, right = f + TURN * t, f - TURN * t
+    big = max(1.0, abs(left), abs(right))
+    return left / big, right / big
 
 
 class RaspbotDesk:
@@ -162,9 +181,10 @@ class RaspbotDesk:
             msg["message"] = getattr(self.bot, "said", "") or f"{self.bot.name} is not connected."
         return msg
 
-    async def press(self, page, direction: str) -> str:
-        """The page holds a button. Returns "" when it drives, else why not."""
-        if direction not in DIRECTIONS:
+    async def press(self, page, direction: str, stick: tuple[float, float] | None = None) -> str:
+        """The page holds a button, or a stick (direction "stick", `stick` = (forward, turn); the
+        hub's VR Raspbot, quick job 107). Returns "" when it drives, else why not."""
+        if direction not in DIRECTIONS and not (direction == "stick" and stick):
             raise ValueError(f"unknown direction {direction!r}")
         if page in self._blocked:
             return "Let go of the button after STOP, then press again."
@@ -176,9 +196,23 @@ class RaspbotDesk:
         if not self.bot.connected:
             return self.status()["message"]
         self._last_input = time.monotonic()
-        left, right = DIRECTIONS[direction]
+        left, right = stick_speeds(*stick) if direction == "stick" else DIRECTIONS[direction]
         await self.bot.drive(left * self.speed, right * self.speed)
         self.moving = direction
+        return ""
+
+    async def look(self, page, pan: float, tilt: float) -> str:
+        """Turn the camera (degrees from its centre). Any page that may drive, while no other page
+        has control. It never takes control, and the freeze is for the wheels only: the camera
+        stays where it was looking. Returns "" when sent, else why not."""
+        if page in self._blocked:
+            return "Let go of the stick after STOP, then move it again."
+        if self.driver is not None and self.driver is not page:
+            return "Another page has control."
+        if not self.bot.connected:
+            return self.status()["message"]
+        lim = LOOK_MAX
+        await self.bot.look(max(-lim, min(float(pan), lim)), max(-lim, min(float(tilt), lim)))
         return ""
 
     def set_speed(self, speed: float) -> float:

@@ -375,8 +375,11 @@ Focus step 8 (`docs/guides/hub.md` → "Devices"). Every hub page (both looks) k
 - `{"type": "set_speed", "speed": 0.3}`: the Speed slider, 0 (none) … 1 (the program's cap); one speed for every page. Only a page that may drive.
 - `{"type": "release"}`: every button let go; the car stops and control is free.
 - `{"type": "stop", "device": "<name>"}`: STOP, from any page (also a view-only page). The page that drove must send `release` before it drives again.
+- `{"type": "drive", "dir": "stick", "stick": [forward, turn]}` (each -1 … 1; quick job 107, the hub's VR Raspbot): like a held button, with a stick. Full sideways turns like `left` / `right`.
+- `{"type": "look", "pan": 20.0, "tilt": -5.0}`: turn the camera, degrees from its centre (pan + = left, tilt + = up), at most 90. It never takes control; refused while another page has control, or after STOP until `release`.
+- `{"type": "picture"}`, `{"type": "record", "on": true | false}`: save a picture or start / end a recording on the brain's computer (`recordings/raspbot/`). Answer: `{"type": "saved", "what": "picture" | "recording", "on": …, "path": "<the file>"}`, or an `error` without a camera. A recording also ends when the page that started it closes.
 
-Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "speed": 0.5, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
+Brain → page, every 0.2 s: `{"type": "raspbot_status", "name": "raspbot1", "fake": false, "connected": true, "moving": "" | "<dir>", "control": "free" | "you" | "other", "camera": true, "speed": 0.5, "may_drive": true, "message": "<why not connected>", "address": "<a view-only page's address>", "recording": "<file name>" | "", "folder": "<where pictures go>"}`. A refused `drive` gets `{"type": "error", "message": "Another page has control."}`. The brain stops the car when a driver's input stops for 0.3 s.
 
 ### The Wake Word page (quick job 99, `hub/wake_clips.py`)
 Only from the brain's computer (else `403`). `{word}` is a key of `PHRASES` in `ai/wake.py` (else `404`).
@@ -387,7 +390,7 @@ Only from the brain's computer (else `403`). `{word}` is a key of `PHRASES` in `
 
 `GET /api/raspbot/camera.mjpg`: the Raspbot's camera (`multipart/x-mixed-replace` JPEGs), relayed from the Raspbot's port 8766; `404` without a camera.
 
-Brain → the program on the Raspbot (`robots/raspbot/lab_os_raspbot.py`, TCP port 8765), one JSON line each: `{"drive": [left, right]}` (-1.0 … 1.0 of its speed cap) or `{"stop": true}`. The program answers once at connect: `{"hello": "<hostname>", "camera_port": 8766 | 0}`. It stops the motors after 0.5 s without a command, when the connection drops, and for a line it does not understand. A new connection replaces the old one.
+Brain → the program on the Raspbot (`robots/raspbot/lab_os_raspbot.py`, TCP port 8765), one JSON line each: `{"drive": [left, right]}` (-1.0 … 1.0 of its speed cap), `{"stop": true}`, or `{"look": [pan, tilt]}` (the camera's servos, degrees from their centre; the program keeps each servo's limits and leaves the wheels as they are). The program answers once at connect: `{"hello": "<hostname>", "camera_port": 8766 | 0}`. It stops the motors after 0.5 s without a command, when the connection drops, and for a line it does not understand. A new connection replaces the old one.
 
 ## Recording files (`.jsonl`)
 One line per received message: `{"dt": <seconds since recording start>, "msg": <message>}`. Written by `lab-os-teleop serve --record`, read by `lab-os-teleop replay`.

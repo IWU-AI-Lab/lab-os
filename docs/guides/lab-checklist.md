@@ -72,15 +72,17 @@ Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plu
 - **W.1** Open `http://localhost:8080/webcam`. Click **Start webcam control**. Hold Space and move your right hand slowly. → did the arm follow your hand? (yes / no) Is it good enough to show? (yes / no: what is wrong)
 
 ## T. The Quest: one arm, then two (20 min)
-Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --speed 0.3`. The Quest is on the router's Wi-Fi.
+Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi.
 - **T.1** On the Quest, open the hub, then **Enter VR**, then **Teleop**. Hold the right grip and move your hand. → did `so101-white` follow? (yes / no) Hold the left grip and move your hand. → did `so101-green` follow? (yes / no)
 - **T.2** Hold both grips and move both hands slowly. → did both arms follow, each with its own hand? (yes / no) Is it good enough to show? (yes / no: what is wrong)
 - **T.3** Quick job 102. In the hub in VR, open **Teleop**. Point the right controller at **OPTIONS** under the status box, then pull the trigger. Press **+** for the speed and select **1:1**, then **Relative**. → did each change at once? (yes / no) Point at **BACK** and pull the trigger. → are you back on the hub? (yes / no) Open Teleop again in AR, put the controllers down, then point your right hand at **EXIT** and pinch. → did it leave AR? (yes / no)
 - **T.4** Quick job 103. Connect the Quest by USB. On the brain's computer, run `uv run lab-os quest-view --wifi`. → did it say "ready on Wi-Fi"? (yes / no: what did it say?) Unplug the cable, then press the Quest view button in the hub's strip. → did the window show what the Quest sees? (yes / no) Is it smooth enough to show? (yes / no)
 
-## R. The Raspbot (10 min)
+## R. The Raspbot (20 min)
 raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`.
 - **R.1** Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`. Open **All Pages** → **Raspbot**. Drive it forward, back and in a circle. → did it drive? (yes / no) Did STOP stop it at once? (yes / no) Which speed is good for the demo? (a percentage)
+- **R.2** Quick job 107. Do R.1 first, with the Quest's address in `drive_from` (as for T). On the Quest, open the hub, **Enter VR**, then **Raspbot**. Look left, right, up and down. → did the camera turn the same way each time? (yes / no: which way was wrong) Push the left stick forward, then let go. → did the car drive, then stop? (yes / no)
+- **R.3** In the Raspbot in VR, press **PICTURE**, then **RECORD**. Wait 5 s, then press **END REC**. → did the status line give two file names? (yes / no) Is the camera's picture bright enough to drive by? (yes / no)
 
 ## L. The Newline (10 min)
 The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
@@ -88,7 +90,7 @@ The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
 - **L.2** The Newline's microphones through the Pi. Many touch screens give their microphones to the computer on the touch cable. On the Pi, run `arecord -l`. → copy the lines. In the Newline's own settings, look for a choice that shares its microphone or camera with the HDMI or USB source. → is there one? (yes: its name and where / no)
 
 ## A. More to show (30 min)
-Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Run `uv run --extra so101 lab-os serve --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
+Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
 - **A.1** The card swipe. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start, with "Card read" and its own sound? (yes / no)
 - **A.2** Visitor mode. Say "(wake word), it's demo time". → did the hub greet the visitors? (yes / no) Tap **Ask me to wave**. → did the arm wave? (yes / no) Say "(wake word), the visitors have left".
 - **A.3** Conversation mode. Say "(wake word), start a conversation". Ask two questions without the wake word. Say "That's all". → did it answer both? (yes / no) Did the core go back to rest? (yes / no)
