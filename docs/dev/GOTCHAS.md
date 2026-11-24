@@ -14,6 +14,7 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ### 2026-11-23 — The other wake words answer much less than "hey Jarvis" (lab checks V.21 to V.23)
 - The desk at sensitivity 9, the builder in the chair, 5 tries each: OK computer 0, TARS 1, Hey Friday 2, Hey Jarvis 4. The heard ones scored 0.89 to 1.00 (`lab-os logs`). The misses are not in the log: the brain logs only a heard phrase. The builder thinks the tone matters (said like a question, it may not wake). Quick job 99.
+- **Later (2026-11-23, quick job 99):** the brain logs each second that did not wake it, with its best score (`missed "…"? best 0.12 in this second`). It logged a score only from 0.25 up, so at sensitivity 9 (threshold 0.25) no miss showed. The Wake Word page trains openWakeWord's "custom verifier" idea on the builder's own tries (numpy, no scikit-learn): a score from 0.1 up to the threshold wakes it when the verifier agrees. A try that scores under 0.1 can't be helped by it: the log shows those. No better trained models were found for the three community words.
 - The Pi that drives the Newline (HDMI and the touch cable) has no microphone. The Newline's own microphone works only in its Android Chrome (2026-11-13), not through the Pi.
 
 ### 2026-11-23 — The Raspbot v2: Yahboom's app program holds the car, and the board has no watchdog (quick job 72)
