@@ -76,6 +76,15 @@ PICK_JAW_DEPTH_CM = 4.0
 # Closed on nothing, the real so101-white read 7.8 % open (GOTCHAS 2026-11-12): more than this
 # after the lift = holding something. A guess between that and a 2.5 cm cube; lab check part 3.
 PICK_HELD_PCT = 15.0
+# On the SO-101 the gripper point (the model's gripper_frame_link) is on the fixed jaw's inner
+# face, not between the open jaws: aimed at an object's middle, the fixed jaw came down on its
+# top (quick job 106). pick_at puts the gripper point this far from the object's middle, away
+# from the moving jaw, so the fixed jaw comes down beside the object (a 3.2 cm Duplo piece: 0.4
+# cm clear) and the moving jaw pushes it against the fixed one.
+PICK_JAW_SIDE_CM = 2.0
+# The direction the moving jaw opens, in the gripper's own frame (the wrist_roll joint's frame
+# of the SO-101 model; from the jaws' meshes, models/so101).
+SO101_OPEN_DIR = (1.0, 0.0, 0.0)
 DOWN_DEG = 180.0  # tool angle: pointing straight down
 SHORT_PCT = 5.0  # the gripper's opening ended further than this from the one asked for
 FLOOR_SAMPLES = 20  # points checked along a joint-space move
@@ -716,6 +725,26 @@ class RobotTools:
             return None
         return q
 
+    def _fixed_jaw_beside(self, current: dict, x_cm: float, y_cm: float, z_cm: float):
+        """Where the gripper point goes so the object at (x, y) stands between the open jaws:
+        PICK_JAW_SIDE_CM from it, against the moving jaw's opening direction, pointing straight
+        down. Only arms whose kinematics have frames (the SO-101); others aim at (x, y) itself."""
+        if not hasattr(self.kin, "frames"):
+            return x_cm, y_cm
+        gx, gy = x_cm, y_cm
+        for _ in range(3):  # the direction turns with shoulder_pan: settle it
+            q = self._reaches(current, (gx, gy, z_cm), DOWN_DEG)
+            if q is None:
+                return gx, gy  # the checks below refuse it with their own sentence
+            rot = self.kin.frames(q)["wrist_roll"][1]
+            dx, dy = (sum(rot[i][k] * SO101_OPEN_DIR[k] for k in range(3)) for i in range(2))
+            n = math.hypot(dx, dy)
+            if n < 1e-6:
+                return gx, gy
+            gx = x_cm - PICK_JAW_SIDE_CM * dx / n
+            gy = y_cm - PICK_JAW_SIDE_CM * dy / n
+        return gx, gy
+
     async def pick_at(
         self,
         x_cm: float,
@@ -737,9 +766,10 @@ class RobotTools:
             raise Refused(
                 f"height_cm {height_cm:g}: pick_at takes objects {lo_h:g}–{hi_h:g} cm tall"
             )
-        above = (x_cm, y_cm, height_cm + PICK_ABOVE_CM)
-        grip = (x_cm, y_cm, max(height_cm - PICK_JAW_DEPTH_CM, self.limits.min_z_cm))
         current = self.arm.read_joints()
+        gx, gy = self._fixed_jaw_beside(current, x_cm, y_cm, height_cm + PICK_ABOVE_CM)
+        above = (gx, gy, height_cm + PICK_ABOVE_CM)
+        grip = (gx, gy, max(height_cm - PICK_JAW_DEPTH_CM, self.limits.min_z_cm))
         (tx, ty, tz), _ = self.kin.fk(current)
         here = (tx * 100, ty * 100, tz * 100)
         far = math.dist(here, above)

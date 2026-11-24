@@ -170,9 +170,10 @@ class UrdfKinematics:
 
 @functools.cache
 def so101_kinematics() -> UrdfKinematics:
-    """SO-101 from models/so101 (tip = gripper_frame_link, between the fingertips). Its zero pose
-    is an "L": upper arm up, forearm and gripper forward (tool angle 90). +wrist_roll is clockwise
-    seen from above / counter-clockwise for the operator behind it: the opposite of the xArm."""
+    """SO-101 from models/so101 (tip = gripper_frame_link: at the fingertips, on the fixed jaw's
+    inner face; the tips reach 0.6 cm past it). Its zero pose is an "L": upper arm up, forearm and
+    gripper forward (tool angle 90). +wrist_roll is clockwise seen from above / counter-clockwise
+    for the operator behind it: the opposite of the xArm."""
     return UrdfKinematics(load_chain(SO101_URDF, "gripper_frame_link"), roll_sign=1.0)
 
 

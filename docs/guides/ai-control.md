@@ -192,14 +192,14 @@ Each single move is one round trip to the AI service: a few seconds each. With `
 ## Picking up (`pick_at`)
 `pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object that stands at (x, y) on the table, in one call instead of about 17 small calls. It has five steps, each through the same safety path as `gripper` and `move_to`:
 1. Open the gripper.
-2. Go to `height_cm` + 6 cm above the object, pointing straight down.
+2. Go to `height_cm` + 6 cm above the object, pointing straight down. The gripper point is on the fixed jaw, so it goes 2 cm beside the object, away from the moving jaw: the object is then between the open jaws (since 2026-11-24; before, the fixed jaw came down on the object's top).
 3. Go straight down as deep as the jaws reach: 4 cm below the object's top, never below the floor (`min_z_cm`). For the 3 cm cube that is the floor. Before 2026-11-20 it went to half the height, and the cube was held with the jaw tips only.
 4. Close.
 5. Lift back up.
 
 Before anything moves, it checks that both points are in reach pointing down, that the point above is within `max_move_cm` (10 cm) of the gripper (if not, use `move_to` near it first), and the usual limits. AI Control (`/ai`) shows each step ("Pick · next · 2/5 go above it…") just before it moves. The pick ends early on STOP (`stopped`), or if a step stops more than 1.5 cm wrong (the gripper stays open). The result is `holding` (the gripper stopped more than 15 % open after the lift) or `missed` (it closed fully: the real arm reads about 8 % with nothing in it), with `steps`.
 
-The x and y come from the stand camera's grid (above). The height reading and the elbow's sag (`docs/plan/ideas.md` → "AI picking") still decide if step 3 goes low enough: fix those first.
+The x and y come from the stand camera's grid (above). The white arm's height reading is right since 2026-11-24 (quick job 106). The sag under load (`docs/plan/ideas.md` → "AI picking") still makes some steps end 1.5 cm short.
 
 ## Seeing the pose (`pose_view`)
 Without a camera, the AI cannot see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose that its motors report, as a picture:
