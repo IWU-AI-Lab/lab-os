@@ -19,6 +19,7 @@ import platform
 import shutil
 import subprocess
 import tarfile
+import time
 import urllib.request
 import zipfile
 from collections.abc import Callable
@@ -325,11 +326,15 @@ class QuestView:
         return True
 
 
+CONNECT_TRIES = 10  # one a second: adbd on the Quest needs a few seconds after `adb tcpip`
+
+
 def wifi(
     registry: Callable[[], Registry] = load_registry,
     devices: Callable[[str], list[str]] = adb_devices,
     run: Callable = subprocess.run,
     connect: Callable[[str, str], bool] = adb_connect,
+    wait: Callable[[float], None] = time.sleep,
 ) -> list[str]:
     """`lab-os quest-view --wifi`: each headset on USB that has a `host` gets adb's TCP mode
     (`adb tcpip 5555`), then `adb connect`. Then Quest view also works without the cable, until
@@ -357,7 +362,14 @@ def wifi(
             said.append(f"{d.name}: adb tcpip failed: {why}")
             continue
         address = wifi_address(d.host)
-        ok = any(connect(adb, address) for _ in range(3))  # adbd restarts on the headset first
+        # adbd restarts on the headset first, and that takes a few seconds (GOTCHAS 2026-11-24).
+        ok = False
+        for attempt in range(CONNECT_TRIES):
+            if attempt:
+                wait(1.0)
+            if connect(adb, address):
+                ok = True
+                break
         said.append(
             f"{d.name}: ready on Wi-Fi at {address}. You can unplug the USB cable."
             if ok

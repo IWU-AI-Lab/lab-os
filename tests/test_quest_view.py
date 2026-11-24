@@ -315,12 +315,36 @@ def test_wifi_switches_a_usb_headset_to_tcp_mode(scrcpy):
 
     reg = Registry(WIFI_REG.devices | {"quest-c": Device("quest-c", "quest", serial="SERIAL_C")})
     said = qv.wifi(registry=lambda: reg, devices=lambda adb: ["SERIAL_A", "SERIAL_C"], run=run,
-                   connect=lambda adb, address: address == "192.168.8.180:5555")  # fmt: skip
+                   connect=lambda adb, address: address == "192.168.8.180:5555",
+                   wait=lambda s: None)  # fmt: skip
     assert ran == [["/usr/bin/adb", "-s", "SERIAL_A", "tcpip", "5555"]]
     assert said[0].startswith("quest-a: ready on Wi-Fi at 192.168.8.180:5555")
     assert said[1].startswith("quest-c: no address")
     with pytest.raises(qv.QuestViewError, match="by USB first"):
         qv.wifi(registry=lambda: reg, devices=lambda adb: [], run=run)
+
+
+def test_wifi_waits_while_the_headset_restarts_adb(scrcpy):
+    """adbd on the Quest needs a few seconds after `adb tcpip`: tries again once a second
+    (lab checklist T.4, 2026-11-24: three quick tries all failed)."""
+    tries, waits = [], []
+
+    class Done:
+        returncode, stdout, stderr = 0, "restarting in TCP mode port: 5555", ""
+
+    def connect(adb, address):
+        tries.append(address)
+        return len(tries) >= 5
+
+    said = qv.wifi(registry=lambda: WIFI_REG, devices=lambda adb: ["SERIAL_A"],
+                   run=lambda cmd, **kw: Done(), connect=connect, wait=waits.append)  # fmt: skip
+    assert said[0].startswith("quest-a: ready on Wi-Fi") and waits == [1.0] * 4
+
+    tries.clear()
+    said = qv.wifi(registry=lambda: WIFI_REG, devices=lambda adb: ["SERIAL_A"],
+                   run=lambda cmd, **kw: Done(), connect=lambda adb, a: False,
+                   wait=lambda s: None)  # fmt: skip
+    assert "can't reach 192.168.8.180:5555" in said[0]
 
 
 def test_the_lab_quest_has_its_wifi_address():
