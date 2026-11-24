@@ -310,9 +310,10 @@ class Show {
     this.greet.step(now);
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
-    this.exit.mesh.visible = P === "hub";
+    // in Teleop, Exit is on the bar under its status box (quick job 102), where you look while you drive
+    this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop";
     this.exit.hover = this.pointer.all().some((h) => h.what.kind === "exit");
-    if (P === "hub") this.exit.paint();
+    if (this.exit.mesh.visible) this.exit.paint();
     this.pointer.setTargets(P === "hub" ? [...this.hub.targets(), this.exit.mesh] : []);
     camera.getWorldPosition(this.hub.cameraPos ||= new THREE.Vector3());
     this.stage.worldToLocal(this.hub.cameraPos);
@@ -398,8 +399,9 @@ function xrPointers(show, frame, r, now) {
   const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" || !!show.off; // off: Exit on the card
   const teleop = on && !show.off && show.hub.module?.id === "teleop";
   // Teleop open (quick job 97, as before 2026-11-21): its own session reads the controllers and drives the
-  // arm; only the right ray can reach the tab (Back, ⏻), with no beam in the way (its trigger or pinch only
-  // grips while the clutch is held)
+  // arm; only the right ray can reach the buttons beside the status box (STOP, Options, Back, Exit; quick job
+  // 102), its beam drawn only while it is on one, so it isn't in the way (its trigger or pinch only grips while
+  // the clutch is held)
   if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
   for (const src of frame.session.inputSources) {
     const key = src.handedness;
@@ -408,7 +410,7 @@ function xrPointers(show, frame, r, now) {
     if (!pose || !on || (teleop && key === "left")) { show.pointer.hide(key); continue; }
     const p = pose.transform.position, o = pose.transform.orientation;
     FWD.set(0, 0, -1).applyQuaternion(new THREE.Quaternion(o.x, o.y, o.z, o.w));
-    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), !teleop);
+    show.pointer.update(key, new THREE.Vector3(p.x, p.y, p.z), FWD.clone(), teleop ? "on-hit" : true);
     const b = !!src.gamepad?.buttons[5]?.pressed; // B (right) / Y (left)
     if (b && !backWas[key]) show.back(now, key);
     backWas[key] = b;

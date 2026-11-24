@@ -250,6 +250,10 @@ export class TeleopSession {
     this.drag[slot] = null;
     savePlace(slot === "left" ? this.placeLeft : this.place, slot === "left" ? LEFT_PLACE_KEY : PLACE_KEY);
   }
+  /** Put the 3D arm back at its first place (both 3D arms with two arms): the hub's Teleop options. */
+  putBack() {
+    this._putBack(!!this.leftFeed.status);
+  }
   _putBack(both) {
     this.place = { ...START };
     this.xrScene.setPlacement(this.place);
