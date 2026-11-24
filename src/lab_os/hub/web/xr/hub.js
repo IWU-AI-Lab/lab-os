@@ -167,7 +167,8 @@ export class HubView {
     if (this.menu.mesh.visible) return [this.menu.mesh]; // ⏻'s menu: choose, or press beside it
     if (this.mode === "details") return [this.page.mesh, this.power.mesh];
     if (this.mode === "settings") return [this.settings.mesh, this.power.mesh];
-    if (this.mode === "module") return [this.tab.mesh, ...(this.module?.view.targets?.() || [])];
+    // Teleop has its own Back and Exit beside its status box (quick job 102), so no tab
+    if (this.mode === "module") return [...(this.module?.id === "teleop" ? [] : [this.tab.mesh]), ...(this.module?.view.targets?.() || [])];
     return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.gear.mesh, this.card.mesh, this.ask.mesh];
   }
 
@@ -230,6 +231,7 @@ export class HubView {
     if (w.kind === "set") { this.sfx.blip(); this.settings.press(w); return null; }
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
+    if (w.kind === "tele") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Teleop's options
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
     if (w.kind === "page" || w.kind === "card") return null;
@@ -357,7 +359,7 @@ export class HubView {
     // a module: the hub steps back (hidden), the module's view and its tab come forward
     if (this.menu.mesh.visible) this.menu.paint();
     const inModule = this.mode === "module";
-    this.tab.mesh.visible = inModule;
+    this.tab.mesh.visible = inModule && this.module?.id !== "teleop";
     if (inModule) {
       this.tab.paint();
       const v = this.module?.view;

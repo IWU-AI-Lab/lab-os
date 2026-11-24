@@ -210,11 +210,18 @@ def main(argv: list[str] | None = None) -> None:
     qv = sub.add_parser(
         "quest-view",
         help="what the Quest sees, on this computer (scrcpy): --install downloads it into "
-        "downloads/scrcpy/, --remove deletes it; without either, says what's there "
+        "downloads/scrcpy/, --remove deletes it, --wifi makes it work without the USB cable; "
+        "without one, says what's there "
         "(docs/guides/quest-view.md)",
     )
     qv.add_argument("--install", action="store_true", help="download scrcpy (no sudo)")
     qv.add_argument("--remove", action="store_true", help="delete the downloaded scrcpy")
+    qv.add_argument(
+        "--wifi",
+        action="store_true",
+        help="with the headset on USB: switch its adb to Wi-Fi (adb tcpip 5555), so Quest view "
+        "also works without the cable until the headset restarts",
+    )
     rm = sub.add_parser(
         "room",
         help="set up the room: open each page of room.yaml on its device (the running brain does "
@@ -252,7 +259,7 @@ def main(argv: list[str] | None = None) -> None:
         from lab_os import quest_view
 
         try:
-            print(quest_view.main(args.install, args.remove))
+            print(quest_view.main(args.install, args.remove, args.wifi))
         except (quest_view.QuestViewError, OSError) as e:
             raise SystemExit(str(e)) from None
         return
