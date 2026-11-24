@@ -53,16 +53,51 @@ async def test_the_brain_lists_the_devices_with_the_hub_open(aiohttp_client):
     desk, welcome = await page(client, "desk")
     assert welcome["device"] == "desk" and welcome["window"]
     newline, _ = await page(client, "newline")
-    nameless, _ = await page(client, "")  # a page with no name: not offered as a place to open
+    # a page with no name: listed by its address (quick job 101: before, it was left out, and the
+    # Pi that drives the Newline was not in Open on…)
+    nameless, _ = await page(client, "")
     got = await (await client.get("/api/hub-devices")).json()
-    assert [d["name"] for d in got["devices"]] == ["desk", "newline"]
-    assert got["devices"][0]["windows"][0]["stage"] == "hub"
+    assert [d["name"] for d in got["devices"]] == ["addr-127-0-0-1", "desk", "newline"]
+    assert got["devices"][0]["title"] == "127.0.0.1 (no device name)"
+    assert not got["devices"][0]["named"] and got["devices"][1]["named"]
+    assert got["devices"][1]["windows"][0]["stage"] == "hub"
     await newline.close()
     await settle(client)
     got = await (await client.get("/api/hub-devices")).json()
-    assert [d["name"] for d in got["devices"]] == ["desk"]
+    assert [d["name"] for d in got["devices"]] == ["addr-127-0-0-1", "desk"]
     await desk.close()
     await nameless.close()
+
+
+async def test_open_on_a_page_without_a_name(aiohttp_client):
+    """Quick job 101: a hub opened without ?device= can still show a page sent from elsewhere."""
+    client = await aiohttp_client(make_app())
+    pi, _ = await page(client, "")
+    desk, dw = await page(client, "desk")
+    r = await client.post(
+        "/api/hub-devices/open",
+        json={
+            "module": "monitor",
+            "device": "addr-127-0-0-1",
+            "from": "desk",
+            "from_window": dw["window"],
+        },
+    )
+    out = await r.json()
+    assert out["ok"] and out["message"] == "Monitor is open on 127.0.0.1 (no device name)."
+    assert (await next_of(pi, "open"))["module"] == "monitor"
+    await pi.close()
+    await desk.close()
+
+
+def test_address_keys():
+    from lab_os.hub.hub_devices import address_key
+
+    assert address_key("192.168.8.167") == "addr-192-168-8-167"
+    assert clean_name(address_key("192.168.8.167")) == "addr-192-168-8-167"
+    long = address_key("fe80::1234:5678:9abc:def0:1234:5678")
+    assert long.startswith("addr-") and len(long) <= 32 and clean_name(long) == long
+    assert address_key("") == "addr-unknown"
 
 
 async def test_a_copied_tab_gets_its_own_window(aiohttp_client):

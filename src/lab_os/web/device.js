@@ -175,7 +175,7 @@ export function connectDevice(h) {
     /** The windows showing something opened from this device (or this window), for "bring it back". */
     sentFromHere: () => list.flatMap((d) => d.windows
       .filter((w) => w.showing && ((name && w.from === name) || (wid && w.from_window === wid)))
-      .map((w) => ({ device: d.name, window: w.id, label: w.label, showing: w.showing }))),
+      .map((w) => ({ device: d.name, title: d.title || d.name, window: w.id, label: w.label, showing: w.showing }))),
     /** Where a module can be opened: every window of the other devices, and this device's other windows. */
     targets: () => list.map((d) => ({ ...d, windows: d.windows.filter((w) => w.id !== wid) })).filter((d) => d.windows.length),
   };
@@ -231,18 +231,44 @@ export function fillOpenOn(box, dev, module, opts = {}) {
       for (const d of targets) {
         const own = d.name === dev.name;
         const sub = d.windows.length > 1 ? `${d.windows.length} monitors` : where(d.windows[0]);
-        box.append(row(own ? `${d.name} (this device)` : d.name, sub, () => go(d.name)));
+        const title = d.title || d.name; // a page with no device name: its address (quick job 101)
+        box.append(row(own ? `${title} (this device)` : title, sub, () => go(d.name)));
       }
       for (const x of opts.extra || []) box.append(row(x.label, x.sub || "", async () => x.run(msg)));
       if (!targets.length) {
         box.append(el("p", "oo-none", dev.up()
-          ? "No other device has the hub open. Open it there with ?device=<name> in the address (docs/guides/hub.md → Devices)."
+          ? "No other device has the hub open. Open the hub there first (docs/guides/hub.md → Devices)."
           : "Not connected to the brain right now: trying again."));
       }
     }
     box.append(msg);
   }
   draw(null);
+}
+
+/**
+ * "Another monitor of this computer" (HDMI/DP): open `url` full size on another monitor. Chrome's Window
+ * Management API places the window there (it asks once; localhost or https only). Elsewhere: a new window to
+ * drag over. say(text) tells the person. Returns "placed", "window", or "" (nothing opened).
+ */
+let screenDetails = null;
+export async function openOnMonitor(url, name, say) {
+  let place = "";
+  if ("getScreenDetails" in window) {
+    try {
+      screenDetails ||= await window.getScreenDetails();
+      const others = screenDetails.screens.filter((s) => s !== screenDetails.currentScreen);
+      const s = others.find((o) => !o.isPrimary) || others[0];
+      if (!s) { say("Only one monitor is connected to this computer."); return ""; }
+      place = `popup,left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight}`;
+    } catch (e) {
+      say(`The browser didn't allow placing windows (${e.message}); dragging the new window works too.`);
+    }
+  }
+  const w = window.open(url, name, place || "popup,width=1280,height=800");
+  if (!w) { say("The browser blocked the new window: press the button again."); return ""; }
+  say(place ? "Opened on the other monitor." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
+  return place ? "placed" : "window";
 }
 
 /** "Bring it back": a row per page this device opened elsewhere; opts.onBack(item) after it closed there. */
@@ -252,7 +278,7 @@ export function fillSent(box, dev, opts = {}) {
   box.hidden = !items.length;
   for (const it of items) {
     const line = el("div", "oo-sent");
-    const at = it.label ? `${it.device} (${it.label})` : it.device;
+    const at = it.label ? `${it.title || it.device} (${it.label})` : it.title || it.device;
     line.append(el("span", "oo-what", `${it.showing.title} is on ${at}`));
     const b = el("button", "oo-back", "Bring it back");
     b.type = "button";

@@ -117,7 +117,7 @@ function control(f, value, onSave, disabled) {
 function row(label, help, ctl, unit = "") {
   const r = document.createElement("div");
   r.className = "row";
-  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs" hidden>Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
+  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
   if (ctl) r.querySelector(".ctl").append(ctl);
   return r;
 }
@@ -374,7 +374,7 @@ function restartBar(labels, writable) {
 let writableHere = false;
 function setRestart(labels = [], keys = []) {
   restartBar(labels, writableHere);
-  document.querySelectorAll(".row[data-key]").forEach((r) => (r.querySelector(".rs").hidden = !keys.includes(r.dataset.key)));
+  document.querySelectorAll(".row[data-key]").forEach((r) => r.querySelector(".rs").classList.toggle("on", keys.includes(r.dataset.key)));
 }
 // another window may have changed a setting: the bar and the notes again when this one shows
 document.addEventListener("visibilitychange", async () => {

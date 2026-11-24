@@ -10,7 +10,7 @@
 import { fsElement, fsPossible, fullscreenButton, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 import "/web/no-menu.js";
-import { connectDevice, deviceName, fillOpenOn, fillSent, isPrefsKey, prefs, shouldRefill } from "/web/device.js";
+import { connectDevice, deviceName, fillOpenOn, fillSent, isPrefsKey, openOnMonitor, prefs, shouldRefill } from "/web/device.js";
 import { WAKE_QUIET_MS, assistantLanguage, createVoice, revealPacer, silenceWatch, wayIn } from "/web/voice.js";
 
 const $ = (s) => document.querySelector(s);
@@ -375,7 +375,15 @@ function openHere(id, sentFrom) {
 }
 
 function fillMenu() {
-  fillOpenOn($("#open-on"), device, S.module.id, { title: S.module.title, onSent: () => setTimeout(closeModule, 900) });
+  const m = S.module;
+  fillOpenOn($("#open-on"), device, m.id, {
+    title: m.title,
+    onSent: () => setTimeout(closeModule, 900),
+    // quick job 101: every page with Open on… also offers this computer's other monitor
+    extra: m.page ? [{ label: "Another monitor of this computer", sub: "a window of its own", run: async (msg) => {
+      if ((await openOnMonitor(`${m.page}?screen=1`, `lab-os-${m.id}`, (t) => (msg.textContent = t))) === "placed") setTimeout(closeModule, 900);
+    } }] : [],
+  });
 }
 function closeOpenOn() {
   $("#open-on").hidden = true;
