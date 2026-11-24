@@ -172,6 +172,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-24 | **The floor is 0.2 cm above the table** (`min_z_cm`, both venues; was 1.1 cm since 2026-11-18). The builder asked for 0.9 cm lower, for good. Replaces the 2026-11-18 row's number. Quick job 106 measures the white arm's real position numbers. | Tic-tac-toe: at the 1.1 cm floor the jaws closed above a 3 cm piece, three times (`docs/dev/GOTCHAS.md`, 2026-11-12 entry). |
 | 2026-11-23 | **The lab checklist is a short demo run until the demo** (`docs/guides/lab-checklist.md`, about 2 hours); the edge cases, errors and details move to `docs/guides/lab-checklist-after-demo.md`, for after 2026-12-03. | The builder: the full list with the reports got too long. |
 | 2026-11-23 | **Each persona has a voice of its own gender:** J.A.R.V.I.S. male, the Lab Assistant female (quick job 100). The assistants never say which language they answer in. | The builder: the voice should match the persona. |
 | 2026-11-23 | **Teleop on the Quest stays inside the hub in VR and AR** (the builder), as a module like the others (quick job 97). Replaces the part of the 2026-11-21 start flow (PR #204) that opened the whole Teleop page from the hub in VR. | On the Quest, leaving the hub for a full page is one step too many; the other modules stay in the hub. |

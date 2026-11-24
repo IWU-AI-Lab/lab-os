@@ -69,7 +69,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Bare hands: the right wrist drives, a left pinch = clutch, a right pinch = gripper | 🟡 | Works, but is difficult to steer. |
 | The relative mode at scale 1 (10 cm of hand = 10 cm of gripper), following at up to 180°/s scaled by the Speed slider | ✅ | On the real arm 2026-11-17. |
 | The 1:1 mode ("Hand → arm"): the gripper goes where your hand is | ✅ | On the real arm 2026-11-17: "way more intuitive", about 0.5 s behind, a little shaking. |
-| The Speed slider and the right thumbstick (limited by the venue); the gripper and the wrist stay above the floor (1.1 cm above the table since 2026-11-18) | ✅ | |
+| The Speed slider and the right thumbstick (limited by the venue); the gripper and the wrist stay above the floor (0.2 cm above the table since 2026-11-24; 1.1 cm before) | ✅ | |
 | The 3D arm in the headset (a see-through ghost in AR), which you can move onto the real arm | ✅ | |
 | The headset's status panel in the hub's design (2026-11-18): the state as a colored label, the gripper and the speed in the digit font, the hint | ✅ | Checked on the Mac over dark and light backgrounds. In the headset: lab check F.13. |
 | **What the Quest sees, on another screen** (2026-11-18): a button in the hub's strip (brain's computer) opens scrcpy's window with the headset's picture (watch only). `lab-os quest-view --install` downloads scrcpy, `--remove` deletes it. Without the USB cable on the router's Wi-Fi too (2026-11-23, quick job 103): `lab-os quest-view --wifi` once after each restart of the Quest; USB stays the first choice. | 🟡 | Download, start and stop tried on the Mac without a headset. On the Quest: lab check F.12; on Wi-Fi: T.4. |
