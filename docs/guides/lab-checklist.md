@@ -6,7 +6,7 @@ Every step has a tag (for example **H.2**). The line after **→** says what to 
 
 **Report problems in one line each, after "Also,".** A problem that does not stop the demo becomes a job for after the demo. When a step passes, it is removed.
 
-**Order.** Tuesday 2026-11-24: 0, S, H, G, W, T, R, L. Tuesday 2026-12-01: 0, M, then a practice run of the whole demo.
+**Order.** Tuesday 2026-11-24: 0, S, H, G, W, T, R, L, M. Tuesday 2026-12-01: 0, then a practice run of the whole demo.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -47,7 +47,7 @@ uv run pytest -q
 
 ## S. The start and the voice (25 min)
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port.
-- **S.1** Tap **Start lab-os**. Tap the start screen. → did the hub open full screen, with the startup's sound and a spoken greeting? (yes / no)
+- **S.1** On the lab desktop, click the **Start lab-os** icon. When the start screen shows, click it. → did the hub open full screen, with the startup's sound and a spoken greeting? (yes / no)
 - **S.2** Say "(wake word), what time is it?". → did it answer aloud? (yes / no) Type a question in the ask line. → did it answer? (yes / no)
 - **S.3** Quick job 98. Say fast, in one breath: "(wake word), how many minutes does a 1200 km flight take at 850 km per hour?" → did it hear the whole question? (yes / no) Say "(wake word), calculate 37 times 48," stop for one breath, then say "then add 199". → did it say 1975? (yes / no) → did the answer start about 2 s after you stopped? (yes / slower: how many seconds?)
 - **S.4** Quick job 99. On the desktop, open All Pages → **Wake Word**. Select the active word. Record 8 tries in the tones the page shows, and 20 s of talk. Press **Train**. → copy the result line. Say "(wake word), what time is it?" 5 times, with a new tone each time (once like a question). → how many times did it answer? (0 to 5)
@@ -82,13 +82,14 @@ raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Step
 ## L. The Newline (10 min)
 The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
 - **L.1** On that Pi, open `http://192.168.8.130:8080/design?device=newline`. Tap to start. → is the startup smooth enough to show? (yes / no) Does a touch land under your finger? (yes / no) Do you hear the greeting from the Newline? (yes / no)
+- **L.2** The Newline's microphones through the Pi. Many touch screens give their microphones to the computer on the touch cable. On the Pi, run `arecord -l`. → copy the lines. In the Newline's own settings, look for a choice that shares its microphone or camera with the HDMI or USB source. → is there one? (yes: its name and where / no)
 
-## M. Every screen in the room, on Tuesday 2026-12-01 (30 min)
-After part N, or on the campus network for the computers that are already on it (the desktops and the Pis). The plan for the demo: `docs/plan/current-focus.md` → item 10. Use the brain's address on the same network as the device: `192.168.8…` on the router, or the campus address that `hostname -I` shows first.
-- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Newline), open Chrome at `http://<the brain's address>:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
-- **M.2** On each computer with a USB microphone (the 2 Windows desktops) and on the Newline: open `chrome://flags`, search for "Insecure origins treated as secure", type `http://<the brain's address>:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
+## M. Every screen in the room (30 min)
+The plan for the demo: `docs/plan/current-focus.md` → item 10. Each computer must be on the router: its Wi-Fi, or a cable to the big switch. A computer on the campus network cannot reach the hub at `192.168.8.130`.
+- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Pi that drives the Newline), open Chrome at `http://192.168.8.130:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
+- **M.2** On each computer with a USB microphone (the 2 Windows desktops, and a Pi with a USB microphone): open `chrome://flags`, search for "Insecure origins treated as secure", type `http://192.168.8.130:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
 - **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
 - **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
 - **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
-- **M.6** Quick job 96. Open `http://<the brain's address>:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
+- **M.6** Quick job 96. Open `http://192.168.8.130:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
 - **M.7** Quick job 101. On a Pi, open the hub with no name (`http://192.168.8.130:8080/design?device=`). On the desktop's hub, open AI Spend's details and press **Open on…**. → is the Pi in the list, by its address? (yes / no) Select it. → did AI Spend open on the Pi? (yes / no) On the desktop, press **Open on…** → **Another monitor of this computer**. → did AI Spend open on the other monitor? (yes / no / no other monitor)
