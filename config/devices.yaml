@@ -132,6 +132,7 @@ devices:
   quest-a:
     kind: quest
     serial: 2G97C5ZHB300FG
+    host: 192.168.8.180   # on the router's Wi-Fi (reserved there): Quest view without the USB cable
     notes: Quest A. The builder's (probably). Teleop, the hub in VR.
 
   quest-b:

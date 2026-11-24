@@ -79,7 +79,8 @@ class Device:
     table_z_cm: float = 0.0
     serial: str = ""  # headsets: the serial adb lists (the Quest's view, quick job 36)
     mirror: tuple[str, ...] = ()  # headsets: extra scrcpy options for its view (crop, window)
-    host: str = ""  # network robots (the Raspbot): its name or address; "" = the device's name
+    host: str = ""  # network robots (the Raspbot): its name or address; "" = the device's name.
+    # Headsets: the address on the router's Wi-Fi, for Quest view without the cable (quick job 103)
     port: int = 0  # network robots: the port its program listens on; 0 = the robot's default
     speed: float = 0.5  # the Raspbot: the Speed slider at start, 0 … 1 of its program's speed cap
 

@@ -3,9 +3,9 @@
 Use it so that the people in the room can see what the person in the headset sees. Since 2026-11-18 (quick job 36).
 
 ## What it uses
-lab-os uses **scrcpy** ([github.com/Genymobile/scrcpy](https://github.com/Genymobile/scrcpy), Apache 2.0, widely used). scrcpy shows the screen of an Android device over adb, and the Quest is an Android device. It uses the same USB cable and adb connection as teleop (`docs/guides/quest-setup.md`). scrcpy installs nothing on the headset permanently: it copies a small server to the Quest each time and removes it after.
+lab-os uses **scrcpy** ([github.com/Genymobile/scrcpy](https://github.com/Genymobile/scrcpy), Apache 2.0, widely used). scrcpy shows the screen of an Android device over adb, and the Quest is an Android device. It uses the same USB cable and adb connection as teleop (`docs/guides/quest-setup.md`), or adb on the router's Wi-Fi (since 2026-11-23, below). scrcpy installs nothing on the headset permanently: it copies a small server to the Quest each time and removes it after.
 
-Meta's own casting (the headset's Camera → Cast, or oculus.com/casting in Chrome) needs the internet, a Meta account, and the headset and the computer on the same Wi-Fi. The lab does not have that network yet, so lab-os uses scrcpy. Casting stays available as a fallback.
+Meta's own casting (the headset's Camera → Cast, or oculus.com/casting in Chrome) needs the internet and a Meta account. lab-os uses scrcpy, which needs neither. Casting stays available as a fallback.
 
 Older scrcpy versions showed a black or flickering picture on Quest system versions 74 and later. scrcpy v4.0 (May 2026) fixed this. lab-os uses v5.0.1.
 
@@ -26,6 +26,22 @@ The command downloads scrcpy v5.0.1 for this computer (Linux x86_64, macOS or Wi
 
 The window only shows the picture. Clicks and keys in it never reach the headset (`--no-control`). The headset keeps its own sound (`--no-audio`). The window shows 30 frames per second, so that the Quest has enough graphics power for VR. When the brain stops, the window closes.
 
+## Without the USB cable (the router's Wi-Fi)
+Since 2026-11-23 (quick job 103), Quest view also works when the Quest is on the router's Wi-Fi and not plugged in. scrcpy then gets the picture over adb on Wi-Fi, as scrcpy's own docs and Meta's describe (`adb tcpip 5555`, then `adb connect`). The Quest's own wireless debugging screen is not used: on Quest system version 83 it does not open (Meta's forum).
+
+USB stays the first choice. If the Quest is plugged in, the view comes over the cable.
+
+The headset's address is `host` in `config/devices.yaml` (`quest-a`: `192.168.8.180`, reserved in the router). adb on Wi-Fi stays on until the Quest restarts. So, after each restart of the Quest, do this once:
+1. Connect the Quest by USB, and allow USB debugging.
+2. Run:
+   ```bash
+   uv run lab-os quest-view --wifi
+   ```
+   It says "quest-a: ready on Wi-Fi at 192.168.8.180:5555. You can unplug the USB cable."
+3. Unplug the cable. Press the Quest view button. The press connects to the Quest on Wi-Fi first.
+
+If the Quest does not answer on Wi-Fi, the button's message says so and what to do. Over Wi-Fi the window uses 4 Mbit/s (8 over USB), so that the router has room for the hub and teleop. Another Quest gets its own `host` line when its address is reserved in the router.
+
 **Both eyes or one eye:** the window shows the Quest's full screen, both eyes side by side. To show one eye, or to open the window in a fixed place, add scrcpy options to the headset in `config/devices.yaml`:
 ```yaml
   quest-a:
@@ -38,7 +54,7 @@ The window only shows the picture. Clicks and keys in it never reach the headset
 **adb:** the download includes its own adb. But if the computer has an adb, lab-os gives scrcpy that one (`ADB=…`). Two different adb versions stop each other's server, and that would cut teleop's `adb reverse` (`docs/dev/GOTCHAS.md` 2026-11-18).
 
 ## Where the code is
-- `src/lab_os/quest_view.py`: the download, finding scrcpy and adb, starting and stopping.
+- `src/lab_os/quest_view.py`: the download, finding scrcpy and adb, USB or Wi-Fi, starting and stopping.
 - `/api/quest-view` in `src/lab_os/hub/server.py` (`docs/dev/protocol.md`).
 - The button: `hub/web/design.html` and `hub/web/hub.js`.
 - The tests: `tests/test_quest_view.py`.

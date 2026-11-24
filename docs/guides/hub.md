@@ -191,7 +191,7 @@ They have the hub's design (`src/lab_os/web/design/`: `kit.css`, `kit.js`, `icon
 - **The old pages** (`/classic/teleop`, `/classic/monitor`), `/plain` and the performance test `/perf` were removed on 2026-11-20 (the builder). They are in git's history before that day.
 
 ## What the Quest sees
-On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window with what the Quest on the USB cable sees, so that the room can watch. It needs scrcpy: `docs/guides/quest-view.md`.
+On the brain's own computer, a button in the strip (the screen-with-goggles icon; **Quest view** on the plain hub) opens a window with what the Quest sees (by its USB cable, or on the router's Wi-Fi), so that the room can watch. It needs scrcpy: `docs/guides/quest-view.md`.
 
 ## Settings (the ⚙, or `/settings`)
 The ⚙ in either hub opens this page. Since 2026-11-19 (quick job 38), it follows common guidance for settings screens (Apple's Human Interface Guidelines, Nielsen Norman Group):
