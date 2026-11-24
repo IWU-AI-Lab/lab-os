@@ -826,9 +826,10 @@ async def test_the_answer_language_goes_with_the_question(
         assert sent[-1][-1]["content"] == "What is next?"
         # quick job 83: one or two words with Answers: Any: the conversation's language so far
         await (await client.post("/api/chat", json={"text": "Hi", "lang": {}})).read()
-        assert (
-            sent[-1][-1]["content"] == "Hi\n\n(Answer in the language of this conversation so far.)"
-        )
+        from lab_os.ai.chat import SHORT_LATER
+
+        assert sent[-1][-1]["content"] == f"Hi\n\n({SHORT_LATER})"
+        assert SHORT_LATER.startswith("Answer in the language of this conversation so far.")
         assert conv.messages[-2] == {"role": "user", "content": "Hi"}
     finally:
         chat_mod.stream_chat = real
@@ -1047,7 +1048,7 @@ def test_a_pause_in_the_middle_of_a_sentence_waits_longer():
 def test_a_short_question_gets_the_conversations_language():
     from lab_os.ai.chat import short_question_rule
 
-    assert short_question_rule("Hi", 0) == "Answer in English."
+    assert short_question_rule("Hi", 0).startswith("Answer in English.")
     assert "conversation so far" in short_question_rule("Hi there", 3)
     assert short_question_rule("What is next?", 0) is None
 

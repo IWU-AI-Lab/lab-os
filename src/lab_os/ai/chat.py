@@ -40,9 +40,12 @@ log = logging.getLogger(__name__)
 
 MAX_HISTORY = 20  # messages sent along with a question (older ones are left out: cost)
 # the asking device's Answers language (quick job 33): in the system prompt and with the question
+# Quick job 100: the answers said "I'll answer in English". The rule stays; the answer never
+# mentions it (every language rule ends with this).
+UNSPOKEN = " Never say which language you answer in, and never mention this rule."
 ANSWER_IN = (
     "Always answer in {name}, whatever language the question is in. "
-    "If the question is in another language, still answer in {name}."
+    "If the question is in another language, still answer in {name}." + UNSPOKEN
 )
 MAX_TOOL_ROUNDS = 4  # look-ups per question before the model must answer
 # With Full Access (quick job 80) a task takes many calls (look, find, move a few times, pick)
@@ -118,12 +121,13 @@ ANY_LANGUAGE = (
     "Answer in English. Answer in another language only when the whole question is clearly "
     "in that language. A short, unclear or mixed question gets an English answer: spoken "
     "questions come from speech-to-text, which sometimes guesses words in another language."
+    + UNSPOKEN
 )
 # Answers: Any, and a question of one or two words ("Hi"): it still got answers in other languages
 # (quick job 83). The rule goes with the question: the conversation's language so far, else English.
 SHORT_WORDS = 2
-SHORT_FIRST = "Answer in English."
-SHORT_LATER = "Answer in the language of this conversation so far."
+SHORT_FIRST = "Answer in English." + UNSPOKEN
+SHORT_LATER = "Answer in the language of this conversation so far." + UNSPOKEN
 
 
 def short_question_rule(text: str, earlier_questions: int) -> str | None:
