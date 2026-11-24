@@ -198,11 +198,11 @@ def test_the_page_marks_a_limit_thats_off():
 
 
 def test_the_floor_is_the_same_for_the_ai_tools_and_teleop(monkeypatch):
-    """Quick job 3 (decision 2026-11-13: -0.5 cm from so101-white's base, which stands on a plate),
-    measured from the table since quick job 28: 1.1 cm, the same place for so101-white."""
+    """Quick job 3 (2026-11-13: -0.5 cm from so101-white's base, which stands on a plate),
+    measured from the table since quick job 28: 1.1 cm; 0.2 cm since 2026-11-24 (the builder)."""
     monkeypatch.setattr(config, "active_dir", lambda: config.DEFAULT_DIR)
     for name in ("lab", "visit-day"):
         v = load_venue(name, config.DEFAULT_DIR)
-        assert v.floor_cm == 1.1 and AiLimits.from_venue(v).min_z_cm == 1.1
+        assert v.floor_cm == 0.2 and AiLimits.from_venue(v).min_z_cm == 0.2
     loop = make_loop(loop_args(venue="lab"))  # the fake arm stands on the table
-    assert loop.mapper.config.floor_m == pytest.approx(0.011)
+    assert loop.mapper.config.floor_m == pytest.approx(0.002)
