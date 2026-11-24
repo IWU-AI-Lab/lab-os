@@ -7,6 +7,8 @@
 #                     its base). 0 (the default) when it stands on the table; negative when it stands
 #                     on a plate. Every height the AI tools, pick_at, the floor and teleop use is then
 #                     measured from the table (quick job 28).
+# joint_offsets_deg -> arms: degrees added to a joint's reading so the model matches the real arm
+#                     (goals get them taken off again), e.g. {shoulder_lift: -4.7} (quick job 106).
 # serial           -> headsets: the serial number `adb devices` lists (the Quest's view, quick job 36)
 # mirror           -> headsets: extra scrcpy options for its view on the brain's computer, e.g.
 #                     ["--crop=2064:2208:0:0"] for one eye, ["--fullscreen"] (docs/guides/quest-view.md)
@@ -83,6 +85,9 @@ devices:
     # It stands on the stand camera's base plate: the table is ~1.6 cm below its z 0 (measured
     # 2026-11-17, GOTCHAS; lab check 3.2 said ~1.5). Lab check F.2 measures it by touching the table.
     table_z_cm: -1.6
+    # Its shoulder_lift reads 4.7° too far forward: the jaw tips read 0.3-1.7 cm too low, more the
+    # farther out (measured by hand with the motors off, 2026-11-24, quick job 106; GOTCHAS).
+    joint_offsets_deg: {shoulder_lift: -4.7}
     ports:
       - /dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41532410-if00
     usb:

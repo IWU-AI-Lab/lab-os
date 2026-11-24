@@ -77,6 +77,10 @@ class Device:
     # arms: the table's height in the arm's own numbers (cm; its z = 0 is the bottom of its base).
     # An arm standing on a plate has a negative one (so101-white: -1.6, quick job 28).
     table_z_cm: float = 0.0
+    # arms: degrees added to a joint's reading so the model matches the real arm (quick job 106:
+    # so101-white's shoulder_lift reads 4.7° too far forward). Goals get the same back.
+    # (joint, degrees) pairs: a tuple, so the frozen Device stays hashable.
+    joint_offsets_deg: tuple[tuple[str, float], ...] = ()
     serial: str = ""  # headsets: the serial adb lists (the Quest's view, quick job 36)
     mirror: tuple[str, ...] = ()  # headsets: extra scrcpy options for its view (crop, window)
     host: str = ""  # network robots (the Raspbot): its name or address; "" = the device's name.
@@ -134,6 +138,9 @@ def _read_devices(path: Path) -> dict[str, Device]:
             training_calibration=spec.get("training_calibration", ""),
             socket=spec.get("socket", ""),
             table_z_cm=float(spec.get("table_z_cm", 0.0)),
+            joint_offsets_deg=tuple(
+                (str(j), float(v)) for j, v in (spec.get("joint_offsets_deg") or {}).items()
+            ),
             serial=str(spec.get("serial") or ""),
             mirror=tuple(str(a) for a in (spec.get("mirror") or ())),
             host=str(spec.get("host") or ""),

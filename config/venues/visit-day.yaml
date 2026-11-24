@@ -10,7 +10,7 @@ one_to_one_max_deg_per_s: 180   # teleop 1:1: fastest joint turn (°/s), as the 
 ai_tools:              # what an AI tool may do per call (docs/guides/ai-control.md); left out = these defaults
   max_joint_change_deg: 30   # move_joints / go_to_pose: no joint moves further in one call (the gripper may)
   max_move_cm: 10            # move_to: the gripper moves at most this far in one call
-  min_z_cm: 0.2              # nothing goes lower than this (cm) above the table; also teleop's floor. From the table since quick job 28 (2026-11-18). 0.2 since 2026-11-24 (the builder: 0.9 cm lower than 1.1, because the jaws closed above a 3 cm piece; docs/plan/log.md)
+  min_z_cm: 0.8              # nothing goes lower than this (cm) above the table; also teleop's floor. From the table since quick job 28 (2026-11-18). 0.8 since 2026-11-24 (quick job 106: the jaw tips reach 0.6 cm below the gripper point, so they stop 0.2 cm above the table; docs/plan/log.md)
 limits:                # safety limits that can be switched off (here or Settings → Safety limits); on by default.
   per_move: on               # the AI tools' per-call limit (max_joint_change_deg, max_move_cm)
   speed_cap: on              # max_speed_scale and one_to_one_max_deg_per_s (off: up to full speed)

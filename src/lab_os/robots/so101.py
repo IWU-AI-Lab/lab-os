@@ -50,9 +50,13 @@ class MotionDisabled(RuntimeError):
     """Raised when something tries to move the arm while the driver is read-only."""
 
 
-def calibrated_limits(calibration: dict, base: dict[str, JointLimit]) -> dict[str, JointLimit]:
+def calibrated_limits(
+    calibration: dict, base: dict[str, JointLimit], offsets: dict[str, float] | None = None
+) -> dict[str, JointLimit]:
     """`base` narrowed to the ranges recorded in a LeRobot calibration (joint -> object with
-    range_min/range_max). In degrees mode, 0 is the middle of the recorded range."""
+    range_min/range_max). In degrees mode, 0 is the middle of the recorded range; a joint with an
+    offset (the arm's `joint_offsets_deg`) has its range moved by it, like its readings."""
+    offsets = offsets or {}
     out = dict(base)
     for joint in SO101_JOINTS[:-1]:
         cal = calibration.get(joint)
@@ -60,6 +64,7 @@ def calibrated_limits(calibration: dict, base: dict[str, JointLimit]) -> dict[st
             continue
         half = (cal.range_max - cal.range_min) / 2 * 360 / (STEPS - 1)
         lo, hi = sorted((-half * SIGNS[joint], half * SIGNS[joint]))
+        lo, hi = lo + offsets.get(joint, 0.0), hi + offsets.get(joint, 0.0)
         b = base[joint]
         if max(lo, b.low) < min(hi, b.high):
             out[joint] = JointLimit(max(lo, b.low), min(hi, b.high))
@@ -137,6 +142,9 @@ class SO101Arm:
     stopped: bool = False
     make_robot: Callable[[str, str, Path], object] = lerobot_follower  # replaceable for tests
     calibration_source: Path | None = None  # a borrowed arm: the training file it copies
+    # Added to a joint's reading (and taken off its goal) so the model matches the real arm:
+    # `joint_offsets_deg` in devices.yaml, set on connect (quick job 106).
+    offsets: dict[str, float] = field(default_factory=dict)
     _robot: object = field(default=None, repr=False)
     _port: str | None = field(default=None, repr=False)  # the by-id name it was opened by
     _last: dict[str, float] = field(default_factory=dict, repr=False)  # last reading
@@ -148,6 +156,8 @@ class SO101Arm:
         # by-id name, board serial, plugged in, and no other program has the port (LeLab, a run)
         device, port = guarded_port(self.name)
         self._port = port
+        if device is not None:
+            self.offsets = dict(device.joint_offsets_deg)
         folder = CALIBRATION_DIR / self.name
         borrowed = device is not None and bool(device.training_calibration)
         if borrowed:
@@ -181,7 +191,7 @@ class SO101Arm:
                 )
             self._robot = robot
             self._commanded = {}  # a reconnect starts from a fresh reading, not the old goal
-            self.limits = calibrated_limits(robot.calibration, self.limits)
+            self.limits = calibrated_limits(robot.calibration, self.limits, self.offsets)
             now = self.read_measured()
             if self.allow_motion:
                 # Goals = where the motors are, THEN LeRobot's settings (PID, gripper current
@@ -207,7 +217,7 @@ class SO101Arm:
         raw = self._require_connected().bus.sync_read(
             "Present_Position", num_retry=self.num_read_retries
         )
-        self._last = {j: _from_lerobot(j, v) for j, v in raw.items()}
+        self._last = {j: _from_lerobot(j, v) + self.offsets.get(j, 0.0) for j, v in raw.items()}
         self._last_read_t = time.monotonic()
         return dict(self._last)
 
@@ -320,7 +330,7 @@ class SO101Arm:
             log.warning("%s: closing the port: %s", self.name, e)
 
     def _lerobot_values(self, joints: dict[str, float]) -> dict[str, float]:
-        return {j: _to_lerobot(j, v) for j, v in joints.items()}
+        return {j: _to_lerobot(j, v - self.offsets.get(j, 0.0)) for j, v in joints.items()}
 
     def _require_connected(self):
         if self._robot is None:
