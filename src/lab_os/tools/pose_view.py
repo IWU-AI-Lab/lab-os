@@ -8,9 +8,9 @@ Two views side by side, both to the same scale, with a grid in cm:
 - **top**, seen from above with the arm's forward (x) up the picture and its left (y) to the left,
   as if standing behind the arm.
 
-Marked on both: the gripper point (between the fingertips), the last move_to target, and any
-`marks` the AI adds (e.g. where it thinks the cube is). Flat shading, painter's algorithm: crude
-but plain, and fast enough without a GPU (a fraction of a second once the meshes are loaded).
+Marked on both: the gripper point (at the fingertips, on the fixed jaw), the last move_to target,
+and any `marks` the AI adds (e.g. where it thinks the cube is). Flat shading, painter's algorithm:
+crude but plain, and fast enough without a GPU (a fraction of a second once the meshes are loaded).
 """
 
 import functools

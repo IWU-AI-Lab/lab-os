@@ -105,7 +105,7 @@ Not tools: what only a page can do for itself (its full screen, Desktop control,
 The brain limits and refuses. It never trusts the numbers that it gets. This section is the reference for these limits; `SAFETY.md` has the rules for people.
 - **The same path as teleop:** moves go through the teleop loop: the arm's soft limits (3° inside the real limits), the venue's `max_speed_scale`, and a limited speed (all joints arrive together).
 - **Small steps for each call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° for each joint** (`move_joints`, `go_to_pose`; not the gripper) or **10 cm** (`move_to`). A larger request goes part of the way and says so. The AI then calls again.
-- **The floor:** nothing goes below `min_z_cm`, in cm above the table. It is **0.2 cm** in both venues (since 2026-11-24; it was 1.1 cm from 2026-11-18, when heights started at the table). The brain checks the whole path. Teleop uses the same number. An arm that is already lower (moved by hand) can move up, but never further down. If the real arm still touches the table (it bends down under its own weight when stretched out), make the number higher.
+- **The floor:** nothing goes below `min_z_cm`, in cm above the table. It is **0.8 cm** in both venues (since 2026-11-24; it was 1.1 cm from 2026-11-18, when heights started at the table). The jaw tips reach 0.6 cm below the gripper point, so at the floor they are 0.2 cm above the table. The brain checks the whole path. Teleop uses the same number. An arm that is already lower (moved by hand) can move up, but never further down. If the real arm still touches the table (it bends down under its own weight when stretched out), make the number higher.
 - **Refused, nothing moves:** the venue has `motion_allowed: false`; **teleop has control** (a teleop page or the Quest drives); another AI move still runs; **lab-os is shutting down** (from "Shut down lab-os" or "Restart Now" until the brain stops; a move that runs then ends with "stopped"); an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that is not a number.
 - **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control"), and the pages show the AI tools as the controller. The hub does not go back to its start screen during a move.
 - **Switching limits off:** the limit for each call, the speed cap and the floor are on by default. You can set each one to `off` under `limits:` in the venue file, or in Settings → Safety Limits and Shut Down. Then restart the brain. `arm_status` then shows `"off"` for that number. A public venue or a venue with `limits_locked: true` cannot switch them off (the lab has neither). The soft joint limits, one controller at a time and STOP always stay.
@@ -170,7 +170,7 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
 **Do this one time, and again when the camera or the arm moves:**
 1. Print `models/charuco/calibration-sheet-letter.pdf` at **100 %** ("Actual size", not "Fit to page"). Measure one square: is it 35 mm? If not, add `--square-mm <your measurement>` in step 4.
 2. Put the sheet flat in front of the arm, with the long edge pointing straight away from the arm, approximately in the center.
-3. Find the sheet's **"Board origin" corner** (printed on it, top left, seen from the arm) in the arm's cm. Move the jaw tips onto it (teleop) and read the gripper's x and y (`/ai`, or `arm_status`). A ruler from the center of the base also works, but the AI uses the arm's own numbers.
+3. Find the sheet's **"Board origin" corner** (printed on it, top left, seen from the arm) in the arm's cm. Move the jaw tips onto it (teleop) and read the gripper's x and y (`/ai`, or `arm_status`). Use the arm's numbers, not a ruler: the arm's x 0 is 3.9 cm behind the base's turning axis.
 4. Move the arm off the sheet. Then run (the brain can keep running; the camera opens only for a moment):
    ```bash
    uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>
@@ -192,14 +192,14 @@ Each single move is one round trip to the AI service: a few seconds each. With `
 ## Picking up (`pick_at`)
 `pick_at(x_cm, y_cm, height_cm=2.5, open_pct=100)` picks up the object that stands at (x, y) on the table, in one call instead of about 17 small calls. It has five steps, each through the same safety path as `gripper` and `move_to`:
 1. Open the gripper.
-2. Go to `height_cm` + 6 cm above the object, pointing straight down.
+2. Go to `height_cm` + 6 cm above the object, pointing straight down. The gripper point is on the fixed jaw, so it goes 2 cm beside the object, away from the moving jaw: the object is then between the open jaws (since 2026-11-24; before, the fixed jaw came down on the object's top).
 3. Go straight down as deep as the jaws reach: 4 cm below the object's top, never below the floor (`min_z_cm`). For the 3 cm cube that is the floor. Before 2026-11-20 it went to half the height, and the cube was held with the jaw tips only.
 4. Close.
 5. Lift back up.
 
 Before anything moves, it checks that both points are in reach pointing down, that the point above is within `max_move_cm` (10 cm) of the gripper (if not, use `move_to` near it first), and the usual limits. AI Control (`/ai`) shows each step ("Pick · next · 2/5 go above it…") just before it moves. The pick ends early on STOP (`stopped`), or if a step stops more than 1.5 cm wrong (the gripper stays open). The result is `holding` (the gripper stopped more than 15 % open after the lift) or `missed` (it closed fully: the real arm reads about 8 % with nothing in it), with `steps`.
 
-The x and y come from the stand camera's grid (above). The height reading and the elbow's sag (`docs/plan/ideas.md` → "AI picking") still decide if step 3 goes low enough: fix those first.
+The x and y come from the stand camera's grid (above). The white arm's height reading is right since 2026-11-24 (quick job 106). The sag under load (`docs/plan/ideas.md` → "AI picking") still makes some steps end 1.5 cm short.
 
 ## Seeing the pose (`pose_view`)
 Without a camera, the AI cannot see the arm. `pose_view` draws the arm's 3D model (`models/so101`) in the pose that its motors report, as a picture:

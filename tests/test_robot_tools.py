@@ -506,7 +506,7 @@ async def test_unplugged_during_a_move(rig):
 
 @pytest.mark.parametrize("table_z_cm", [0.0, -1.6])  # the green arm (on the table), the white one
 async def test_ready_to_home_stays_above_the_floor_all_the_way(table_z_cm):
-    """Quick job 30: the floor (0.2 cm above the table, both venues) never refuses going home,
+    """Quick job 30: the floor (0.8 cm above the table, both venues) never refuses going home,
     and nothing on the way dips below it."""
     from lab_os.venues import load_venue
 

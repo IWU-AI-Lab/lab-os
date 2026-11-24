@@ -193,11 +193,12 @@ def create_mcp_server(
         tool_angle_deg: float | None = None,
         arm: str | None = None,
     ) -> dict:
-        """Move the gripper point (between the fingertips) in a straight line to (x, y, z) cm from
-        the arm's base: x forward, y to the arm's left, z up (0 = the table). `tool_angle_deg`:
-        the gripper's tilt, 0 = up, 90 = forward, 180 = straight down (for picking from above);
-        default: keep the current one. At most max_move_cm per call (then it goes part of the way:
-        call again). Refuses points it can't reach or below min_z_cm, instead of guessing."""
+        """Move the gripper point (at the fingertips, on the fixed jaw's inner face) in a straight
+        line to (x, y, z) cm from the arm's base: x forward, y to the arm's left, z up (0 = the
+        table). `tool_angle_deg`: the gripper's tilt, 0 = up, 90 = forward, 180 = straight down (for
+        picking from above); default: keep the current one. At most max_move_cm per call (then it
+        goes part of the way: call again). Refuses points it can't reach or below min_z_cm, instead
+        of guessing."""
         return await run(
             "move_to", x_cm=x_cm, y_cm=y_cm, z_cm=z_cm, tool_angle_deg=tool_angle_deg, arm=arm
         )

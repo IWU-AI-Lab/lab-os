@@ -3,12 +3,13 @@ steps in order and announced before they move, holding vs missed, the checks bef
 moves, STOP mid-pick. No hardware."""
 
 import asyncio
+import math
 
 import pytest
 
 from lab_os.robots.fake import FakeArm
 from lab_os.teleop.loop import InputState, TeleopLoop
-from lab_os.tools.robot import Refused, RobotTools
+from lab_os.tools.robot import PICK_JAW_SIDE_CM, SO101_OPEN_DIR, Refused, RobotTools
 from lab_os.venues import Venue
 
 FAST = {"deg_per_s": 900}
@@ -57,8 +58,9 @@ async def test_a_pick_runs_the_five_steps_in_order_each_announced_first():
     assert log[-1] == ("pick_at", "ok")
     assert [s["step"][:3] for s in r["steps"]] == ["1/5", "2/5", "3/5", "4/5", "5/5"]
     assert r["result"] == "missed" and "closed on nothing" in r["message"]  # fake jaws shut
-    p = r["gripper_point_cm"]
-    assert p["x"] == pytest.approx(20, abs=0.5) and p["z"] == pytest.approx(8.5, abs=0.5)
+    p = r["gripper_point_cm"]  # on the fixed jaw: beside the object, not over its middle
+    assert math.dist((p["x"], p["y"]), SPOT) == pytest.approx(PICK_JAW_SIDE_CM, abs=0.5)
+    assert p["z"] == pytest.approx(8.5, abs=0.5)
 
 
 async def test_jaws_stopped_on_something_say_holding():
@@ -134,3 +136,26 @@ async def test_the_jaws_close_as_deep_as_they_reach(monkeypatch):
         down = [e for e in tools.calls.entries[n:] if e["tool"] == "move_to"][1]
         floor = tools.limits.min_z_cm
         assert down["args"]["z_cm"] == pytest.approx(want if want is not None else floor), depth
+
+
+@pytest.mark.parametrize("roll", [0.0, 90.0, -45.0])
+async def test_the_object_stands_between_the_jaws_not_under_the_fixed_one(roll):
+    """Quick job 106: the gripper point is on the fixed jaw's inner face, so pick_at puts it
+    PICK_JAW_SIDE_CM from the object, against the moving jaw's opening: the object is on the
+    open side, whatever wrist_roll is."""
+    arm = FakeArm()
+    arm.connect()
+    arm.move_joints({"wrist_roll": roll}, 1.0, deg_per_s=math.inf)
+    tools, task = await make(arm)
+    try:
+        await near_the_spot(tools)
+        r = await tools.call("pick_at", x_cm=SPOT[0], y_cm=SPOT[1])
+    finally:
+        task.cancel()
+    grip = next(s for s in r["steps"] if s["step"].startswith("3/5"))
+    gp = grip["gripper_point_cm"]
+    rot = tools.kin.frames(tools.arm.read_joints())["wrist_roll"][1]
+    opens = [sum(rot[i][k] * SO101_OPEN_DIR[k] for k in range(3)) for i in range(2)]
+    to_object = (SPOT[0] - gp["x"], SPOT[1] - gp["y"])
+    assert math.dist(to_object, (0, 0)) == pytest.approx(PICK_JAW_SIDE_CM, abs=0.5)
+    assert to_object[0] * opens[0] + to_object[1] * opens[1] > 1.5  # along the opening

@@ -20,13 +20,15 @@ pieces:
   robot: red       # the colour the robot plays (5 pieces)
   person: blue     # the colour the person plays
   release_open_pct: 60   # open this far to let go: fully open, the jaws can hit the next cell
-  # where the robot's 5 pieces stand at the start (their middle, on the table)
+  # where the robot's 5 pieces stand at the start (their middle, on the table). Spots 1 and 5 were
+  # (4, 16) and (4, -16) until quick job 106: pick_at's gripper point goes 2 cm beside the piece,
+  # and from there the route left the arm's reach.
   robot_start_cm:
-    - [4, 16]
+    - [4, 18]
     - [10, 16]
     - [15, 13]
     - [10, -16]
-    - [4, -16]
+    - [15, -13]
 
 # The arm travels at the piece's height + 6 cm and never goes low over the board except to put a
 # piece down. The ready and home poses both put the gripper low over the board (on the fake arm's

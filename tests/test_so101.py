@@ -1,6 +1,7 @@
 """SO-101 driver tests: no hardware and no LeRobot, the LeRobot robot + bus are faked."""
 
 import json
+import math
 import stat
 from dataclasses import dataclass
 
@@ -431,3 +432,51 @@ def test_a_motor_that_does_not_answer_a_write_gives_the_same_sentence(no_port_ch
     with pytest.raises(so101.MotorsNotAnswering):
         arm.connect()
     assert not robot.bus.connected
+
+
+def test_a_joint_offset_moves_the_reading_the_goal_and_the_limits(monkeypatch):
+    """Quick job 106: so101-white's shoulder_lift reads 4.7° too far forward. The driver adds
+    the offset to the reading, takes it off the goal, and moves the joint's range with it."""
+    robot = FakeRobot(dict.fromkeys(SO101_JOINTS, 10.0))
+    monkeypatch.setattr(
+        so101, "guarded_port", lambda name: (devices.Device(name, "so101", **OFFSET), PORT)
+    )
+    arm = SO101Arm(name="so101-white", allow_motion=True, make_robot=lambda *_: robot)
+    arm.connect()
+    assert arm.read_measured()["shoulder_lift"] == pytest.approx(5.3)
+    assert arm.read_measured()["elbow_flex"] == 10.0
+    first = robot.bus.writes[0][1]  # goals = where the motors are: unchanged in motor units
+    assert first["shoulder_lift"] == pytest.approx(10.0)
+    arm.move_joints({"shoulder_lift": 6.3}, speed_scale=1.0, deg_per_s=math.inf)
+    assert robot.bus.writes[-1][1]["shoulder_lift"] == pytest.approx(11.0)
+    lim = arm.limits["shoulder_lift"]
+    plain = calibrated_limits(full_calibration(), so101_limits())["shoulder_lift"]
+    assert lim.low == pytest.approx(max(plain.low - 4.7, so101_limits()["shoulder_lift"].low))
+    assert lim.high == pytest.approx(plain.high - 4.7)
+
+
+OFFSET = {"joint_offsets_deg": (("shoulder_lift", -4.7),)}
+
+
+def test_so101_white_has_its_measured_shoulder_offset():
+    """Quick job 106: the offset is in devices.yaml for the white arm only, and with it the
+    model puts the jaw tips at the measured distance (A1, 2026-11-24: 29-30 cm from the base's
+    turning axis by ruler, on the table)."""
+    from lab_os.kinematics import on_table, so101_kinematics
+
+    reg = load_registry()
+    white = dict(reg.devices["so101-white"].joint_offsets_deg)
+    assert white == {"shoulder_lift": -4.7}
+    assert not reg.devices["so101-green"].joint_offsets_deg
+    a1 = {  # read with the motors off, the jaw tips on the table at cell A1
+        "shoulder_pan": -17.67,
+        "shoulder_lift": 61.01 + white["shoulder_lift"],
+        "elbow_flex": -49.19,
+        "wrist_flex": 75.78,
+        "wrist_roll": 94.2,
+    }
+    kin = on_table(so101_kinematics(), reg.devices["so101-white"].table_z_cm)
+    (x, y, z), _ = kin.fk(a1)
+    axis = kin.frames(a1)["shoulder_pan"][0]
+    assert 29.0 < math.hypot(x - axis[0], y - axis[1]) * 100 < 30.0
+    assert 0.0 < z * 100 < 1.0  # the gripper point: 0.6 cm above the tips on the table
