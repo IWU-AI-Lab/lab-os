@@ -6,7 +6,7 @@ Every step has a tag (for example **H.2**). The line after **→** says what to 
 
 **Report problems in one line each, after "Also,".** A problem that does not stop the demo becomes a job for after the demo. When a step passes, it is removed.
 
-**Order.** Tuesday 2026-11-24: 0, S, H, G, W, T, R, L, M. Tuesday 2026-12-01: 0, then a practice run of the whole demo.
+**Order.** Tuesday 2026-11-24: 0, S, H, G, W, T, R, L, A, M. Tuesday 2026-12-01: 0, then a practice run of the whole demo.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -86,6 +86,15 @@ raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Step
 The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
 - **L.1** On that Pi, open `http://192.168.8.130:8080/design?device=newline`. Tap to start. → is the startup smooth enough to show? (yes / no) Does a touch land under your finger? (yes / no) Do you hear the greeting from the Newline? (yes / no)
 - **L.2** The Newline's microphones through the Pi. Many touch screens give their microphones to the computer on the touch cable. On the Pi, run `arecord -l`. → copy the lines. In the Newline's own settings, look for a choice that shares its microphone or camera with the HDMI or USB source. → is there one? (yes: its name and where / no)
+
+## A. More to show (30 min)
+Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Run `uv run --extra so101 lab-os serve --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
+- **A.1** The card swipe. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start, with "Card read" and its own sound? (yes / no)
+- **A.2** Visitor mode. Say "(wake word), it's demo time". → did the hub greet the visitors? (yes / no) Tap **Ask me to wave**. → did the arm wave? (yes / no) Say "(wake word), the visitors have left".
+- **A.3** Conversation mode. Say "(wake word), start a conversation". Ask two questions without the wake word. Say "That's all". → did it answer both? (yes / no) Did the core go back to rest? (yes / no)
+- **A.4** The Cameras page. Open **All Pages** → **Cameras**. → does each plugged-in camera show a live picture? (yes / no: which does not)
+- **A.5** Quest view. Put on the Quest (on the router's Wi-Fi, no cable) and open the hub on it. On the desktop's hub, press the Quest view button (the screen-with-goggles icon). → did a window show what the Quest sees? (yes / no: what the button's tooltip says)
+- **A.6** LeRobot teleop with Rerun. Press Ctrl+C in the brain's terminal (hold the arm first). Stop LeLab. Plug in both green arms and their two cameras. Run `uv run --extra so101 lab-os serve --arm fake`. Open **Training**. Put the leader and the follower in the same pose, and press **Start** in "LeRobot teleop with Rerun". → did Rerun show the camera pictures and the joints? (yes / no) Does the follower follow the leader? (yes / no) Hold the follower, then press **Stop**.
 
 ## M. Every screen in the room (30 min)
 The plan for the demo: `docs/plan/current-focus.md` → item 10. Each computer must be on the router: its Wi-Fi, or a cable to the big switch. A computer on the campus network cannot reach the hub at `192.168.8.130`.
