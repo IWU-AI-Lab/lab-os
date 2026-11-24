@@ -21,9 +21,9 @@ def desk(persona: Persona, service: str = "openai") -> VoiceDesk:
 
 def test_the_personas_speak_with_their_own_voices():
     jarvis, plain = current_persona("jarvis"), current_persona("lab-assistant")
-    assert jarvis.speakers == {"openai": "onyx", "gemini": "Charon"}
+    assert jarvis.speakers == {"openai": "fable", "gemini": "Charon"}
     assert plain.speakers == {"openai": "nova", "gemini": "Kore"}
-    assert desk(jarvis).setup().speaker == "onyx"
+    assert desk(jarvis).setup().speaker == "fable"
     assert desk(plain).setup().speaker == "nova"
     assert desk(jarvis, "gemini").setup().speaker == "Charon"
     assert desk(plain, "gemini").setup().speaker == "Kore"
@@ -35,7 +35,8 @@ def test_the_personas_speak_with_their_own_voices():
 def test_the_greeting_recording_follows_the_voice():
     folder = Path("/r")
     a = greeting_file(folder, desk(current_persona("jarvis")).setup(), "Good morning.", "jarvis")
-    b = greeting_file(folder, setup("openai"), "Good morning.", "jarvis")  # the old fable one
+    other = desk(current_persona("lab-assistant")).setup()
+    b = greeting_file(folder, other, "Good morning.", "jarvis")
     assert a != b
 
 

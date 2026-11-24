@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-23 — OpenAI's `onyx` is not a British voice (quick job 100)
+**What:** Quick job 100 gave J.A.R.V.I.S. `onyx` for a male voice. The builder wanted the British voice of the films. `onyx` is a deep American voice; of OpenAI's voices only `fable` sounds British. `tts-1-hd` takes no accent instruction (`style:` needs gpt-4o-mini-tts, which drifted: the entry of 2026-11-20).
+**Fix:** J.A.R.V.I.S. uses `fable` again (`config/personas/jarvis.yaml`). Gemini's `Charon` has no British accent; Gemini gets no accent instruction now.
+
 ### 2026-11-23 — A hub with no device name was never in Open on…, and kit.css's [hidden] beat a Settings rule (quick job 101)
 **What:** (1) Lab check V.4: the Pi that drives the Newline had the hub open, but the log said only "device (no name) connected (192.168.8.167)". The brain listed only windows with a device name, so Open on… had nothing to offer. (2) Only pages with an address of their own had "Another monitor of this computer"; the details pages (AI Spend, Commits) have none, and the plain hub had the choice nowhere. (3) Lab check 0.3: the note "Applies when the brain restarts" was to keep its place while hidden (`.row.may-restart .rs[hidden] { display: block; visibility: hidden }`), but `kit.css` has `[hidden] { display: none !important; }`, which wins. When the Restart bar showed, the row grew 21 px, and the value box (centered in the row) moved down 10.6 px under the pointer (measured in headless Chrome at 1600 × 900).
 **Fix:** (1) A window with no name is listed by its address (`addr-192-168-8-167`, shown "192.168.8.167 (no device name)"). (2) A details page opens on another monitor as `/design?view=<id>`; the plain hub has the choice too (`device.js` → `openOnMonitor`). (3) The note is shown with a class, not `hidden`. Measured again: the box does not move. Note: a browser keeps the last device name it had, so a page with no name in the address can still be a named device.

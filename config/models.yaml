@@ -75,7 +75,7 @@ voices:
     # and the voice drifted between answers (GOTCHAS 2026-11-20, case 2). tts-1-hd takes no style.
     speak: tts-1-hd
     speaker: fable                     # OpenAI's voices: fable, alloy, echo, onyx, nova, shimmer, …
-    # a persona's `speakers:` wins (quick job 100: J.A.R.V.I.S. onyx, the Lab Assistant nova)
+    # a persona's `speakers:` wins (quick job 100: J.A.R.V.I.S. fable, the British voice; the Lab Assistant nova)
     # `style:` (accent, mood, manner) works only with gpt-4o-mini-tts and newer, e.g.:
     # style: A lively, warm British accent (Received Pronunciation). Upbeat and engaged.
     speed: 1.15                        # 1 = normal; the style alone doesn't change the pace
