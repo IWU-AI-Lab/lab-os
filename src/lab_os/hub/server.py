@@ -406,7 +406,9 @@ async def _lerobot_state(request: web.Request, said: str = "") -> web.Response:
 
 async def lerobot_state(app: web.Application, here: bool = True, said: str = "") -> dict:
     runner = lerobot_teleop.RUNNER
-    c, _ = await asyncio.to_thread(lerobot_teleop.check, brain_uses=_brain_uses(app))
+    c, _ = await asyncio.to_thread(
+        lerobot_teleop.check, brain_uses=_brain_uses(app), own_group=runner.group()
+    )
     out = c.as_dict() | runner.state() | {"here": here}
     if said:
         out["said"] = said

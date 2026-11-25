@@ -95,10 +95,12 @@ def check(
     by_path: str = "/dev/v4l/by-path/",
     brain_uses: tuple[str, ...] = (),
     is_installed=installed,
+    own_group: int | None = None,
 ) -> tuple[Check, Plan]:
     """Is it safe to start LeRobot's teleop on the green set now? Opens nothing. `brain_uses`: the
     devices the brain itself has open (its arms, its open cameras): the brain's own process isn't
-    seen by `users_of`."""
+    seen by `users_of`. `own_group`: the process group of the teleop the brain started (not
+    "another program")."""
     c, plan = Check(), Plan()
     registry = registry or load_registry()
     root = root or calibration_root()
@@ -149,12 +151,25 @@ def check(
         if not Path(path).exists():
             continue
         users = users_of(path, proc)
+        if users and own_group is not None:
+            users = [u for u in users if _group(u, proc) != own_group]
         if users is None:
             c.add(False, f"can't tell on this computer whether another program has {label} open")
         elif users:
             who = ", ".join(users)
             c.add(False, f"{label} is open in {who}: stop it first (one program per port)")
     return c, plan
+
+
+def _group(user: str, proc: Path) -> int | None:
+    """The process group of "name (pid 123)", from /proc/123/stat (None if it's gone)."""
+    m = re.search(r"\(pid (\d+)\)", user)
+    try:
+        stat = (proc / m.group(1) / "stat").read_text() if m else ""
+    except OSError:
+        return None
+    fields = stat.rsplit(")", 1)[-1].split()
+    return int(fields[2]) if len(fields) > 2 else None
 
 
 def command(plan: Plan, calibration_dir: Path, rerun_port: int | None = RERUN_PORT) -> list[str]:
@@ -226,6 +241,10 @@ class Runner:
     def running(self) -> bool:
         return self.proc is not None and self.proc.poll() is None
 
+    def group(self) -> int | None:
+        """The process group of the running teleop (uv and LeRobot), else None."""
+        return self.proc.pid if self.running() else None
+
     def state(self) -> dict:
         return {
             "running": self.running(),
@@ -266,12 +285,15 @@ class Runner:
                 cwd=REPO_ROOT,
                 env=child_env(),
                 stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,  # into the brain's log: a crash says why
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
                 start_new_session=True,
             )
         except OSError:
             return False
+        threading.Thread(target=self._read_viewer, args=(self.viewer,), daemon=True).start()
         end = time.monotonic() + wait_s
         while time.monotonic() < end:
             if self.viewer.poll() is not None:
@@ -295,6 +317,20 @@ class Runner:
             last = next((x for x in reversed(self.lines) if "Error" in x), "")
             self.said = "LeRobot's teleop stopped." + (f" {last}" if code and last else "")
         self._stop_viewer()
+
+    def _read_viewer(self, viewer) -> None:
+        """Rerun's own words go to the brain's log; its warnings and errors also to the page."""
+        for raw in viewer.stdout:
+            line = ANSI.sub("", raw).rstrip()
+            if line:
+                log.info("Rerun: %s", line)
+                if " WARN " in line or " ERROR " in line or "panicked" in line:
+                    self.lines.append(f"Rerun: {line}")
+        code = viewer.wait()
+        if code not in (0, -signal.SIGTERM):
+            said = f"The Rerun window closed (exit code {code})."
+            log.warning("Rerun: %s", said)
+            self.lines.append(said)
 
     @staticmethod
     def _signal(proc, sig) -> None:

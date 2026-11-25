@@ -92,6 +92,35 @@ def test_a_port_open_in_another_program_refuses(tmp_path):
     assert any("lelab (pid 4242)" in t for ok, t in c.lines if not ok)
 
 
+def test_the_brains_own_teleop_is_not_another_program(tmp_path):
+    """While the brain's LeRobot teleop runs, it holds the green ports: not "another program"."""
+    w = world(tmp_path)
+    pid = w["proc"] / "697362"
+    (pid / "fd").mkdir(parents=True)
+    (pid / "comm").write_text("lerobot-teleope\n")
+    (pid / "stat").write_text("697362 (lerobot-teleope) S 697360 697360 697360 0 -1\n")
+    (pid / "fd" / "3").symlink_to(w["registry"].devices["so101-green"].ports[0])
+    assert lt.check(**w, own_group=697360)[0].ok
+    c, _ = lt.check(**w, own_group=1)  # another group: refused
+    assert any("lerobot-teleope (pid 697362)" in t for ok, t in c.lines if not ok)
+
+
+def test_the_rerun_windows_words_reach_the_log(caplog):
+    """Rerun's output goes to the brain's log; a crash also to the page, with its exit code."""
+    viewer = subprocess.Popen(
+        [sys.executable, "-c", "print('x WARN out of memory'); raise SystemExit(3)"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )  # fmt: skip
+    runner = lt.Runner()
+    with caplog.at_level("INFO", logger=lt.__name__):
+        runner._read_viewer(viewer)
+    assert "Rerun: x WARN out of memory" in caplog.text
+    assert list(runner.lines) == [
+        "Rerun: x WARN out of memory",
+        "The Rerun window closed (exit code 3).",
+    ]
+
+
 def test_the_command_line(tmp_path):
     """LeRobot's teleop through lab-os's so101 extra, with the training files' ids, read from a
     temporary copy: LeRobot never touches its cache. Its data view on, sent to our Rerun."""
