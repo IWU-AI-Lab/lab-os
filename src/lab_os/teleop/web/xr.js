@@ -7,8 +7,10 @@
 //     own arm, grip = clutch, trigger = gripper, A or X stops both. Hold Y: each grip moves its own
 //     3D arm instead, and the real arms hold (arm-moves.js); a short tap of Y puts both back. Each
 //     hand's position is sent from its own 3D arm's base. Bare hands drive only the right arm.
-//   - Hands (controllers put down): right wrist = the controller, left pinch = clutch, right pinch
-//     = gripper. Sent as a "right controller" with grip/trigger from the pinches (source "hands").
+//   - Hands (Hands chosen in the hub's Teleop options; hand-choice.js): right wrist = the controller,
+//     left pinch = clutch, right pinch = gripper. Sent as a "right controller" with grip/trigger from
+//     the pinches (source "hands"). Controllers put down: the arm holds still, unless "Switch to
+//     Hands by Itself" is on (quick job 114).
 //   - Hand positions are sent in the 3D arm's frame (from its base, turned with it; "frame": "arm"):
 //     once it sits on the real arm, the gripper moves the way the hand moves in the room, from any
 //     side, and in the 1:1 mode it goes exactly where the hand is (grab the 3D gripper to start).
@@ -16,6 +18,7 @@ import * as THREE from "three";
 import { XRScene } from "./xr-scene.js";
 import { getArmFeed } from "./arm/arm-feed.js";
 import { ArmMoves } from "./arm-moves.js";
+import { loadHandChoice, pickSource, saveHandChoice } from "./hand-choice.js";
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v || 0));
 // Pinch: thumb tip to index tip. Apart (6 cm+) = 0, touching (1.5 cm; the joints' centres) = 1.
@@ -230,6 +233,12 @@ export class TeleopSession {
     this.moves = new ArmMoves();
     this.yWas = false;
     this.flick = 0;
+    this.handChoice = loadHandChoice(); // controllers or hands (quick job 114)
+  }
+  /** Controllers or hands, and the switch to hands by itself: the hub's Teleop options. */
+  setHandChoice(c) {
+    this.handChoice = { hands: !!c.hands, auto: !!c.auto };
+    saveHandChoice(this.handChoice);
   }
   /** Move and turn a 3D arm ("right" or "left") with controller `c`, from where both were at the grab. */
   _dragArm(slot, c) {
@@ -280,8 +289,9 @@ export class TeleopSession {
       if (isHand(src)) bare[src.handedness] = readHand(src, frame, refSpace);
       else if (src.gamepad) hands[src.handedness] = readController(src, frame, refSpace);
     }
-    // controllers win; hands only when no controller is in use (the Quest switches by itself)
-    const source = hands.right || hands.left ? "controllers" : bare.right || bare.left ? "hands" : null;
+    // the chosen input only: controllers put down, the arm holds still (no hands, no clutch). With
+    // "Switch to Hands by Itself" on, the controllers win and the hands drive while they are down.
+    const source = pickSource(!!(hands.right || hands.left), !!(bare.right || bare.left), this.handChoice);
     if (source === "hands") hands = handsAsController(bare);
 
     const left = hands.left, right = hands.right;

@@ -23,7 +23,7 @@ import { deviceName } from "/web/device.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
 import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
-import { optionMessage } from "./teleop-options.js";
+import { handChoiceAfter, optionMessage } from "./teleop-options.js";
 
 export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"], raspbot: ["Raspbot", "i-cam"] };
 const PX = 900; // canvas pixels per metre
@@ -403,6 +403,9 @@ export class TeleopModule {
     const s = this.tele.feed.status;
     const msg = optionMessage(what.key, what.op, what.value, s);
     if (msg) this.link.send(msg);
+    // Hands, or the switch to hands by itself: this headset's choice (quick job 114)
+    const choice = handChoiceAfter(what.key, what.op, what.value, this.tele.handChoice);
+    if (choice) this.tele.setHandChoice(choice);
     if (what.key === "style" && what.op === "pick") {
       this.style = what.value;
       try { localStorage.setItem(this.styleKey, what.value); } catch { /* private window: this session only */ }
@@ -416,7 +419,7 @@ export class TeleopModule {
     this.opts.hover = hits.find((h) => h.obj === this.opts.mesh)?.what || null;
     this.bar.open = this.opts.mesh.visible;
     this.bar.paint();
-    if (this.opts.mesh.visible) this.opts.paint(this.tele.feed.status, this.style, performance.now() - this.said.t < 4000 ? this.said.text : "");
+    if (this.opts.mesh.visible) this.opts.paint(this.tele.feed.status, this.style, this.tele.handChoice, performance.now() - this.said.t < 4000 ? this.said.text : "");
   }
   frame(t, xrFrame, refSpace) { return this.tele?.frame(t, xrFrame, refSpace); }
   close() { this.tele?.end(); this.tele = null; } // session_end: the arm freezes, control is free

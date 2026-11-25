@@ -62,7 +62,7 @@ export class TeleopBar {
 
 /* ---------- the options, over the status box ---------- */
 export class TeleopOptions {
-  constructor(w = 0.42, h = 0.4) {
+  constructor(w = 0.42, h = 0.48) {
     this.w = w; this.h = h;
     this.p = new CanvasPlane(w, h, PX);
     this.p.mesh.userData.hit = this;
@@ -75,9 +75,10 @@ export class TeleopOptions {
     const r = this.regions.find((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
     return r ? { kind: "tele", ...r.what } : { kind: "page" };
   }
-  /** `s`: the brain's status; `style`: the 3D arm's look here; `said`: the last thing a press did. */
-  paint(s, style, said = "") {
-    const rows = optionRows(s, style);
+  /** `s`: the brain's status; `style`: the 3D arm's look here; `input`: controllers or hands here
+   * ({hands, auto}); `said`: the last thing a press did. */
+  paint(s, style, input, said = "") {
+    const rows = optionRows(s, style, input);
     const key = JSON.stringify([rows, this.hover, said]);
     this.p.paint((g, cw) => this._draw(g, cw, rows, said), key);
   }
