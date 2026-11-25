@@ -509,3 +509,11 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 | Remote GUI from home (via a private overlay network; ask IT first) | Use the system's GUI off-site. | Remote access, GUI |
 | Cellular robots | Robots across campus without the lab network. | Network/connection |
 | Escape room (dropped 2026-10-15, still parked) | — | — |
+
+## Far future (the builder, 2026-11-25)
+
+### A 3D scan of the lab in the Command Center
+Scan the lab with phone cameras or the Quest, and make a 3D scene with Gaussian splatting. Put the virtual screens and devices where they are in the real lab, with 3D models of the SO-101 arms and the mobile robots (the Raspbot). It adds to the Command Center's 2D workspace (`docs/design/command-center.md`) and does not replace it.
+
+### Hand gestures for the Command Center
+Control the Command Center with hand gestures through a webcam (MediaPipe hands, as webcam teleop does). If it can be done in time, it may come before the demo. Every control still works without gestures.
