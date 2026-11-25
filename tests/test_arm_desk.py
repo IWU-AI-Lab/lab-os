@@ -6,9 +6,11 @@ tools on the fake arm; the cube is found by its colour in a test picture. No har
 import asyncio
 import io
 import json
+import math
 from collections import deque
 from dataclasses import replace
 
+import numpy as np
 import pytest
 from aiohttp import web
 from PIL import Image, ImageDraw
@@ -88,14 +90,21 @@ def test_off_unless_place_yaml_says_so(tmp_path, monkeypatch):
 @pytest.fixture
 async def desk(tmp_path, monkeypatch):
     """An arm desk on a fake arm whose jaws stop on a cube, switched on, with a stand camera that
-    sees a blue cube 20 cm in front of the base."""
+    sees a blue cube at (18, 10) cm (`shot["jpeg"]`: a picture, or one made from the desk), and
+    a wrist camera that sees the cube at `shot["wrist"]` (x, y cm), if any, from the gripper."""
     from lab_os import devices
 
     monkeypatch.setattr(table_map, "map_path", lambda cam: tmp_path / f"{cam}.yaml")
     table_map.save(_plain_map(SETUP.camera))
     monkeypatch.setattr(devices, "camera_device", lambda cam: "/dev/video-fake")
-    shot = {"jpeg": picture((20, 0, BLUE, 2.5))}
-    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w, cam: shot["jpeg"])
+    shot = {"jpeg": picture((18, 10, BLUE, 2.5)), "wrist": None}
+
+    def grab(path, w, cam):
+        if cam == SETUP.wrist_camera:
+            return wrist_picture(d, shot["wrist"])
+        return shot["jpeg"](d) if callable(shot["jpeg"]) else shot["jpeg"]
+
+    monkeypatch.setattr(robot_tools, "_grab_jpeg", grab)
     probe = FakeArm()
     lo, hi = probe.limits["gripper"].low + 3, probe.limits["gripper"].high - 3
     arm = CubeInTheJaws(stop_deg=lo + (hi - lo) * 0.3)
@@ -108,6 +117,31 @@ async def desk(tmp_path, monkeypatch):
     d.shot, d.on = shot, on
     yield d
     task.cancel()
+
+
+WRIST_F = 500  # the fake wrist camera's focal length (px): ~65° wide at 640 px
+
+
+def wrist_picture(d, cube) -> bytes:
+    """What a camera at the gripper point, looking along the jaws, sees of a blue cube at `cube`
+    (x, y cm on the table; None: no cube): a pinhole camera, its picture turning with the arm."""
+    img = Image.new("RGB", (640, 480), (120, 120, 115))
+    if cube is not None:
+        (gx, gy, gz), angle = d.robot.kin.fk(d.robot.arm.read_joints())
+        c = np.array([gx, gy, gz]) * 100
+        h, a = math.atan2(gy, gx), math.radians(angle)
+        look = np.array([math.sin(a) * math.cos(h), math.sin(a) * math.sin(h), math.cos(a)])
+        right = np.array([math.sin(h), -math.cos(h), 0.0])
+        down = np.cross(look, right)
+        rel = np.array([cube[0], cube[1], SETUP.height_cm / 2]) - c
+        depth = rel @ look
+        if depth > 1:
+            u, v = 320 + WRIST_F * (rel @ right) / depth, 240 + WRIST_F * (rel @ down) / depth
+            half = WRIST_F * SETUP.height_cm / depth / 2
+            ImageDraw.Draw(img).rectangle([u - half, v - half, u + half, v + half], fill=BLUE)
+    out = io.BytesIO()
+    img.save(out, "JPEG", quality=90)
+    return out.getvalue()
 
 
 async def settle(d):
@@ -163,7 +197,7 @@ async def test_hand_me_the_cube_then_let_go(desk):
     early, _ = await desk.call(LET_GO, True)
     assert "isn't holding" in early
     result, _ = await desk.call(HAND, True)
-    assert "Found the cube about 20 cm" in result, result
+    assert "Found the cube with the stand camera, about 21 cm" in result, result
     await settle(desk)
     assert desk.holding and joints_near(desk, SETUP.pose), desk.last
     steps = [e["tool"] for e in desk.robot.calls.entries]
@@ -175,15 +209,61 @@ async def test_hand_me_the_cube_then_let_go(desk):
     assert desk.robot._gripper_pct(desk.robot.arm.read_joints()["gripper"]) > 90
 
 
-async def test_no_cube_or_out_of_reach_moves_nothing(desk):
-    desk.shot["jpeg"] = picture((20, 0, RED, 2.5))
-    result, _ = await desk.call(HAND, True)
-    assert "can't see the blue cube" in result and desk.task is None
-    desk.shot["jpeg"] = picture((40, 0, BLUE, 2.5))
+async def test_out_of_reach_moves_nothing(desk):
+    desk.shot["jpeg"] = picture((44, 25, BLUE, 2.5))
     result, _ = await desk.call(HAND, True)
     assert "can't pick it up" in result and desk.task is None
     moves = [e for e in desk.robot.calls.entries if e["tool"] != "camera_snapshot"]
     assert moves == []
+
+
+def steps(d) -> list[str]:
+    return [e["tool"] for e in d.robot.calls.entries]
+
+
+async def test_a_cube_to_the_side_is_picked_with_a_tilted_gripper(desk):
+    """Out of a straight-down pick's reach (quick job 117, lab check H.2): the gripper tilts."""
+    assert desk.robot.pick_plan(30, 15, 2.5)[0] < 180
+    desk.shot["jpeg"] = picture((30, 15, BLUE, 2.5))
+    result, _ = await desk.call(HAND, True)
+    assert "Found the cube with the stand camera" in result, result
+    await settle(desk)
+    assert desk.holding, desk.last
+    pick = [e for e in desk.robot.calls.entries if e["tool"] == "pick_at"][-1]
+    assert pick["result"]["tool_angle_deg"] < 180
+
+
+async def test_a_cube_near_the_jaws_is_looked_at_again_from_home(desk):
+    """The arm at ready may hide a cube under its jaws from the stand camera: it folds to home
+    and looks again before it picks."""
+    (gx, gy, _), _ = desk.robot.kin.fk(desk.robot.arm.read_joints())
+    desk.shot["jpeg"] = picture((gx * 100 - 4, gy * 100, BLUE, 2.5))
+    result, _ = await desk.call(HAND, True)
+    assert "Found the cube with the stand camera" in result, result
+    seen = steps(desk)
+    assert seen[0] == "camera_snapshot" and "go_to_pose" in seen
+    assert seen.index("go_to_pose") < len(seen) - 1 and seen[-1] == "camera_snapshot"
+    await settle(desk)
+    assert desk.holding, desk.last
+
+
+async def test_the_wrist_camera_finds_what_the_stand_camera_cant(desk):
+    desk.shot["jpeg"] = picture((20, 0, RED, 2.5))  # no blue cube for the stand camera
+    desk.shot["wrist"] = (21.0, -13.0)
+    result, _ = await desk.call(HAND, True)
+    assert "Found the cube with the wrist camera" in result, result
+    await settle(desk)
+    assert desk.holding, desk.last
+    pick = [e for e in desk.robot.calls.entries if e["tool"] == "pick_at"][-1]
+    x, y = pick["args"]["x_cm"], pick["args"]["y_cm"]
+    assert math.dist((x, y), desk.shot["wrist"]) < 1.0, (x, y)
+
+
+async def test_no_camera_sees_it(desk):
+    desk.shot["jpeg"] = picture((20, 0, RED, 2.5))
+    result, _ = await desk.call(HAND, True)
+    assert "can't see the blue cube" in result and "wrist camera didn't find it" in result
+    assert "pick_at" not in steps(desk) and not desk.holding
 
 
 async def test_stop_ends_the_hand_over(desk):
