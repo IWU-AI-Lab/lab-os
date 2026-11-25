@@ -3140,7 +3140,8 @@ $("#ignite").addEventListener("click", () => ignite());
 // key, then Enter. On the start screen a key waits SWIPE.gap ms for the next one: a person's key then starts
 // the hub as before, and a fast run of keys ending with Enter is a swipe. Only a plain number (a student ID,
 // with or without the stripe's ; and ? marks) starts it; anything else (a bank card's data has ^ or =) does
-// nothing. The data is only tested here: never stored, logged or sent.
+// nothing. The data is only tested here: never stored, logged or sent. A reader on the brain's own computer
+// needs no focus: the brain reads it and sends "card" (onCard below, quick job 113).
 const SWIPE = { gap: 50, min: 4 };
 const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock", "AltGraph"]);
 let burst = null;
@@ -3688,6 +3689,7 @@ import("/web/device.js").then((m) => {
     onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
     onClose: () => { if (S.moduleOpen) closeModule(); },
     onLive: (list) => setLive(list),
+    onCard: () => { if ($("#ignite")) ignite("card"); },  // the brain read the swipe (quick job 113)
     onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),
