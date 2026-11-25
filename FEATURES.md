@@ -66,7 +66,7 @@ This page lists the features that work today, and some lab robot projects that a
 | Feature | Status | Notes |
 |---|---|---|
 | Quest 3 controllers drive `so101-white` through inverse kinematics: grip = clutch, trigger = gripper, A/X = stop | ✅ | The working demo. |
-| Bare hands: the right wrist drives, a left pinch = clutch, a right pinch = gripper | 🟡 | Works, but is difficult to steer. |
+| Bare hands: the right wrist drives, a left pinch = clutch, a right pinch = gripper. Only when chosen (since 2026-11-25, quick job 114): **Hands** in the VR and AR Teleop options; controllers put down otherwise hold the arm still. **Switch to Hands by Itself** (off by default) brings back the automatic change | 🟡 | Works, but is difficult to steer. The choice: tests with node; lab check T.1 of the demo run. |
 | The relative mode at scale 1 (10 cm of hand = 10 cm of gripper), following at up to 180°/s scaled by the Speed slider | ✅ | On the real arm 2026-11-17. |
 | The 1:1 mode ("Hand → arm"): the gripper goes where your hand is | ✅ | On the real arm 2026-11-17: "way more intuitive", about 0.5 s behind, a little shaking. |
 | The Speed slider and the right thumbstick (limited by the venue); the gripper and the wrist stay above the floor (0.8 cm above the table since 2026-11-24, so the jaw tips stop 0.2 cm above it; 1.1 cm before) | ✅ | |

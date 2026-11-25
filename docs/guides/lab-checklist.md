@@ -59,7 +59,8 @@ Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plu
 - **W.1** Quick job 120. Open `http://localhost:8080/webcam`. Click **Start webcam control**. Hold Space and move your right hand slowly. → did the arm follow your hand? (yes / no) Can you close the gripper and keep it closed while you move? (yes / no) Is it good enough to show? (yes / no: what is wrong)
 
 ## T. The Quest: one arm, then two (10 min)
-Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi. Quick jobs 114, 119 and 121 add their steps here.
+Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi. Quick jobs 119 and 121 add their steps here.
+- **T.1** Quick job 114. On the Quest, open the hub, **Enter VR**, then **Teleop**. Hold the right grip and move the arm a little. Put both controllers down on the table and hold your hands up in view. → did the arm stay still? (yes / no) Pick up the controllers. Select **Options**, then **Hand → Arm** → **Hands**. Hold a left pinch and move the right hand. → did the arm follow? (yes / no) Select **Relative**. Set **Switch to Hands by Itself** to **On**, and put the controllers down. → did the hands drive without a choice? (yes / no) Set it back to **Off**.
 
 ## R. The Raspbot (10 min)
 raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`. Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`.
