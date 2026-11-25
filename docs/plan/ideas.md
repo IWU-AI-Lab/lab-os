@@ -44,6 +44,26 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-25)
+
+### Agentic AI arm control (AMP1-style upgrades to `run_program`)
+- **What:** upgrade `run_program` (`src/lab_os/tools/program.py`) so a generalist AI model controls an SO-101 arm in a multi-turn code loop, inspired by Apple's [AMP1](https://arxiv.org/abs/2611.09892) ([paper HTML](https://arxiv.org/html/2611.09892v1), [GitHub](https://github.com/apple-aiml-research/ml-amp)). Keep our existing safety layer (STOP, soft limits, floor, green-arm rules) instead of importing `ml-amp` directly. Four small upgrades cover most of the gain:
+  1. **Stateful `run_program` sessions with cameras:** keep variables and helper functions across turns in one task, and let the program take or crop camera snapshots.
+  2. **Dry-run move preview (`preview_move`):** check reachability, floor, and speed limits before the arm moves, and return exact refusal reasons so the model can fix the path.
+  3. **Optional `pick_at` by model strength:** keep `pick_at` for smaller models (such as `gpt-6-luna`), and let frontier models use raw `move_to`, `gripper`, and `camera_snapshot` when they need custom grasps or pushes.
+  4. **Per-arm persistent memory folder (AMP1+):** keep a small local folder per arm (for example `config/local/arm-memory/so101-white/`) with Markdown notes and reusable Python helpers so the AI learns from past runs without GPU training.
+- **Why:** generalist models beat specialist VLAs and WAMs on reliability and generalization without demonstrations. On RoboLab-120, AMP1 reached 85.6 % zero-shot (Gemini 4 Argon) and 82.8 % (Opus 5.5) versus 49.2 % for the best VLA; in 108 real-world trials it reached 96.3 % versus 45.4 % (FLUX 3 Action) and 27.8 % ($\pi_{0.5}$). Persistent memory raised RGB-only bimanual RoboDojo success from 26.4 % to 84.1 % and cut model calls by about 35 %.
+- **Watch out:** AMP1 loops are slow and costly. Real-world tasks averaged 280 s (69 s moving and 211 s reasoning), and RoboLab-120 episodes averaged about $1.39 on Opus 5.5. Use this mode for developer MCP sessions or an opt-in "Agentic Control" mode, not for the $20/month public hub chat. Smaller models drop sharply without depth (Haiku 5.5 fell to 10.7 % on RGB-only).
+- **Plugs into:** `lab_os.tools.program`, `lab_os.tools.robot`, `camera_snapshot`, and local arm config (`config/local/`).
+- **Related:** "Faster AI arm control" and "LLMs/VLMs driving the green SO-101s" below.
+
+### Jetson Orin Nanos as on-device policy nodes (ExecuTorch-TensorRT)
+- **What:** use the lab's 5 Jetson Orin Nanos (`jetson1` … `jetson5`) as thin network robot and policy nodes running Hugging Face LeRobot policies locally with [ExecuTorch-TensorRT](https://pytorch.org/blog/executorch-tensorrt-pytorch-robot-policies-at-nvidia-tensorrt-speed/) (Torch-TensorRT 2.15 and ExecuTorch 1.6). Each Jetson hosts an SO-101 arm and its two cameras over the lab router and runs compiled `.pte`/`.ptd` policies without loading PyTorch at runtime. One 8 GB Orin Nano can also serve as a portable offline field brain (`lab-os serve`) plus a local SmolVLA demo.
+- **Why:** this solves two lab bottlenecks at once. First, the brain desktop's USB ports are full and its RTX 5070 GPU is shared with training. Second, PyTorch eager mode is too slow or runs out of memory on an 8 GB Orin Nano. With ExecuTorch-TensorRT on an 8 GB Orin Nano Super, ACT (52M) runs in 26 ms (407 MiB), SmolVLA (450M) runs in 120 ms (1,146 MiB, 6.4× faster than PyTorch eager), GR00T 1.7 (3B) runs in 215 ms (5,301 MiB), and $\pi_{0.5}$ (3.6B) runs in 467 ms (5,538 MiB). Combined with AMP1 above, this fits our two-speed plan: generalist AI for open-ended reasoning, and fast local policies on the Jetsons for reactive or offline skills.
+- **Watch out:** before building, check three things on the lab hardware: (1) confirm our Orin Nanos have 8 GB RAM (not 4 GB) and can run JetPack 7.2 or newer (CUDA 13.2; minimal runtime install is about 4.6 GB); (2) test the Jetson kernel's CH340 USB-serial driver with `so101-white`; (3) watch [ExecuTorch issue #24353](https://github.com/pytorch/executorch/issues/24353) for wheel-pinning fixes and single-program export for 3B+ models. Keep `lab-os` in charge of control handover, STOP, soft limits, and the green-arm rules.
+- **Plugs into:** "Robots report in" (Core plumbing above), the robots slot, the AI models slot, and "Our own recording and training page" below.
+- **Related:** "Faster AI arm control" (asynchronous action chunks with SmolVLA) and "GPU-busy indicator on the hub" below.
+
 ## Recent ideas (2026-11-23)
 
 ### The AI drives both arms at the same time
