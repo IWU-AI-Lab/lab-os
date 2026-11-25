@@ -6,7 +6,7 @@ Every step has a tag (for example **H.2**). The line after **→** says what to 
 
 **Report problems in one line each, after "Also,".** A problem that does not stop the demo becomes a job for after the demo. When a step passes, it is removed.
 
-**Order.** Tuesday 2026-11-24: 0, S, H, G, W, T, R, L, A, M. Tuesday 2026-12-01: 0, then a practice run of the whole demo.
+**Order.** Tuesday 2026-12-01: 0, then the parts below, then a practice run of the whole demo. The steps that passed on 2026-11-24 are removed (`docs/plan/log.md`, 2026-11-25). The quick jobs since then add their steps here.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
@@ -45,65 +45,38 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 
-## S. The start and the voice (25 min)
-Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port.
-- **S.1** On the lab desktop, click the **Start lab-os** icon. When the start screen shows, click it. → did the hub open full screen, with the startup's sound and a spoken greeting? (yes / no)
-- **S.2** Say "(wake word), what time is it?". → did it answer aloud? (yes / no) Type a question in the ask line. → did it answer? (yes / no)
-- **S.3** Quick job 98. Say fast, in one breath: "(wake word), how many minutes does a 1200 km flight take at 850 km per hour?" → did it hear the whole question? (yes / no) Say "(wake word), calculate 37 times 48," stop for one breath, then say "then add 199". → did it say 1975? (yes / no) → did the answer start about 2 s after you stopped? (yes / slower: how many seconds?)
-- **S.4** Quick job 99. On the desktop, open All Pages → **Wake Word**. Select the active word. Record 8 tries in the tones the page shows, and 20 s of talk. Press **Train**. → copy the result line. Say "(wake word), what time is it?" 5 times, with a new tone each time (once like a question). → how many times did it answer? (0 to 5)
-- **S.5** Quick job 100. Say "(wake word), hi". → was the voice male for J.A.R.V.I.S. or female for the Lab Assistant? (yes / no) → did J.A.R.V.I.S. have a British accent? (yes / no) → did the answer talk about the language, such as "I'll answer in English"? (no / yes: the words) In ⚙ → Assistant, change the persona. Say "(wake word), hi" again. → was the greeting and the answer in the other persona's voice? (yes / no)
-- **S.6** Quick job 104. Open ⚙ on the hub. Type "wake" in the search bar at the top. → did only the wake word settings show? (yes / no) Empty the bar. → did all the settings show again? (yes / no)
+## S. The start and the voice (10 min)
+Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
 How it works: `docs/guides/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
-- **H.1** Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no)
-- **H.2** Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no)
+- **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)
+- **H.2** Quick job 117. Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no) Do it again with the cube to the side of the arm. → did it pick it up? (yes / no: what it said)
 - **H.3** Ask for the cube again. While the arm moves, press STOP on the phone. → did the arm stop at once? (yes / no) Say "(wake word), move the arm to home". → did it go home? (yes / no)
-
-## G. Tic-tac-toe (30 min)
-Claude Code plays against you with `so101-white`. Set up as in `docs/guides/tic-tac-toe.md` (the printed sheet, the pieces, the stand camera). Run `uv run --extra so101 lab-os serve --speed 0.3`.
-- **G.0** Quick job 106. Do this first. Make the stand camera's map again: follow `docs/guides/ai-control.md` → "Table map", steps 1 to 5 (the printed sheet). → did it find 20 or more corners, with the worst 5 mm or less? (yes / no) Put the paper board back where the Board drawing (G.1) shows it.
-- **G.1** Open the Cameras page. Press **Board** on the stand camera's picture. → do the magenta squares sit on the printed lines? (yes / no) Put the 5 red pieces in the green rings while you watch. → was each place easy to find? (yes / no: which ring)
-- **G.2** In Claude Code, type the prompts in sections 4 and 5 of the guide. Play one game to the end. → did the AI read the board right each time? (yes / no: which turn) Did each red piece go inside its cell? (yes / no) About how many minutes did the game take?
-- **G.3** Quick job 106. Put a red piece in ring 3. In Claude Code, type "pick up the piece at start spot 3 with pick_at, then lift it". → did the jaws close around the middle of the piece? (yes / no: above it, beside it) Did the jaw tips touch the table? (yes / no)
 
 ## W. Teleop with a webcam (10 min)
 Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plug in `so101-white`. Run `uv run --extra so101 lab-os serve --speed 0.3`. **X** is STOP on the webcam page.
-- **W.1** Open `http://localhost:8080/webcam`. Click **Start webcam control**. Hold Space and move your right hand slowly. → did the arm follow your hand? (yes / no) Is it good enough to show? (yes / no: what is wrong)
+- **W.1** Quick job 120. Open `http://localhost:8080/webcam`. Click **Start webcam control**. Hold Space and move your right hand slowly. → did the arm follow your hand? (yes / no) Can you close the gripper and keep it closed while you move? (yes / no) Is it good enough to show? (yes / no: what is wrong)
 
-## T. The Quest: one arm, then two (20 min)
-Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi.
-- **T.1** On the Quest, open the hub, then **Enter VR**, then **Teleop**. Hold the right grip and move your hand. → did `so101-white` follow? (yes / no) Hold the left grip and move your hand. → did `so101-green` follow? (yes / no)
-- **T.2** Hold both grips and move both hands slowly. → did both arms follow, each with its own hand? (yes / no) Is it good enough to show? (yes / no: what is wrong)
-- **T.3** Quick job 102. In the hub in VR, open **Teleop**. Point the right controller at **OPTIONS** under the status box, then pull the trigger. Press **+** for the speed and select **1:1**, then **Relative**. → did each change at once? (yes / no) Point at **BACK** and pull the trigger. → are you back on the hub? (yes / no) Open Teleop again in AR, put the controllers down, then point your right hand at **EXIT** and pinch. → did it leave AR? (yes / no)
-- **T.4** Quick job 103. Connect the Quest by USB. On the brain's computer, run `uv run lab-os quest-view --wifi`. → did it say "ready on Wi-Fi"? (yes / no: what did it say?) Unplug the cable, then press the Quest view button in the hub's strip. → did the window show what the Quest sees? (yes / no) Is it smooth enough to show? (yes / no)
+## T. The Quest: one arm, then two (10 min)
+Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi. Quick jobs 114, 119 and 121 add their steps here.
 
-## R. The Raspbot (20 min)
-raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`.
-- **R.1** Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`. Open **All Pages** → **Raspbot**. Drive it forward, back and in a circle. → did it drive? (yes / no) Did STOP stop it at once? (yes / no) Which speed is good for the demo? (a percentage)
-- **R.2** Quick job 107. Do R.1 first, with the Quest's address in `drive_from` (as for T). On the Quest, open the hub, **Enter VR**, then **Raspbot**. Look left, right, up and down. → did the camera turn the same way each time? (yes / no: which way was wrong) Push the left stick forward, then let go. → did the car drive, then stop? (yes / no)
-- **R.3** In the Raspbot in VR, press **PICTURE**, then **RECORD**. Wait 5 s, then press **END REC**. → did the status line give two file names? (yes / no) Is the camera's picture bright enough to drive by? (yes / no)
+## R. The Raspbot (10 min)
+raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`. Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`.
+- **R.3** Quick job 122. On the Quest, open the hub, **Enter VR**, then **Raspbot**. Press **PICTURE**, then **RECORD**. Wait 5 s, then press **END REC**. → did the status line give two file names? (yes / no) On the desktop, open the recording. → does it play 5 s of video? (yes / no)
 
 ## L. The Newline (10 min)
-The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
-- **L.1** On that Pi, open `http://192.168.8.130:8080/design?device=newline`. Tap to start. → is the startup smooth enough to show? (yes / no) Does a touch land under your finger? (yes / no) Do you hear the greeting from the Newline? (yes / no)
-- **L.2** The Newline's microphones through the Pi. Many touch screens give their microphones to the computer on the touch cable. On the Pi, run `arecord -l`. → copy the lines. In the Newline's own settings, look for a choice that shares its microphone or camera with the HDMI or USB source. → is there one? (yes: its name and where / no)
+The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable). On 2026-11-24, `arecord -l` on the Pi listed the Newline's microphone ("Newline Q Pro Elite", card 2), through the touch cable.
+- **L.2** On the Pi, open `chrome://flags`, search for "Insecure origins treated as secure", type `http://192.168.8.130:8080`, select Enabled, then Relaunch. Open `http://192.168.8.130:8080/design?device=newline`. In Chrome's site settings for the hub, select the Newline microphone. Stand 2 m in front of the Newline and say "(wake word), what time is it?". → did it answer? (yes / no) Did you need a raised voice? (yes / no)
 
-## A. More to show (30 min)
+## A. More to show (20 min)
 Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
-- **A.1** The card swipe. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start, with "Card read" and its own sound? (yes / no)
-- **A.2** Visitor mode. Say "(wake word), it's demo time". → did the hub greet the visitors? (yes / no) Tap **Ask me to wave**. → did the arm wave? (yes / no) Say "(wake word), the visitors have left".
-- **A.3** Conversation mode. Say "(wake word), start a conversation". Ask two questions without the wake word. Say "That's all". → did it answer both? (yes / no) Did the core go back to rest? (yes / no)
-- **A.4** The Cameras page. Open **All Pages** → **Cameras**. → does each plugged-in camera show a live picture? (yes / no: which does not)
-- **A.5** Quest view. Put on the Quest (on the router's Wi-Fi, no cable) and open the hub on it. On the desktop's hub, press the Quest view button (the screen-with-goggles icon). → did a window show what the Quest sees? (yes / no: what the button's tooltip says)
-- **A.6** LeRobot teleop with Rerun. Press Ctrl+C in the brain's terminal (hold the arm first). Stop LeLab. Plug in both green arms and their two cameras. Run `uv run --extra so101 lab-os serve --arm fake`. Open **Training**. Put the leader and the follower in the same pose, and press **Start** in "LeRobot teleop with Rerun". → did Rerun open in its own window, with the camera pictures and the joints? (yes / no) Does the follower follow the leader? (yes / no) Hold the follower, then press **Stop**.
+- **A.1** Quick job 113. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Click on another window, so that the hub does not have the focus. Swipe your student ID. → did the hub start, with "Card read" and its own sound? (yes / no)
+- **A.2** Quick job 115. Do this once with `so101-white`, then once with only `so101-green` plugged in. Say "(wake word), it's demo time". Tap **Ask me to wave**. → did the arm wave? (yes / no, for each arm) Say "(wake word), the visitors have left".
+- **A.4** Quick job 109. Open **All Pages** → **Cameras**. Plug in the webcam. → did it show within a few seconds? (yes / no) → does each camera show under the right arm's name? (yes / no: which is wrong)
+- **A.6** LeRobot teleop with Rerun (fixed on 2026-11-24, PRs #273 to #275). Press Ctrl+C in the brain's terminal (hold the arm first). Stop LeLab. Plug in both green arms and their two cameras. Run `uv run --extra so101 lab-os serve --arm fake`. Open **Training**. Put the leader and the follower in the same pose, and press **Start** in "LeRobot teleop with Rerun". → did Rerun open in its own window, with the camera pictures and the joints? (yes / no) Does the follower follow the leader? (yes / no) Hold the follower, then press **Stop**.
 
-## M. Every screen in the room (30 min)
-The plan for the demo: `docs/plan/current-focus.md` → item 10. Each computer must be on the router: its Wi-Fi, or a cable to the big switch. A computer on the campus network cannot reach the hub at `192.168.8.130`.
-- **M.1** On each computer that can show a screen (the 2 Windows desktops, the other Ubuntu desktop, each Pi with a screen, the Pi that drives the Newline), open Chrome at `http://192.168.8.130:8080/design?device=<a short name>`. Use names like `win-1`, `win-2`, `ubuntu-2`, `pi-1`, `newline`. → for each: the name, and did the hub load? (yes / no)
-- **M.2** On each computer with a USB microphone (the 2 Windows desktops, and a Pi with a USB microphone): open `chrome://flags`, search for "Insecure origins treated as secure", type `http://192.168.8.130:8080`, select Enabled, then Relaunch. → for each: is there a mic button next to "Ask anything"? (yes / no)
-- **M.3** On the desktop's hub, open the Devices panel. → how many devices does it list? (a number) Are all names from M.1 there? (yes / no: which are missing?)
-- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
-- **M.5** On the desktop's hub, open the AI Spend panel's details. Press **Open on…** → the Newline. → did AI Spend open on the Newline? (yes / no) Do the same with the system diagram (the network icon in Devices). → did it open there? (yes / no)
-- **M.6** Quick job 96. Open `http://192.168.8.130:8080/design?device=phone` on a phone, held upright. Open the hub on the Pi's touchscreen too. On each, open Teleop, then the Devices details, then Settings. → Did each page fit with no sideways scroll? (yes / no: which page?) Could you press every button with a finger? (yes / no: which button?) Was any text cut off? (no / yes: where?)
-- **M.7** Quick job 101. On a Pi, open the hub with no name (`http://192.168.8.130:8080/design?device=`). On the desktop's hub, open AI Spend's details and press **Open on…**. → is the Pi in the list, by its address? (yes / no) Select it. → did AI Spend open on the Pi? (yes / no) On the desktop, press **Open on…** → **Another monitor of this computer**. → did AI Spend open on the other monitor? (yes / no / no other monitor)
+## M. Every screen in the room (15 min)
+The plan for the demo: `docs/plan/current-focus.md` → item 10. Each computer must be on the router: its Wi-Fi, or a cable to the big switch. A computer on the campus network cannot reach the hub at `192.168.8.130`. Open the hub on each computer as on 2026-11-24 (`/design?device=<its name>`).
+- **M.2** Quick job 112. On each Windows desktop, say "(wake word), what time is it?". → did it answer the question? (yes / no: what it said)
+- **M.3** Quick job 109. On the desktop's hub, open the Devices panel. Unplug the white arm's USB cable, then plug it in again. → did the panel change within a few seconds, each time? (yes / no) Close the hub on one computer. → did that device go from the list? (yes / no)
