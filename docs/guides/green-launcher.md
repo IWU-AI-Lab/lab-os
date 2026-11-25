@@ -60,6 +60,8 @@ To start, press **Start** in the card. The page first checks these lines:
 
 The green cameras are used when they are plugged in. Without them, the teleop runs and Rerun shows only the joints.
 
+If the Rerun window closes by itself, the card shows its exit code. The brain's log has Rerun's own words (`uv run lab-os logs`, the lines that start with `Rerun:`).
+
 To stop, press **Stop**. **Warning:** the green follower goes limp, as with Ctrl+C. Hold it first if it is lifted. When lab-os stops, the teleop stops too.
 
 How it keeps the green rules (`AGENTS.md` → "Hard rules"):
