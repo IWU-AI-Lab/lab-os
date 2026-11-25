@@ -1,4 +1,5 @@
-"""Tic-tac-toe on a paper grid (preview 1, docs/guides/tic-tac-toe.md): the layout from
+"""Tic-tac-toe on a paper grid (preview 1, docs/archive/guides-2026-11-25/tic-tac-toe.md): the
+layout from
 config/games/tic-tac-toe.yaml, and the board drawn on the stand camera's picture.
 
 The AI plays with the robot tools it already has: `camera_snapshot(board=true)` shows the board

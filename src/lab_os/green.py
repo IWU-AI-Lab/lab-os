@@ -12,7 +12,8 @@ It starts LeLab (`lelab`, Hugging Face's web page for LeRobot, its own uv tool) 
 - no program other than LeLab has a green port open (lab-os driving so101-green, say), whether or
   not LeLab is already running (quick job 17). LeLab is told apart by its command line.
 LeLab opens the ports when you press teleop or record in its page. `lab-os green` in a terminal,
-the desktop icon (docs/guides/green-launcher.md) and the hub's Training page all run this.
+the desktop icon (docs/archive/guides-2026-11-25/green-launcher.md) and the hub's Training page all
+run this.
 """
 
 import json

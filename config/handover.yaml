@@ -1,4 +1,4 @@
-# "Hand me the cube" (preview 4, docs/guides/hub.md → "The assistant moves the arm"): how
+# "Hand me the cube" (preview 4, docs/archive/guides-2026-11-25/hub.md → "The assistant moves the arm"): how
 # the brain finds the cube in the stand camera's picture, and where the arm holds it out. The hub's
 # assistant may use it only when place.yaml has `assistant_moves_arm: true` (Settings → Robots).
 

@@ -15,5 +15,5 @@ drive_from:           # other devices that may drive a real arm, by name or addr
   - 192.168.8.180     # the Quest on the router's Wi-Fi (its address is reserved in the router)
 calendar:             # dates the hub's greeting mentions in the two weeks before (docs/dev/personas.md)
   - {date: 2026-12-15, what: "The semester ends"}
-domain: hub.indwesailab.com   # not used yet: the secure address is deferred (docs/guides/voice.md → "Secure pages");
+domain: hub.indwesailab.com   # not used yet: the secure address is deferred (docs/archive/guides-2026-11-25/voice.md → "Secure pages");
                               # later only this place updates the name (step 8)

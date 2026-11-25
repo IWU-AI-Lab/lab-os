@@ -85,7 +85,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 | Roll call / device diagnostics / battery | 1, 2, 6 | on hold (router) / idea |
 | Teleop + control handover + STOP everywhere | 2, 3 | done (polish on hold) |
 | Personas | 2, 3 | built (focus step 4) |
-| Kiosk screens | 3, 9 | full screen on the start press and the kiosk recipe built (`docs/guides/hub.md`); the rest an idea |
+| Kiosk screens | 3, 9 | full screen on the start press and the kiosk recipe built (`docs/archive/guides-2026-11-25/hub.md`); the rest an idea |
 | Remote access + tokens + tiers | 4, 8 | after this focus / idea (needs router + IT) |
 | Harness toggle + lab-paid agent + cost display | 5 | after this focus |
 | GPU-busy indicator | 1, 7 | idea |

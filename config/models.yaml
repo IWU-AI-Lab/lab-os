@@ -59,7 +59,7 @@ setups:
     options:
       max_tokens: 800
 
-# Voice setups (focus step 7, docs/guides/voice.md): who hears (speech-to-text) and who speaks
+# Voice setups (focus step 7, docs/archive/guides-2026-11-25/voice.md): who hears (speech-to-text) and who speaks
 # (text-to-speech). A persona picks one by name (`voice: main`; `voice: none` = no voice).
 # `fallback` works like the chat's: no key in .env → the next setup.
 # `hear`: Gemini's is a Live API transcription model (the words arrive while you talk);

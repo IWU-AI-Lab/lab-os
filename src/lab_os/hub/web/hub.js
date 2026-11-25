@@ -677,7 +677,7 @@ function onChatEvent(ev, answer, paced = false) {
   }
 }
 
-/* ---------- voice (step 7, docs/guides/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
+/* ---------- voice (step 7, docs/archive/guides-2026-11-25/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
    no microphone or no voice at the brain: no mic button, typing unchanged. */
 const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0 };

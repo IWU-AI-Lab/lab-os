@@ -1,6 +1,6 @@
 # Teleop with the Quest: at home (no headset) and on the real Quest (USB)
 
-The teleop program shows a WebXR page and gets the controller data over a WebSocket. `lab-os-teleop` drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). `lab-os serve` drives the SO-101 that is plugged in, else the fake arm (`docs/guides/hub.md` → "Start it"). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
+The teleop program shows a WebXR page and gets the controller data over a WebSocket. `lab-os-teleop` drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). `lab-os serve` drives the SO-101 that is plugged in, else the fake arm (`docs/archive/guides-2026-11-25/hub.md` → "Start it"). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
 
 ```bash
 uv run lab-os-teleop serve                         # the headset page and the fake arm
@@ -9,7 +9,7 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser ne
 ```
 Then open **http://localhost:8080/monitor** to watch the fake arm.
 
-**With the brain** (`uv run lab-os serve`, `docs/guides/hub.md`), the teleop page is at **http://localhost:8080/teleop**. `/ws` and `/monitor` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
+**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the teleop page is at **http://localhost:8080/teleop**. `/ws` and `/monitor` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
 
 In VS Code, the Run and Debug panel has a button for each of these commands (`.vscode/launch.json`).
 
@@ -30,7 +30,7 @@ With the controllers:
 
 The arm freezes when you release the grip, when tracking stops, when the connection drops, or when the session ends. After a freeze, release the grip and press it again.
 
-**Bare hands:** put the controllers down. The Quest changes to hand tracking by itself.
+**Bare hands:** in the hub's VR or AR Teleop, select **Options** → **Hand → Arm** → **Hands**, then put the controllers down. Hands drive in Relative. If you put the controllers down without Hands, the arm holds still. **Switch to Hands by Itself** (Off by default) brings back the old way: the hands drive while the controllers are down.
 - The **right wrist** moves the arm, like the controller.
 - Hold a **left pinch** (thumb on index finger): the clutch.
 - **Right pinch:** the gripper. Fingers apart = open. Fingers together = closed.
@@ -144,7 +144,7 @@ After Enter VR (or Enter AR): The startup plays around you, as on the designed h
 - Point at a panel with a controller (or your hand) and pull the trigger (or pinch) to open its details. 7d, 14d, 30d, List all and a device's card also work.
 - **B** or **Y** closes a page. **⏻** (top right; on a module, beside ← on its tab) opens a small menu: **Back to the start screen** or **Exit** (leaves VR or AR). B closes the menu.
 - **⚙** (beside ⏻) opens Settings, with the same groups as ⚙ on the screens. **This Device** is the Quest. Point at a switch, a choice or − / + and pull the trigger: it saves at once, and the line at the bottom says "Saved" or why not. Change names, colours and lists on a screen (VR has no keyboard). The brain's settings change only when the Quest is connected by USB (it then counts as the brain's computer).
-- **Asking:** point at the ask line under the core and hold the trigger (or a pinch) while you talk. The wake word and the microphone permission: `docs/guides/voice.md` → "In VR".
+- **Asking:** point at the ask line under the core and hold the trigger (or a pinch) while you talk. The wake word and the microphone permission: `docs/archive/guides-2026-11-25/voice.md` → "In VR".
 - **Monitor** and **AI Control** show the arm as a hologram, with each joint's angle, who has control, and STOP. They only show; they do not drive. AI Control also shows each robot-tool call. To go back, press B or Y, or point at ←.
 - **Teleop** opens around you, without leaving VR or AR, like Monitor and AI Control (since 2026-11-23). The arm follows your controllers or hands, as on the Teleop page: hold the right grip to move, the trigger is the gripper, **A** or **X** stops. The status box beside the arm says what the arm does, and who has control when another page or the AI tools have it. The left grip moves the 3D arm; **Y** puts it back. The arm holds still when you go back, when you leave VR, or when input stops.
   - Under the status box are four buttons: **STOP**, **OPTIONS**, **BACK** (back to the hub) and **EXIT** (leaves VR or AR). Point at one with the right controller or the right hand. Then pull the trigger or pinch. The beam shows while it is on a button. **B** also goes back.
@@ -196,6 +196,6 @@ What is different from one arm:
 - "WebXR not available" → the address must be `http://localhost:8080`, not the desktop's IP address (an IP address is not a secure address).
 - The headset's panel says "Stopped" and "Let go of the grip, then grab again" → release the grip fully, then press it again.
 
-To show what the headset sees on the desktop's screen, for the room: `docs/guides/quest-view.md`.
+To show what the headset sees on the desktop's screen, for the room: `docs/archive/guides-2026-11-25/quest-view.md`.
 
 Later (not needed for the demo): Wi-Fi instead of USB needs HTTPS with a certificate that the Quest trusts, or adb over Wi-Fi. USB is simpler and portable (`docs/archive/focus-2026-10-teleop-demo.md`, "Fewest moving parts").

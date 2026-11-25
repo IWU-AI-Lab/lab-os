@@ -294,13 +294,14 @@ def test_the_vr_teleop_options_are_the_teleop_pages():
     the speed (5 % a step, up to the venue's cap), relative or 1:1 (only where the brain offers
     it), the 3D arm's look, and putting the 3D arm back."""
     rows = _options(f"m.optionRows({json.dumps(STATUS)}, 'stick')")
-    assert [r["key"] for r in rows] == ["speed", "mode", "style", "place"]
-    speed, mode, style, _ = rows
+    assert [r["key"] for r in rows] == ["speed", "mode", "auto", "style", "place"]
+    speed, mode, _, style, _ = rows
     assert speed["value"] == "50%" and speed["can"] == {"minus": True, "plus": True}
-    assert [c["value"] for c in mode["choices"] if c["enabled"]] == ["relative", "one_to_one"]
+    enabled = [c["value"] for c in mode["choices"] if c["enabled"]]
+    assert enabled == ["relative", "one_to_one", "hands"]
     assert style["value"] == "stick"
     only = _options(f"m.optionRows({json.dumps(STATUS | {'modes': ['relative']})})")
-    assert [c["enabled"] for c in only[1]["choices"]] == [True, False]
+    assert [c["enabled"] for c in only[1]["choices"]] == [True, False, True]
     assert "1:1 is off in this venue" in only[1]["help"]
     at_cap = _options(f"m.optionRows({json.dumps(STATUS | {'speed_scale': 0.8})})")
     assert at_cap[0]["can"]["plus"] is False
@@ -318,6 +319,66 @@ def test_the_vr_teleop_options_are_the_teleop_pages():
     no_1to1 = STATUS | {"modes": ["relative"]}
     assert _options(f"m.optionMessage('mode', 'pick', 'one_to_one', {json.dumps(no_1to1)})") is None
     assert _options("m.optionMessage('speed', 'plus', null, null)") is None  # no brain yet
+
+
+def _hand_choice(call: str):
+    """Run teleop/web/hand-choice.js (no imports) with node and return what `call` gives."""
+    import shutil
+    import subprocess
+
+    import pytest
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node isn't installed")
+    url = (SRC / "teleop/web/hand-choice.js").as_uri()
+    script = f"import({json.dumps(url)}).then(m => console.log(JSON.stringify({call})))"
+    out = subprocess.run([node, "-e", script], capture_output=True, text=True, check=True)
+    return json.loads(out.stdout)
+
+
+def test_hand_control_only_when_you_choose_it():
+    """Quick job 114 (the builder, 2026-11-24: "HUGE issue"): putting the controllers down no
+    longer switches to the hands by itself. Off by default: the controllers drive, and with them
+    down the arm holds still (no hands are sent). Hands is a mode next to Relative and 1:1; a switch
+    turns the old automatic change back on."""
+    pick = "m.pickSource({}, {}, {})"
+    off = '{"hands": false, "auto": false}'
+    hands = '{"hands": true, "auto": false}'
+    auto = '{"hands": false, "auto": true}'
+    assert _hand_choice("m.loadHandChoice(null)") == {"hands": False, "auto": False}
+    # (controllers seen, hands seen) → the source that drives
+    assert _hand_choice(pick.format("false", "true", off)) == "controllers"  # put down: holds
+    assert _hand_choice(pick.format("true", "true", off)) == "controllers"
+    assert _hand_choice(pick.format("true", "false", hands)) == "hands"  # controllers do nothing
+    assert _hand_choice(pick.format("false", "true", auto)) == "hands"  # the old way
+    assert _hand_choice(pick.format("true", "true", auto)) == "controllers"
+    assert _hand_choice(pick.format("false", "false", auto)) is None
+    xr = (SRC / "teleop/web/xr.js").read_text()
+    assert "pickSource(" in xr and "loadHandChoice()" in xr and "setHandChoice(c)" in xr
+
+    rows = _options(f"m.optionRows({json.dumps(STATUS)}, '', {hands})")
+    mode, switch = rows[1], rows[2]
+    assert mode["value"] == "hands" and "left pinch" in mode["help"]
+    assert switch["label"] == "Switch to Hands by Itself" and switch["value"] == "off"
+    rows = _options(f"m.optionRows({json.dumps(STATUS)}, '', {auto})")
+    assert rows[1]["value"] == "relative" and rows[2]["value"] == "on"
+    assert [c["enabled"] for c in rows[1]["choices"]] == [True, True, False]  # auto: no Hands
+    assert _options(f"m.optionRows({json.dumps(STATUS)})")[2]["value"] == "off"  # the default
+    # Hands drive relative: from 1:1 the brain goes to relative
+    one = STATUS | {"mode": "one_to_one"}
+    assert _options(f"m.optionMessage('mode', 'pick', 'hands', {json.dumps(one)})") == {
+        "type": "set_mode",
+        "mode": "relative",
+    }
+    assert _options(f"m.optionMessage('mode', 'pick', 'hands', {json.dumps(STATUS)})") is None
+    after = "m.handChoiceAfter('{}', 'pick', '{}', {})"
+    assert _options(after.format("mode", "hands", off)) == {"hands": True, "auto": False}
+    assert _options(after.format("mode", "relative", hands)) == {"hands": False, "auto": False}
+    assert _options(after.format("auto", "on", hands)) == {"hands": False, "auto": True}
+    assert _options(f"m.handChoiceAfter('speed', 'plus', null, {off})") is None
+    mods = (SRC / "hub/web/xr/modules.js").read_text()
+    assert "handChoiceAfter(" in mods and "this.tele.setHandChoice(choice)" in mods
 
 
 async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client):

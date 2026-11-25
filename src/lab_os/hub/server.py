@@ -6,7 +6,7 @@ GET /design              the designed hub, whatever `hub.look` says (docs/design
 GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
 GET /xr                  the hub in VR/AR for the Quest (watch-only)
 GET /training            the training launcher's page (so101-green + LeLab,
-                         docs/guides/green-launcher.md)
+                         docs/archive/guides-2026-11-25/green-launcher.md)
 GET /api/green           the training launcher's port check (port names only, nothing opened)
 POST /api/green/start    check again, then start LeLab in a terminal (the brain's computer only)
 POST /api/green/stop     stop the LeLab the launcher started, nothing else (brain's computer only)

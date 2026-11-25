@@ -11,7 +11,8 @@ last 76 frames (one per chunk) → the phrase's model over the last 16 embedding
 
 How sensitive (a setting per device, 1–9): openWakeWord's own two knobs, `threshold` (the score
 that counts) and `patience` (that many 80 ms chunks in a row at or over it). Its other two options
-were tried on the recordings and left out (docs/guides/voice.md → "Sensitivity"): its Silero VAD
+were tried on the recordings and left out (docs/archive/guides-2026-11-25/voice.md →
+"Sensitivity"): its Silero VAD
 filter zeroed a real "hey Jarvis" in loud noise (the opposite of what a noisy room needs), and its
 Speex noise suppression is a Linux-only C package; the browser already suppresses noise before the
 audio gets here.

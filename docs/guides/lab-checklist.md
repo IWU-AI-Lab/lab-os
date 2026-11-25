@@ -49,7 +49,7 @@ uv run pytest -q
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
-How it works: `docs/guides/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
+How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
 - **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)
 - **H.2** Quick job 117. Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no) Do it again with the cube to the side of the arm. → did it pick it up? (yes / no: what it said)
 - **H.3** Ask for the cube again. While the arm moves, press STOP on the phone. → did the arm stop at once? (yes / no) Say "(wake word), move the arm to home". → did it go home? (yes / no)
@@ -59,7 +59,8 @@ Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plu
 - **W.1** Quick job 120. Open `http://localhost:8080/webcam`. Click **Start webcam control**. Hold Space and move your right hand slowly. → did the arm follow your hand? (yes / no) Can you close the gripper and keep it closed while you move? (yes / no) Is it good enough to show? (yes / no: what is wrong)
 
 ## T. The Quest: one arm, then two (10 min)
-Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi. Quick jobs 114, 119 and 121 add their steps here.
+Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (each its USB cable and power supply). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. The Quest is on the router's Wi-Fi. Quick jobs 119 and 121 add their steps here.
+- **T.1** Quick job 114. On the Quest, open the hub, **Enter VR**, then **Teleop**. Hold the right grip and move the arm a little. Put both controllers down on the table and hold your hands up in view. → did the arm stay still? (yes / no) Pick up the controllers. Select **Options**, then **Hand → Arm** → **Hands**. Hold a left pinch and move the right hand. → did the arm follow? (yes / no) Select **Relative**. Set **Switch to Hands by Itself** to **On**, and put the controllers down. → did the hands drive without a choice? (yes / no) Set it back to **Off**.
 
 ## R. The Raspbot (10 min)
 raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`. Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`.
