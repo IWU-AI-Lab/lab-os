@@ -86,3 +86,11 @@ def _fake_arm_needs_no_settling(monkeypatch):
 
     monkeypatch.setattr(robot, "HOLD_S", 0.02)
     monkeypatch.setattr(robot, "SETTLE_S", 0.0)
+
+
+@pytest.fixture(autouse=True)
+def _no_live_device_scan(monkeypatch):
+    """The live device list (quick job 109) sees nothing of the computer the tests run on."""
+    from lab_os.hub import server
+
+    monkeypatch.setattr(server, "scan_system", lambda: ([], [], []))

@@ -112,6 +112,7 @@ class TeleopLoop:
     # Servo health (drivers with read_health: temperature, load, voltage), read every few seconds
     # and logged, to see what 1:1 does to the motors. Hot servos slow 1:1 down to relative speed.
     health: dict | None = None
+    health_ok: bool | None = None  # the last health read: answered (True), failed (False), not yet
     health_every_s: float = 5.0
     health_log: Path | None = None
     _health_t: float = 0.0
@@ -247,7 +248,9 @@ class TeleopLoop:
             self.health = read()
         except Exception as e:  # a dropped packet: keep the last reading
             log.warning("servo health read failed: %s", e)
+            self.health_ok = False  # the live device list: the motors don't answer
             return
+        self.health_ok = True
         if self.health_log:
             entry = {
                 "time": datetime.now().isoformat(timespec="seconds"),
@@ -318,7 +321,7 @@ class TeleopLoop:
         self.frozen = True  # held where it is; input starts it again (after a release)
         self.mapper.reset(require_release=True)
         self.jog.reset(require_release=True)
-        self.health = None
+        self.health, self.health_ok = None, None
         log.info("%s reconnected", self.arm.name)
 
     def adopt(self, other: "TeleopLoop") -> Arm:
@@ -330,6 +333,7 @@ class TeleopLoop:
         self._freeze("stopped")
         self.arm, self.mapper, self.health_log = other.arm, other.mapper, other.health_log
         self.arm_connected, self.arm_problem, self.health = True, None, None
+        self.health_ok = None
         self.frozen = True
         self.input_kind = None
         self._last_joints = {}

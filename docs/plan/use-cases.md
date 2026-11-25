@@ -80,7 +80,7 @@ Concrete situations lab-os should handle, used to decide which features matter. 
 ## Features by how many workflows need them
 | Feature | Workflows | Status |
 |---|---|---|
-| Hub + status strip + devices panel | 1, 2, 6, 7, 8 | built (the devices panel lists `devices.yaml`; whether each is on waits for the roll call and the router) |
+| Hub + status strip + devices panel | 1, 2, 6, 7, 8 | built (the devices panel shows the live device list: what is connected now, and every device seen before; quick job 109) |
 | MCP tools, read tier (assistant reads docs, devices, reports) | 1, 4, 6 | built (focus steps 2, 3, 6); reports wait for the troubleshooting suite |
 | Roll call / device diagnostics / battery | 1, 2, 6 | on hold (router) / idea |
 | Teleop + control handover + STOP everywhere | 2, 3 | done (polish on hold) |

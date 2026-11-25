@@ -3,6 +3,9 @@
 Every on-the-ground surprise and its fix. Newest first. (Network/device-setup gotchas also live at the bottom of `docs/guides/network-setup-checklist.md`.)
 
 ---
+### 2026-11-25 — The Devices panel never showed what was plugged in (quick job 109)
+The Devices panel read only `config/devices.yaml` (`/api/devices`), once a minute, and its Power column always said "not known". So a plug, an unplug or a connect never changed it, and the Cameras page listed only the cameras in `devices.yaml` (the webcam is not there). The brain itself saw the arm unplug (the teleop loop checks the USB every half second), but no page took that from it except Monitor's small "disconnected" chip. **Fix:** one live list in the brain (`src/lab_os/hub/live_devices.py`): it looks at `/sys` and `adb devices` every 2 s and pushes each change to every hub page. The seen devices are kept in `config/local/seen-devices.yaml`. `/sys/bus/usb/devices/<bus>-<port>` names map to the `/dev/v4l/by-path/` sockets as `usb-0:<port>`. The brain's log of 2026-11-24 is on the lab desktop: this session could not read it.
+
 
 ### 2026-11-24 — The Newline gives its microphone to the computer on its USB touch cable (lab check L.2)
 **What:** on the Pi that drives the Newline (HDMI and the touch cable), `arecord -l` lists `card 2: Elite [Newline Q Pro Elite], device 0: USB Audio`. The Pi has no microphone of its own, but it can use the Newline's. The manual in `docs/device_manuals/` is for another model and says nothing about it.
