@@ -174,7 +174,7 @@ def snap(tmp_path, monkeypatch):
 
     monkeypatch.setattr(table_map, "map_path", lambda cam: tmp_path / f"{cam}.yaml")
     monkeypatch.setattr(devices, "camera_device", lambda cam: "/dev/video-fake")
-    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w: _jpeg())
+    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w, cam: _jpeg())
     arm = FakeArm()
     arm.connect()
     loop = TeleopLoop(arm=arm, inputs=InputState())
