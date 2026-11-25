@@ -944,6 +944,7 @@ def grab_frame(path: str):
     try:
         if not cap.isOpened():
             raise Refused(f"couldn't open the camera at {path}")
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # as camera_feed: USB time
         frame = None
         last = None
         steady = 0

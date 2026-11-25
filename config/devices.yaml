@@ -1,7 +1,10 @@
 # Robot registry. Names follow docs/plan/log.md.
 #
 # Serial devices are listed ONLY by /dev/serial/by-id/ path (ttyACM numbers swap; see docs/dev/GOTCHAS.md).
-# Cameras are listed ONLY by USB socket (/dev/v4l/by-path/): identical cameras share a serial.
+# Cameras are listed ONLY by where they are plugged in: identical cameras share a serial. Either
+#   socket: usb-0:7            -> the computer's USB socket (/dev/v4l/by-path/ names), or
+#   beside: <arm>, hub_port: "2" -> port 2 of the USB hub that the arm's board is on (quick job 115;
+#                                 `uv run lab-os usb` prints both for each camera plugged in).
 # off_limits: true -> lab_os.devices refuses to hand out the port.
 # table_z_cm       -> arms: where the table is in the arm's own heights (cm; its z 0 is the bottom of
 #                     its base). 0 (the default) when it stands on the table; negative when it stands
@@ -61,21 +64,21 @@ devices:
     socket: usb-0:8
     notes: The green set's stand camera, looking at the table from above (lab desktop's USB socket 8).
 
-  # HACK (2026-11-12, temporary, for today's camera test with the AI): the two cameras plugged in
-  # now are the WHITE arm's, but they sit in sockets 7 and 8, which are registered above as the
-  # green set's. These two names point at the same sockets so the AI can use them (renamed -cam-a/-b →
-  # -cam-stand/-cam-wrist 2026-11-16, quick job 15). Clean up: own sockets per setup, see docs/plan/current-focus.md -> "Hacks to clean up".
-  # Socket 7 is the wrist camera and 8 the stand camera, as on the green set: unplugging the wrist
-  # camera removed usb-0:7 (lab check 3.9, 2026-11-17); swapped 2026-11-18, quick job 29.
+  # The white arm's two cameras (the same model and serial as the green ones) are on the white
+  # arm's own USB hub (quick job 115): each is named by its port on that hub, so the names follow
+  # the arm to any socket of the computer. `uv run lab-os usb` shows the hub_port of each camera
+  # (docs/guides/plug-in.md). Until 2026-11-25 they were an alias of the green set's sockets 7, 8.
   so101-white-cam-stand:
     kind: camera
-    socket: usb-0:8
-    notes: White arm's camera, in the lab desktop's USB socket 8. The stand camera, on the 3D-printed stand about 2 ft up, behind the arm, looking forward and down over it.
+    beside: so101-white
+    hub_port: "3"
+    notes: White arm's stand camera, on the 3D-printed stand about 2 ft up, behind the arm, looking forward and down over it. In port 3 of the white arm's USB hub.
 
   so101-white-cam-wrist:
     kind: camera
-    socket: usb-0:7
-    notes: White arm's camera, in the lab desktop's USB socket 7. On the wrist, looking along the jaws.
+    beside: so101-white
+    hub_port: "2"
+    notes: White arm's wrist camera, looking along the jaws. In port 2 of the white arm's USB hub.
 
   so101-white:
     kind: so101

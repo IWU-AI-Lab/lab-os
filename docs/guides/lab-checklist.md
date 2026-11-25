@@ -45,6 +45,14 @@ uv run pytest -q
 ```
 - **0.1** Read the last line that `pytest` shows. → copy the line.
 
+## P. Plug in every USB device (15 min)
+Quick job 115. Do this part before every other part. Setup: no brain running. Follow `docs/guides/plug-in.md` → "The plan" and steps 1 and 2 of "The order". Put the card reader and the webcam on the Windows desktop.
+- **P.1** Run `uv run lab-os usb`. → copy the output.
+- **P.2** Unplug the white wrist camera. Run `uv run lab-os usb` again. Plug the camera in again. → which name went from the list? Is there a line that starts with `!`? (yes / no)
+- **P.3** Run `uv run --extra so101 lab-os serve --host 0.0.0.0`. → copy the line that starts with "Plugged in". Open the Cameras page. Is each picture under the correct name (the wrist camera looks along the jaws)? (yes / no, for each camera)
+- **P.4** Sit in the chair. Say "(wake word), what time is it?" 3 times, in a normal voice. → how many times did it answer? (0 to 3)
+- **P.5** Stop the brain (Ctrl+C). Unplug the USB cables of the two green arms. Start the brain as in P.3. → does the line that starts with "Plugged in" name only `so101-white`? (yes / no)
+
 ## S. The start and the voice (10 min)
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
 
@@ -52,7 +60,7 @@ Setup: no brain running, every hub window closed, the USB microphone in the desk
 - **S.2** Say "(wake word), calculate 37 times 48". Stop for about 1 s. Then say "then add 199". → did it wait for "then add 199"? (yes / no) Did it say 1975? (yes / no)
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
-How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
+How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
 - **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)
 - **H.2** Quick job 117. Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no) Do it again with the cube to the side of the arm. → did it pick it up? (yes / no: what it said)
 - **H.3** Ask for the cube again. While the arm moves, press STOP on the phone. → did the arm stop at once? (yes / no) Say "(wake word), move the arm to home". → did it go home? (yes / no)
@@ -74,7 +82,7 @@ The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable).
 - **L.2** On the Pi, open `chrome://flags`, search for "Insecure origins treated as secure", type `http://192.168.8.130:8080`, select Enabled, then Relaunch. Open `http://192.168.8.130:8080/design?device=newline`. In Chrome's site settings for the hub, select the Newline microphone. Stand 2 m in front of the Newline and say "(wake word), what time is it?". → did it answer? (yes / no) Did you need a raised voice? (yes / no)
 
 ## A. More to show (20 min)
-Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
+Each step checks one more moment of the demo, once. Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Run `uv run --extra so101 lab-os serve --host 0.0.0.0 --speed 0.3`. Keep a hand at STOP on your phone (Monitor).
 - **A.1** Quick job 113. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Click on another window, so that the hub does not have the focus. Swipe your student ID. → did the hub start, with "Card read" and its own sound? (yes / no)
 - **A.2** Quick job 115. Do this once with `so101-white`, then once with only `so101-green` plugged in. Say "(wake word), it's demo time". Tap **Ask me to wave**. → did the arm wave? (yes / no, for each arm) Say "(wake word), the visitors have left".
 - **A.4** Quick job 109. Open **All Pages** → **Cameras**. Plug in the webcam. → did it show within a few seconds? (yes / no) → does each camera show under the right arm's name? (yes / no: which is wrong)

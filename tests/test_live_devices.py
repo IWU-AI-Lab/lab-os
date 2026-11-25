@@ -104,6 +104,19 @@ def test_known_and_unknown(tmp_path):
     assert identify(REG, [locked | {"socket": "usb-0:9"}], [], lambda n: 2) == []
 
 
+def test_a_camera_on_its_arms_hub_has_its_name():
+    """Quick job 115: a camera `beside` an arm is the one on its port of the arm's hub."""
+    wrist = Device("so101-white-cam-wrist", "camera", beside="so101-white", hub_port="2")
+    reg = Registry({d.name: d for d in (WHITE, wrist)})
+    arm = {"vendor_id": 0x1A86, "product_id": 0x55D3, "serial_number": "5B41532410"}
+    arm |= {"manufacturer": "", "product_string": "", "usb": "1-7.1", "socket": "usb-0:7.1"}
+    cams = [{"video": "/dev/video0", "usb": "1-7.2", "socket": "usb-0:7.2", "title": "USB Camera"}]
+    by_id = {d["id"]: d for d in identify(reg, [arm], cams, lambda n: 2)}
+    assert by_id["camera:usb-0:7.2"]["name"] == "so101-white-cam-wrist"
+    alone = {d["id"]: d for d in identify(reg, [], cams, lambda n: 2)}  # the arm is unplugged
+    assert alone["camera:usb-0:7.2"]["known"] is False
+
+
 def test_an_unknown_camera_opens_by_its_socket(tmp_path):
     by_path = tmp_path / "by-path"
     by_path.mkdir()
@@ -178,7 +191,8 @@ async def test_the_brain_list_and_its_users(aiohttp_client, monkeypatch, tmp_pat
     arm = next(d for d in got if d["id"] == "so101-white")
     assert arm["connected"] and arm["kind"] == "arm"
     cams = (await (await client.get("/api/cameras")).json())["cameras"]
-    assert [c["id"] for c in cams] == ["so101-white-cam-stand", "camera-usb-0-2"]
+    # socket 8 is the green set's stand camera: the white set's are on the white arm's hub (115)
+    assert [c["id"] for c in cams] == ["so101-green-cam-stand", "camera-usb-0-2"]
     listed = app[server.TOOLS_PROJECT].list_devices()
     white = next(d for d in listed["devices"] if d["name"] == "so101-white")
     green = next(d for d in listed["devices"] if d["name"] == "so101-green")
