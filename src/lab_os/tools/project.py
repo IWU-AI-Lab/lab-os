@@ -81,6 +81,8 @@ class ProjectTools:
         self.repo = repo
         self.venue = venue
         self._registry = registry
+        # the brain's live device list (quick job 109), set by the brain; None elsewhere
+        self.live: Callable[[], list[dict]] | None = None
 
     # ---------- docs ----------
 
@@ -203,11 +205,16 @@ class ProjectTools:
 
     def list_devices(self) -> dict:
         """The place's device list: name, kind, off limits, borrowed (another project's, drivable
-        with AGENTS.md's rules), active in this venue, notes. Whether a device is switched on isn't
-        known yet (the roll call comes with the lab router)."""
+        with AGENTS.md's rules), active in this venue, notes. In the brain (quick job 109), also
+        what is connected now (the live list, looked at every 2 s): `connected` for each device,
+        `motor_power` for the arms the brain drives, `other_connected` for the USB devices and
+        cameras devices.yaml doesn't know, and `screens` with the hub open."""
         active = set(self.venue.active_devices) if self.venue else set()
-        devices = [
-            {
+        live = self.live() if self.live else None
+        now = {d["name"]: d for d in live or () if d["connected"]}
+        devices = []
+        for d in self._registry().devices.values():
+            entry = {
                 "name": d.name,
                 "kind": d.kind,
                 "off_limits": d.off_limits,
@@ -215,6 +222,26 @@ class ProjectTools:
                 "active_in_venue": d.name in active,
                 "notes": " ".join(d.notes.split()),
             }
-            for d in self._registry().devices.values()
-        ]
-        return {"venue": self.venue.name if self.venue else None, "devices": devices}
+            if live is not None and d.kind != "fake":
+                here = now.get(d.name) or next(
+                    (x for x in now.values() if d.name in x.get("names", ())), None
+                )
+                entry["connected"] = here is not None
+                if here and here.get("driven"):
+                    entry["motor_power"] = here.get("power") or "not known yet"
+                    if here.get("problem"):
+                        entry["problem"] = here["problem"]
+            devices.append(entry)
+        out = {"venue": self.venue.name if self.venue else None, "devices": devices}
+        if live is not None:
+            out["other_connected"] = [
+                {"name": d["name"], "kind": d["kind"], "what": d.get("what", "")}
+                for d in now.values()
+                if not d.get("known") and d["kind"] != "screen"
+            ]
+            out["screens"] = [d["name"] for d in now.values() if d["kind"] == "screen"]
+            out["how"] = (
+                "connected: plugged in or on the network now. motor_power only for the arms the "
+                "brain drives (the others: not known; their port is not opened)."
+            )
+        return out

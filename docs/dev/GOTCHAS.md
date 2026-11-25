@@ -3,6 +3,9 @@
 Every on-the-ground surprise and its fix. Newest first. Entries that a later fix made out of date: `docs/archive/gotchas-out-of-date-2026-11-25.md`. (Network/device-setup gotchas also live at the bottom of `docs/archive/guides-2026-11-25/network-setup-checklist.md`.)
 
 ---
+### 2026-11-25 — The Devices panel never showed what was plugged in (quick job 109)
+The Devices panel read only `config/devices.yaml` (`/api/devices`), once a minute, and its Power column always said "not known". So a plug, an unplug or a connect never changed it, and the Cameras page listed only the cameras in `devices.yaml` (the webcam is not there). The brain itself saw the arm unplug (the teleop loop checks the USB every half second), but no page took that from it except Monitor's small "disconnected" chip. **Fix:** one live list in the brain (`src/lab_os/hub/live_devices.py`): it looks at `/sys` and `adb devices` every 2 s and pushes each change to every hub page. The seen devices are kept in `config/local/seen-devices.yaml`. `/sys/bus/usb/devices/<bus>-<port>` names map to the `/dev/v4l/by-path/` sockets as `usb-0:<port>`. The brain's log of 2026-11-24 is on the lab desktop: this session could not read it.
+
 
 ### 2026-11-25 — A camera on a USB hub never matched its `socket`, and raw pictures fill a USB 2.0 controller (quick job 115)
 **What:** (1) A camera behind a hub has a longer `/dev/v4l/by-path/` name: `…-usb-0:7.2:1.0-video-index0` (socket 7, port 2 of the hub). `socket: usb-0:7` matches only `usb-0:7:`, so the white cameras on the white arm's hub were "not found". (2) OpenCV opens these cameras in their raw default format. A UVC camera then asks for a large part of a USB 2.0 controller's fixed timetable, which the other cameras and the USB microphone also need. This is a possible cause of the bad wake word with more devices plugged in (2026-11-24 entry below). It is not proven: part P of the demo run checks it.

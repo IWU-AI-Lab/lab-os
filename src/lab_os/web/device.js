@@ -87,6 +87,7 @@ async function screenInfo() {
  * h.look: "plain" | "design"; h.state(): {stage: "start"|"hub", showing: module id | null, from, from_window};
  * h.onOpen(module, from, fromWindow): open that module here (sent from another device);
  * h.onClose(): close the module here ("bring it back" there); h.onDevices(list): the brain's list changed;
+ * h.onLive(list): the live device list changed (quick job 109: every device seen, connected or not);
  * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not;
  * h.onOff(): lab-os was shut down (the page is covered; close the microphone).
  */
@@ -139,7 +140,8 @@ export function connectDevice(h) {
       } else if (m.type === "devices") {
         list = m.devices || [];
         h.onDevices?.(list);
-      } else if (m.type === "settings") applySettings(m.settings, false);
+      } else if (m.type === "live-devices") h.onLive?.(m.devices || []);
+      else if (m.type === "settings") applySettings(m.settings, false);
       else if (m.type === "open") h.onOpen?.(m.module, m.from || "", m.from_window || "");
       else if (m.type === "close") h.onClose?.();
       else if (m.type === "brain_off") {

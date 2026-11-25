@@ -37,8 +37,11 @@
   </style>
 </head>
 <!--
-  Cameras (quick job 93): the picture of every camera in devices.yaml, live (/api/cameras: one entry for
-  each USB socket, so two names for one socket give one picture). A switch for each camera hides or shows
+  Cameras (quick job 93): the picture of every camera plugged in now, live (/api/cameras: the brain's live
+  device list, quick job 109; one entry for each USB socket, so two names for one socket give one picture).
+  The page asks for the list every few seconds, so a camera plugged in later shows by itself. A camera that
+  devices.yaml doesn't list (the webcam) shows under its socket's name, with what the system calls it.
+  raspbot1's camera shows while raspbot1 is connected (its picture comes through the brain's relay). A switch for each camera hides or shows
   its picture; the choice is kept for each device ("cameras_hidden", like the other "This device"
   settings), so two screens can show different cameras. The page asks for a camera's pictures only while
   it shows them: the brain opens a camera on the first picture and closes it 5 s after the last
@@ -61,14 +64,14 @@
       <div id="switches" class="switches" role="group" aria-label="Show or hide each camera"></div>
       <p id="msg" class="msg" aria-live="polite"></p>
     </div>
-    <div id="grid"><p class="empty">Looking for cameras…</p></div>
+    <div id="grid"><p class="empty wait">Looking for cameras…</p></div>
   </main>
 </div>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module">
 import { deviceName, prefs, prefsKey, setPref } from "/web/device.js";
 
-const EVERY_MS = 250, AFTER_ERROR_MS = 3000, LATE_MS = 2000;
+const EVERY_MS = 250, AFTER_ERROR_MS = 3000, LATE_MS = 2000, LIST_MS = 3000;
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let cams = [], hidden = new Set(prefs().cameras_hidden || []), running = 0;
@@ -90,9 +93,12 @@ addEventListener("storage", (e) => {
 async function load() {
   const r = await fetch("/api/cameras", { cache: "no-store" }).catch(() => null);
   if (!r?.ok) { $("#grid").innerHTML = `<p class="empty">The brain didn't answer. Its terminal has the details.</p>`; return; }
-  cams = (await r.json()).cameras;
+  const now = (await r.json()).cameras, key = (l) => l.map((c) => `${c.id}|${c.names.join()}|${c.board}`).join(";");
+  if (key(now) === key(cams) && $("#grid .cam, #grid .empty:not(.wait)")) return;  // the same cameras: keep the pictures going
+  cams = now;
   render();
 }
+setInterval(() => { if (!document.hidden) load(); }, LIST_MS);
 
 function render() {
   const shown = cams.filter((c) => !hidden.has(c.id));
@@ -105,13 +111,14 @@ function render() {
   }).join("");
   const grid = $("#grid");
   grid.classList.toggle("one", shown.length === 1);
-  if (!cams.length) grid.innerHTML = `<p class="empty">There is no camera in devices.yaml.</p>`;
+  if (!cams.length) grid.innerHTML = `<p class="empty">There is no camera plugged in now. A camera shows here a few seconds after you plug it in.</p>`;
   else if (!shown.length) grid.innerHTML = `<p class="empty">Every camera is hidden on this device. Press a camera's name above to show it.</p>`;
   else {
     grid.innerHTML = shown.map((c) => `<section class="card cam" data-id="${esc(c.id)}"><div class="in">
       <h2><span class="names"><svg class="ico"><use href="/web/design/icons.svg#i-cam"/></svg>${esc(c.id)}</span><span class="right">${c.board ? `<button type="button" class="btn small switch board" aria-pressed="${boardOn.has(c.id)}" title="Draw the tic-tac-toe board's cells and the numbered start spots on the picture"><span class="pill ${boardOn.has(c.id) ? "on" : "off"}"></span>Board</button>` : ""}<span class="tally off" title="The age of the picture">--.-</span></span></h2>
       <div class="view"><img alt="${esc(c.id)}" hidden><p class="why">Opening the camera…</p></div>
       ${c.names.length > 1 ? `<p class="also">Also listed as ${c.names.slice(1).map(esc).join(", ")} (the same USB socket).</p>` : ""}
+      ${c.known === false ? `<p class="also">${esc(c.title)}. It is not in devices.yaml.</p>` : ""}
     </div></section>`).join("");
   }
   start();
@@ -143,6 +150,14 @@ function start() {
 }
 async function loop(card, run) {
   const img = card.querySelector("img"), why = card.querySelector(".why"), tally = card.querySelector(".tally");
+  const stream = cams.find((c) => c.id === card.dataset.id)?.stream;
+  if (stream) {  // the Raspbot's camera: one MJPEG stream through the brain, not picture by picture
+    img.onload = () => { img.hidden = false; why.hidden = true; tally.className = "tally live"; tally.textContent = "live"; };
+    img.onerror = () => { img.hidden = true; why.hidden = false; why.textContent = "The Raspbot's camera does not answer."; };
+    img.src = `${stream}?t=${Date.now()}`;
+    const stop = setInterval(() => { if (run !== running) { clearInterval(stop); img.removeAttribute("src"); } }, 500);
+    return;
+  }
   let got = 0;
   const age = setInterval(() => {
     if (run !== running) return clearInterval(age);

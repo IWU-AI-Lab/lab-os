@@ -18,6 +18,7 @@ borrowed or not).
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -339,6 +340,23 @@ def check_not_in_use(name: str, paths: list[str], proc: Path = Path("/proc")) ->
 
 
 # ---- cameras (by USB socket, or by their port on the arm's hub) -------------------------------
+UNKNOWN_CAMERA = "camera-usb-"  # a camera devices.yaml doesn't list: named by its socket
+
+
+def unknown_camera_name(socket: str) -> str:
+    """The name a camera that devices.yaml doesn't list gets (the live device list, the Cameras
+    page): its socket, "usb-0:3.2" → "camera-usb-0-3.2"."""
+    return UNKNOWN_CAMERA + socket.removeprefix("usb-").replace(":", "-", 1)
+
+
+def unknown_camera_socket(name: str) -> str | None:
+    """The socket in such a name, or None: "camera-usb-0-3.2" → "usb-0:3.2"."""
+    bus, _, port = name.removeprefix(UNKNOWN_CAMERA).partition("-")
+    if not name.startswith(UNKNOWN_CAMERA) or not bus.isdigit():
+        return None
+    return f"usb-{bus}:{port}" if re.fullmatch(r"\d+(\.\d+)*", port) else None
+
+
 def usb_device_dir(port: str, sys_dir: str = SYS_DIR) -> str:
     """The sysfs folder of the USB device behind serial port `port` (a by-id link), for example
     /sys/devices/pci0000:00/0000:00:14.0/usb1/1-7/1-7.1. "" when it isn't there."""
@@ -363,6 +381,15 @@ def chain_of(usb_dir: str) -> str:
     """The port chain of a sysfs USB folder: "1-7.1" → "7.1" (socket 7, port 1 of its hub)."""
     name = os.path.basename(usb_dir)
     return name.split("-", 1)[1] if "-" in name else ""
+
+
+def socket_on_hub(arm_socket: str, hub_port: str) -> str:
+    """The socket of the port `hub_port` on the hub that an arm in `arm_socket` is on:
+    ("usb-0:7.1", "2") → "usb-0:7.2". "" when the arm is not on a hub."""
+    chain = arm_socket.removeprefix("usb-").removeprefix("0:")
+    if "." not in chain or not hub_port:
+        return ""
+    return f"usb-0:{chain.rsplit('.', 1)[0]}.{hub_port}"
 
 
 def _beside_socket(device: Device, registry: Registry, sys_dir: str) -> tuple[str, str]:
@@ -399,6 +426,14 @@ def camera_paths(
     metadata), picture first. Lists folders; opens nothing."""
     registry = registry or load_registry()
     device = registry.devices.get(name)
+    unknown = unknown_camera_socket(name) if device is None else None
+    if unknown:  # a camera that devices.yaml doesn't list (the webcam): by its socket
+        owners = [
+            d for d in registry.devices.values() if d.kind == "camera" and d.socket == unknown
+        ]
+        if any(d.off_limits for d in owners):
+            raise PortNotAllowed(f"{name}: socket {unknown} belongs to an off-limits camera")
+        device = Device(name=name, kind="camera", socket=unknown)
     if device is None:
         raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:

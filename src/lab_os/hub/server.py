@@ -54,7 +54,11 @@ POST /api/room/setup     open each page of the room's layout on its device (room
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
-GET /api/cameras         every camera in devices.yaml, one per USB socket (the Cameras page)
+GET /api/cameras         every camera plugged in now (the live device list), one per USB socket,
+                         and raspbot1's while it is connected (the Cameras page)
+GET /api/live-devices    the live device list: every device seen here, connected or not
+                         (hub/live_devices.py)
+POST /api/live-devices/remove  {"id"}: take a device off that list
 GET /api/camera-feed/{name}   that camera's newest picture (JPEG); opened while asked for, closed
                          5 s after (lab_os/camera_feed.py); ?board=1: the tic-tac-toe board on it
 Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
@@ -80,7 +84,7 @@ from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
-from lab_os.devices import load_registry
+from lab_os.devices import Registry, load_registry
 from lab_os.hub import launch, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
@@ -88,15 +92,23 @@ from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
 from lab_os.hub.internet import InternetCheck
+from lab_os.hub.live_devices import LiveDevices, SeenStore, identify, usb_devices, video_cameras
 from lab_os.hub.project import FOCUS_FILE, project_summary
-from lab_os.hub.raspbot_page import add_raspbot
+from lab_os.hub.raspbot_page import RASPBOT, add_raspbot
 from lab_os.hub.room import RoomDesk
 from lab_os.hub.room import set_up as set_up_room
 from lab_os.hub.system_tools import add_system_tools
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
 from lab_os.personas import Persona, current_persona
-from lab_os.quest_view import AdbReverse, QuestView, QuestViewError
+from lab_os.quest_view import (
+    AdbReverse,
+    QuestView,
+    QuestViewError,
+    adb_devices,
+    find_adb,
+    find_scrcpy,
+)
 from lab_os.robots.raspbot import FakeRaspbot, RaspbotDesk
 from lab_os.teleop.cli import LEFT_FAKE, teleop_floor_m
 from lab_os.teleop.loop import TeleopLoop
@@ -189,6 +201,8 @@ AI_CHECK_EVERY_S = (60.0, 20.0)  # while connected / while not
 NEW_ARM_EVERY_S = 2.0
 NEW_ARM_QUIET_S = 5.0
 ADB_EVERY_S = 3.0  # quick job 73: how often the brain looks for a newly connected Quest
+LIVE_EVERY_S = 2.0  # quick job 109: how often the brain looks at what is plugged in and connected
+RASPBOT_CAMERA = "raspbot1-cam"  # the Cameras page's name for the Raspbot's camera
 
 log = logging.getLogger(__name__)
 
@@ -238,6 +252,9 @@ QUEST_VIEW = web.AppKey("quest_view", QuestView)
 FEEDS = web.AppKey("feeds", camera_feed.CameraFeeds)  # quick job 63: the cameras open for pages
 ADB_REVERSE = web.AppKey("adb_reverse", object)  # quick job 73: an AdbReverse, or None
 FIND_ARM = web.AppKey("find_arm", object)  # quick job 73: lab_os.teleop.cli.arm_finder(), or None
+LIVE = web.AppKey("live_devices", LiveDevices)  # quick job 109: the live device list
+# () -> (USB devices, cameras, adb serials): what the computer sees (tests give their own)
+LIVE_SCAN = web.AppKey("live_scan", object)
 RESTART = web.AppKey("restart", dict)  # {"asked": bool}: start again after stopping (lab_os.cli)
 
 
@@ -947,6 +964,8 @@ def lab_status(app: web.Application) -> dict:
         "venue": brain.venue.name,
         "arm": arm,
         "hub_open_on": [d["name"] for d in app[HUB_DEVICES].listing()],
+        # the live device list (quick job 109): plugged in or on the network now
+        "devices_connected": [d["name"] for d in app[LIVE].connected() if d["kind"] != "screen"],
         "voice": {
             "available": voice["available"],
             "service": voice.get("service"),
@@ -1029,16 +1048,37 @@ async def api_arm_cameras(request: web.Request) -> web.Response:
 
 
 async def api_cameras(request: web.Request) -> web.Response:
-    """Every camera in devices.yaml, one per USB socket, for the Cameras page (quick job 93).
-    Opens nothing: the pictures come from /api/camera-feed, only for the cameras shown."""
-    try:
-        cams = await asyncio.to_thread(camera_feed.all_cameras)
-    except config.ConfigError:
-        cams = []
+    """Every camera plugged in now, one per USB socket (the live device list, quick job 109), and
+    the Raspbot's while it is connected, for the Cameras page (quick job 93). A camera devices.yaml
+    doesn't list (the webcam) is there by its socket's name. Opens nothing: the pictures come from
+    /api/camera-feed (the Raspbot's: its relay), only for the cameras shown."""
+    cams = live_cameras(request.app)
     game = await asyncio.to_thread(_board_game)
     for c in cams:  # the camera that sees the tic-tac-toe board gets a Board button
         c["board"] = game is not None and game[1].camera in c["names"]
     return web.json_response({"cameras": cams})
+
+
+def live_cameras(app: web.Application) -> list[dict]:
+    """The cameras on the live list now: {id, names, title, known} (+ stream for the Raspbot)."""
+    out = [
+        {"id": d["name"], "names": d["names"], "title": d["what"], "known": d["known"]}
+        for d in app[LIVE].connected()
+        if d["kind"] == "camera"
+    ]
+    out.sort(key=lambda c: (not c["known"], c["id"]))
+    bot = app[RASPBOT].bot if RASPBOT in app else None
+    if bot is not None and bot.connected and getattr(bot, "camera_port", 0):
+        out.append(
+            {
+                "id": RASPBOT_CAMERA,
+                "names": [bot.name],
+                "title": f"{bot.name}'s camera",
+                "known": True,
+                "stream": "/api/raspbot/camera.mjpg",
+            }
+        )
+    return out
 
 
 def _board_game() -> tuple[TableMap, tic_tac_toe.Layout] | None:
@@ -1125,6 +1165,147 @@ async def api_devices(request: web.Request) -> web.Response:
             {"name": arm, "kind": "arm", "off_limits": False, "linked": True, "notes": ""}
         )
     return web.json_response({"devices": devices, "arm": arm})
+
+
+# ---------- the live device list (quick job 109) ----------
+def scan_system() -> tuple[list[dict], list[dict], list[str]]:
+    """What this computer sees now: its USB devices and cameras (Linux: /sys; elsewhere none) and
+    the devices adb lists. Opens nothing."""
+    adb = find_adb(find_scrcpy())
+    return usb_devices(), video_cameras(), adb_devices(adb) if adb else []
+
+
+def live_entries(
+    app: web.Application, usb: list[dict], cams: list[dict], adb: list[str]
+) -> list[dict]:
+    """The live list's entries now: the USB devices and cameras (known by devices.yaml or not),
+    with the brain's own knowledge added: the arms it drives (their motors' power), the Quests that
+    adb lists, raspbot1 and every open hub screen."""
+    try:
+        registry = load_registry()
+    except (config.ConfigError, OSError, ValueError) as e:
+        log.warning("live devices: %s", e)
+        registry = Registry()
+    loop: TeleopLoop = app[LOOP]
+    driven = {each.arm.name: each for each in (loop, loop.left) if each is not None}
+    driving = {n for n, each in driven.items() if each.arm_connected}
+    plugged = {
+        d.name
+        for d in registry.devices.values()
+        if d.kind in ("so101", "xarm1s") and any(u.matches(i) for i in usb for u in d.usb)
+    }
+
+    def rank(camera: str) -> int:  # two names for one socket: the camera of the arm in use
+        arm = camera.split("-cam-")[0]
+        return 0 if arm in driving else 1 if arm in plugged else 2
+
+    out = identify(registry, usb, cams, rank)
+    have = {d["id"] for d in out}
+    for name, each in driven.items():  # an arm the brain drives, also where /sys isn't there
+        dev = registry.devices.get(name)
+        if dev is None or dev.kind == "fake" or not each.arm_connected or name in have:
+            continue
+        out.append(
+            {"id": name, "name": name, "kind": "arm", "known": True, "what": dev.kind, "via": "USB"}
+        )
+    for d in out:
+        if d["kind"] == "arm" and d["id"] in driven:
+            d |= _arm_power(driven[d["id"]])
+    for dev in registry.devices.values():  # the Quests adb lists (by cable or Wi-Fi)
+        if dev.kind != "quest" or dev.name in have or dev.off_limits:
+            continue
+        wifi = bool(dev.host) and any(a.split(":")[0] == dev.host for a in adb)
+        if (dev.serial and dev.serial in adb) or wifi:
+            out.append(
+                {
+                    "id": dev.name,
+                    "name": dev.name,
+                    "kind": "headset",
+                    "known": True,
+                    "what": " ".join(dev.notes.split())[:140] or "Quest",
+                    "via": "adb (Wi-Fi)" if wifi else "adb (USB)",
+                }
+            )
+    bot = app[RASPBOT].bot if RASPBOT in app else None
+    if bot is not None and not bot.is_fake and bot.connected:
+        dev = registry.devices.get(bot.name)
+        out.append(
+            {
+                "id": bot.name,
+                "name": bot.name,
+                "kind": "robot",
+                "known": dev is not None,
+                "what": " ".join((dev.notes if dev else "").split())[:140] or "Raspbot",
+                "via": "network",
+                "camera": bool(getattr(bot, "camera_port", 0)),
+            }
+        )
+    for screen in app[HUB_DEVICES].listing():
+        n = len(screen["windows"])
+        out.append(
+            {
+                "id": f"screen:{screen['name']}",
+                "name": screen["name"] if screen["named"] else screen["title"],
+                "kind": "screen",
+                "known": screen["named"],
+                "what": f"The hub is open in {n} window{'s' if n != 1 else ''}.",
+                "via": "network",
+            }
+        )
+    return out
+
+
+def _arm_power(each: TeleopLoop) -> dict:
+    """An arm the brain drives: its motors' power, from the last servo reading."""
+    out = {"driven": True, "problem": each.arm_problem}
+    if not each.arm_connected:
+        return out | {"power": None}
+    if each.health_ok is False:
+        return out | {"power": "off", "problem": "the motors don't answer: is their power on?"}
+    if each.health_ok and each.health:
+        volts = min(h.get("volts", 0.0) for h in each.health.values())
+        return out | {"power": "on", "volts": round(volts, 1)}
+    return out | {"power": None}
+
+
+async def look_at_devices(app: web.Application) -> bool:
+    """One look; every hub page gets the list when it changed. True: it changed."""
+    usb, cams, adb = await asyncio.to_thread(app[LIVE_SCAN])
+    live = app[LIVE]
+    if not live.update(live_entries(app, usb, cams, adb)):
+        return False
+    await app[HUB_DEVICES].tell_all({"type": "live-devices", "devices": live.listing()})
+    return True
+
+
+async def _live_devices_task(app: web.Application):
+    async def run():
+        while True:
+            try:
+                await look_at_devices(app)
+            except Exception:  # a failed look must not end the looking
+                log.exception("looking at the devices")
+            await asyncio.sleep(LIVE_EVERY_S)
+
+    task = asyncio.create_task(run())
+    yield
+    task.cancel()
+
+
+async def api_live_devices(request: web.Request) -> web.Response:
+    return web.json_response({"devices": request.app[LIVE].listing()})
+
+
+async def api_live_devices_remove(request: web.Request) -> web.Response:
+    """Take a device off the list (any page: it changes only what the list shows)."""
+    b = await _body(request)
+    live = request.app[LIVE]
+    if not live.remove(str(b.get("id", ""))):
+        return web.json_response(
+            {"ok": False, "message": "That device is not on the list."}, status=404
+        )
+    await request.app[HUB_DEVICES].tell_all({"type": "live-devices", "devices": live.listing()})
+    return web.json_response({"ok": True, "devices": live.listing()})
 
 
 async def api_project(request: web.Request) -> web.Response:
@@ -1461,6 +1642,8 @@ def create_brain_app(
     find_arm: Callable | None = None,
     adb_reverse: AdbReverse | None = None,
     raspbot: RaspbotDesk | None = None,
+    live_scan: Callable | None = None,
+    seen_devices: SeenStore | None = None,
 ) -> web.Application:
     """The teleop server with the hub on top. Pass an `InternetCheck` to check in the background,
     and `mcp_port` to offer the robot tools over MCP (calls logged to logs/ai-tools/). `place`:
@@ -1471,7 +1654,10 @@ def create_brain_app(
     local/hub-devices.yaml). `find_arm`: started on the fake arm with no --arm, take an SO-101
     plugged in later (`lab_os.teleop.cli.arm_finder`, quick job 73). `adb_reverse`: run `adb
     reverse` for each Quest connected by USB, also after the cable is plugged in again. `raspbot`:
-    the Raspbot page's car (default: the fake one; `lab-os serve` gives devices.yaml's)."""
+    the Raspbot page's car (default: the fake one; `lab-os serve` gives devices.yaml's).
+    `live_scan`: what the computer sees, for the live device list (default: `scan_system`);
+    `seen_devices`: where its seen devices are kept (default: the place's
+    local/seen-devices.yaml)."""
     app = create_app(
         loop,
         recorder,
@@ -1557,6 +1743,9 @@ def create_brain_app(
     app[FIND_ARM] = find_arm
     app[FEEDS] = camera_feed.FEEDS
     app[ADB_REVERSE] = adb_reverse
+    app[LIVE] = LiveDevices(seen_devices or SeenStore())
+    project.live = app[LIVE].listing  # the assistant's list_devices: what is connected now
+    app[LIVE_SCAN] = live_scan or (lambda: scan_system())  # looked up each time (tests)
     app.router.add_get("/", hub_page)
     app.router.add_get("/design", design_page)
     app.router.add_get("/ai", ai_page)
@@ -1592,6 +1781,8 @@ def create_brain_app(
     app.router.add_get("/api/camera-feed/{name}", api_camera_feed)
     app.router.add_get("/api/pose-view.png", api_pose_view)
     app.router.add_get("/api/devices", api_devices)
+    app.router.add_get("/api/live-devices", api_live_devices)
+    app.router.add_post("/api/live-devices/remove", api_live_devices_remove)
     app.router.add_get("/api/ai-calls", api_ai_calls)
     app.router.add_get("/api/settings", api_settings_get)
     app.router.add_post("/api/settings", api_settings_post)
@@ -1621,6 +1812,7 @@ def create_brain_app(
     app.cleanup_ctx.append(_quest_view_task)
     app.cleanup_ctx.append(_new_arm_task)
     app.cleanup_ctx.append(_adb_reverse_task)
+    app.cleanup_ctx.append(_live_devices_task)
     app.cleanup_ctx.append(_camera_feeds_task)
     app.cleanup_ctx.append(_lerobot_teleop_task)
     app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages
