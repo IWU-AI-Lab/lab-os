@@ -37,6 +37,8 @@ outputs/
 *.onnx
 # the wake word's models (3.7 MB) are needed offline (models/openwakeword/README.md)
 !models/openwakeword/*.onnx
+# the turn model (8.7 MB), for the end of a spoken question (models/smart-turn/README.md)
+!models/smart-turn/*.onnx
 wandb/
 
 # Claude Code (per-machine)
