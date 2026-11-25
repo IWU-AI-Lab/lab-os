@@ -1,5 +1,6 @@
 """Save the tic-tac-toe grid as a letter-size PDF to print at 100 % (preview 1;
-docs/guides/tic-tac-toe.md). The cells are `board.cell_cm` of config/games/tic-tac-toe.yaml.
+docs/archive/guides-2026-11-25/tic-tac-toe.md). The cells are `board.cell_cm` of
+config/games/tic-tac-toe.yaml.
 
     uv run python scripts/save_tic_tac_toe_sheet.py
 

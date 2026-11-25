@@ -156,7 +156,7 @@ The first thing people see, so it's the flashiest part.
   Also a candidate for the Quest.
 - The hyperspace jump ends the same way: the rings assemble around the core as it lands, then the checks, title and greeting.
 - **The greeting carries one line of real news** when there is some, most important first, after "Good morning/afternoon/evening": an alert ("fake-arm is waiting for the clutch."), a device that dropped out ("xarm1 has been offline since Tuesday."), the budget running low ("AI spend is at $16 of $20, with 9 days to go."), a step finished ("Step 1 is done. Next: personas."), a busy day ("31 commits yesterday."), then the calendar ("Working late.", "Saturday in the lab.", "New week."). Otherwise the persona's plain line: "All local systems are up." Never invented: each case reads a real fact. One line, so it fits under the title. The chat's first message starts with the same line.
-- **Startup as a video** (2026-11-18, a test for slow screens, `docs/guides/hub.md`): the same startup played from a recording, the words live above it. The design stays the source: after any change to the startup, the recording is made again from the real page (`scripts/record_startup.py`).
+- **Startup as a video** (2026-11-18, a test for slow screens, `docs/archive/guides-2026-11-25/hub.md`): the same startup played from a recording, the words live above it. The design stays the source: after any change to the startup, the recording is made again from the real page (`scripts/record_startup.py`).
 - Any input skips straight to the hub. ≤ ~8 s with the unlock. Only real checks ("Internet: online", "AI: not connected").
 
 **Quality levels** (`quality` in the theme):

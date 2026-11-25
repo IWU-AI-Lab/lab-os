@@ -166,7 +166,7 @@ In the Quest, with the 3D arm lined up on the real one, point at a spot on the t
 Hand signs seen by a webcam or the Kinect do hub things: move a window to another screen, open a page, go back. Later than the webcam teleop preview, and on the same hand tracking. **Watch out:** a gesture must not fire by accident while someone talks with their hands; one clear "start" sign first. The older "Kinect gestures" line under "Triggers & sign-in" below is the same idea.
 
 ### One AI budget for every brain
-Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key, so the budget on one brain doesn't see what the other spent. One budget for the key would count both. Ways: the real cost from OpenAI (it counts every brain on the key; it needs an Admin key that only an Organization Owner can make, quick job 41, 2026-11-19: `docs/guides/hub.md` → "AI Spend"), OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs.
+Each brain counts its own AI spend today (the laptop's and the lab desktop's), although both use the professor's OpenAI key, so the budget on one brain doesn't see what the other spent. One budget for the key would count both. Ways: the real cost from OpenAI (it counts every brain on the key; it needs an Admin key that only an Organization Owner can make, quick job 41, 2026-11-19: `docs/archive/guides-2026-11-25/hub.md` → "AI Spend"), OpenAI's own monthly limit on the key's project (set by the professor in OpenAI's dashboard), or the brains share their spend logs.
 
 ## Recent ideas (2026-11-18)
 
@@ -188,7 +188,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 ## Recent ideas (2026-11-13)
 
 ### The hub's own chat moving the arm
-- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4). **Built 2026-11-20:** a named pose, the cube's hand-over and "let go", off unless ⚙ → Robots → The Assistant May Move the Arm, never on a public venue, the brain's own computer only (`docs/guides/hub.md`). Still an idea: other moves ("pick up the cube" and put it somewhere).
+- **A first version is a preview for the 2026-12-03 demo** (2026-11-19): "Hand me the cube" (`docs/plan/current-focus.md` → "Until the demo", preview 4). **Built 2026-11-20:** a named pose, the cube's hand-over and "let go", off unless ⚙ → Robots → The Assistant May Move the Arm, never on a public venue, the brain's own computer only (`docs/archive/guides-2026-11-25/hub.md`). Still an idea: other moves ("pick up the cube" and put it somewhere).
 - **What:** someone asks the hub's assistant (typed or by voice) to move the arm ("wave", "pick up the cube"), not only a developer's AI tool (the builder, 2026-11-13).
 - **Watch out:** today the hub's chat stays in the read tier because anyone in the room can talk to it (current focus, "A public screen"). Needs: which venues allow it (never `public: true`), one controller at a time, STOP on every screen, and probably a person nearby.
 - **Plugs into:** the move tools (same safety layer), voice, the persona.
@@ -243,7 +243,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Plugs into:** quality levels (theme), "This device" settings.
 
 ### Teleop with a webcam instead of the Quest
-- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo", 2026-11-19). **Built 2026-11-19 with the webcam** (`docs/guides/webcam-teleop.md`): MediaPipe's hand landmarker in the browser (vendored), the same `xr_input` as the Quest's bare hands, relative only.
+- **A first version is a preview for the 2026-12-03 demo** (`docs/plan/current-focus.md` → "Until the demo", 2026-11-19). **Built 2026-11-19 with the webcam** (`docs/archive/guides-2026-11-25/webcam-teleop.md`): MediaPipe's hand landmarker in the browser (vendored), the same `xr_input` as the Quest's bare hands, relative only.
 - **Left after the preview:** the wrist's turn from the hand (MediaPipe's world landmarks give the palm's direction); 1:1 (the page would need to know where the camera is relative to the arm); a one-handed clutch; per-user pinch thresholds.
 - **The Kinect** (model 1414, the first Kinect for the Xbox 360): not a webcam, so Chrome can't see it. It needs libfreenect (on Ubuntu `sudo apt install freenect` and its udev rules, so `sudo`), its own power and USB adapter, and a small bridge on the brain that sends its depth to the page (or finds the hand there). Its depth would make toward/away exact. Lab check K says whether the lab has the adapter.
 - **What:** drive the arm with your bare hand in front of an ordinary webcam: no headset. The page (or the brain) finds the hand's joints in each camera image and sends them through the same path as the Quest's hands: wrist = where the gripper goes, a pinch = the clutch or the gripper.
@@ -287,7 +287,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
   - Test 1 and 2 today on any **Android phone** with Chrome (it behaves like the Newline's); try 3 at the Newline.
 - **Newline Signage Pro** (corrected 2026-11-09): installed on the Newline but needs registering; Newline names only the Q Pro and STV+ as "fully integrated", and resellers sell a license (~$99 per display per year; a free year comes with Newline's media-player box), so maybe not free. Its listed content is images, videos, text, weather, QR codes and live feeds: **no mention of web pages or touch**. The builder checks at the lab: does registering ask for a license, can it show a URL full screen, does touch work. Good for watch-only screens if so; the interactive hub uses 1–4.
 - **For other projects too:** a written "kiosk screen" recipe (any address, full screen, starts at boot) helps every lab project. Later the hub could choose what each screen shows (focus step 8; "Sending more than a module to another screen" above).
-- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `docs/guides/network-setup-checklist.md`).
+- **Plugs into:** outputs/clients; the touchscreens idea; `docs/` recipe (like `docs/archive/guides-2026-11-25/network-setup-checklist.md`).
 
 ## Recent ideas (2026-11-08)
 "Device card", "hive" and "locked" are the hub's devices panel as defined in `docs/design/DESIGN.md`.
@@ -407,7 +407,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Open questions:** which Pi models are behind the small screens? (Reaching the brain: `pi01` does over the lab Wi-Fi, and the Newline through `pi01`, 2026-11-10; the router makes it simple.)
 
 ### Voice beyond push-to-talk
-- **Built (focus step 7, 2026-11-12):** push-to-talk, dictation and the wake word through the speech-to-text → chat → text-to-speech pipeline (`docs/guides/voice.md`). The routes and prices compared on 2026-11-10 (OpenAI, Gemini, local, realtime): `docs/archive/focus-2026-11-13-hub-voice-ai.md` → "Step 7, concretely".
+- **Built (focus step 7, 2026-11-12):** push-to-talk, dictation and the wake word through the speech-to-text → chat → text-to-speech pipeline (`docs/archive/guides-2026-11-25/voice.md`). The routes and prices compared on 2026-11-10 (OpenAI, Gemini, local, realtime): `docs/archive/focus-2026-11-13-hub-voice-ai.md` → "Step 7, concretely".
 - **What stays here:** a realtime service for demos (faster, handles interruptions); a **local** speech-to-text → model → text-to-speech pipeline (e.g. faster-whisper + Piper on the brain) as the **offline lite mode** fallback; tool calls from the voice model through our tools + safety layer; venues need internet for cloud voices.
 - **Other triggers later:** a big USB button, or an IR remote (like the builder's Raspbot voice project).
 - **Plugs into:** triggers slot, conversation manager, model router.

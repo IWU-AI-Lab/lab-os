@@ -233,7 +233,7 @@ function screensRow() {
   r.append(list);
   b.addEventListener("click", async () => {
     if (!("getScreenDetails" in window)) {
-      list.innerHTML = "<li>This browser can't place windows on other monitors: open the page there by hand (docs/guides/hub.md → Other monitors).</li>";
+      list.innerHTML = "<li>This browser can't place windows on other monitors: open the page there by hand (docs/archive/guides-2026-11-25/hub.md → Other monitors).</li>";
       return;
     }
     try {
@@ -246,7 +246,7 @@ function screensRow() {
   return r;
 }
 
-/* ---------- the way in for voice (docs/guides/voice.md): what this screen can do ---------- */
+/* ---------- the way in for voice (docs/archive/guides-2026-11-25/voice.md): what this screen can do ---------- */
 const VOICE = { key: "voice", label: "Talking to It", kind: "choice", choices: ["push-to-talk", "dictation"],
   help: "Push-to-Talk: hold the mic (or Space) and talk. Dictation: the words go into the ask line.",
   value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };
@@ -263,7 +263,7 @@ async function voiceRows() {
   return rows;
 }
 
-/* ---------- how readily this device hears the wake word (docs/guides/voice.md → "Sensitivity") ---------- */
+/* ---------- how readily this device hears the wake word (docs/archive/guides-2026-11-25/voice.md → "Sensitivity") ---------- */
 const SENS_WORDS = { 1: "Fewest false wakes", 3: "Quiet room", 5: "The default", 7: "Noisy room", 9: "Hears the most" };
 const SENSITIVITY = { key: "wake_sensitivity", label: "Wake Word Sensitivity", kind: "range", min: 1, max: 9,
   help: "Higher for a noisy room or a weak microphone; lower if it wakes by itself.",
@@ -311,7 +311,7 @@ function iconRow() {
     `[Desktop Entry]\nType=Application\nName=Lab hub (${NAME})\nComment=The lab's hub on this device\nExec=sh -c "google-chrome --app=${url} --start-fullscreen || chromium --app=${url} --start-fullscreen || chromium-browser --app=${url} --start-fullscreen"\nIcon=applications-science\nCategories=Science;\n`,
     "application/x-desktop"));
   windows.addEventListener("click", () => save(`lab-hub-${NAME}.bat`,
-    `@echo off\r\nrem The lab's hub on this device (lab-os, docs/guides/hub.md -> Devices)\r\nstart "" chrome --app=${url} --start-fullscreen\r\n`,
+    `@echo off\r\nrem The lab's hub on this device (lab-os, docs/archive/guides-2026-11-25/hub.md -> Devices)\r\nstart "" chrome --app=${url} --start-fullscreen\r\n`,
     "application/octet-stream"));
   return r;
 }

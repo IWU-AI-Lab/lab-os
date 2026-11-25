@@ -76,7 +76,7 @@ Setup: `so101-white` connected, the brain running (part T's command without `--l
 - **D.3** Say `(wake word), the visitors have left`. → nothing to report.
 
 ## W. Teleop with a webcam (25 min)
-Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
+Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/archive/guides-2026-11-25/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
 
 Cables to plug in, on the lab desktop:
 - The C615: a free USB socket. If no socket is free, unplug the green set's two cameras (sockets 7 and 8). This part does not use them.
@@ -107,7 +107,7 @@ uv run --extra so101 lab-os serve --speed 0.3
 - **W.15** Was it easy to use? (easy / possible / too hard) Would you show it at the demo? (yes / no) Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
 ## G. Tic-tac-toe (45 min)
-Preview 1: Claude Code plays tic-tac-toe with `so101-white` against you. How it works: `docs/guides/tic-tac-toe.md`. You need the stand camera's table map (made on 2026-11-19), the cube, and 5 red and 5 blue pieces (LEGO, about 3 cm tall).
+Preview 1: Claude Code plays tic-tac-toe with `so101-white` against you. How it works: `docs/archive/guides-2026-11-25/tic-tac-toe.md`. You need the stand camera's table map (made on 2026-11-19), the cube, and 5 red and 5 blue pieces (LEGO, about 3 cm tall).
 
 Before the lab day, print `models/games/tic-tac-toe-sheet-letter.pdf` at 100 % ("Actual size"). Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Then run:
 ```bash
@@ -120,7 +120,7 @@ uv run --extra so101 lab-os serve --speed 0.3
 - **G.5** During the game, did the arm go low over the board at a time when it did not put a piece down? (no / yes: when) Clear the board. Tell the AI to go home. Press Ctrl+C in the brain's terminal. Hold the arm first if it is lifted.
 
 ## H. "Hand me the cube" (25 min)
-Preview 4: the hub's assistant moves the arm to a named pose, and hands you the blue cube. How it works: `docs/guides/hub.md` → "The assistant moves the arm". You need the blue cube and the stand camera's table map. Stand in front of the arm, across the table, with a hand near STOP on a second device (Monitor).
+Preview 4: the hub's assistant moves the arm to a named pose, and hands you the blue cube. How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". You need the blue cube and the stand camera's table map. Stand in front of the arm, across the table, with a hand near STOP on a second device (Monitor).
 
 Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Then run:
 ```bash
@@ -151,7 +151,7 @@ Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop
 - **I.9** On the other monitor, press **Window** in Monitor's bar. → is Monitor a window now? (yes / no) Close it. Open it on the other monitor again, as in I.8. → does it open as a window? (yes / no)
 - **I.10** Quick job 65. On the Newline (touch), press and hold the core for 2 seconds. Then press and hold a module button. → did a browser menu open? (yes / no) Press and hold a word in the ask line. → can you select it and paste? (yes / no)
 - **I.11** Quick job 79. Plug the USB card reader into the lab desktop. Press ⏻ → **Back to the start screen**. Swipe your student ID. → did the hub start with "Card read" and its own sound? (yes / no) Go back to the start screen. Swipe a bank card. → did anything happen? (yes / no)
-- **I.15** Quick job 54. Connect the Newline by HDMI and its USB touch cable, and the other monitor too. Follow `docs/guides/hub.md` → "The Newline's touch with a second monitor". → what did `echo $XDG_SESSION_TYPE` say? (x11 / wayland) Did each touch in the four corners land under your finger? (yes / no)
+- **I.15** Quick job 54. Connect the Newline by HDMI and its USB touch cable, and the other monitor too. Follow `docs/archive/guides-2026-11-25/hub.md` → "The Newline's touch with a second monitor". → what did `echo $XDG_SESSION_TYPE` say? (x11 / wayland) Did each touch in the four corners land under your finger? (yes / no)
 
 ## Q. Leave VR, and "lab-os is off" in the Quest (20 min)
 Quick job 78. Setup: the brain running on the fake arm (`uv run lab-os serve --arm fake`), the Quest on its USB cable, and `http://localhost:8080/xr` open in the Quest's browser.

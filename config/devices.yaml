@@ -14,7 +14,7 @@
 #                     (goals get them taken off again), e.g. {shoulder_lift: -4.7} (quick job 106).
 # serial           -> headsets: the serial number `adb devices` lists (the Quest's view, quick job 36)
 # mirror           -> headsets: extra scrcpy options for its view on the brain's computer, e.g.
-#                     ["--crop=2064:2208:0:0"] for one eye, ["--fullscreen"] (docs/guides/quest-view.md)
+#                     ["--crop=2064:2208:0:0"] for one eye, ["--fullscreen"] (docs/archive/guides-2026-11-25/quest-view.md)
 # borrowed: true   -> another project's device (AGENTS.md, "Hard rules"): lab-os may drive or use
 #                     it, but never sets it up (no motor IDs, baud rate, firmware, calibration),
 #                     drives it with a copy of its training calibration, and never opens it while

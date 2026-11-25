@@ -1,4 +1,4 @@
-// This page's device (focus step 8, docs/guides/hub.md → "Devices"): a computer or screen with the hub open
+// This page's device (focus step 8, docs/archive/guides-2026-11-25/hub.md → "Devices"): a computer or screen with the hub open
 // under a name in its address (`/?device=desk`). The brain keeps the list of devices that have the hub open
 // and each device's own settings ("This device"); a hub page keeps one WebSocket to it (/ws/hub-device,
 // docs/dev/protocol.md → "Devices"), which reconnects by itself when the brain restarts. When the brain is shut
@@ -237,7 +237,7 @@ export function fillOpenOn(box, dev, module, opts = {}) {
       for (const x of opts.extra || []) box.append(row(x.label, x.sub || "", async () => x.run(msg)));
       if (!targets.length) {
         box.append(el("p", "oo-none", dev.up()
-          ? "No other device has the hub open. Open the hub there first (docs/guides/hub.md → Devices)."
+          ? "No other device has the hub open. Open the hub there first (docs/archive/guides-2026-11-25/hub.md → Devices)."
           : "Not connected to the brain right now: trying again."));
       }
     }

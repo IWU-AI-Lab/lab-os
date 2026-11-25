@@ -3,7 +3,7 @@
 GET /teleop      the XR input page (Quest browser or a desktop browser + WebXR emulator);
                  also at GET / for `lab-os-teleop` (`lab-os serve` puts the hub there)
 GET /webcam      webcam teleop (preview 2): a bare hand in front of a webcam, same input as the
-                 Quest's bare hands (docs/guides/webcam-teleop.md)
+                 Quest's bare hands (docs/archive/guides-2026-11-25/webcam-teleop.md)
 GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
 GET /static/...  the teleop pages' own scripts
 GET /web/...     web files every page shares (vendored libraries, theme.js): src/lab_os/web/

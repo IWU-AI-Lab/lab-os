@@ -57,7 +57,7 @@ Quick job 115. Do this part before every other part. Setup: no brain running. Fo
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
-How it works: `docs/guides/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
+How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
 - **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)
 - **H.2** Quick job 117. Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no) Do it again with the cube to the side of the arm. → did it pick it up? (yes / no: what it said)
 - **H.3** Ask for the cube again. While the arm moves, press STOP on the phone. → did the arm stop at once? (yes / no) Say "(wake word), move the arm to home". → did it go home? (yes / no)

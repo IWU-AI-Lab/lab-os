@@ -25,7 +25,7 @@ The Raspbot's own app program (Yahboom's "big program", started at login) also d
 Yahboom's app program starts again at the next start of the Raspbot. To stop it for good, remove `~/.config/autostart/start_raspbot.desktop` on the Raspbot. The builder decides this: the Yahboom phone app then does not work.
 
 ## The Raspbot's Wi-Fi at start
-Before, raspbot1 always started its own "Raspbot" hotspot at start, and stayed on it. A Wi-Fi in hotspot mode does not look for other networks. With lab-os's Wi-Fi service, raspbot1 looks for the router's Wi-Fi (GL-B7-5G) for up to 60 seconds at start. It joins the router when it finds it. It starts the "Raspbot" hotspot only when it does not find the router. Then connect to the hotspot to reach it (`docs/guides/network-setup-checklist.md`).
+Before, raspbot1 always started its own "Raspbot" hotspot at start, and stayed on it. A Wi-Fi in hotspot mode does not look for other networks. With lab-os's Wi-Fi service, raspbot1 looks for the router's Wi-Fi (GL-B7-5G) for up to 60 seconds at start. It joins the router when it finds it. It starts the "Raspbot" hotspot only when it does not find the router. Then connect to the hotspot to reach it (`docs/archive/guides-2026-11-25/network-setup-checklist.md`).
 
 Install it once (`uv run lab-os raspbot deploy` copies the files first):
 1. Run `ssh -t raspbot1 sudo sh lab-os/install-wifi.sh`. Type raspbot1's password.

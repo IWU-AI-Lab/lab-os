@@ -16,14 +16,14 @@ The first press asks the browser for the microphone. Allow it once. The micropho
 - The brain has **voice:** the persona's `voice:` is not `none`, a voice setup has its key, the internet works, and the chat is not paused (no key, budget used up).
 
 ## Secure pages (the microphone on other screens)
-Browsers give the microphone (and Wake Lock, app install, WebXR) only to `https://` or `http://localhost` pages. The lab's own address (`hub.indwesailab.com`, with a Let's Encrypt certificate through Route 53) is **for later** (decision 2026-11-10; the router side: `docs/guides/network-setup-checklist.md` → Step 7). Until then, use one of these (the easiest first):
+Browsers give the microphone (and Wake Lock, app install, WebXR) only to `https://` or `http://localhost` pages. The lab's own address (`hub.indwesailab.com`, with a Let's Encrypt certificate through Route 53) is **for later** (decision 2026-11-10; the router side: `docs/archive/guides-2026-11-25/network-setup-checklist.md` → Step 7). Until then, use one of these (the easiest first):
 - **The brain's own screen:** `http://localhost:8080`. A monitor or the Newline on the brain's HDMI is also the brain's screen.
 - **Chrome's flag** on another screen: open `chrome://flags`, find "Insecure origins treated as secure", add `http://<brain's address>:8080`, and relaunch. On a kiosk, start Chrome with `--unsafely-treat-insecure-origin-as-secure=http://<brain's address>:8080`.
 - **`adb reverse`** over USB (the Quest, or an Android device): there the page is also `http://localhost:8080`.
 - **Tailscale's certificate** (an idea: `docs/plan/ideas.md` → "Demo away from the lab").
 
 ## The way in, for each device
-⚙ → **This Device** → **Talking to It** sets how this device listens. The brain keeps the setting under the device's name (`?device=` in the hub's address, `docs/guides/hub.md` → "Devices"), so each device has its own. A page with no name keeps it in its browser.
+⚙ → **This Device** → **Talking to It** sets how this device listens. The brain keeps the setting under the device's name (`?device=` in the hub's address, `docs/archive/guides-2026-11-25/hub.md` → "Devices"), so each device has its own. A page with no name keeps it in its browser.
 - **Push-to-Talk** (the default): hold the mic (or Space), talk, release. It answers aloud.
 - **Wake Word:** say the persona's wake word (**"hey Jarvis"** for J.A.R.V.I.S., **"OK computer"** for the Lab Assistant) from anywhere in the room, then your question. It answers aloud. Push-to-Talk still works. See "The wake word" below.
 - **Dictation:** tap the mic (or tap Space when the ask line is empty). The words go **into the ask line** while you talk. It stops after a short silence (about 1.6 s after you start talking; 8 s if you say nothing), after a second tap, or when you press Space. **Enter** stops and sends. **Esc** or any other key stops and keeps the words. Then correct them and send, as for typing. The answer comes as text, as for a typed question.

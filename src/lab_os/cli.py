@@ -39,10 +39,12 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 def _banner(port: int, host: str, mcp_port: int) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
-        f"Designed: http://localhost:{port}/design   (the reveal, preview; docs/guides/hub.md)",
+        f"Designed: http://localhost:{port}/design   (the reveal, preview; "
+        "docs/archive/guides-2026-11-25/hub.md)",
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
-        f"Webcam:   http://localhost:{port}/webcam   (preview; docs/guides/webcam-teleop.md)",
+        f"Webcam:   http://localhost:{port}/webcam   (preview; "
+        "docs/archive/guides-2026-11-25/webcam-teleop.md)",
     ]
     if mcp_port:
         lines.append(
@@ -51,7 +53,8 @@ def _banner(port: int, host: str, mcp_port: int) -> str:
         )
     if host not in LOCAL_HOSTS:
         lines.append(
-            f"Other screens: http://<this computer's IP address>:{port}/ (docs/guides/hub.md)"
+            f"Other screens: http://<this computer's IP address>:{port}/ "
+            "(docs/archive/guides-2026-11-25/hub.md)"
         )
     return "\n".join(lines)
 
@@ -171,7 +174,7 @@ def main(argv: list[str] | None = None) -> None:
     g = sub.add_parser(
         "green",
         help="start the SO-101 training setup (so101-green + LeLab) after checking the ports; "
-        "opens nothing itself (docs/guides/green-launcher.md)",
+        "opens nothing itself (docs/archive/guides-2026-11-25/green-launcher.md)",
     )
     g.add_argument("--wait", action="store_true", help="wait for Enter before closing")
     g.add_argument("--stop", action="store_true", help="stop the LeLab this launcher started")
@@ -184,7 +187,8 @@ def main(argv: list[str] | None = None) -> None:
     i = sub.add_parser(
         "icon",
         help='make the "Start lab-os" icon on this computer (the brain\'s): it starts the brain '
-        "and opens the hub as DEVICE. Options after -- go to lab-os serve (docs/guides/hub.md → "
+        "and opens the hub as DEVICE. Options after -- go to lab-os serve "
+        "(docs/archive/guides-2026-11-25/hub.md → "
         "Devices)",
     )
     i.add_argument("--device", default="desk", help="this computer's device name (default: desk)")
@@ -212,7 +216,7 @@ def main(argv: list[str] | None = None) -> None:
         help="what the Quest sees, on this computer (scrcpy): --install downloads it into "
         "downloads/scrcpy/, --remove deletes it, --wifi makes it work without the USB cable; "
         "without one, says what's there "
-        "(docs/guides/quest-view.md)",
+        "(docs/archive/guides-2026-11-25/quest-view.md)",
     )
     qv.add_argument("--install", action="store_true", help="download scrcpy (no sudo)")
     qv.add_argument("--remove", action="store_true", help="delete the downloaded scrcpy")
@@ -225,7 +229,7 @@ def main(argv: list[str] | None = None) -> None:
     rm = sub.add_parser(
         "room",
         help="set up the room: open each page of room.yaml on its device (the running brain does "
-        'it, as "Open on…"; docs/guides/hub.md → Devices)',
+        'it, as "Open on…"; docs/archive/guides-2026-11-25/hub.md → Devices)',
     )
     rm.add_argument("--port", type=int, default=8080, help="the brain's port (default 8080)")
     lg = sub.add_parser(
