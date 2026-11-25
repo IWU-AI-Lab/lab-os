@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
-    /* the two choices side by side, Rerun's view under them across the page (quick job 91) */
+    /* the two choices side by side (quick job 91) */
     main.one { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 96rem; width: 100%; margin: 0 auto; padding: 1rem; align-items: start; }
     .lines { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
     .lines li { display: grid; grid-template-columns: 1.4rem 1fr; gap: 0.6rem; align-items: start; font: var(--w-lines) 0.92rem/1.45 var(--f-lines); color: var(--text); }
@@ -19,9 +19,6 @@
     #lr-log { max-height: 9rem; overflow: auto; margin: 0.6rem 0 0; font: var(--w-lines) 0.75rem/1.35 var(--f-lines); color: var(--text-dim); white-space: pre-wrap; }
     #lr-log:empty { display: none; }
     @media (max-width: 900px) { main.one { grid-template-columns: 1fr; } }
-    #rerun-card { grid-column: 1 / -1; }
-    #rerun-card[hidden] { display: none; }
-    #rerun { display: block; width: 100%; height: 70vh; border: 1px solid var(--line); background: var(--bg); }
     .hint { font: var(--w-lines) 0.82rem/1.45 var(--f-lines); color: var(--text-dim); margin: 0.4rem 0 0; }
   </style>
 </head>
@@ -62,7 +59,7 @@
 
     <section class="card"><div class="in">
       <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>LeRobot teleop with Rerun</h2>
-      <p class="hint">LeRobot's own teleop command: the green leader drives the green follower. Rerun shows the cameras and the joints over time. Checked first; nothing is opened until every line is fine.</p>
+      <p class="hint">LeRobot's own teleop command: the green leader drives the green follower. Rerun opens in its own window and shows the cameras and the joints over time. Checked first; nothing is opened until every line is fine.</p>
       <p class="hint"><b>Warning:</b> at Start the follower moves to the leader's pose at once. Put both arms in the same pose first.</p>
       <ul id="lr-lines" class="lines"><li><span></span><span>Checking…</span></li></ul>
       <div class="actions">
@@ -74,10 +71,6 @@
       <pre id="lr-log"></pre>
     </div></section>
 
-    <section id="rerun-card" class="card" hidden><div class="in">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-cam"/></svg>Rerun: the cameras and the joints</h2>
-      <iframe id="rerun" title="Rerun"></iframe>
-    </div></section>
   </main>
 </div>
 <script type="module" src="/web/design/kit.js"></script>
@@ -113,7 +106,6 @@
     else $("#msg").textContent = r ? await r.text() : "The brain didn't answer.";
   };
   // ---- LeRobot teleop with Rerun (quick job 91) ----
-  let viewerAt = null;
   function showLr(c) {
     $("#lr-lines").innerHTML = c.lines.map((l) => `<li class="${l.ok ? "ok" : "no"}">${icon(l.ok)}<span>${esc(l.text)}</span></li>`).join("");
     const st = $("#lr-state");
@@ -123,11 +115,7 @@
     $("#lr-stop").hidden = !c.running || !c.here;
     $("#lr-log").textContent = (c.log || []).join("\n");
     $("#lr-msg").textContent = !c.here ? "It starts only on the brain's computer."
-      : c.said || (c.running && !c.viewer ? "Rerun opened in its own window." : "");
-    // Rerun's web viewer, served by lab-os's Rerun on this computer
-    const want = c.running && c.viewer && c.here ? `http://${location.hostname}:${c.viewer}/?url=${encodeURIComponent(`rerun+http://${location.hostname}:${c.rerun}/proxy`)}` : null;
-    $("#rerun-card").hidden = !want;
-    if (want !== viewerAt) { $("#rerun").src = want || "about:blank"; viewerAt = want; }
+      : c.said || (c.running ? "Rerun opened in its own window." : "");
   }
   async function loadLr() {
     const r = await fetch("/api/lerobot-teleop").catch(() => null);

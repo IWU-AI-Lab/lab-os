@@ -44,7 +44,7 @@ If a line fails, the launcher says what to change and opens nothing. After the f
 LeLab is its own uv tool (`~/.local/share/uv/tools/lelab`, with its own LeRobot). The launcher starts it as it is. lab-os itself may drive the green follower (`docs/guides/ai-control.md` → "The green arm"), but never at the same time as LeLab. The code is in `src/lab_os/green.py`.
 
 ## LeRobot teleop with Rerun (since 2026-11-22)
-The Training page has a second choice beside LeLab: **LeRobot teleop with Rerun**. It runs LeRobot's own teleop command: the green leader drives the green follower. Rerun shows the camera pictures and the joints over time, in a frame on the Training page. It works only on the brain's computer.
+The Training page has a second choice beside LeLab: **LeRobot teleop with Rerun**. It runs LeRobot's own teleop command: the green leader drives the green follower. Rerun opens in its own window and shows the camera pictures and the joints over time. Stop closes the Rerun window too. It works only on the brain's computer.
 
 Before you start:
 - Install LeRobot and Rerun once: `uv sync --extra so101` (about 5 GB). After a plain `uv sync`, do it again.
@@ -68,7 +68,7 @@ How it keeps the green rules (`AGENTS.md` → "Hard rules"):
 - It runs through lab-os's own `so101` extra, never the `lerobot` conda environment.
 - It is LeRobot's tool, as LeLab is. STOP on the lab-os pages and the soft limits do not apply to it. Use **Stop** on the Training page.
 
-The command (`src/lab_os/lerobot_teleop.py`): `uv run --extra so101 lerobot-teleoperate --robot.type=so101_follower --robot.id=sheep --teleop.type=so101_leader --teleop.id=shepherd --display_data=true`, with the green ports, the cameras, the temporary calibration folders and the address of lab-os's Rerun. Rerun's usage data is off for these programs.
+The command (`src/lab_os/lerobot_teleop.py`): `uv run --extra so101 lerobot-teleoperate --robot.type=so101_follower --robot.id=sheep --teleop.type=so101_leader --teleop.id=shepherd --display_data=true`, with the green ports, the cameras, the temporary calibration folders and the address of the Rerun window that lab-os opens (`rerun --bind 127.0.0.1 --port 9876`). Rerun's usage data is off for these programs.
 
 ## Move the icon to another computer
 The icon is the file `~/.local/share/applications/lab-os-training.desktop`:

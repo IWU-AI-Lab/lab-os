@@ -196,6 +196,15 @@ def test_stop_is_like_ctrl_c(tmp_path):
     assert runner.stop() == "LeRobot's teleop isn't running."
 
 
+def test_rerun_opens_its_own_window():
+    """Rerun's own window, not its web viewer (in the page's frame it crashed the browser tab)."""
+    argv = lt.viewer_command()
+    assert argv[:5] == ["uv", "run", "--extra", "so101", "rerun"]
+    assert "--serve-web" not in argv and "--web-viewer-port" not in argv
+    assert argv[argv.index("--bind") + 1] == "127.0.0.1"  # this computer only
+    assert argv[argv.index("--port") + 1] == str(lt.RERUN_PORT)  # where LeRobot sends
+
+
 def test_a_hack_line_for_rerun_usage_data():
     assert lt.child_env()["CI"] == "1"
     focus = (Path(__file__).resolve().parents[1] / "docs/plan/current-focus.md").read_text()
@@ -213,7 +222,7 @@ async def test_the_page_and_its_api(aiohttp_client, monkeypatch):
     monkeypatch.setattr(lt.RUNNER, "start", lambda plan: calls.append(plan) or "started")
     client = await aiohttp_client(make_app())
     page = await (await client.get("/training")).text()
-    assert 'id="lr-start"' in page and 'id="rerun"' in page and "follower goes limp" in page
+    assert 'id="lr-start"' in page and "<iframe" not in page and "follower goes limp" in page
     got = await (await client.get("/api/lerobot-teleop")).json()
     assert got["ok"] is False and got["running"] is False and got["here"] is True
     res = await (await client.post("/api/lerobot-teleop/start")).json()

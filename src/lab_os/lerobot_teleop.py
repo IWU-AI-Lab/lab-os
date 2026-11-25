@@ -17,7 +17,8 @@ The green rules (AGENTS.md → "Hard rules") and how this keeps them:
 
 Stop is like Ctrl+C: LeRobot lets go of the arms, so the follower goes limp. It bypasses lab-os's
 own safety layer (STOP on the pages, the soft limits): it is LeRobot's tool, as LeLab is.
-Rerun's web viewer runs here too (`rerun --serve-web`), so the Training page can show it in a frame.
+Rerun opens in its own window on this computer (not in the page: Rerun's web viewer in a frame
+crashed the browser tab, 2026-11-24). The brain starts that window, so Stop closes it too.
 """
 
 import contextlib
@@ -45,7 +46,6 @@ log = logging.getLogger(__name__)
 FOLLOWER_ID, LEADER_ID = "sheep", "shepherd"  # the training files' ids (AGENTS.md)
 CAMERAS = ("so101-green-cam-stand", "so101-green-cam-wrist")
 RERUN_PORT = 9876  # Rerun's data server (LeRobot sends there)
-RERUN_WEB_PORT = 9090  # Rerun's web viewer (the Training page shows it in a frame)
 # LeRobot's lines when it would calibrate (lerobot 0.6.1, so_follower.py / so_leader.py)
 CALIBRATION_SIGNS = (
     "Mismatch between calibration values",
@@ -159,7 +159,8 @@ def check(
 
 def command(plan: Plan, calibration_dir: Path, rerun_port: int | None = RERUN_PORT) -> list[str]:
     """LeRobot's teleop command for the green set. `calibration_dir`: the temporary copy (robot/
-    and teleop/ inside). `rerun_port`: send to our Rerun server, or None for Rerun's own window."""
+    and teleop/ inside). `rerun_port`: send to the brain's Rerun window, or None: LeRobot opens
+    a Rerun window itself."""
     cameras = {
         name: {"type": "opencv", "index_or_path": path, "width": 640, "height": 480, "fps": 30}
         for name, path in plan.cameras.items()
@@ -183,11 +184,18 @@ def command(plan: Plan, calibration_dir: Path, rerun_port: int | None = RERUN_PO
 
 
 def viewer_command() -> list[str]:
-    """Rerun's data server and web viewer, on this computer only (no internet: its own files)."""
+    """Rerun's own window, which listens for LeRobot on this computer only."""
     return [
-        "uv", "run", "--extra", "so101", "rerun", "--serve-web",
-        "--bind", "127.0.0.1", "--port", str(RERUN_PORT), "--web-viewer-port", str(RERUN_WEB_PORT),
-    ]  # fmt: skip
+        "uv",
+        "run",
+        "--extra",
+        "so101",
+        "rerun",
+        "--bind",
+        "127.0.0.1",
+        "--port",
+        str(RERUN_PORT),
+    ]
 
 
 def copy_calibration(plan: Plan) -> Path:
@@ -212,7 +220,7 @@ class Runner:
         self.tmp: Path | None = None
         self.lines: deque[str] = deque(maxlen=30)
         self.said = ""
-        self.web = False  # Rerun's web viewer is up (the page shows it)
+        self.window = False  # the brain opened Rerun's window (Stop closes it)
         self.lock = threading.Lock()
 
     def running(self) -> bool:
@@ -223,8 +231,6 @@ class Runner:
             "running": self.running(),
             "said": self.said,
             "log": list(self.lines)[-12:],
-            "viewer": RERUN_WEB_PORT if self.running() and self.web else None,
-            "rerun": RERUN_PORT,
         }
 
     def start(self, plan: Plan, wait_viewer_s: float = 20.0) -> str:
@@ -234,8 +240,8 @@ class Runner:
             self.lines.clear()
             self.said = ""
             self.tmp = copy_calibration(plan)
-            self.web = self._start_viewer(wait_viewer_s)
-            argv = command(plan, self.tmp, RERUN_PORT if self.web else None)
+            self.window = self._start_viewer(wait_viewer_s)
+            argv = command(plan, self.tmp, RERUN_PORT if self.window else None)
             log.info("LeRobot teleop: %s", " ".join(argv))
             self.proc = self.popen(
                 argv,
@@ -270,10 +276,10 @@ class Runner:
         while time.monotonic() < end:
             if self.viewer.poll() is not None:
                 return False
-            if _answers(RERUN_PORT) and _answers(RERUN_WEB_PORT):
+            if _answers(RERUN_PORT):
                 return True
             time.sleep(0.3)
-        return False  # LeRobot then opens Rerun's own window
+        return False  # LeRobot then opens a Rerun window itself
 
     def _read(self, proc) -> None:
         for raw in proc.stdout:
