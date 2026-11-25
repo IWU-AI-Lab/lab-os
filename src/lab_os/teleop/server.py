@@ -64,6 +64,9 @@ OFF_TOLD = web.AppKey("off_told", dict)
 OFF_TELL_S = 0.2  # time for the broadcaster to send brain_off before the sockets close
 LOCAL_CONTROL_ONLY = web.AppKey("local_control_only", bool)
 NAMES = web.AppKey("names", dict)  # page → its device name, from `hello` (quick job 76)
+# page → {"remote", "agent", "device"}: every open teleop page, for the live device list (a Quest
+# on Wi-Fi without adb shows by its teleop page, quick job 141)
+LINKS = web.AppKey("links", dict)
 # a page on another computer that may only watch → its address, for the line that says how to let
 # it drive (quick job 95)
 WATCHERS = web.AppKey("watchers", dict)
@@ -124,6 +127,16 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
         if app[RECORDER]:
             app[RECORDER].write(raw)
         return True
+    if kind == "hello":  # input pages and view-only ones (another screen's Quest) alike
+        log.info("input page connected: %s", raw.get("agent", "?"))
+        if ws is not None:  # its device name: the other pages say who has control (quick job 76)
+            app[NAMES][ws] = str(raw.get("device") or "")[:32]
+            if ws in app[LINKS]:
+                app[LINKS][ws] |= {
+                    "agent": str(raw.get("agent") or "")[:300],
+                    "device": app[NAMES][ws],
+                }
+        return True
     if not is_input:
         return True  # monitors can only stop
     if kind in ("xr_input", "joint_input"):
@@ -155,10 +168,6 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
         log.info("teleop mode set to %s", mode)
         if app[RECORDER]:
             app[RECORDER].write(raw)
-    elif kind == "hello":
-        log.info("input page connected: %s", raw.get("agent", "?"))
-        if ws is not None:  # its device name: the other pages say who has control (quick job 76)
-            app[NAMES][ws] = str(raw.get("device") or "")[:32]
     else:
         raise ValueError(f"unknown message type {kind!r}")
     return True
@@ -183,6 +192,7 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
         return ws
 
     app[CLIENTS].add(ws)
+    app[LINKS][ws] = {"remote": request.remote or "", "agent": "", "device": ""}
     if is_input:
         app[INPUTS].add(ws)
     bad = 0
@@ -207,6 +217,7 @@ async def websocket(request: web.Request) -> web.WebSocketResponse:
     finally:
         app[CLIENTS].discard(ws)
         app[NAMES].pop(ws, None)
+        app[LINKS].pop(ws, None)
         app[WATCHERS].pop(ws, None)
         if is_input:
             app[INPUTS].discard(ws)
@@ -314,6 +325,7 @@ def create_app(
     app[OUTBOX] = asyncio.Queue()
     app[CONTROL] = {"ws": None}
     app[NAMES] = {}
+    app[LINKS] = {}
     app[WATCHERS] = {}
     app[SHUTDOWN] = asyncio.Event()
     app[OFF_TOLD] = {"told": False}

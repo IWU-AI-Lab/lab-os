@@ -1955,7 +1955,7 @@ async function removeDevice(id) {
 }
 // columns the device table can show; hub.device_columns picks which, in order
 const word = (ok, yes, no) => `<span class="sw${ok ? " ok" : ""}"><i></i>${ok ? yes : no}</span>`;
-const powerWord = (d) => (d.power === undefined ? "" : d.power === "on" ? word(true, "On", "") : d.power === "off" ? word(false, "", "Off") : `<span class="sw">${d.driven ? "Not known yet" : "Not known"}</span>`);
+const powerWord = (d) => (d.power === undefined ? "" : d.power === "on" ? word(true, "On", "") : d.power === "off" ? word(false, "", "Off") : d.power === "in use" ? `<span class="sw" title="${esc(d.problem)}">In use</span>` : `<span class="sw">${d.driven ? "Not known yet" : "Not known"}</span>`);
 const COLUMNS = {
   id: { head: "Device", title: "Its lab-os name, or what the system calls it", cell: (d) => (d.known ? esc(d.name) : `${esc(d.name)}<small>Unknown</small>`) },
   on: { head: "Connected", title: "Plugged in or on the network now", cell: (d) => word(d.on, "Yes", "No") },
@@ -2036,7 +2036,8 @@ function showDevice(d, from) {
   const dot = (ok, yes, no) => `<div class="row${ok ? " on" : ""}"><span class="dot"></span>${ok ? yes : no}</div>`;
   const conn = dot(d.on, `Connected${d.via ? ` (${esc(d.via)})` : ""}`, `Not connected${d.last ? `. Last seen ${esc(d.last)}` : ""}`);
   const power = d.power === undefined || !d.on ? "" : d.power === "on" ? dot(true, `Motor power: on${d.volts ? ` (${d.volts} V)` : ""}`, "")
-    : d.power === "off" ? dot(false, "", "Motor power: off, or the motors do not answer") : `<div class="row"><span class="dot"></span>Motor power: ${d.driven ? "not known yet" : "not known (the brain does not drive this arm)"}</div>`;
+    : d.power === "off" ? dot(false, "", "Motor power: off, or the motors do not answer")
+    : d.power === "in use" ? `<div class="row"><span class="dot"></span>Motor power: not known (in use by another program)</div>` : `<div class="row"><span class="dot"></span>Motor power: ${d.driven ? "not known yet" : "not known (the brain does not drive this arm)"}</div>`;
   const problem = d.problem ? `<div>${esc(d.problem)}</div>` : "";
   card.querySelector(".in").innerHTML = `<div class="t"><svg class="ico"><use href="#${ico}"/></svg>${esc(d.name)}<button type="button" aria-label="Close">×</button></div>
     <div>${esc(d.use)}</div>${conn}${power}${problem}

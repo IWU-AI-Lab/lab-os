@@ -231,3 +231,54 @@ def test_the_pages_use_the_list():
     cameras = (src / "hub" / "web" / "cameras.html").read_text()
     assert "LIST_MS" in cameras and "stream" in cameras
     assert "unplugged" in (src / "teleop" / "web" / "monitor.js").read_text()
+
+
+def test_parts_built_into_the_computer_are_left_out(tmp_path):
+    """Quick job 141: the lab desktop's Bluetooth and keyboard light are not devices to list."""
+    usb, _ = _sysfs(tmp_path)
+    (_usb(usb, "1-14", "8087", "0033") / "removable").write_text("fixed\n")
+    (usb / "1-3" / "removable").write_text("removable\n")
+    assert [d["usb"] for d in live_devices.usb_devices(usb)] == ["1-2", "1-3", "1-4", "1-8"]
+
+
+def test_a_quest_by_its_teleop_page_and_an_arm_in_use(monkeypatch):
+    """Quick job 141: a Quest on Wi-Fi without adb shows by its teleop page; an arm the brain
+    doesn't drive says "in use" while another program has its port (the port is not opened)."""
+    from lab_os.hub import server
+
+    quest = Device("quest-a", "quest", serial="2G97", host="192.168.8.180")
+    reg = Registry({d.name: d for d in (WHITE, quest)})
+    monkeypatch.setattr(server, "load_registry", lambda: reg)
+    monkeypatch.setattr(server, "users_of", lambda port: ["lelab (pid 42)"])
+
+    class Loop:
+        left = None
+        arm = Device("fake-arm", "fake")
+        arm_connected = True
+
+    class Hub:
+        def listing(self):
+            return []
+
+    quest_ua = "Mozilla/5.0 (X11; Linux x86_64; Quest 3) OculusBrowser/157"
+    app = {
+        server.LOOP: Loop(),
+        server.HUB_DEVICES: Hub(),
+        server.LINKS: {
+            1: {"remote": "192.168.8.180", "agent": quest_ua, "device": ""},
+            2: {"remote": "192.168.8.99", "agent": quest_ua, "device": ""},
+            3: {"remote": "127.0.0.1", "agent": "Chrome desktop", "device": "desk"},
+        },
+    }
+    usb = [{"vendor_id": 0x1A86, "product_id": 0x55D3, "serial_number": "5B41532410",
+            "usb": "1-3", "socket": "usb-0:3"}]  # fmt: skip
+    in_use = server.ports_in_use(usb)
+    assert in_use == {"so101-white": ["lelab (pid 42)"]}
+    got = {d["id"]: d for d in server.live_entries(app, usb, [], ["2G97"], in_use)}
+    assert got["so101-white"]["power"] == "in use" and "lelab" in got["so101-white"]["problem"]
+    assert got["quest-a"]["via"] == "adb (USB)"  # adb first; its teleop page adds no second one
+    assert got["quest:192.168.8.99"]["known"] is False
+    assert len([d for d in got.values() if d["kind"] == "headset"]) == 2
+    got = {d["id"]: d for d in server.live_entries(app, usb, [], [], {})}
+    assert got["quest-a"]["via"] == "teleop page (network)"
+    assert "power" not in got["so101-white"]

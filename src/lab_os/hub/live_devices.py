@@ -33,6 +33,8 @@ FILE_NAME = "seen-devices.yaml"
 USB_SYS = Path("/sys/bus/usb/devices")
 VIDEO_SYS = Path("/sys/class/video4linux")
 HUB_CLASS = "09"  # USB hubs: not a device a person plugs in for itself
+# built into the computer (the desktop's Bluetooth, its keyboard light; quick job 141): not listed
+FIXED = "fixed"
 ARM_KINDS = ("so101", "so101-leader", "xarm1s")
 STORED = ("name", "kind", "known", "what", "via", "first_seen", "last_seen")
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$")
@@ -53,8 +55,9 @@ def socket_of(usb_name: str) -> str:
 
 
 def usb_devices(root: Path = USB_SYS) -> list[dict]:
-    """Every USB device plugged in (not the hubs), from sysfs: vendor_id, product_id,
-    serial_number, manufacturer, product_string (hidapi's names), usb (its sysfs name), socket."""
+    """Every USB device plugged in (not the hubs, not the parts built into the computer), from
+    sysfs: vendor_id, product_id, serial_number, manufacturer, product_string (hidapi's names), usb
+    (its sysfs name), socket."""
     out = []
     try:
         entries = sorted(os.listdir(root))
@@ -64,7 +67,7 @@ def usb_devices(root: Path = USB_SYS) -> list[dict]:
         if ":" in name or name.startswith("usb"):
             continue  # an interface, or a controller's root hub
         d = root / name
-        if _read(d / "bDeviceClass") == HUB_CLASS:
+        if _read(d / "bDeviceClass") == HUB_CLASS or _read(d / "removable") == FIXED:
             continue
         try:
             vid, pid = int(_read(d / "idVendor"), 16), int(_read(d / "idProduct"), 16)
