@@ -145,8 +145,8 @@ def greeting_file(folder: Path, setup: VoiceSetup, text: str, persona: str = "")
     persona never plays another's recording, quick job 84)."""
     voice = [setup.service, setup.base_url, setup.speak, setup.speaker, setup.style, setup.speed]
     # "v2": recordings from before quick job 47 may come from a fallback model (another person's
-    # sound): they are made again once, by the first model
-    key = ["v2", voice, text] + ([persona] if persona else [])
+    # sound): they are made again once, by the first model; "v3": quiet edges (quick job 111)
+    key = ["v3", voice, text] + ([persona] if persona else [])
     digest = hashlib.sha256(json.dumps(key).encode()).hexdigest()[:16]
     return folder / f"{setup.name}-{digest}.wav"
 

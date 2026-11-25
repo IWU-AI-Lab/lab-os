@@ -107,6 +107,34 @@ def _rewrap(data: bytes) -> bytes:
         return data
 
 
+# Quiet before and after each spoken piece, and a short fade at its edges (quick job 111). OpenAI's
+# audio starts with sound in its first sample and can end in the middle of the last sound: the page
+# played the pieces end to end, so the start or end of a word was lost and the sentences ran on.
+LEAD_S, TAIL_S, FADE_S = 0.08, 0.22, 0.006
+
+
+def pad_wav(data: bytes) -> bytes:
+    """A 16-bit mono WAV with a fade in and out of `FADE_S`, `LEAD_S` of quiet before it and
+    `TAIL_S` after it. Any other audio comes back as it was."""
+    try:
+        with wave.open(io.BytesIO(data)) as w:
+            if w.getsampwidth() != 2 or w.getnchannels() != 1:
+                return data
+            rate, pcm = w.getframerate(), w.readframes(w.getnframes())
+    except (wave.Error, EOFError):
+        return data
+    n = len(pcm) // 2
+    samples = list(struct.unpack(f"<{n}h", pcm[: n * 2]))
+    fade = min(int(rate * FADE_S), n // 2)
+    for i in range(fade):
+        k = i / fade
+        samples[i] = int(samples[i] * k)
+        samples[n - 1 - i] = int(samples[n - 1 - i] * k)
+    quiet = b"\0\0"
+    body = struct.pack(f"<{n}h", *samples)
+    return wav_bytes(quiet * int(rate * LEAD_S) + body + quiet * int(rate * TAIL_S), rate)
+
+
 def has_speech(pcm: bytes, rate: int = RATE) -> bool:
     """Whether a recording may hold speech: long enough, and some part of it clearly louder than
     the quietest part (silence and a steady hum are not speech)."""
@@ -504,7 +532,7 @@ async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) ->
                 raise VoiceError(f"{_who(setup)} sent no audio for that.") from None
             audio = base64.b64decode(inline["data"])
             rate = _pcm_rate(str(inline.get("mimeType", "")))
-            return wav_bytes(audio, rate) if rate else audio
+            return pad_wav(wav_bytes(audio, rate) if rate else audio)
         body = {"model": setup.speak, "input": text, "response_format": "wav"}
         if setup.speaker:
             body["voice"] = setup.speaker
@@ -520,7 +548,7 @@ async def speak(session: aiohttp.ClientSession, setup: VoiceSetup, text: str) ->
         ) as resp:
             if resp.status != 200:
                 raise _http_error(setup, resp.status, await resp.text())
-            return _rewrap(await resp.read())
+            return pad_wav(_rewrap(await resp.read()))
     except VoiceError:
         raise
     except TimeoutError:

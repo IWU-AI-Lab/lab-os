@@ -156,7 +156,7 @@ def key(monkeypatch):
 def test_models_yaml_voices():
     voices = load_voices()
     assert voices["main"].speak == "tts-1-hd" and not voices["main"].style  # quick job 83
-    assert voices["main"].speed == 1.15
+    assert voices["main"].speed is None  # normal pace (quick job 111: 1.15 was too fast)
     assert voices["main"].service == "openai" and voices["main"].fallback == "backup"
     assert voices["backup"].service == "gemini" and voices["backup"].key_env == "GEMINI_API_KEY"
     assert voices["main"].cost(60, 60) == pytest.approx(0.018)
@@ -215,6 +215,22 @@ def test_a_streamed_wav_counts_its_real_length():
     assert fixed[40:44] == (48_000).to_bytes(4, "little") and wav_seconds(fixed) == 1.0
 
 
+def test_a_spoken_piece_gets_quiet_edges():
+    """Quick job 111: a word at the very start or end of a piece was cut; pieces ran together."""
+    import struct
+
+    from lab_os.ai.speech import LEAD_S, TAIL_S, pad_wav
+
+    loud = struct.pack("<2400h", *([20_000] * 2400))  # 0.1 s of sound up to both edges
+    padded = pad_wav(wav_bytes(loud, 24_000))
+    assert wav_seconds(padded) == pytest.approx(0.1 + LEAD_S + TAIL_S)
+    pcm = struct.unpack(f"<{(len(padded) - 44) // 2}h", padded[44:])
+    lead = int(24_000 * LEAD_S)
+    assert not any(pcm[:lead]) and not any(pcm[lead + 2400 :])  # quiet before and after
+    assert pcm[lead] == 0 and pcm[lead + 1] < 2_000 and pcm[lead + 1200] == 20_000  # a fade in
+    assert pad_wav(b"not a wav") == b"not a wav"
+
+
 async def test_gemini_hears_while_the_audio_streams(aiohttp_server, key):
     seen = []
     server = await aiohttp_server(fake_voice(seen=seen))
@@ -270,7 +286,9 @@ async def test_gemini_speaks_a_wav(aiohttp_server, key):
     server = await aiohttp_server(fake_voice(seen=seen))
     async with __import__("aiohttp").ClientSession() as session:
         wav = await speak(session, gemini_setup(server), "Hello.")
-    assert wav[:4] == b"RIFF" and wav_seconds(wav) == pytest.approx(0.6)
+    assert wav[:4] == b"RIFF" and wav_seconds(wav) == pytest.approx(
+        0.6 + 0.3
+    )  # + the quiet edges (quick job 111)
     tts = next(s for s in seen if "tts" in s)
     voice = tts["tts"]["generationConfig"]["speechConfig"]["voiceConfig"]
     assert voice == {"prebuiltVoiceConfig": {"voiceName": "Charon"}} and tts["key"] == "test-key"
@@ -336,7 +354,7 @@ async def test_openai_hears_the_recording_and_speaks(aiohttp_server, key):
         h.feed(SECOND)
         assert await h.finish() == HEARD and words == [HEARD]
         wav = await speak(session, setup, "Hello.")
-    assert wav_seconds(wav) == pytest.approx(1.0)
+    assert wav_seconds(wav) == pytest.approx(1.0 + 0.3)  # + the quiet edges
     assert {"transcribe": "test-transcribe", "auth": "Bearer test-key"} in seen
     speech = next(s for s in seen if "speech" in s)["speech"]
     assert speech == {

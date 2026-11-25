@@ -58,6 +58,7 @@ Setup: no brain running, every hub window closed, the USB microphone in the desk
 
 - **S.1** Quick job 110. Start the brain: `uv run lab-os serve`. Open `http://localhost:8080` and tap the start screen. Set ⚙ → This device → **Talking to It** to **wake word**. Say "(wake word), what time is it?" in a normal voice. → did the hub start to think less than 1 s after your last word? (yes / no: about how long)
 - **S.2** Say "(wake word), calculate 37 times 48". Stop for about 1 s. Then say "then add 199". → did it wait for "then add 199"? (yes / no) Did it say 1975? (yes / no)
+- **S.3** Quick job 111. Say "(wake word), tell me three short facts about robot arms". Listen to the full answer. → was the speed normal, not too fast? (yes / no) Did you hear the start and the end of each word? (yes / no: which word was cut) Was there a short pause between the sentences? (yes / no)
 
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
 How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.

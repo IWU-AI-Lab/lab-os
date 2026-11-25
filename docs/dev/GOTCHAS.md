@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — OpenAI's voice audio has no quiet at its edges, and its speed cuts words (quick job 111)
+**What:** the builder heard the answer too fast, with the start or end of a word missing. A measure of `tts-1-hd` (`fable`) showed two causes. (1) `speed: 1.15` made a sentence 2.92 s → 2.42 s (about 1.2 times faster, not 1.15), and the audio then ended with sound in its last 20 ms: the end of the last word was cut. (2) Each piece starts with sound in its first sample, and the page plays the pieces end to end, so a word edge was lost and the sentences ran together. The page joins the pieces correctly (in order, each after the one before).
+**Fix:** the normal speed (no `speed:` in `config/models.yaml`). The brain adds 0.08 s of quiet before and 0.22 s after each spoken piece, with a 6 ms fade at both edges (`pad_wav`, both voice services). The greeting recordings are made again once ("v3").
+
 ### 2026-11-25 — The turn model hears the tone of the voice, not the words (quick job 110)
 **What:** Smart Turn (`lab_os.ai.turn`) judges a pause by the sound only. On macOS's `say` voice, "Calculate 37 times 48," scored 0.99 (finished), because that voice falls in tone at a comma; "…, and then" scored 0.01. A real person's voice usually stays up in a pause in the middle of a sentence, but a person who drops their voice at a pause can have the question cut.
 **Fix:** none in the model. With the Gemini voice (words while it hears), the brain does not end a question whose words end on a comma or a word like "and", "then" or "times". With the OpenAI voice there are no words before the end. The brain logs each check ("the turn model says finished (0.97)"), so a cut question shows in `uv run lab-os logs`.
