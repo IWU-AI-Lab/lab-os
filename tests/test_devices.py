@@ -6,13 +6,16 @@ import os
 import pytest
 
 from lab_os.devices import (
+    Device,
     InUse,
     PortNotAllowed,
+    Registry,
     camera_device,
     camera_paths,
     check_not_in_use,
     check_port_allowed,
     check_usb_allowed,
+    controller_of,
     default_device,
     load_registry,
     serial_port,
@@ -46,15 +49,19 @@ def test_a_borrowed_arm_is_never_a_default():
     assert default_device(("so101",)) == "so101-white"  # name the green one to use it
 
 
-def test_the_training_cameras_by_socket_and_the_model_block_is_gone():
+def test_the_training_cameras_by_socket_and_the_white_ones_by_their_hub():
     reg = load_registry()
-    cams = {d.name: d.socket for d in reg.devices.values() if d.kind == "camera"}
-    # HACK: the white-cam names are a temporary alias of the same two sockets (devices.yaml)
+    cams = {
+        d.name: d.socket or (d.beside, d.hub_port)
+        for d in reg.devices.values()
+        if d.kind == "camera"
+    }
+    # quick job 115: the white set's cameras are on the white arm's hub, no longer an alias
     assert cams == {
         "so101-green-cam-wrist": "usb-0:7",
         "so101-green-cam-stand": "usb-0:8",
-        "so101-white-cam-wrist": "usb-0:7",  # lab check 3.9: the wrist is 7, as on the green set
-        "so101-white-cam-stand": "usb-0:8",
+        "so101-white-cam-stand": ("so101-white", "3"),
+        "so101-white-cam-wrist": ("so101-white", "2"),
     }
     assert all(reg.devices[n].borrowed for n in cams if "green" in n)
     check_usb_allowed({"vendor_id": 0x0C45, "product_id": 0x6366, "serial_number": "SN0001"})
@@ -194,3 +201,70 @@ def test_a_missing_camera_says_where_it_looked(tmp_path):
 def test_an_off_limits_camera_is_refused_before_looking(locked, tmp_path):
     with pytest.raises(PortNotAllowed):
         camera_paths("locked-cams", locked, by_path=str(tmp_path))
+
+
+# ---- cameras by their port on the arm's hub (quick job 115) -----------------------------------
+def fake_usb(tmp_path, arm_chain: str, cameras: dict[str, str], controller="0000:00:14.0"):
+    """A fake /sys and /dev: the arm's board at `arm_chain` ("7.1": socket 7, port 1 of a hub)
+    and cameras at their chains ({"7.2": "video0"}), with by-path links as udev makes them.
+    Returns (registry, by_path, sys_dir)."""
+    sys_dir = tmp_path / "sys"
+    usb = sys_dir / "devices" / "pci0000:00" / controller / "usb1"
+    iface = usb / f"1-{arm_chain}" / f"1-{arm_chain}:1.0"
+    iface.mkdir(parents=True)
+    (sys_dir / "class" / "tty" / "ttyACM0").mkdir(parents=True)
+    os.symlink(iface, sys_dir / "class" / "tty" / "ttyACM0" / "device")
+    tty = tmp_path / "ttyACM0"
+    tty.touch()
+    port = tmp_path / "usb-1a86_USB_Single_Serial_5B41532410-if00"
+    port.symlink_to(tty)
+    by_path = tmp_path / "by-path"
+    by_path.mkdir()
+    for chain, video in cameras.items():
+        (tmp_path / video).touch()
+        name = f"pci-{controller}-usb-0:{chain}:1.0-video-index0"
+        (by_path / name).symlink_to(tmp_path / video)
+    reg = Registry(
+        {
+            "so101-white": Device("so101-white", "so101", ports=(str(port),)),
+            "white-wrist": Device("white-wrist", "camera", beside="so101-white", hub_port="2"),
+            "white-stand": Device("white-stand", "camera", beside="so101-white", hub_port="3"),
+        }
+    )
+    return reg, str(by_path), str(sys_dir)
+
+
+def test_a_camera_is_found_by_its_port_on_the_arms_hub(tmp_path):
+    reg, by_path, sys_dir = fake_usb(tmp_path, "4.1", {"4.2": "video0", "4.3": "video2", "7": "x"})
+    got = camera_paths("white-wrist", reg, by_path=by_path, sys_dir=sys_dir)
+    assert [os.path.basename(p) for p in got] == ["pci-0000:00:14.0-usb-0:4.2:1.0-video-index0"]
+    stand = camera_device("white-stand", reg, by_path, fake_proc(tmp_path, {}), sys_dir)
+    assert stand.endswith("usb-0:4.3:1.0-video-index0")
+
+
+def test_the_arms_hub_follows_the_arm_to_another_socket(tmp_path):
+    reg, by_path, sys_dir = fake_usb(tmp_path, "2.4.1", {"2.4.2": "video0"})
+    got = camera_paths("white-wrist", reg, by_path=by_path, sys_dir=sys_dir)
+    assert got[0].endswith("usb-0:2.4.2:1.0-video-index0")
+
+
+def test_a_camera_on_another_controller_is_not_the_arms(tmp_path):
+    reg, by_path, sys_dir = fake_usb(tmp_path, "4.1", {})
+    os.symlink(os.devnull, os.path.join(by_path, "pci-0000:05:00.0-usb-0:4.2:1.0-video-index0"))
+    with pytest.raises(LookupError, match="no camera in port 2 of so101-white's hub"):
+        camera_paths("white-wrist", reg, by_path=by_path, sys_dir=sys_dir)
+
+
+def test_a_camera_beside_an_arm_says_what_is_missing(tmp_path):
+    reg, by_path, sys_dir = fake_usb(tmp_path, "4", {})  # the arm in the computer's socket
+    with pytest.raises(LookupError, match="not on a USB hub"):
+        camera_paths("white-wrist", reg, by_path=by_path, sys_dir=sys_dir)
+    os.remove(reg.devices["so101-white"].ports[0])
+    with pytest.raises(LookupError, match="so101-white is not plugged in"):
+        camera_paths("white-wrist", reg, by_path=by_path, sys_dir=sys_dir)
+
+
+def test_the_controller_is_the_pci_name_above_the_bus():
+    assert controller_of("/sys/devices/pci0000:00/0000:00:14.0/usb1/1-7/1-7.1") == "0000:00:14.0"
+    behind_a_bridge = "/sys/devices/pci0000:00/0000:00:01.2/0000:02:00.0/usb3/3-1"
+    assert controller_of(behind_a_bridge) == "0000:02:00.0"

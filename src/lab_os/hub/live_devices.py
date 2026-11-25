@@ -24,7 +24,7 @@ from pathlib import Path
 import yaml
 
 from lab_os import config
-from lab_os.devices import Registry, unknown_camera_name
+from lab_os.devices import Registry, socket_on_hub, unknown_camera_name
 
 log = logging.getLogger(__name__)
 
@@ -125,10 +125,11 @@ def identify(
 ) -> list[dict]:
     """The USB devices plugged in now, each as a list entry: a device in devices.yaml by its name,
     every other one as unknown. A camera is one entry (its USB device isn't listed again). Two
-    names for one camera's socket (the white and green sets): the lowest `prefer` rank (the camera
+    names for one camera's socket (or port of an arm's hub): the lowest `prefer` rank (the camera
     of the arm in use), then not borrowed, then devices.yaml's order. Off-limits ones are left
     out."""
     out = []
+    arm_socket: dict[str, str] = {}
     cam_usb = {c["usb"]: c for c in cameras}
     for info in usb:
         cam = cam_usb.get(info["usb"])
@@ -149,6 +150,8 @@ def identify(
         )
         if dev and dev.off_limits:
             continue
+        if dev:
+            arm_socket[dev.name] = info["socket"]  # its cameras may be on its hub (quick job 115)
         if dev:
             kind = (
                 "arm" if dev.kind in ARM_KINDS else "headset" if dev.kind == "quest" else dev.kind
@@ -181,7 +184,8 @@ def identify(
         names = [
             d.name
             for d in registry.devices.values()
-            if d.kind == "camera" and d.socket == cam["socket"]
+            if d.kind == "camera"
+            and cam["socket"] in (d.socket, socket_on_hub(arm_socket.get(d.beside, ""), d.hub_port))
         ]
         if any(registry.devices[n].off_limits for n in names):
             continue

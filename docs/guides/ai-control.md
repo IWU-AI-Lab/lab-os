@@ -162,7 +162,7 @@ The cameras:
 - `so101-white-cam-wrist`: the white arm's wrist camera, along the jaws.
 - `so101-green-cam-stand` and `so101-green-cam-wrist`: the same for the green arm.
 
-The white arm's cameras use the same USB sockets as the green set's for now (socket 7 = wrist, 8 = stand on both sets; `docs/plan/current-focus.md` → "Hacks to clean up").
+The white arm's cameras are on the white arm's USB hub, and the green set's cameras are in sockets 7 (wrist) and 8 (stand). `docs/guides/plug-in.md` tells what goes where.
 
 ## Table map: the stand camera's cm grid
 A printed sheet tells lab-os where the stand camera's pixels are on the table. Then its pictures get a **cm grid** (yellow lines = x forward, blue = y, every 5 cm, numbers every 10 cm, a red dot at the center of the base). The AI reads where the cube is instead of a guess (the guess was 8 cm wrong: GOTCHAS 2026-11-12). `table_point(camera, x_px, y_px)` also changes a pixel into cm. This is Google's method (`docs/dev/existing-work-teleop-ai.md`). It is correct only on the table's surface: read the point where an object **touches** the table. The wrist camera makes the position more exact.

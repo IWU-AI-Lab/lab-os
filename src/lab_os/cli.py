@@ -250,7 +250,19 @@ def main(argv: list[str] | None = None) -> None:
     )
     rb.add_argument("action", choices=["deploy"])
     rb.add_argument("--to", default="raspbot1", help="the Raspbot's ssh name (default raspbot1)")
+    us = sub.add_parser(
+        "usb",
+        help="list every USB device under its USB controller, with its lab-os name (Linux; "
+        "docs/guides/plug-in.md)",
+    )
+    us.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
     args = parser.parse_args(argv)
+    if args.command == "usb":
+        from lab_os import usb_map
+
+        use_config(args)
+        print(usb_map.report())
+        return
     if args.command == "raspbot":
         from lab_os.robots.raspbot import deploy
 
