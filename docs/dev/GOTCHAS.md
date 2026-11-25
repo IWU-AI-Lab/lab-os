@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — Chrome on a laptop: "This site can't be reached", Firefox works (quick job 130)
+**What:** in the lab, the builder's laptop could not open the hub in Chrome. Firefox on the same laptop opened it. The brain sends no `https://` redirect and no HSTS, and the hub pages fetch nothing from `localhost`, so nothing in lab-os makes Chrome refuse. The causes on the laptop: on macOS 15 and later, an app needs the Local Network permission to reach a `192.168.…` address (else `ERR_ADDRESS_UNREACHABLE`), and the permission can be off for Chrome only; a VPN, proxy or extension that only Chrome uses; a typed address without `http://` that Chrome changed to `https://`. Chrome's Local Network Access prompt (Chrome 141 and later) is for a page's requests, not for a typed address.
+**Fix:** the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". Lab step M.6 asks for the error code. If the code is not one of these, add it here.
+
 ### 2026-11-25 — The Windows desktops woke, then dropped every question (quick job 112)
 **What:** in the brain's log of 2026-11-24, `windows-02` and `windows-03` heard the wake word 9 times and never logged a "question on" line. Each time, the page sent the question's audio for 6 s and then cancelled it. The page's silence watch (`web/silence.js`) counts a piece as speech only when it is 3 times the room's level and at least 0.02. On those microphones, the wake word was only 4 to 11 dB over the room (the desk: 10 to 36 dB), so the watch never heard speech and stopped after its 6 s with nothing said.
 **Fix:** after the wake word, a question that the watch did not hear still goes to the transcriber; the transcriber decides. No words: the page says "I didn't hear a question.", and the log says "no words in the question on …". Conversation mode still drops a quiet turn (so that a silent room is not sent every 15 s). The answer on a quiet microphone comes about 6 s after the wake word, not after a short pause.
