@@ -4,6 +4,13 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 
 ---
 
+### 2026-11-24 — The Newline gives its microphone to the computer on its USB touch cable (lab check L.2)
+**What:** on the Pi that drives the Newline (HDMI and the touch cable), `arecord -l` lists `card 2: Elite [Newline Q Pro Elite], device 0: USB Audio`. The Pi has no microphone of its own, but it can use the Newline's. The manual in `docs/device_manuals/` is for another model and says nothing about it.
+**Then:** the Pi's Chrome needs the "Insecure origins treated as secure" flag for the hub's address before it may use a microphone (lab check L.2).
+
+### 2026-11-24 — The wake word worked badly with the card reader on the USB hub
+**What:** with the card reader and `so101-white` on a USB hub in the desktop's motherboard USB-C port, and the Quest in the front USB-C port, the wake word answered badly. After a restart without the card reader, it worked well. The cause is not known yet (quick job 115).
+
 ### 2026-11-24 — `quest-view --wifi` gave up before the Quest's adb was back (lab check T.4)
 **What:** `uv run lab-os quest-view --wifi` said "TCP mode is on, but adb can't reach 192.168.8.180:5555". The Quest was on the router's Wi-Fi at that address: a ping answered, port 5555 was open a minute later, and `adb connect 192.168.8.180:5555` then worked. After `adb tcpip 5555`, adbd on the headset restarts and needs a few seconds. The three `adb connect` tries ran one right after the other, so all three came too early.
 **Fix:** up to 10 tries, 1 s apart (`CONNECT_TRIES` in `quest_view.py`).

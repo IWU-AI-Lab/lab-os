@@ -228,3 +228,6 @@ There are no other people in the lab before the demo.
 - **V.24** With each word that answered 4 or 5 times: talk with another person near the microphone for 10 minutes, without the wake word. → did it wake by itself? (no / yes: write the times)
 - **V.14** Say "(wake word), start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
 
+## M4. After the demo: "set up the room" (10 min)
+Skipped on 2026-11-24. Open the hub on each computer first (`/design?device=<its name>`).
+- **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
