@@ -137,6 +137,7 @@ uv run --extra so101 lab-os serve --speed 0.3 --open desk
 - **H.9** Quick job 80. Keep a hand at STOP. Put the cube about 20 cm straight in front of the arm. Set ⚙ → Assistant → **Full Access** off, and ⚙ → Robots → **The Assistant May Move the Arm** off. Ask the hub's assistant: "Pick up the cube." → did the arm stay still? (yes / no)
 - **H.10** Set **Full Access** on. Ask again, in one sentence: "Pick up the cube." → did the arm pick it up? (yes / no) About how many seconds did it take? Write the time. Set **Full Access** off again.
 - **H.11** Quick job 81. Put the cube about 20 cm straight in front of the arm. In Claude Code, ask: "Pick up the cube with one run_program call, then hold it at the handover pose." → did the arm do it in one call? (yes / no) How many seconds did it take? Earlier, single moves took about a minute or more.
+- **H.12** Quick job 116. Open the Cameras page on the desktop, and keep it open. In Claude Code, ask: "Take a camera_snapshot of so101-white-cam-stand, then of so101-white-cam-wrist." → did both pictures come, with no "couldn't open the camera"? (yes / no: copy the message) Did the Cameras page keep its pictures during the snapshots? (yes / no)
 
 ## I. The icon, one hub window and full screen (30 min)
 Quick job 59. The hub window is now a browser of its own. Setup: the lab desktop, no brain running, every hub window closed.

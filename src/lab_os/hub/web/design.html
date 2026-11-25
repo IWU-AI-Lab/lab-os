@@ -2679,6 +2679,14 @@ $(".core").addEventListener("click", (e) => {
   SFX.blip(); openChat();
 });
 $("#mod-back").addEventListener("click", closeModule);
+// a tap or click outside the module's frame closes it, like Back (quick job 129); the press and the release
+// must both be outside, so a drag that ends there (a slider, a text selection) keeps it open
+let modDownOutside = false;
+$("#module").addEventListener("pointerdown", (e) => { modDownOutside = e.target === $("#module"); });
+$("#module").addEventListener("click", (e) => {
+  if (!modDownOutside || e.target !== $("#module") || S.closing) return;
+  e.stopPropagation(); closeModule();
+});
 // callouts open their details like module buttons; their own controls (range, list, devices) keep working
 document.querySelectorAll(".side .panel[data-detail]").forEach((p) => {
   const go = () => { if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule(p); };
@@ -3631,6 +3639,8 @@ $("#mod-send").addEventListener("click", (e) => {
   $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
 });
 $("#open-on").addEventListener("click", (e) => e.stopPropagation());
+// a tap anywhere outside "Open on…" closes it (quick job 129); the page in the frame has its own listener
+addEventListener("pointerdown", (e) => { if (!$("#open-on").hidden && !e.target.closest("#open-on, #mod-send")) closeOpenOn(); });
 // a module sent from another device: shown at once, even from the start screen (that device has the hub open,
 // so it's there for this; no startup, no new conversation); a module already open here gives way
 function openHere(id, sentFrom) {

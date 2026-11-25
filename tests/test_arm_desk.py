@@ -95,7 +95,7 @@ async def desk(tmp_path, monkeypatch):
     table_map.save(_plain_map(SETUP.camera))
     monkeypatch.setattr(devices, "camera_device", lambda cam: "/dev/video-fake")
     shot = {"jpeg": picture((20, 0, BLUE, 2.5))}
-    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w: shot["jpeg"])
+    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w, cam: shot["jpeg"])
     probe = FakeArm()
     lo, hi = probe.limits["gripper"].low + 3, probe.limits["gripper"].high - 3
     arm = CubeInTheJaws(stop_deg=lo + (hi - lo) * 0.3)

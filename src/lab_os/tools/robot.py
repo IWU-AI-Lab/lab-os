@@ -381,12 +381,13 @@ class RobotTools:
         from lab_os.camera_feed import FEEDS
 
         try:
-            live = FEEDS.frame(camera)  # open for the teleop page: its newest frame (quick job 63)
+            # open for a page under any of its names: its newest frame (quick jobs 63 and 116)
+            live = FEEDS.frame(camera)
             if live is not None:
                 jpeg = await asyncio.to_thread(_frame_jpeg, live, width_px)
             else:
-                path = devices.camera_device(camera)
-                jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px)
+                path = devices.camera_device(camera)  # nobody else has it (one program per camera)
+                jpeg = await asyncio.to_thread(_grab_jpeg, path, width_px, camera)
         except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed, Refused) as e:
             if game is None and isinstance(e, Refused):
                 raise
@@ -917,10 +918,15 @@ def _brief(r: dict) -> dict:
     return {k: r[k] for k in keep if k in r}
 
 
-def _grab_jpeg(path: str, width_px: int) -> bytes:
-    """Open the camera at `path`, take one frame (the first few are dark while it adjusts), close
-    it, and return it as a JPEG `width_px` wide."""
-    return _frame_jpeg(grab_frame(path), width_px)
+def _grab_jpeg(path: str, width_px: int, camera: str) -> bytes:
+    """One settled frame of `camera` at `path` as a JPEG `width_px` wide. It opens through the
+    brain's camera feeds, so a page that shows the camera now shares it (quick job 116)."""
+    from lab_os.camera_feed import FEEDS, CameraError
+
+    try:
+        return _frame_jpeg(FEEDS.grab(camera, path), width_px)
+    except CameraError as e:
+        raise Refused(str(e)) from e
 
 
 def _frame_jpeg(frame, width_px: int) -> bytes:
