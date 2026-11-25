@@ -84,7 +84,7 @@ from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
-from lab_os.devices import Registry, load_registry
+from lab_os.devices import Registry, load_registry, users_of
 from lab_os.hub import launch, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
@@ -92,7 +92,14 @@ from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
 from lab_os.hub.internet import InternetCheck
-from lab_os.hub.live_devices import LiveDevices, SeenStore, identify, usb_devices, video_cameras
+from lab_os.hub.live_devices import (
+    ARM_KINDS,
+    LiveDevices,
+    SeenStore,
+    identify,
+    usb_devices,
+    video_cameras,
+)
 from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.raspbot_page import RASPBOT, add_raspbot
 from lab_os.hub.room import RoomDesk
@@ -115,6 +122,7 @@ from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.recording import Recorder
 from lab_os.teleop.server import (
     CONTROL,
+    LINKS,
     LOOP,
     OFF_TELL_S,
     OFF_TOLD,
@@ -1175,12 +1183,38 @@ def scan_system() -> tuple[list[dict], list[dict], list[str]]:
     return usb_devices(), video_cameras(), adb_devices(adb) if adb else []
 
 
+def ports_in_use(usb: list[dict]) -> dict[str, list[str]]:
+    """The arms plugged in now whose port another program has open: {arm: ["lelab (pid 42)"]}.
+    Looks at /proc (in a thread: it takes some ms); never opens a port (quick job 141)."""
+    try:
+        registry = load_registry()
+    except (config.ConfigError, OSError, ValueError):
+        return {}
+    out = {}
+    for d in registry.devices.values():
+        if (
+            d.kind in ARM_KINDS
+            and not d.off_limits
+            and any(u.matches(i) for i in usb for u in d.usb)
+        ):
+            users = [u for port in d.ports for u in users_of(port) or ()]
+            if users:
+                out[d.name] = users
+    return out
+
+
 def live_entries(
-    app: web.Application, usb: list[dict], cams: list[dict], adb: list[str]
+    app: web.Application,
+    usb: list[dict],
+    cams: list[dict],
+    adb: list[str],
+    in_use: dict[str, list[str]] | None = None,
 ) -> list[dict]:
     """The live list's entries now: the USB devices and cameras (known by devices.yaml or not),
-    with the brain's own knowledge added: the arms it drives (their motors' power), the Quests that
-    adb lists, raspbot1 and every open hub screen."""
+    with the brain's own knowledge added: the arms it drives (their motors' power), the other arms
+    whose port another program has (`in_use`, from `ports_in_use`), the Quests that adb lists or
+    whose teleop page is open, raspbot1 and every open hub screen."""
+    in_use = in_use or {}
     try:
         registry = load_registry()
     except (config.ConfigError, OSError, ValueError) as e:
@@ -1211,6 +1245,9 @@ def live_entries(
     for d in out:
         if d["kind"] == "arm" and d["id"] in driven:
             d |= _arm_power(driven[d["id"]])
+        elif d["kind"] == "arm" and in_use.get(d["id"]):  # the green arms with LeLab, say
+            users = ", ".join(in_use[d["id"]])
+            d |= {"power": "in use", "problem": f"Another program has its port: {users}."}
     for dev in registry.devices.values():  # the Quests adb lists (by cable or Wi-Fi)
         if dev.kind != "quest" or dev.name in have or dev.off_limits:
             continue
@@ -1226,6 +1263,13 @@ def live_entries(
                     "via": "adb (Wi-Fi)" if wifi else "adb (USB)",
                 }
             )
+            have.add(dev.name)
+    for link in list(app[LINKS].values()) if LINKS in app else ():  # a Quest's teleop page
+        quest = _quest_of_link(registry, link)
+        if quest is None or quest["id"] in have:
+            continue
+        have.add(quest["id"])
+        out.append(quest)
     bot = app[RASPBOT].bot if RASPBOT in app else None
     if bot is not None and not bot.is_fake and bot.connected:
         dev = registry.devices.get(bot.name)
@@ -1255,6 +1299,35 @@ def live_entries(
     return out
 
 
+def _quest_of_link(registry: Registry, link: dict) -> dict | None:
+    """A teleop page open in a Quest's browser (quick job 141): the Quest is connected, also
+    without adb (on Wi-Fi). Known by its device name (`?device=quest-a`) or its address."""
+    if "Quest" not in link.get("agent", ""):
+        return None
+    remote, name = link.get("remote", ""), link.get("device", "")
+    dev = next(
+        (
+            d
+            for d in registry.devices.values()
+            if d.kind == "quest" and (d.name == name or (d.host and d.host == remote))
+        ),
+        None,
+    )
+    if dev is not None and dev.off_limits:
+        return None
+    entry = {"kind": "headset", "via": "teleop page (network)"}
+    if dev is not None:
+        what = " ".join(dev.notes.split())[:140] or "Quest"
+        return entry | {"id": dev.name, "name": dev.name, "known": True, "what": what}
+    where = remote or "unknown address"
+    return entry | {
+        "id": f"quest:{remote or 'unknown'}",
+        "name": f"Quest at {where}",
+        "known": False,
+        "what": "A Quest with the teleop page open (no device name, not in devices.yaml).",
+    }
+
+
 def _arm_power(each: TeleopLoop) -> dict:
     """An arm the brain drives: its motors' power, from the last servo reading."""
     out = {"driven": True, "problem": each.arm_problem}
@@ -1271,8 +1344,9 @@ def _arm_power(each: TeleopLoop) -> dict:
 async def look_at_devices(app: web.Application) -> bool:
     """One look; every hub page gets the list when it changed. True: it changed."""
     usb, cams, adb = await asyncio.to_thread(app[LIVE_SCAN])
+    in_use = await asyncio.to_thread(ports_in_use, usb)
     live = app[LIVE]
-    if not live.update(live_entries(app, usb, cams, adb)):
+    if not live.update(live_entries(app, usb, cams, adb, in_use)):
         return False
     await app[HUB_DEVICES].tell_all({"type": "live-devices", "devices": live.listing()})
     return True

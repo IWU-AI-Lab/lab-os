@@ -227,7 +227,7 @@ class ProjectTools:
                     (x for x in now.values() if d.name in x.get("names", ())), None
                 )
                 entry["connected"] = here is not None
-                if here and here.get("driven"):
+                if here and (here.get("driven") or here.get("power") == "in use"):
                     entry["motor_power"] = here.get("power") or "not known yet"
                     if here.get("problem"):
                         entry["problem"] = here["problem"]
@@ -242,6 +242,7 @@ class ProjectTools:
             out["screens"] = [d["name"] for d in now.values() if d["kind"] == "screen"]
             out["how"] = (
                 "connected: plugged in or on the network now. motor_power only for the arms the "
-                "brain drives (the others: not known; their port is not opened)."
+                "brain drives (the others: not known; their port is not opened), or 'in use' "
+                "when another program has the arm's port."
             )
         return out
