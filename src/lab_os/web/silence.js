@@ -2,7 +2,8 @@
 // so the tests run it with node (tests/test_silence_watch.py).
 
 // The question after the wake word ends after this much quiet (1.5 s, then 1 s, then 1.6 s, now 2 s; the
-// brain may end it sooner, when the voice service hears the pause at the end of a sentence).
+// brain may end it sooner: its turn model hears a finished question about 0.3 s after the last word,
+// quick job 110, lab_os.ai.turn; or the voice service hears the pause at the end of a sentence).
 // Quick job 98: 1.6 s with a room level that rose while the person talked cut long questions and
 // "37 times 48, … then add 199".
 export const WAKE_QUIET_MS = 2000;

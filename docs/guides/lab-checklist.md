@@ -48,6 +48,9 @@ uv run pytest -q
 ## S. The start and the voice (10 min)
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
 
+- **S.1** Quick job 110. Start the brain: `uv run lab-os serve`. Open `http://localhost:8080` and tap the start screen. Set ⚙ → This device → **Talking to It** to **wake word**. Say "(wake word), what time is it?" in a normal voice. → did the hub start to think less than 1 s after your last word? (yes / no: about how long)
+- **S.2** Say "(wake word), calculate 37 times 48". Stop for about 1 s. Then say "then add 199". → did it wait for "then add 199"? (yes / no) Did it say 1975? (yes / no)
+
 ## H. The AI moves the arm: "Hand me the cube" (15 min)
 How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves the arm". Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Open Monitor on your phone (`http://192.168.8.130:8080/monitor`) for its STOP. Keep a hand on it while the arm has power.
 - **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)

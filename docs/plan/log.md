@@ -172,6 +172,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-25 | **The end of a question after the wake word: Pipecat's Smart Turn v3.2 on the brain** (quick job 110, `models/smart-turn/`, BSD 2-clause). After 0.3 s of quiet, it hears the last 8 s and says whether the question is finished; then the question ends at once. Not finished: the page's 2 s of quiet still ends it. Push-to-talk is unchanged (the release ends it). | The builder asked for no fixed wait. Smart Turn is maintained, runs on the CPU in about 40 ms, and uses `onnxruntime`, which lab-os already has. |
 | 2026-11-25 | **Three lanes at once** (lane 1: voice and the assistant; lane 2: arms, teleop, VR and the Raspbot; lane 3: the hub, its pages and the devices). Replaces the two lanes of 2026-11-20. | The builder: more jobs before 2026-12-01. |
 | 2026-11-25 | **Until the demo, a change to a safety rule merges without the builder's review** (STOP, the soft limits, the floor, the speed caps, one controller at a time, the freeze). The green arms' rules and `.claude/` still wait. Replaces a part of the 2026-11-20 row. | The builder: no safety reviews while the builder works fast. |
 | 2026-11-25 | **"Etc." in a job means every related thing**, not only the list (`AGENTS.md`). | The builder: sessions did only what was listed. |

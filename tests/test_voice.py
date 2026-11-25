@@ -939,6 +939,56 @@ async def test_conversation_mode_listens_again_after_each_answer(
     await ws.close()
 
 
+class FakeTurn:
+    """The turn model, with a fixed score (quick job 110)."""
+
+    why_not = None
+
+    def __init__(self, score):
+        self.score, self.asked = score, 0
+
+    def finished(self, pcm):
+        self.asked += 1
+        return self.score
+
+
+LOUD_50MS = b"\x00\x10" * 800  # 50 ms of speech (4096)
+QUIET_50MS = b"\x05\x00" * 800  # 50 ms of the room
+
+
+@pytest.mark.parametrize("score", [0.9, 0.1])
+async def test_the_turn_model_ends_a_finished_question(
+    aiohttp_client, aiohttp_server, key, tmp_path, score
+):
+    """Quick job 110: 0.6 s of speech and 0.3 s of quiet ask the turn model. Finished → the brain
+    ends the question itself ("ended", ended by the turn model); not finished → it waits for the
+    page's silence watch (the page then sends "end")."""
+    from lab_os.hub.server import BRAIN
+
+    app, conv, _ = await voice_app(aiohttp_server, tmp_path, heard="What time is it?")
+    turn = app[BRAIN].voice.turn_model = FakeTurn(score)
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws/voice?device=desk")
+    await ws.send_json({"type": "converse", "on": True})
+    await until(ws, "listening", [])
+    for _ in range(12):
+        await ws.send_bytes(LOUD_50MS)
+    for _ in range(8):
+        await ws.send_bytes(QUIET_50MS)
+    if score > 0.5:
+        await until(ws, "ended", [])
+    else:
+        with pytest.raises(asyncio.TimeoutError):
+            await until(ws, "ended", [], timeout=0.5)
+        await ws.send_json({"type": "end"})
+    await until(ws, "audio_end", [])
+    assert turn.asked == 1
+    await ws.send_json({"type": "playing", "seq": 0})  # the turn's timing is kept here
+    await asyncio.sleep(0.1)
+    assert app[BRAIN].voice.timings[-1]["ended_by"] == ("turn model" if score > 0.5 else "page")
+    await ws.close()
+
+
 async def test_that_s_all_ends_it_and_a_phrase_starts_it(
     aiohttp_client, aiohttp_server, key, tmp_path
 ):
