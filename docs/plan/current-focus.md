@@ -53,7 +53,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
    - **Done when:** the real arm does the cube task from a Claude Code prompt.
 
 3. **Cameras for the AI.** `pose_view` (2026-11-11) and `camera_snapshot` (2026-11-12) are built and were used in the cube pick. The stand camera's cm grid (2026-11-16) worked on 2026-11-19: 24 of 24 corners, worst 1.3 mm; the AI found the cube to about 1 cm with no position given in words.
-   - **Left:** a camera for each arm by name (hack below).
+   - Each arm's cameras have its names: the white set's by their port on the white arm's USB hub (quick job 115, 2026-11-25).
    - **Done when:** "pick up the red block" works with no positions given in words.
 
 4. **Personas** (done 2026-11-10). `docs/dev/personas.md`.
@@ -94,7 +94,6 @@ The Current Project panel reads this list: each step's **bold title** is what th
 
 ## Hacks to clean up
 - `src/lab_os/lerobot_teleop.py` (`child_env`, quick job 91): `CI=1` for LeRobot's teleop and its Rerun turns off Rerun's anonymous usage data. Rerun 0.33 has no other switch except `rerun analytics disable`, which changes the user's own Rerun setting. Replace it when Rerun has an environment variable for it, or when the builder chooses to switch it off on the lab desktop.
-- `config/devices.yaml`: `so101-white-cam-stand` / `-cam-wrist` (2026-11-12; `-cam-a` / `-b` until quick job 15, 2026-11-16) are a temporary alias of sockets 7 and 8, which are also the green set's cameras, because the white arm's two cameras sit in those sockets today (7 = wrist, 8 = stand on both sets; the white names were the wrong way round until quick job 29, 2026-11-18). The two cables must be in the right sockets: on 2026-11-19 they were swapped. Give each setup its own names (a looks from above, b is the wrist camera) when the powered USB hub arrives. `camera_snapshot` (step 3) is built for the test; its tidy-up (a camera for the arm by name, not by hand) is left.
 - `tools/mcp_server.py` (`McpHttp.shutdown`, quick job 44): to end every AI tool's session before the MCP server stops, it reads the MCP library's private session list (`_server_instances`). Without it, the stop still ends in about 1 s, but uvicorn prints an error trace. Replace it when the library offers a public call.
 - `robots/xarm.py`: 240°/1000 units is the datasheet scale, not measured (zero = the "Run" pose, signs observed 2026-10-27). Motion tuning (`lead_s` 0.3 s, `max_deg_per_s` 120, `idle_read_after_s` 0.6, `min_read_interval_s` 0.25) is from first tests, not optimized. Default limits (until hand calibration) come from the builder's grab script.
 

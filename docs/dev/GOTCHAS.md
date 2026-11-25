@@ -4,12 +4,16 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — A camera on a USB hub never matched its `socket`, and raw pictures fill a USB 2.0 controller (quick job 115)
+**What:** (1) A camera behind a hub has a longer `/dev/v4l/by-path/` name: `…-usb-0:7.2:1.0-video-index0` (socket 7, port 2 of the hub). `socket: usb-0:7` matches only `usb-0:7:`, so the white cameras on the white arm's hub were "not found". (2) OpenCV opens these cameras in their raw default format. A UVC camera then asks for a large part of a USB 2.0 controller's fixed timetable, which the other cameras and the USB microphone also need. This is a possible cause of the bad wake word with more devices plugged in (2026-11-24 entry below). It is not proven: part P of the demo run checks it.
+**Fix:** a camera can be `beside: <arm>` with `hub_port: "2"`: lab-os finds the arm's hub in `/sys`, on the same controller, and the name follows the arm to any socket. The brain asks the cameras for MJPEG. `uv run lab-os usb` lists each device under its controller and warns when too many cameras and microphones share one. `docs/guides/plug-in.md`.
+
 ### 2026-11-24 — The Newline gives its microphone to the computer on its USB touch cable (lab check L.2)
 **What:** on the Pi that drives the Newline (HDMI and the touch cable), `arecord -l` lists `card 2: Elite [Newline Q Pro Elite], device 0: USB Audio`. The Pi has no microphone of its own, but it can use the Newline's. The manual in `docs/device_manuals/` is for another model and says nothing about it.
 **Then:** the Pi's Chrome needs the "Insecure origins treated as secure" flag for the hub's address before it may use a microphone (lab check L.2).
 
 ### 2026-11-24 — The wake word worked badly with the card reader on the USB hub
-**What:** with the card reader and `so101-white` on a USB hub in the desktop's motherboard USB-C port, and the Quest in the front USB-C port, the wake word answered badly. After a restart without the card reader, it worked well. The cause is not known yet (quick job 115).
+**What:** with the card reader and `so101-white` on a USB hub in the desktop's motherboard USB-C port, and the Quest in the front USB-C port, the wake word answered badly. After a restart without the card reader, it worked well. The cause is not known yet (quick job 115). Quick job 115: a possible cause and the plan, in the 2026-11-25 entry above.
 
 ### 2026-11-24 — `quest-view --wifi` gave up before the Quest's adb was back (lab check T.4)
 **What:** `uv run lab-os quest-view --wifi` said "TCP mode is on, but adb can't reach 192.168.8.180:5555". The Quest was on the router's Wi-Fi at that address: a ping answered, port 5555 was open a minute later, and `adb connect 192.168.8.180:5555` then worked. After `adb tcpip 5555`, adbd on the headset restarts and needs a few seconds. The three `adb connect` tries ran one right after the other, so all three came too early.

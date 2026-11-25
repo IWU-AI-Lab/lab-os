@@ -38,7 +38,7 @@ Cables to plug in, on the lab desktop:
 - `so101-white` (the follower): its USB cable and its power supply.
 - `so101-green` (the follower): its USB cable and its power supply.
 - The Quest: its USB-C data cable.
-- The arms need no cameras for this part. If no USB socket is free, unplug the two cameras in sockets 7 and 8.
+- The arms need no cameras for this part. If no USB socket is free, unplug the green set's two cameras (sockets 7 and 8).
 - The green leader arm can stay plugged in. lab-os does not open it.
 
 Then run:
@@ -79,7 +79,7 @@ Setup: `so101-white` connected, the brain running (part T's command without `--l
 Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/guides/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
 
 Cables to plug in, on the lab desktop:
-- The C615: a free USB socket. If no socket is free, unplug the two cameras in sockets 7 and 8. This part does not use them.
+- The C615: a free USB socket. If no socket is free, unplug the green set's two cameras (sockets 7 and 8). This part does not use them.
 - Put the C615 on top of the desktop's monitor, facing the chair.
 
 Then run:
@@ -109,7 +109,7 @@ uv run --extra so101 lab-os serve --speed 0.3
 ## G. Tic-tac-toe (45 min)
 Preview 1: Claude Code plays tic-tac-toe with `so101-white` against you. How it works: `docs/guides/tic-tac-toe.md`. You need the stand camera's table map (made on 2026-11-19), the cube, and 5 red and 5 blue pieces (LEGO, about 3 cm tall).
 
-Before the lab day, print `models/games/tic-tac-toe-sheet-letter.pdf` at 100 % ("Actual size"). Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
+Before the lab day, print `models/games/tic-tac-toe-sheet-letter.pdf` at 100 % ("Actual size"). Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Then run:
 ```bash
 uv run --extra so101 lab-os serve --speed 0.3
 ```
@@ -122,7 +122,7 @@ uv run --extra so101 lab-os serve --speed 0.3
 ## H. "Hand me the cube" (25 min)
 Preview 4: the hub's assistant moves the arm to a named pose, and hands you the blue cube. How it works: `docs/guides/hub.md` → "The assistant moves the arm". You need the blue cube and the stand camera's table map. Stand in front of the arm, across the table, with a hand near STOP on a second device (Monitor).
 
-Plug in `so101-white` (its USB cable and its power supply) and its stand camera (socket 8). Then run:
+Plug in `so101-white` (its USB cable and its power supply) and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Then run:
 ```bash
 uv run --extra so101 lab-os serve --speed 0.3 --open desk
 ```
@@ -173,7 +173,7 @@ Quick job 73. Start lab-os with its icon, with no arm, no xArm and no USB microp
 - **U.8** In the Quest, open the hub in VR, then **Teleop**. Hold the grip, then press **A**. → does the panel say "Stopped", with "Let go of the grip, then grab again" under it? (yes / no) Let go of the grip. → does the panel change to "Holding" at once, without a new grab? (yes / no)
 - **U.9** Quick job 60. Open the hub in VR (the Quest on its USB cable). → is the hub easy to read, and does all of it still fit when you turn your head a little? (yes / no) Point at ⚙ (beside ⏻) and pull the trigger. → does Settings open, with This Device first? (yes / no)
 - **U.10** In Settings → This Device, switch **Sound** off, then on again. → does the line at the bottom say "Saved"? (yes / no) Press **B**. → does Settings close? (yes / no)
-- **U.11** Quick job 63. Plug in `so101-white` and its two cameras (sockets 7 and 8). Open Teleop on the desktop. → under the joint angles, do you see the stand and the wrist picture, moving? (yes / no) Close Teleop and wait 10 seconds. Start LeLab's camera view of the green set (it uses the same sockets). Open Teleop again. → does each picture say that the camera is in use? (yes / no)
+- **U.11** Quick job 63. Plug in `so101-white` and its two cameras, on its USB hub (`docs/guides/plug-in.md`). Open Teleop on the desktop. → under the joint angles, do you see the stand and the wrist picture, moving? (yes / no) Plug in the green set's two cameras (sockets 7 and 8). Start LeLab's camera view of the green set. Open the Cameras page. → do the two green pictures say that the camera is in use? (yes / no)
 - **U.12** Quick job 49. Connect the Quest by USB. On the desktop's hub, press the Quest view button. Close the window with its own X. → does the button go dark within a second or two? (yes / no) Press it once. → does the window open again? (yes / no)
 - **U.13** Quick job 50. Keep a hand at STOP. With `so101-white` and AI Control open, ask the hub's assistant "move the arm to home" (⚙ → Robots → The Assistant May Move the Arm on). → does AI Control show the move without "clipped"? (yes / no) → is the arm folded where it was before? (yes / no)
 - **U.14** Quick job 51. Keep a hand at STOP. Put the cube about 20 cm straight in front of `so101-white`. Ask the hub's assistant "Hand me the cube". → when the jaws closed, did they hold the cube with most of their length, not only the tips? (yes / no) Did the gripper touch the table? (yes / no)

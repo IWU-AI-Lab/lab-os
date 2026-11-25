@@ -125,6 +125,8 @@ def test_every_camera_once_for_each_socket():
             "so101-white-cam-stand": Device("so101-white-cam-stand", "camera", socket="usb-0:8"),
             "secret-cam": Device("secret-cam", "camera", off_limits=True, socket="usb-0:9"),
             "new-cam": Device("new-cam", "camera"),  # no socket yet: shown, its picture says why
+            "hub-cam": Device("hub-cam", "camera", beside="so101-white", hub_port="2"),
+            "hub-cam-2": Device("hub-cam-2", "camera", beside="so101-white", hub_port="2"),
         }
     )
     assert camera_feed.all_cameras(reg) == [
@@ -134,6 +136,7 @@ def test_every_camera_once_for_each_socket():
         },
         {"id": "so101-white-cam-stand", "names": ["so101-white-cam-stand"]},
         {"id": "new-cam", "names": ["new-cam"]},
+        {"id": "hub-cam", "names": ["hub-cam", "hub-cam-2"]},  # one port of the arm's hub
     ]
     assert camera_feed.all_cameras(Registry({})) == []
 

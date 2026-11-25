@@ -5,8 +5,8 @@ open (LeLab, a recording: the green set's rule) is refused with a sentence, befo
 
 One reader thread per camera keeps its newest frame; `jpeg(name)` gives it as a JPEG, `frame(name)`
 gives the raw frame to `camera_snapshot` while the camera is open here (two opens of one camera in
-the same program can fail). Cameras are keyed by their device file: two names for one socket (the
-white and green sets share sockets 7 and 8, `config/devices.yaml`) share one reader.
+the same program can fail). Cameras are keyed by their device file: two names for one camera share
+one reader.
 """
 
 import logging
@@ -35,6 +35,9 @@ def _open_capture(path: str):
     if not cap.isOpened():
         cap.release()
         raise CameraError(f"couldn't open the camera at {path}")
+    # MJPEG, not the raw default: a raw picture takes much of a USB 2.0 controller's time, which
+    # the other cameras and the USB microphone need (quick job 115). A camera without it ignores it.
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     return cap
 
 
@@ -158,16 +161,17 @@ def arm_cameras(arm: str, registry: devices.Registry | None = None) -> list[str]
 
 
 def all_cameras(registry: devices.Registry | None = None) -> list[dict]:
-    """Every camera in devices.yaml for the Cameras page (quick job 93), one entry per USB socket:
-    {"id": the first name (the one to ask pictures for), "names": every name for that socket}.
-    Two names for one socket (the white and green sets) are one camera: one picture, not two.
+    """Every camera in devices.yaml for the Cameras page (quick job 93), one entry per USB socket
+    (or port of an arm's hub): {"id": the first name (the one to ask pictures for), "names": every
+    name for that place}. Two names for one place are one camera: one picture, not two.
     Off-limits cameras are left out. In devices.yaml order; opens and lists nothing."""
     registry = registry or devices.load_registry()
     out: dict[str, dict] = {}
     for d in registry.devices.values():
         if d.kind != "camera" or d.off_limits:
             continue
-        key = d.socket or d.name  # no socket: its own entry (the picture says what's missing)
+        # no socket: its own entry (the picture says what's missing)
+        key = d.socket or (f"{d.beside}/{d.hub_port}" if d.beside else d.name)
         if key in out:
             out[key]["names"].append(d.name)
         else:

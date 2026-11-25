@@ -69,6 +69,7 @@ uv run lab-os-teleop serve   # teleop on its own: XR page + fake arm (docs/guide
 uv run lab-os serve --config ~/my-lab-os   # another place's config folder (docs/dev/places.md)
 uv run lab-os icon --device desk           # the "Start lab-os" icon (devices: docs/guides/hub.md)
 uv run lab-os logs --at 18:14              # the brain's log around a time (no --at: the end)
+uv run lab-os usb                          # every USB device under its controller (docs/guides/plug-in.md)
 uv run lab-os raspbot deploy               # the Raspbot page's program to raspbot1 (docs/guides/raspbot.md)
 ```
 Message format between clients and the brain: `docs/dev/protocol.md`. Keep it updated when adding message types. The lab-os core (brain, slots, plug-ins) should grow out of the teleop code, not be designed up front.

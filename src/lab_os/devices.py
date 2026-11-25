@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 
 BY_ID_DIR = "/dev/serial/by-id/"
 BY_PATH_DIR = "/dev/v4l/by-path/"  # cameras by USB socket: identical cameras share a serial
+SYS_DIR = "/sys"  # Linux's device tree: which hub and USB controller a device is on (quick job 115)
 
 
 class PortNotAllowed(RuntimeError):
@@ -74,6 +75,10 @@ class Device:
     # e.g. "robots/so_follower/sheep.json"; lab-os drives with its copy in calibration/<name>/
     training_calibration: str = ""
     socket: str = ""  # cameras: the USB socket in /dev/v4l/by-path/ names, e.g. "usb-0:7"
+    # cameras on an arm's USB hub (quick job 115): the arm, and the camera's port on that hub
+    # ("2"; "4.1" for a hub inside the hub). The name then follows the arm to any socket.
+    beside: str = ""
+    hub_port: str = ""
     # arms: the table's height in the arm's own numbers (cm; its z = 0 is the bottom of its base).
     # An arm standing on a plate has a negative one (so101-white: -1.6, quick job 28).
     table_z_cm: float = 0.0
@@ -137,6 +142,8 @@ def _read_devices(path: Path) -> dict[str, Device]:
             borrowed=bool(spec.get("borrowed", False)),
             training_calibration=spec.get("training_calibration", ""),
             socket=spec.get("socket", ""),
+            beside=str(spec.get("beside") or ""),
+            hub_port=str(spec.get("hub_port") or ""),
             table_z_cm=float(spec.get("table_z_cm", 0.0)),
             joint_offsets_deg=tuple(
                 (str(j), float(v)) for j, v in (spec.get("joint_offsets_deg") or {}).items()
@@ -331,32 +338,95 @@ def check_not_in_use(name: str, paths: list[str], proc: Path = Path("/proc")) ->
             )
 
 
-# ---- cameras (by USB socket) ------------------------------------------------------------------
+# ---- cameras (by USB socket, or by their port on the arm's hub) -------------------------------
+def usb_device_dir(port: str, sys_dir: str = SYS_DIR) -> str:
+    """The sysfs folder of the USB device behind serial port `port` (a by-id link), for example
+    /sys/devices/pci0000:00/0000:00:14.0/usb1/1-7/1-7.1. "" when it isn't there."""
+    tty = os.path.basename(os.path.realpath(port))
+    iface = os.path.join(sys_dir, "class", "tty", tty, "device")
+    if not os.path.exists(iface):
+        return ""
+    return os.path.dirname(os.path.realpath(iface))
+
+
+def controller_of(usb_dir: str) -> str:
+    """The PCI name of the USB controller above a sysfs USB folder ("0000:00:14.0"): the part
+    before "usbN", as /dev/v4l/by-path/ names start ("pci-0000:00:14.0-usb-…")."""
+    parts = usb_dir.split(os.sep)
+    for i, part in enumerate(parts):
+        if part.startswith("usb") and part[3:].isdigit() and i:
+            return parts[i - 1]
+    return ""
+
+
+def chain_of(usb_dir: str) -> str:
+    """The port chain of a sysfs USB folder: "1-7.1" → "7.1" (socket 7, port 1 of its hub)."""
+    name = os.path.basename(usb_dir)
+    return name.split("-", 1)[1] if "-" in name else ""
+
+
+def _beside_socket(device: Device, registry: Registry, sys_dir: str) -> tuple[str, str]:
+    """(controller, chain) of a camera on its arm's hub: the arm's chain minus its own port, then
+    the camera's `hub_port`. Raises LookupError with what to do."""
+    arm = registry.devices.get(device.beside)
+    if arm is None or not arm.ports:
+        raise LookupError(
+            f"{device.name}: beside {device.beside}, which has no port in devices.yaml"
+        )
+    if not device.hub_port:
+        raise LookupError(f"{device.name}: beside {device.beside} needs a hub_port in devices.yaml")
+    usb = usb_device_dir(arm.ports[0], sys_dir) if os.path.exists(arm.ports[0]) else ""
+    if not usb:
+        raise LookupError(
+            f"{device.name}: {device.beside} is not plugged in, so its USB hub is not known"
+        )
+    chain = chain_of(usb)
+    if "." not in chain:
+        raise LookupError(
+            f"{device.name}: {device.beside} is not on a USB hub (it is in the computer's socket "
+            f"{chain}). Plug the arm and its cameras into one hub."
+        )
+    return controller_of(usb), f"{chain.rsplit('.', 1)[0]}.{device.hub_port}"
+
+
 def camera_paths(
-    name: str, registry: Registry | None = None, by_path: str = BY_PATH_DIR
+    name: str,
+    registry: Registry | None = None,
+    by_path: str = BY_PATH_DIR,
+    sys_dir: str = SYS_DIR,
 ) -> list[str]:
     """Every /dev/v4l/by-path/ name of camera `name` (a camera has two: its picture and its
-    metadata), picture first. Lists a directory; opens nothing."""
+    metadata), picture first. Lists folders; opens nothing."""
     registry = registry or load_registry()
     device = registry.devices.get(name)
     if device is None:
         raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:
         raise PortNotAllowed(f"{name} is off limits: {device.notes}")
-    if device.kind != "camera" or not device.socket:
-        raise LookupError(f"{name} needs kind: camera and a socket (e.g. usb-0:7) in devices.yaml")
+    if device.kind != "camera" or not (device.socket or device.beside):
+        raise LookupError(
+            f"{name} needs kind: camera and a socket (e.g. usb-0:7) or beside + hub_port "
+            "in devices.yaml"
+        )
+    if device.beside:
+        controller, chain = _beside_socket(device, registry, sys_dir)
+        where = f"port {device.hub_port} of {device.beside}'s hub"
+    else:
+        controller, chain = "", device.socket.removeprefix("usb-").removeprefix("0:")
+        where = f"socket {device.socket}"
     try:
         entries = sorted(os.listdir(by_path))
     except OSError:
         entries = []
     # "pci-0000:00:14.0-usb-0:7:1.0-video-index0" (newer udev also adds "usbv2-0:7:...")
-    socket = device.socket.removeprefix("usb-")
-    mine = [e for e in entries if any(f"-{u}-{socket}:" in e for u in ("usb", "usbv2", "usbv3"))]
+    mine = [e for e in entries if any(f"-{u}-0:{chain}:" in e for u in ("usb", "usbv2", "usbv3"))]
+    if controller:
+        mine = [e for e in mine if e.startswith(f"pci-{controller}-")]
     controllers = {e.split("-usb")[0] for e in mine}
     if not mine:
-        raise LookupError(f"{name}: no camera in socket {device.socket} (plugged in? ls {by_path})")
+        raise LookupError(f"{name}: no camera in {where} (plugged in? lab-os usb shows them)")
     if len(controllers) > 1:
-        raise LookupError(f"{name}: socket {device.socket} matches several USB controllers")
+        raise LookupError(f"{name}: {where} matches several USB controllers")
     pictures = [e for e in mine if e.endswith("index0")]
     return [os.path.join(by_path, e) for e in pictures + [e for e in mine if e not in pictures]]
 
@@ -366,10 +436,11 @@ def camera_device(
     registry: Registry | None = None,
     by_path: str = BY_PATH_DIR,
     proc: Path = Path("/proc"),
+    sys_dir: str = SYS_DIR,
 ) -> str:
     """The by-path name to open for camera `name`'s picture, after the checks: listed, not off
     limits, plugged in, and no other program using it (LeLab, a recording)."""
-    paths = camera_paths(name, registry, by_path)
+    paths = camera_paths(name, registry, by_path, sys_dir)
     check_not_in_use(name, paths, proc)
     return paths[0]
 
