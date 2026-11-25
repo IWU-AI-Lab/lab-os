@@ -1,5 +1,6 @@
 """What the Quest sees, on the brain's computer (quick job 36): scrcpy mirrors the headset over the
-same USB adb link teleop uses (docs/guides/quest-view.md). Without the cable (quick job 103), over
+same USB adb link teleop uses (docs/archive/guides-2026-11-25/quest-view.md). Without the cable
+(quick job 103), over
 the router's Wi-Fi: adb in TCP mode at the headset's `host` (devices.yaml), port 5555. The headset
 leaves TCP mode at each restart, so `lab-os quest-view --wifi` switches it on again over USB once.
 USB stays the first choice when it is plugged in.

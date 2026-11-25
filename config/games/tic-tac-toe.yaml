@@ -1,4 +1,4 @@
-# Tic-tac-toe (preview 1, docs/guides/tic-tac-toe.md): where the board and the robot's pieces are.
+# Tic-tac-toe (preview 1, docs/archive/guides-2026-11-25/tic-tac-toe.md): where the board and the robot's pieces are.
 # All positions in cm from the middle of the arm's base, as move_to takes them: x forward, y to the
 # arm's left. Measure them again if the paper or the arm moves.
 #

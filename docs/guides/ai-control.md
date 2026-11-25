@@ -57,7 +57,7 @@ An arm on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `
 | `arm_status` | read | The joints, the gripper's opening (%), the gripper's position (cm) and tool angle, the limits, who has control (`free`, `teleop`, `ai`), if it holds still, if the venue allows motion, the limits for each call |
 | `list_poses` | read | The named poses (`config/poses.yaml`). `ready`: the working pose, where teleop starts. `home`: the folded pose where the arm stays |
 | `pose_view` | read | A **picture** of the arm's 3D model in its pose now (side and top, a cm grid, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera ("Seeing the pose" below) |
-| `camera_snapshot` | read | One real picture from a camera. A camera with a table map gets the table's **cm grid** ("Table map" below). With `board: true`, the tic-tac-toe board too (`docs/guides/tic-tac-toe.md`) |
+| `camera_snapshot` | read | One real picture from a camera. A camera with a table map gets the table's **cm grid** ("Table map" below). With `board: true`, the tic-tac-toe board too (`docs/archive/guides-2026-11-25/tic-tac-toe.md`) |
 | `table_point` | read | One pixel of such a picture → x and y on the table, in cm |
 | `move_joints` | move | Some joints to angles, or by amounts (`relative: true`) |
 | `gripper` | move | 0 = closed, 100 = fully open |
@@ -81,7 +81,7 @@ For example: "Use the lab-os tools: what's next, and what's on hold? Then make a
 Each move gives back where the arm **really** stopped (joints, gripper %, position, tool angle), and a `clipped` list of what the brain limited.
 
 ## The hub's buttons as tools (quick job 80)
-Each action that a button on a hub page does is also a tool, for Claude Code, Codex and the hub's assistant (with Full Access, `docs/guides/hub.md` → "Full Access"). Each tool calls the same code as its button, so it has the same checks. A tool that moves an arm goes through the same safety layer as the other move tools.
+Each action that a button on a hub page does is also a tool, for Claude Code, Codex and the hub's assistant (with Full Access, `docs/archive/guides-2026-11-25/hub.md` → "Full Access"). Each tool calls the same code as its button, so it has the same checks. A tool that moves an arm goes through the same safety layer as the other move tools.
 
 | Tool | Tier | The button |
 |---|---|---|
@@ -127,7 +127,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    ```bash
    uv run --extra so101 lab-os serve --speed 0.3
    ```
-   The brain finds `so101-white` when it is plugged in (the terminal says "Plugged in: so101-white"). It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor` (3D). On a second monitor of this computer they can stay open in full screen (`docs/guides/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
+   The brain finds `so101-white` when it is plugged in (the terminal says "Plugged in: so101-white"). It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor` (3D). On a second monitor of this computer they can stay open in full screen (`docs/archive/guides-2026-11-25/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
 3. In the Claude Code session, type `/mcp` → `lab-os` → reconnect (the brain restarted).
 4. Start with small steps. Claude Code does not ask before moves, so watch with STOP near:
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.
@@ -152,7 +152,7 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 - It is active in the `lab` and `visit-day` venues.
 - When the brain connects with motion on, it writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, as LeLab does. Never IDs, baud rate, firmware or calibration.
 
-**Poses:** `ready` is the working pose (reaching forward, about 5 cm up; teleop and the fake arm start there). `handover` holds an object out to a person, about 28 cm out and 20 cm up, and leaves the gripper as it is (the hub's assistant uses it, `docs/guides/hub.md`; computed on the 3D model). `home` is the folded pose where the builder leaves the arm, with the gripper a little open, just above where it rests (quick job 30). Two joints of `home` (`shoulder_lift`, `elbow_flex`) are past their soft limits by 6.3° and 3.6°, so the move stops at the limits and says so (`clipped`). `wrist_flex` is 55 instead of the real 75.9: with 75.9 the 3D model puts the gripper about 1 cm below the table, and the floor refuses the move. When the brain lets go of the arm, it settles into the real rest. Not yet tried on the real arm: lab check F.3.
+**Poses:** `ready` is the working pose (reaching forward, about 5 cm up; teleop and the fake arm start there). `handover` holds an object out to a person, about 28 cm out and 20 cm up, and leaves the gripper as it is (the hub's assistant uses it, `docs/archive/guides-2026-11-25/hub.md`; computed on the 3D model). `home` is the folded pose where the builder leaves the arm, with the gripper a little open, just above where it rests (quick job 30). Two joints of `home` (`shoulder_lift`, `elbow_flex`) are past their soft limits by 6.3° and 3.6°, so the move stops at the limits and says so (`clipped`). `wrist_flex` is 55 instead of the real 75.9: with 75.9 the 3D model puts the gripper about 1 cm below the table, and the floor refuses the move. When the brain lets go of the arm, it settles into the real rest. Not yet tried on the real arm: lab check F.3.
 
 ## Looking through a camera (`camera_snapshot`)
 `camera_snapshot(camera, width_px=640)` takes one real picture from a camera in `devices.yaml` and gives it back as a JPEG. The hub's chat does not get it (it takes text only). If another program has the camera open, the brain refuses. These cameras start black and then flash white, so the brain waits (up to about 6 s) until the brightness is stable.
@@ -176,7 +176,7 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
    uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>
    ```
    It says how many of the 24 corners it found and how far the worst corner is wrong (5 mm or less is good). It saves `config/local/table-maps/so101-white-cam-stand.yaml` and writes a picture with the grid to `logs/table-maps/`. Open the picture: the red dot must be on the base, and the lines must follow the squares.
-5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture). The tic-tac-toe board uses the same map (`docs/guides/tic-tac-toe.md`).
+5. Remove the sheet. From now on, `camera_snapshot` of that camera has the grid (`grid: false` gives the plain picture). The tic-tac-toe board uses the same map (`docs/archive/guides-2026-11-25/tic-tac-toe.md`).
 
 To try it without a camera, add `--image picture.jpg` to use a saved picture.
 

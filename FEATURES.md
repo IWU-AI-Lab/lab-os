@@ -7,7 +7,7 @@ This page lists the features that work today, and some lab robot projects that a
 ---
 
 ## The hub (the lab's start screen)
-`uv run lab-os serve` → http://localhost:8080/ · `docs/guides/hub.md`
+`uv run lab-os serve` → http://localhost:8080/ · `docs/archive/guides-2026-11-25/hub.md`
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -37,14 +37,14 @@ This page lists the features that work today, and some lab robot projects that a
 | Other computers on the network can watch; only the brain's computer drives (`--drive-from <host>`, or `drive_from:` in `place.yaml` since quick job 95, lets more devices drive; a view-only page says which address to add) | ✅ | Tried with `pi01`, a second lab desktop and the Newline (its STOP stopped the arm). |
 
 ## Talking to it (typed chat, voice and personas)
-`docs/dev/chat.md`, `docs/guides/voice.md`, `docs/dev/personas.md`
+`docs/dev/chat.md`, `docs/archive/guides-2026-11-25/voice.md`, `docs/dev/personas.md`
 
 | Feature | Status | Notes |
 |---|---|---|
 | Typed chat under the core ("Ask anything"); the answers show at a steady speed; the History page | ✅ | OpenAI (`main`) since 2026-11-18; the free Gemini key is the fallback. |
 | AI setups in `config/models.yaml` (OpenAI, Gemini, a local Ollama); Gemini when there is no OpenAI key | ✅ | |
 | A spend log for each answer and a monthly budget that pauses the chat; the budget changes in Settings and applies at once | ✅ | $20 a month in the lab. |
-| The AI Spend panel says "Estimated · this computer's brain only"; its page says how the cost is calculated and how much of it is less exact (voice, counted tokens). The assistant says "estimated" with the number. | ✅ | Tested without hardware and in headless Chrome. The real cost from OpenAI needs an Admin key (`docs/guides/hub.md` → "AI Spend"). Lab: check F.15. |
+| The AI Spend panel says "Estimated · this computer's brain only"; its page says how the cost is calculated and how much of it is less exact (voice, counted tokens). The assistant says "estimated" with the number. | ✅ | Tested without hardware and in headless Chrome. The real cost from OpenAI needs an Admin key (`docs/archive/guides-2026-11-25/hub.md` → "AI Spend"). Lab: check F.15. |
 | **One program instead of many moves** (`run_program`, quick job 81): the AI writes one short Python program that calls the robot tools; the brain runs it with no model call between the steps (RestrictedPython; STOP and a time limit end it) | 🧪 | One program picks up the cube on the fake arm; lab check H.11. |
 | **Full Access** for the hub's assistant (⚙ → Assistant, off by default): every tool of the brain, the arms' move tools and the camera pictures included, and the hub's buttons as MCP tools for Claude Code and Codex too (Open on…, settings, visitor mode, the Quest's view, say aloud, teleop's speed and mode, restart, shut down); AI tools reach the second arm by its name (quick job 80) | 🧪 | Tested on fake arms; lab check H.9, H.10. |
 | The chat knows the project: it reads the docs, the git history and the device list, and writes prompts for Claude Code or Codex (Copy button) | ✅ | Read tools only. The moves it can start: visitor mode's fixed wave, and (when Settings allows it) a named pose and the cube's hand-over. |
@@ -81,7 +81,7 @@ This page lists the features that work today, and some lab robot projects that a
 | **The Cameras page** (2026-11-23, quick job 93, `/cameras`): the live picture of every camera in `devices.yaml` (one for each USB socket), with a switch for each camera. The brain keeps the switches for each device, so two screens can show different cameras; a hidden camera is not opened. A camera that another program has open shows the brain's sentence. A tally light and the picture's age in seconds next to each name. A **Board** button on the stand camera draws the tic-tac-toe board's cells and start spots on the live picture (2026-11-24, quick job 105). Opens from All Pages, with Open on… and in `room.yaml`. | 🧪 | Faked cameras in headless Chrome. Lab: check part C. |
 | **Control buttons only when control is possible** (2026-11-20, quick job 76): while another page or the AI tools drive the arm, or the screen may only watch, Teleop's and Webcam control's buttons that would take control are grey, and a line says who has control (the page's device name). | ✅ | Two pages in headless Chrome, and the brain's tests. Lab: check part U.6. |
 | The arm freezes on release, lost tracking, a lost connection or old input; STOP on every page | ✅ | |
-| **Teleop with a webcam** (preview, 2026-11-19, `/webcam`, `docs/guides/webcam-teleop.md`): your bare hand in front of a webcam drives the arm, no headset. The right wrist moves the gripper, a left pinch or Space is the clutch, a right pinch closes the gripper; X = STOP. The hand out of the picture freezes the arm until the clutch is let go. Relative only, one arm. Since 2026-11-22 (quick job 88): the right hand is cyan without Swap, the hand's tilt and turn move the wrist as on the Quest, hand moves count 1.5 times, more smoothing, and a hand counts only after 5 frames in a row. | 🧪 | The fake arm, with a recorded video of hands as the camera in headless Chrome (30 frames a second, the arm followed, the freeze held). Lab: check part W (2026-11-24). The Kinect isn't used yet (it needs drivers that need `sudo`). |
+| **Teleop with a webcam** (preview, 2026-11-19, `/webcam`, `docs/archive/guides-2026-11-25/webcam-teleop.md`): your bare hand in front of a webcam drives the arm, no headset. The right wrist moves the gripper, a left pinch or Space is the clutch, a right pinch closes the gripper; X = STOP. The hand out of the picture freezes the arm until the clutch is let go. Relative only, one arm. Since 2026-11-22 (quick job 88): the right hand is cyan without Swap, the hand's tilt and turn move the wrist as on the Quest, hand moves count 1.5 times, more smoothing, and a hand counts only after 5 frames in a row. | 🧪 | The fake arm, with a recorded video of hands as the camera in headless Chrome (30 frames a second, the arm followed, the freeze held). Lab: check part W (2026-11-24). The Kinect isn't used yet (it needs drivers that need `sudo`). |
 | **Two arms at once** (preview, 2026-11-19): `--left-arm so101-green` next to `--arm so101-white`; each controller drives its own arm (grip = clutch, trigger = gripper); A, X and STOP stop both; the headset, the teleop page and the monitor show both 3D arms and both states; hold Y and a grip to move that hand's 3D arm; relative and 1:1 on both arms | 🧪 | Two software arms, and the headset session in headless Chrome (both 3D arms moved, a 1:1 grab with the left hand). Controllers only. Lab: check part T (2026-11-24). |
 
 ## AI tools drive the arm (MCP)
@@ -98,7 +98,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | `pick_at`: a full pick in one call, each step shown on AI Control before it moves; says "holding" or "missed" | ✅ | `so101-white`: held a 3 cm piece at tic-tac-toe spot 3 (2026-11-24, quick job 106). Lab check G.3. |
 | Table map: the stand camera's pictures get a cm grid of the table, from a printed sheet (`lab-os table-map`); `table_point` changes a pixel into cm | ✅ | Tried only with a drawn sheet. Lab: checklist part 3b. |
 | `camera_snapshot`: one real picture from a camera (socket 7 = wrist, 8 = stand, on both sets) | ✅ | Used in the cube pick. Without the table map, the stand camera's picture gives a direction, not a place. |
-| **Tic-tac-toe** (preview, 2026-11-20, `docs/guides/tic-tac-toe.md`): an AI tool plays against a person with LEGO pieces on a printed grid. `camera_snapshot` with `board: true` draws the cells and the robot's start spots on the stand camera's picture and gives the positions and the steps; the arm keeps to a route off the board. Played with Claude Code. | 🧪 | A robot turn to each of the 9 cells on the fake arm, through the tools' checks; the board drawn on a test picture. Without a camera (the fake arm), the person says the moves. Lab: check part G (2026-11-24). |
+| **Tic-tac-toe** (preview, 2026-11-20, `docs/archive/guides-2026-11-25/tic-tac-toe.md`): an AI tool plays against a person with LEGO pieces on a printed grid. `camera_snapshot` with `board: true` draws the cells and the robot's start spots on the stand camera's picture and gives the positions and the steps; the arm keeps to a route off the board. Played with Claude Code. | 🧪 | A robot turn to each of the 9 cells on the fake arm, through the tools' checks; the board drawn on a test picture. Without a camera (the fake arm), the person says the moves. Lab: check part G (2026-11-24). |
 | The AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |
 | Project tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, `lab_status`, … | ✅ | |
 
@@ -130,7 +130,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | Feature | Status | Notes |
 |---|---|---|
 | **LeRobot teleop with Rerun** (2026-11-22, quick job 91), on the Training page: LeRobot's own `lerobot-teleoperate` for the green set (the leader drives the follower) with Rerun's view of the cameras and joints in a frame on the page. The same checks as LeLab's and more; the training calibration through a temporary copy; a calibration question stops it; Stop = Ctrl+C (limp). | 🧪 | Command line checked with LeRobot 0.6.1's own parser; fake programs for the calibration stop and Stop; Rerun's viewer in the page with test data (headless Chrome). No arms yet. Lab: check part E. |
-| `lab-os green` (desktop icon, the hub's Training page): checks the green arms' ports, then starts LeLab. **Stop LeLab** (or `--stop`) stops only the LeLab that it started. | ✅ | Tried in the lab 2026-11-16 and 11-17; it refuses while another program (for example the brain driving `so101-green`) has a green port. `docs/guides/green-launcher.md` |
+| `lab-os green` (desktop icon, the hub's Training page): checks the green arms' ports, then starts LeLab. **Stop LeLab** (or `--stop`) stops only the LeLab that it started. | ✅ | Tried in the lab 2026-11-16 and 11-17; it refuses while another program (for example the brain driving `so101-green`) has a green port. `docs/archive/guides-2026-11-25/green-launcher.md` |
 
 ---
 

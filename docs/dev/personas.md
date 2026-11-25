@@ -29,9 +29,9 @@ id: jarvis                    # plain name: the same as the file name
 display_name: "J.A.R.V.I.S."  # show name (on screen)
 personality: jarvis.md        # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml; main falls back to backup)
-voice: main                   # voice setup (models.yaml → voices; docs/guides/voice.md); none = no voice
+voice: main                   # voice setup (models.yaml → voices; docs/archive/guides-2026-11-25/voice.md); none = no voice
 speakers: { openai: fable, gemini: Charon }  # its own speaker for each voice service (else the setup's)
-wake_word: hey_jarvis         # the wake word (docs/guides/voice.md); none = no wake word;
+wake_word: hey_jarvis         # the wake word (docs/archive/guides-2026-11-25/voice.md); none = no wake word;
                               # ⚙ → Assistant → Wake Word wins (place.yaml → wake_words)
 picture: { type: orb, style: calm-ring, color: primary }   # read by the designed hub (step 10)
 lines:
@@ -48,4 +48,4 @@ After the start press, the hub shows **"Good morning / afternoon / evening."** p
 2. **The calendar:** a date within two weeks from `calendar` in `config/place.yaml`: "The semester ends in 6 days."
 3. **A busy day:** 10 or more commits yesterday, or today so far: "Yesterday was a busy day: 23 commits."
 
-Otherwise the persona's `greeting` line. Where voice works, it's also spoken, with a hint how to talk (`docs/guides/voice.md` → "The spoken greeting": the time of day and the hint only, from a recording, never the news or this line). Later news (alerts, a device that dropped out, the budget running low) slots in at the top of that list (`src/lab_os/hub/greeting.py`).
+Otherwise the persona's `greeting` line. Where voice works, it's also spoken, with a hint how to talk (`docs/archive/guides-2026-11-25/voice.md` → "The spoken greeting": the time of day and the hint only, from a recording, never the news or this line). Later news (alerts, a device that dropped out, the budget running low) slots in at the top of that list (`src/lab_os/hub/greeting.py`).

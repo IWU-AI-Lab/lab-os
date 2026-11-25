@@ -6,7 +6,8 @@ Every cost here is an estimate made by this brain (quick job 41): chat = the tok
 service sends back × the prices typed into models.yaml; voice = the seconds lab-os measured × a
 price per minute. Entries that are less exact than that (voice, and chat whose tokens lab-os
 counted itself) have `estimated: true`. Another brain that uses the same key keeps its own log, so
-it isn't counted here. OpenAI's own costs need an Admin key (docs/guides/hub.md → "AI Spend")."""
+it isn't counted here. OpenAI's own costs need an Admin key (docs/archive/guides-2026-11-25/hub.md
+→ "AI Spend")."""
 
 import json
 import logging

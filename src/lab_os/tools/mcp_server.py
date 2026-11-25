@@ -59,7 +59,7 @@ part-way open. If unsure, stop and look instead of guessing; if a pick missed, l
 trying again. (Tips adapted from robot_MCP: docs/dev/existing-work-teleop-ai.md.)
 
 Tic-tac-toe on the paper grid: camera_snapshot of the stand camera with board true shows the board
-and gives everything else you need (docs/guides/tic-tac-toe.md).
+and gives everything else you need (docs/archive/guides-2026-11-25/tic-tac-toe.md).
 
 One program instead of many moves (run_program): when a task takes several moves (look, go
 above, pick, carry), write one short Python program that calls the functions and run it in one

@@ -1,6 +1,6 @@
 # Dev Setup — Claude Code + robots
 
-How development works for the lab-os project. Companions: `docs/plan/log.md`, `docs/plan/current-focus.md`, `docs/guides/network-setup-checklist.md`.
+How development works for the lab-os project. Companions: `docs/plan/log.md`, `docs/plan/current-focus.md`, `docs/archive/guides-2026-11-25/network-setup-checklist.md`.
 
 ---
 

@@ -6,7 +6,7 @@ personality: lab-assistant.md # how it talks: a short text file next to this one
 model: main                   # which AI setup (config/models.yaml)
 voice: main                   # voice setup (models.yaml → voices); none = no voice
 speakers: { openai: nova, gemini: Kore }  # the voice for each service (quick job 100): a female voice
-wake_word: ok_computer        # the wake word (docs/guides/voice.md); none = no wake word
+wake_word: ok_computer        # the wake word (docs/archive/guides-2026-11-25/voice.md); none = no wake word
                               # (⚙ → Assistant → its Wake Word wins: place.yaml → wake_words)
 picture: { type: orb, style: plain, color: primary }
 lines:                        # things it says

@@ -1,6 +1,6 @@
 # lab-os — Running Log
 
-A living record of decisions, facts and open questions for the AI lab's lab-os project (named "Lab JARVIS" until 2026-11-22: JARVIS is now one persona of several, quick job 92). Newest entries go at the top of each section. Ideas live only in **docs/plan/ideas.md** (the backlog). Companion docs: `docs/plan/current-focus.md` (what to work on now), `docs/plan/quick-jobs.md`, `docs/dev/project-scaffold.md` (what the repo should contain), `docs/dev/dev-setup.md`, `docs/guides/network-setup-checklist.md`. Early notes (the grill session, the teleop module's origin): `docs/archive/log-2026-10-early-notes.md`. Decision rows and discussion notes before 2026-11-16: `docs/archive/log-decisions-to-2026-11-15.md`.
+A living record of decisions, facts and open questions for the AI lab's lab-os project (named "Lab JARVIS" until 2026-11-22: JARVIS is now one persona of several, quick job 92). Newest entries go at the top of each section. Ideas live only in **docs/plan/ideas.md** (the backlog). Companion docs: `docs/plan/current-focus.md` (what to work on now), `docs/plan/quick-jobs.md`, `docs/dev/project-scaffold.md` (what the repo should contain), `docs/dev/dev-setup.md`, `docs/archive/guides-2026-11-25/network-setup-checklist.md`. Early notes (the grill session, the teleop module's origin): `docs/archive/log-2026-10-early-notes.md`. Decision rows and discussion notes before 2026-11-16: `docs/archive/log-decisions-to-2026-11-15.md`.
 
 **Current focus:** see **docs/plan/current-focus.md**.
 
@@ -148,7 +148,7 @@ Modules in the plan: teleoperation; look-then-reach; phones/laptops as mics; off
 - **The hub's buttons come from config** (`hub.modules` in the theme). No fake "coming soon" buttons. **The status strip and panels show only real facts.**
 - **Offline vs. internet.** Offline: start screen, hub, the assistant's picture, teleop, sounds, theme, fonts. Needs internet: the AI chat and cloud voices. Without internet the assistant shows `offline` and everything else works.
 - **A public screen** (the Newline, a hallway desktop): anyone can start it and talk to it, so the hub's chat stays in the read tier, the move tools only accept AI tools on the brain's own computer, a spend cap pauses the chat, the conversation clears on the reset, and a `public: true` venue hides internal details.
-- **Starting, full screen, the reset, drawing resolution:** `docs/guides/hub.md`.
+- **Starting, full screen, the reset, drawing resolution:** `docs/archive/guides-2026-11-25/hub.md`.
 
 ---
 
@@ -220,7 +220,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 - **Usage pattern (2026-10-28):** the lab is usually empty; startup happens when the first person arrives to a closed lab. Robots are off before that (battery-powered ones must be switched off); all need a physical switch, except the SO-101s (no switch; wall power supply).
 - **Room:** desk clusters; side room with counter, SO-101 arms, beanbag; laggy big screen; projector; 32" ViewSonic monitors; noisy (fans); 3rd floor; setup movable; IWU. Visitor routes may not pass the lab.
 - **Equipment check (2026-10-30):** the lab has most of the demo kit (cables, adapters, extension cords; boxes + a trolley for transport). Also a **Kinect** (version to check) and a spare webcam (the two Innomaker training cameras belong to the green set; lab-os borrows them since 2026-11-12). **To buy:** USB-C power bank (router/field use); **a powered USB hub (7 ports) for the brain desktop** (2026-11-12: all 7 USB-A sockets are taken: keyboard, mouse, the green cameras and arms, the xArm; the white arm + cameras need 4 more) (added 2026-11-11: identical cameras can only be told apart by socket, and the desktop's sockets are limited); **stronger table clamps** (the SO-101s' thin ones are only just sufficient); **a USB conference speakerphone** (one omnidirectional microphone for a room; added 2026-11-20), only if quick job 70 (the nearest microphone answers) is not enough. **Later, not urgent:** better cameras for lab-os (second act). Router: see Network plan.
-- **The devices** (computers, screens, robots, cameras, microphones, wearables): `docs/guides/lab-inventory.md` (2026-11-25; before, they were listed here).
+- **The devices** (computers, screens, robots, cameras, microphones, wearables): `docs/archive/guides-2026-11-25/lab-inventory.md` (2026-11-25; before, they were listed here).
 - **Network:** lab Wi-Fi with MAC registration via campus IT; wall Ethernet port works.
 - **Domain:** the lab owns `indwesailab.com` (bought summer 2026 for one year: renew by summer 2027 or the certificates stop). The university didn't want it as the lab's public face, so only a subdomain is used, for lab screens. **DNS is on AWS Route 53** (checked 2026-11-09: the domain's name servers are `awsdns`); the builder has the AWS login (set up with the professor, summer 2026). The main domain still serves an old public website from S3 that was never removed; the `hub.` subdomain doesn't touch it.
 - **AI access (updated 2026-10-30):** OpenAI keys (primary; the professor's account, paid by the university: believed 2026-11-09, not confirmed); free Gemini keys (free tiers may use data for training: check terms); the Anthropic key is out of credits (Gemini Robotics-ER 2 preview is on the Gemini API).
@@ -235,7 +235,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 - **Portability:** which laptop is the field brain; venue internet; batteries vs. outlets; where visitor routes go.
 - **Teleop spikes:** `xarm1` speed/delay; Quest WebXR data, overlays, USB forwarding (Quest developer mode / Meta account access); IK library; `so101-white` calibration; end-to-end delay.
 - **Glove** firmware source; **training project** plans for `so101-white`; **IT/professor** router questions; overlay network; cellular.
-- TonyBot v1 board; wake word from the doorway; waking screens; Quest camera access; Quest-only practicalities; past Quest demo contact; offline lite mode contents; use cases beyond development; mic test; agent harness; free-tier data terms; Raspbot internals; humanoid SDK. (Answered since: HTTPS → `docs/guides/voice.md` → "Secure pages"; model router → `config/models.yaml`; persona names → `config/personas/`; voice pipeline → `docs/guides/voice.md`.)
+- TonyBot v1 board; wake word from the doorway; waking screens; Quest camera access; Quest-only practicalities; past Quest demo contact; offline lite mode contents; use cases beyond development; mic test; agent harness; free-tier data terms; Raspbot internals; humanoid SDK. (Answered since: HTTPS → `docs/archive/guides-2026-11-25/voice.md` → "Secure pages"; model router → `config/models.yaml`; persona names → `config/personas/`; voice pipeline → `docs/archive/guides-2026-11-25/voice.md`.)
 
 ---
 
