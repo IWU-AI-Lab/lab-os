@@ -1,4 +1,5 @@
-"""The devices that have the hub open (focus step 8, docs/guides/hub.md → "Devices").
+"""The devices that have the hub open (focus step 8, docs/archive/guides-2026-11-25/hub.md →
+"Devices").
 
 A *device* is a computer or screen with the hub open under a name in its address: `/?device=desk`,
 `/?device=newline`, `/?device=quest`. Each hub page (a *window*; one per monitor of a device) keeps
@@ -156,7 +157,7 @@ class DeviceSettings:
         head = (
             "# Each device's own settings (Settings → This device), kept by the brain under the\n"
             "# device's name (the ?device= in its address). Written by the hub; edit if you like.\n"
-            '# docs/guides/hub.md → "Devices".\n'
+            '# docs/archive/guides-2026-11-25/hub.md → "Devices".\n'
         )
         body = yaml.safe_dump({"devices": devices}, sort_keys=True, allow_unicode=True)
         tmp = p.with_suffix(".tmp")

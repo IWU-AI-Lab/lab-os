@@ -1,4 +1,5 @@
-"""Record the designed hub's startup as a video (quick job 34; docs/guides/hub.md, "Startup as a
+"""Record the designed hub's startup as a video (quick job 34;
+docs/archive/guides-2026-11-25/hub.md, "Startup as a
 video"). The design stays the source: record again whenever the startup changes.
 
     uv run lab-os serve --port 8090 --mcp-port 0    # a brain to record from (its chat is reset)

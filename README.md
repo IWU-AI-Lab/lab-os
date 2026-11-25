@@ -29,7 +29,7 @@ uv run lab-os serve                                      # the brain: the hub, t
 uv run lab-os-teleop serve                               # teleop only: the headset page and the fake arm
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay a recording (no browser, no headset)
 ```
-- After `lab-os serve`, open http://localhost:8080/ for the hub. The options are in `docs/guides/hub.md` → "Start it".
+- After `lab-os serve`, open http://localhost:8080/ for the hub. The options are in `docs/archive/guides-2026-11-25/hub.md` → "Start it".
 - After `lab-os-teleop serve`, open http://localhost:8080/monitor to watch the fake arm.
 - To test teleop at home, or to connect the real Quest over USB, read `docs/guides/quest-setup.md`.
 
@@ -49,7 +49,7 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay
 The docs are in folders by who reads them:
 - **Top level:** `FEATURES.md` (what works today), `CHANGELOG.md` (what changed, by date), `SAFETY.md`, `AGENTS.md` (the rules for AI coding agents), `CLAUDE.md` (points Claude Code to `AGENTS.md`).
 - **`docs/plan/`, what we build and why:** `current-focus.md` (the work until the demo on 2026-12-03), `quick-jobs.md` (small decided jobs), `ideas.md` (the only list of ideas, with "On hold"), `vision.md` (the long-term direction), `log.md` (goals, decisions, devices, facts about the lab), `use-cases.md` (real workflows behind the features).
-- **`docs/guides/`, how to use it:** `hub.md` (the hub, its pages, other screens, Settings, visitor mode), `voice.md` (talking to it), `ai-control.md` (an AI tool drives an arm through the brain), `quest-setup.md` (teleop at home and on the real Quest), `quest-view.md` (what the Quest sees, on another screen), `tic-tac-toe.md` (an AI plays tic-tac-toe with the arm), `green-launcher.md` (the SO-101 training setup in one click), `lab-checklist.md` (what to test in the lab before the demo) and `lab-checklist-after-demo.md` (the rest), `network-setup-checklist.md` (devices on the network), `lab-inventory.md` (every device in the lab).
+- **`docs/guides/`, how to use it:** `ai-control.md` (an AI tool drives an arm through the brain), `quest-setup.md` (teleop at home and on the real Quest), `raspbot.md` (the Raspbot), `lab-checklist.md` (what to test in the lab before the demo) and `lab-checklist-after-demo.md` (the rest). The other guides are paused until a stable version: they are in `docs/archive/guides-2026-11-25/` (`hub.md`, `voice.md`, `quest-view.md`, `tic-tac-toe.md`, `green-launcher.md`, `webcam-teleop.md`, `network-setup-checklist.md`, `lab-inventory.md`).
 - **`docs/dev/`, how to work on it:** `dev-setup.md` (branches and folders), `project-scaffold.md` (what the repository contains), `protocol.md` (messages, MCP tools and HTTP endpoints), `places.md` (config folders, devices, other places), `personas.md`, `chat.md` (AI setups, keys, spend), `GOTCHAS.md` (surprises and their fixes).
 - **`docs/design/`:** the approved hub design (`DESIGN.md`, `hub-concept.html`). **`docs/device_manuals/`:** manuals (the Newline). **`docs/archive/`:** closed focuses and other history, by date.
 

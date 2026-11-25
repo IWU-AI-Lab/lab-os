@@ -1,4 +1,5 @@
-"""Save the hub's system diagram as an SVG file for the docs (quick job 12; docs/guides/hub.md,
+"""Save the hub's system diagram as an SVG file for the docs (quick job 12;
+docs/archive/guides-2026-11-25/hub.md,
 "System diagram"). The hub draws it live from the brain's facts; this keeps a copy of what it shows.
 
     uv run lab-os serve --port 8090 --mcp-port 8091    # a brain to draw from (its devices.yaml)

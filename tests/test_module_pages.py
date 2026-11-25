@@ -349,8 +349,7 @@ def test_no_long_press_menu_on_the_hub_pages():
 
 
 async def test_every_page_is_listed(aiohttp_client):
-    """Quick job 67: every page the brain serves is in ⚙ → All Pages (two taps from the hub), and
-    in docs/guides/hub.md."""
+    """Quick job 67: every page the brain serves is in ⚙ → All Pages (two taps from the hub)."""
     from lab_os.hub.server import PAGES
 
     app = make_app()
@@ -369,9 +368,7 @@ async def test_every_page_is_listed(aiohttp_client):
     assert served <= listed, f"pages missing from PAGES: {served - listed}"
     got = await (await client.get("/api/hub")).json()
     assert [p["path"] for p in got["pages"]] == [p for p, _, _ in PAGES]
-    guide = (SRC.parents[1] / "docs" / "guides" / "hub.md").read_text()
-    for path, _, _ in PAGES:
-        assert f"`{path}`" in guide, path
+    # quick job 123: the hub guide is paused (docs/archive/guides-2026-11-25/): no guide check
     # quick job 82: All Pages is a page of its own, a button next to ⚙ in the strip (not in ⚙)
     assert "pagesGroup" not in (SRC / "hub" / "web" / "settings.js").read_text()
     assert "/api/hub" in await (await client.get("/pages")).text()

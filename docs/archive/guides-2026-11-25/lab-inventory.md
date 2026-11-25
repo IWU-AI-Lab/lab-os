@@ -1,6 +1,6 @@
 # Lab inventory
 
-Every device in the lab, what it is, and its name in lab-os. This page is the one list of the lab's devices. How lab-os recognizes and drives a device (serial numbers, sockets, calibration, the green arms' rules) is in `config/devices.yaml`. Network addresses are in `docs/guides/network-setup-checklist.md`. Started 2026-11-25 from the plan log, `config/devices.yaml` and the lab reports. "Not checked" means that nobody has counted or tested it yet.
+Every device in the lab, what it is, and its name in lab-os. This page is the one list of the lab's devices. How lab-os recognizes and drives a device (serial numbers, sockets, calibration, the green arms' rules) is in `config/devices.yaml`. Network addresses are in `docs/archive/guides-2026-11-25/network-setup-checklist.md`. Started 2026-11-25 from the plan log, `config/devices.yaml` and the lab reports. "Not checked" means that nobody has counted or tested it yet.
 
 Every device has a sticker. The Raspberry Pis are numbered 1 to 10. The desktops and ThinkCentres carry a university IT number.
 

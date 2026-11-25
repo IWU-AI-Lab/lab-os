@@ -1,5 +1,5 @@
 """One tap per device (focus step 8): open the hub on this computer as a named device, and the
-"Start lab-os" icon for the brain's computer (docs/guides/hub.md → "Devices").
+"Start lab-os" icon for the brain's computer (docs/archive/guides-2026-11-25/hub.md → "Devices").
 
 Nothing starts by itself: the brain's computer gets an icon that starts the brain and opens the
 hub (`lab-os serve --open desk`); other computers get a "Lab hub" icon that only opens the hub

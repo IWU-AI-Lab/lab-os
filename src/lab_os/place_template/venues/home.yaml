@@ -3,6 +3,6 @@ name: home
 active_devices: [fake-arm]   # add your own arm's name here (devices.yaml) to drive it
 motion_allowed: true
 persona: default   # who the assistant is here: a persona's id (config/personas/), or `default` = the place's (place.yaml)
-wake_word: default   # the persona's wake word on screens that chose it (docs/guides/voice.md): on, off, or default = off on a public venue
+wake_word: default   # the persona's wake word on screens that chose it (docs/archive/guides-2026-11-25/voice.md): on, off, or default = off on a public venue
 max_speed_scale: 0.3   # fraction of each arm's max speed
 one_to_one_max_deg_per_s: off   # teleop 1:1: fastest joint turn (°/s, e.g. 180), none = no cap, off = relative only
