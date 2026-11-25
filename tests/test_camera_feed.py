@@ -44,7 +44,21 @@ def feeds(monkeypatch):
         opened.append(FakeCapture(path))
         return opened[-1]
 
-    f = CameraFeeds(device=device, capture=capture, encode=lambda frame, w: frame.encode())
+    def locate(name):  # no in-use check: where the camera is
+        if name == "unplugged":
+            raise LookupError("unplugged: not plugged in")
+        return {
+            "white-cam-stand": "/dev/v4l/by-path/usb-0:8",
+            "green-cam-stand": "/dev/v4l/by-path/usb-0:8",
+        }.get(name, f"/dev/{name}")
+
+    f = CameraFeeds(
+        device=device,
+        capture=capture,
+        encode=lambda frame, w: frame.encode(),
+        locate=locate,
+        level=lambda frame: 100.0,  # the exposure holds still at once
+    )
     f.opened, f.busy = opened, busy
     yield f
     f.close_all()
@@ -52,6 +66,7 @@ def feeds(monkeypatch):
 
 def test_a_camera_opens_when_asked_and_closes_when_nobody_looks(feeds):
     assert feeds.jpeg("white-cam-stand").startswith(b"frame")
+    time.sleep(0.1)  # a few frames: the exposure settles
     assert len(feeds.opened) == 1 and feeds.frame("white-cam-stand") is not None
     feeds.jpeg("white-cam-stand")
     assert len(feeds.opened) == 1  # still open: the same reader
@@ -65,6 +80,33 @@ def test_two_names_for_one_socket_share_one_reader(feeds):
     feeds.jpeg("white-cam-stand")
     feeds.jpeg("green-cam-stand")
     assert len(feeds.opened) == 1
+
+
+def test_the_ai_sees_a_camera_a_page_has_open_under_another_name(feeds):
+    """Quick job 116: the Cameras page shows socket 8 as the green stand camera; the AI asks for
+    the white one. It gets the page's frame, and nothing opens the camera a second time."""
+    feeds.jpeg("green-cam-stand")
+    time.sleep(0.1)  # a few frames: the exposure settles
+    assert feeds.frame("white-cam-stand") is not None
+    assert feeds.grab("white-cam-stand", "/dev/v4l/by-path/usb-0:8").startswith("frame")
+    assert len(feeds.opened) == 1
+    assert feeds.frame("unplugged") is None
+
+
+def test_a_page_shares_the_camera_the_ai_opened(feeds):
+    assert feeds.grab("white-cam-stand", "/dev/v4l/by-path/usb-0:8").startswith("frame")
+    assert "white-cam-stand" in feeds.open_names()  # open IDLE_S after: LeRobot keeps off it
+    feeds.jpeg("green-cam-stand")
+    assert len(feeds.opened) == 1
+    time.sleep(0.6)
+    assert feeds.opened[0].released  # nobody looks: it closes
+
+
+def test_the_ai_waits_for_the_exposure(feeds, monkeypatch):
+    levels = iter([0, 0, 255, 120] + [121] * 100)  # black, then too bright, then still
+    feeds.level = lambda frame: next(levels, 121)
+    frame = feeds.grab("white-cam-wrist", "/dev/white-cam-wrist")
+    assert int(frame.split()[1]) >= 8  # not one of the first, dark frames
 
 
 def test_a_camera_another_program_has_is_refused(feeds):

@@ -152,7 +152,7 @@ async def test_camera_snapshot_gets_the_grid_when_the_camera_has_a_map(tools, mo
     from lab_os import devices
 
     monkeypatch.setattr(devices, "camera_device", lambda cam: "/dev/video-fake")
-    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w: _jpeg())
+    monkeypatch.setattr(robot_tools, "_grab_jpeg", lambda path, w, cam: _jpeg())
     r = await tools.camera_snapshot("cam")
     assert r["image_jpeg"] == _jpeg() and "no table map" in r["table_grid"]
     table_map.save(_plain_map())
