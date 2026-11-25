@@ -51,7 +51,8 @@ table: start a task from there. "home" is the folded pose the arm is left in: go
 says you're done or asks for home.
 
 Picking something up: find it on the stand camera's grid; move_to within max_move_cm of the
-point above it; then pick_at (open, above, straight down, close, lift in one call). By hand: come
+point above it; then pick_at (open, above, straight down, close, lift in one call; it tilts the
+gripper up to 60° where pointing straight down can't reach). By hand: come
 down from above pointing straight down (tool angle 180), with the gripper fully open; look with
 the wrist camera before closing (the object between the jaw tips); close fully (gripper 0); lift
 a few cm and look again: a held object fills much of the wrist picture and the gripper stops
@@ -213,9 +214,10 @@ def create_mcp_server(
     ) -> dict:
         """Pick up the object standing at (x, y) cm on the table (its middle, where it touches
         the table: the stand camera's grid), in one call: open the gripper (open_pct), go
-        height_cm + 6 cm above it pointing straight down, straight down as deep as the jaws
-        reach (4 cm below its top, never below the floor), close, lift. Start within
-        max_move_cm of the point above it (move_to there first).
+        height_cm + 6 cm above it pointing straight down (tilted up to 60° when straight down
+        can't reach it: the steepest that does; "tool_angle_deg" in the result), straight down
+        as deep as the jaws reach (4 cm below its top, never below the floor), close, lift.
+        Start within max_move_cm of the point above it (move_to there first, at that angle).
         Every point is checked before anything moves; each step shows on the AI Control page
         before it moves. "result": "holding" (the gripper stopped on something), "missed" (it
         shut all the way), or the step where it stopped ("steps" lists them). Check with the

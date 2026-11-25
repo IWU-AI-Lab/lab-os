@@ -14,8 +14,9 @@ refuses; it never trusts the numbers it's given:
   teleop); more than `max_joint_change_deg` per call (all joints go the same fraction of the way;
   the gripper is exempt); more than `max_move_cm` per call for move_to.
 - **pick_at**: one call for a whole pick (open, above, straight down, close, lift), built from
-  the same moves; it checks every point first and says each step on the AI Control page before
-  it moves (decision 2026-11-16, docs/dev/existing-work-teleop-ai.md).
+  the same moves, the gripper pointing down or tilted up to 60° where that reaches (quick job
+  117); it checks every point first and says each step on the AI Control page before it moves
+  (decision 2026-11-16, docs/dev/existing-work-teleop-ai.md).
 - **stop**: always allowed. STOP on any page also ends a move ("stopped").
 - **checked**: after a move, the motors' real position is compared with the target; further than
   `SHORT_CM` / `SHORT_DEG` away = "stopped_short" with how far and which joints, never "arrived".
@@ -86,6 +87,11 @@ PICK_JAW_SIDE_CM = 2.0
 # of the SO-101 model; from the jaws' meshes, models/so101).
 SO101_OPEN_DIR = (1.0, 0.0, 0.0)
 DOWN_DEG = 180.0  # tool angle: pointing straight down
+# pick_at's tool angles, steepest first (quick job 117). Straight down reaches only ~13-24 cm from
+# so101-white's base, so a cube 25 cm out or to the side was "out of reach"; tilted up to 60° it
+# reaches ~4-38 cm. 120° at most: the gripper's body (~10 cm from the jaw tips) stays 5 cm above
+# them, clear of the object's top at PICK_JAW_DEPTH_CM.
+PICK_ANGLES_DEG = (180.0, 170.0, 160.0, 150.0, 140.0, 130.0, 120.0)
 SHORT_PCT = 5.0  # the gripper's opening ended further than this from the one asked for
 FLOOR_SAMPLES = 20  # points checked along a joint-space move
 
@@ -726,15 +732,17 @@ class RobotTools:
             return None
         return q
 
-    def _fixed_jaw_beside(self, current: dict, x_cm: float, y_cm: float, z_cm: float):
+    def _fixed_jaw_beside(
+        self, current: dict, x_cm: float, y_cm: float, z_cm: float, angle: float = DOWN_DEG
+    ):
         """Where the gripper point goes so the object at (x, y) stands between the open jaws:
-        PICK_JAW_SIDE_CM from it, against the moving jaw's opening direction, pointing straight
-        down. Only arms whose kinematics have frames (the SO-101); others aim at (x, y) itself."""
+        PICK_JAW_SIDE_CM from it, against the moving jaw's opening direction, at tool angle
+        `angle`. Only arms whose kinematics have frames (the SO-101); others aim at (x, y)."""
         if not hasattr(self.kin, "frames"):
             return x_cm, y_cm
         gx, gy = x_cm, y_cm
         for _ in range(3):  # the direction turns with shoulder_pan: settle it
-            q = self._reaches(current, (gx, gy, z_cm), DOWN_DEG)
+            q = self._reaches(current, (gx, gy, z_cm), angle)
             if q is None:
                 return gx, gy  # the checks below refuse it with their own sentence
             rot = self.kin.frames(q)["wrist_roll"][1]
@@ -746,6 +754,25 @@ class RobotTools:
             gy = y_cm - PICK_JAW_SIDE_CM * dy / n
         return gx, gy
 
+    def pick_plan(
+        self, x_cm: float, y_cm: float, height_cm: float, seed: dict | None = None
+    ) -> tuple[float, tuple, tuple] | None:
+        """How pick_at takes the object at (x, y), starting from the joints `seed` (default: where
+        the arm is): (tool angle, the point above it, the grip point), with the steepest angle of
+        PICK_ANGLES_DEG that reaches both points and keeps the arm above the floor. None: out of
+        reach (quick job 117)."""
+        current = seed or self.arm.read_joints()
+        for angle in PICK_ANGLES_DEG:
+            z_above = height_cm + PICK_ABOVE_CM
+            gx, gy = self._fixed_jaw_beside(current, x_cm, y_cm, z_above, angle)
+            above = (gx, gy, z_above)
+            grip = (gx, gy, max(height_cm - PICK_JAW_DEPTH_CM, self.limits.min_z_cm))
+            q_above = self._reaches(current, above, angle)
+            q_grip = q_above and self._reaches(q_above, grip, angle)
+            if q_grip and self._lowest_z_cm(q_grip) >= self.limits.min_z_cm - REACH_TOLERANCE_CM:
+                return angle, above, grip
+        return None
+
     async def pick_at(
         self,
         x_cm: float,
@@ -755,9 +782,10 @@ class RobotTools:
         arm: str | None = None,
     ) -> dict:
         """Pick up the object standing at (x, y) on the table: open, go above it pointing
-        straight down, go straight down as deep as the jaws reach (PICK_JAW_DEPTH_CM below its
-        top, never below the floor), close, lift. Every point is checked
-        before anything moves; each step is logged (and shown on AI Control) before it moves."""
+        down (tilted up to 60° when straight down can't reach it: `pick_plan`), go straight
+        down as deep as the jaws reach (PICK_JAW_DEPTH_CM below its top, never below the
+        floor), close, lift. Every point is checked before anything moves; each step is logged
+        (and shown on AI Control) before it moves."""
         self._check_can_move(arm)
         if not self.kin:
             raise Refused(f"no kinematics for the {self.arm.model} model; pick with move_joints")
@@ -767,10 +795,15 @@ class RobotTools:
             raise Refused(
                 f"height_cm {height_cm:g}: pick_at takes objects {lo_h:g}–{hi_h:g} cm tall"
             )
+        plan = self.pick_plan(x_cm, y_cm, height_cm)
+        if plan is None:
+            raise Refused(
+                f"can't reach ({x_cm:g}, {y_cm:g}) with the gripper pointing down or tilted up to "
+                f"{DOWN_DEG - PICK_ANGLES_DEG[-1]:g}°; nothing moved. Too near the base or too far "
+                "out: pick something else or move it."
+            )
+        angle, above, grip = plan
         current = self.arm.read_joints()
-        gx, gy = self._fixed_jaw_beside(current, x_cm, y_cm, height_cm + PICK_ABOVE_CM)
-        above = (gx, gy, height_cm + PICK_ABOVE_CM)
-        grip = (gx, gy, max(height_cm - PICK_JAW_DEPTH_CM, self.limits.min_z_cm))
         (tx, ty, tz), _ = self.kin.fk(current)
         here = (tx * 100, ty * 100, tz * 100)
         far = math.dist(here, above)
@@ -778,16 +811,8 @@ class RobotTools:
             raise Refused(
                 f"the point above the object ({above[0]:.1f}, {above[1]:.1f}, {above[2]:.1f}) cm "
                 f"is {far:.1f} cm from the gripper; pick_at starts within "
-                f"{self.limits.max_move_cm:g} cm of it. Nothing moved: move_to near it first, then "
-                "pick_at."
-            )
-        q_above = self._reaches(current, above, DOWN_DEG)
-        q_grip = q_above and self._reaches(q_above, grip, DOWN_DEG)
-        if q_grip is None:
-            which = "above" if q_above is None else "at"
-            raise Refused(
-                f"can't reach {which} ({x_cm:g}, {y_cm:g}) pointing straight down; nothing moved. "
-                "Too near the base or too far out: pick something else or move it."
+                f"{self.limits.max_move_cm:g} cm of it. Nothing moved: move_to near it first "
+                f"(tool angle {angle:g}), then pick_at."
             )
         steps: list[dict] = []
 
@@ -804,9 +829,9 @@ class RobotTools:
         r = await step(1, "open the gripper", "gripper", open_pct=open_pct)
         if r["result"] in ("stopped", "disconnected"):
             return ended(f"{r['result']} at step 1. Don't move again until the user says so.", r)
-        moves = [(2, "go above it, pointing down", above), (3, "go straight down", grip)]
+        moves = [(2, f"go above it, tool angle {angle:g}°", above), (3, "go straight down", grip)]
         for n, say, (x, y, z) in moves:
-            r = await step(n, say, "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
+            r = await step(n, say, "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=angle)
             if r["result"] in ("stopped", "disconnected"):
                 why = f"{r['result']} at step {n}. Don't move again until the user says so."
                 return ended(why, r)
@@ -820,7 +845,7 @@ class RobotTools:
         if r["result"] in ("stopped", "disconnected"):
             return ended(f"{r['result']} at step 4. Don't move again until the user says so.", r)
         x, y, z = above
-        r = await step(5, "lift", "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=DOWN_DEG)
+        r = await step(5, "lift", "move_to", x_cm=x, y_cm=y, z_cm=z, tool_angle_deg=angle)
         if r["result"] in ("stopped", "disconnected"):
             return ended(f"{r['result']} at step 5. Don't move again until the user says so.", r)
         held = r.get("gripper_open_pct", 0.0) > PICK_HELD_PCT
@@ -833,6 +858,7 @@ class RobotTools:
             r,
         )
         out["result"] = "holding" if held else "missed"
+        out["tool_angle_deg"] = angle
         return out
 
     def use_venue(self, venue: Venue) -> None:

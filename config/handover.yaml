@@ -11,5 +11,15 @@ cube:
   min_value: 0.2          # 0-1: black and dark shadows are below this
   min_area_px: 150        # a smaller patch of that colour (in a 640-wide picture) is not the cube
 
+# When the stand camera can't see the cube (the arm hides it, or it is out of the picture), the arm
+# folds to home and the stand camera looks again; then the wrist camera looks down at the table
+# from a few places and steers the gripper over the cube (quick job 117). No `wrist`: no search.
+wrist:
+  camera: so101-white-cam-wrist
+  # Where the cube shows in the wrist picture (fractions of its width and height, 0-1) when the
+  # gripper point is 7 cm up, pointing straight down, right over the cube's middle. A guess: the
+  # middle. Lab check H.2 tells.
+  target: [0.5, 0.5]
+
 pose: handover           # in poses.yaml: held out to the person; the gripper keeps its grip
 release_open_pct: 100    # how far the gripper opens when the person says to let go
