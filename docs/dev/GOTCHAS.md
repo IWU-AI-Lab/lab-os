@@ -1,6 +1,6 @@
 # Gotchas
 
-Every on-the-ground surprise and its fix. Newest first. (Network/device-setup gotchas also live at the bottom of `docs/guides/network-setup-checklist.md`.)
+Every on-the-ground surprise and its fix. Newest first. Entries that a later fix made out of date: `docs/archive/gotchas-out-of-date-2026-11-25.md`. (Network/device-setup gotchas also live at the bottom of `docs/guides/network-setup-checklist.md`.)
 
 ---
 
@@ -160,13 +160,8 @@ Every on-the-ground surprise and its fix. Newest first. (Network/device-setup go
 **What:** Since quick job 61, `lab-os serve` with no `--arm` opens the SO-101 that is plugged in, and switches its torque on (it holds where it is, it does not move). A coding session that starts the brain to look at a page would take the white arm too. A brain that already has the arm keeps it: the second one says the port is in use and drives the fake arm.
 **Fix:** In a coding session, start the brain with `--arm fake`. The tests never see a port (`tests/conftest.py`, `_no_arm_plugged_in`).
 
-### 2026-11-20 — The tests failed after a change on the settings page, or with an arm plugged in
-**What:** In the lab, the settings page saves into the repo's `config/` (persona, chat keep time, the hub's look and buttons, the limits). The tests read that folder and expected the committed values, so 6 tests failed after the builder changed settings. One more test failed because so101-white was plugged in: the visitors' welcome names the robots whose `/dev/serial/by-id/…` port exists.
-**Fix:** `tests/conftest.py` gives each test run a copy of `config/` as last committed (`git archive HEAD config`) and uses it as the repo's config. Changes on the settings page do not change the tests now. A committed change can still make a test fail: then update that test. The visitor test's brain treats every port as unplugged.
-**Since 2026-11-20 (later the same day):** replaced. The settings page writes into `config/local/` (not in git), so `config/` holds only the defaults, and the tests read it as it is, with an empty `local/` (`docs/dev/places.md` → "The place's own changes").
-
 ### 2026-11-20 — The wake word: not reproduced, but one screen could make every screen deaf for 2 minutes
-**What:** (quick job 42, for the lab-day entry below.) Tried on the Mac with the designed hub in headless Chrome, a fake microphone that says "hey Jarvis" every 7 s, and a stand-in for OpenAI (full spoken answers): the wake word kept working after a sensitivity change sent to the brain, after one made in ⚙ in the hub, after full answers, and the venue switch changes nothing for it (both personas have `hey_jarvis`; neither venue is public). Found in the code instead:
+**What:** (quick job 42, for the lab-day entry "the wake word stops after a settings change", now in `docs/archive/gotchas-out-of-date-2026-11-25.md`.) Tried on the Mac with the designed hub in headless Chrome, a fake microphone that says "hey Jarvis" every 7 s, and a stand-in for OpenAI (full spoken answers): the wake word kept working after a sensitivity change sent to the brain, after one made in ⚙ in the hub, after full answers, and the venue switch changes nothing for it (both personas have `hey_jarvis`; neither venue is public). Found in the code instead:
 - The brain ignores the phrase on **every** screen while **any** screen is busy: the chat answering, a question being heard, or a screen still playing an answer.
 - "Still playing" lasted until the page said it had played the answer, or for **120 s** after each spoken piece. A page that never says so (a second window, a tab that the browser paused, a held greeting that never played) kept every screen deaf for 2 minutes after each answer it got. A "still playing" message also added 120 s. Nothing was logged.
 This fits "came back much later" (visitor mode) and maybe the others; not proven.
@@ -191,10 +186,6 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 - With the Quest's pinch scale (tips 6–7 cm apart = 0), the photo's relaxed open hands read 72–87 % pinch: enough to hold the clutch (over 60 %). A hand with its thumb along the index finger still reads about 60 % at 5 cm.
 **Fix:** the page uses the opposite label, and the position in the picture only when both hands carry the same label; a **Swap left and right hands** box for the lab. Pinch is now 5 cm apart = 0, 2 cm = 1 (`webcam-hands.js`). Lab check W.3 and W.4 say if that is right for a real hand. (2026-11-22, quick job 88: on a real webcam the opposite label swapped the hands, lab check W on the laptop. The page now uses MediaPipe's label as it is.)
 
-### 2026-11-19 — The teleop pages say "frozen: release grip" while the grip is already released
-**What:** after any freeze (also the brain's first input), `status.needs_release` stays true until the arm moves again, even with the clutch let go: it is the mapper's flag *or* the jog's (`loop.py` `status()`), and the jog's flag clears only with keyboard jogging. So with a Quest or the webcam, the Arm chip says "frozen: release grip" (the webcam page: "frozen: let go of the clutch") until the next grab, though the release already happened. Nothing moves wrongly; only the words are off.
-**Fix:** not changed (it is in the teleop loop, which the builder reviews). The webcam page's own state shows the page's freeze, which is correct. (2026-11-20, quick job 66: fixed. `status.needs_release` is now the flag of the input that drives: the keys' flag for keys, the hand mapper's for a Quest, hands or the webcam.)
-
 ### 2026-11-19 — A teleop test that holds the grip from its first frame fails when the loop ticks first
 **What:** quick job 44's pull request. `test_stop_works_from_a_monitor` failed on GitHub, and locally only after `test_shutdown.py`. If the loop's first tick comes before the page's first frame, it freezes (no input) and then wants the grip released before it engages. The test held the grip from its first frame, so it never engaged. The race was there before; a small change in timing showed it.
 **Fix:** the test (and the two-arms test like it) sends a released frame first, as a real controller does.
@@ -203,17 +194,9 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 **What:** quick job 44. `AppRunner.cleanup()` waits for every running handler (`shutdown_timeout`, 60 s by default). An open WebSocket is a running handler, and aiohttp doesn't close WebSockets by itself, so with pages open the brain stayed up about 30 s after "Shut down" (31.4 s measured). The teleop loop and the MCP server ran the whole time, so an AI tool's next small move started and the arm moved to its goal. uvicorn (the MCP server) waits the same way for an AI tool's open stream, and cutting it prints an error trace.
 **Fix:** `TeleopLoop.shut_down()` refuses every move from the start of a shutdown. `on_shutdown` closes every page's WebSocket (`close_sockets`), `shutdown_timeout` is 1 s, and the MCP server ends each session before it stops (a `# HACK:`, current-focus.md). A new long-lived connection (a stream, a socket) must be closed there too.
 
-### 2026-11-19 — Lab day: the wake word stops after a settings change
-**What:** on the desktop, the wake word stopped after a change to Wake Word Sensitivity and came back only after a restart (lab check 9.7). During visitor mode it stopped too, and came back much later (F.11). On the Quest it did not answer until the builder changed Level of Detail (F.6). When it works, it is reliable.
-**Fix:** quick job 42 (2026-11-20, the entry "The wake word: not reproduced…" above).
-
 ### 2026-11-19 — Lab day: the room decides what the microphone hears, not the sensitivity
 **What:** the desktop faces the wall, and the USB microphone is in its front port, about 60 cm from the chair. A dividing wall stands between the desk and the door. A loud fan on the roof makes noise above the desk at times. Without the fan, the wake word works about 9 times in 10 near the microphone, and from the front of the room with a raised voice. With the fan and more than a few feet away, it is unreliable. Sensitivities 5, 7 and 9 made little difference. Without "hey", "Jarvis" inside a sentence woke it 0 times in one minute.
 **Fix:** none in code. The builder keeps the sensitivity setting. A USB extension cable can put the microphone on the table, facing the room.
-
-### 2026-11-19 — Lab day: voice timing and languages
-**What:** push-to-talk took about 9 s to the first spoken word (9.3). After a wake word question, the answer started 4.2 s and 5.3 s after the question ended (the words were final after 0.5 to 0.9 s, the first text came 1.8 to 2.9 s later). After ⏻ and start, the greeting did not start at once (9.2). With Answers: English, a typed Spanish question got a Spanish answer and no voice; a typed "你好" got English (9.14). Listens: English still let other languages through ("ni hao"), and a few times "test" came out in Cyrillic. The voice sometimes changed to another person between answers. The microphone button disappeared when the microphone was unplugged and did not come back when it was plugged in again. With the lab-assistant persona, spoken questions came back as words in German, Turkish or Portuguese, with Listens on English and on Any; JARVIS was fine (2.9).
-**Fix:** quick jobs 42 (the greeting), 46, 47, 48 and 55.
 
 ### 2026-11-19 — Lab day: the Newline is smooth only by HDMI at 1600×900
 **What:** in the Newline's own Chrome, the startup was not smooth at Drawing Resolution 1 or 0.5 (0.5 is also blurry). By HDMI from the desktop, Ubuntu shows 60 Hz at 1920×1080, but everything on the Newline looks like a low frame rate (the desktop's other monitors are normal). At 1600×900 it is smooth and readable from 3 m. The Newline has no "PC" or "Game" picture mode. Ubuntu and the Pi show it as "Hitevision group 32". Its USB touch cable works (the desktop's xArm cable was out from then on), but with a second monitor connected, touch did not land correctly. Its speakers play the hub's voice by HDMI. A Pi by HDMI and USB touch works the same way: smoother at 1600×900 than at 1920×1080, but less smooth than the desktop or a laptop.
@@ -227,18 +210,6 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 **What:** `so101-white-cam-wrist` showed the stand camera's view (F.1). The config was right (wrist = socket 7, stand = socket 8); the two USB cables were the wrong way round. The builder swapped them, and the names were correct. The stand camera's picture was blurry.
 **Fix:** the cables, not the config. The names follow the socket until the powered USB hub arrives (`docs/plan/current-focus.md` → "Hacks to clean up"). The blur: turn the stand camera's focus ring, if it has one.
 
-### 2026-11-19 — Lab day: the arm kept moving after "Shut down lab-os"
-**What:** F.9. The arm went limp, but the AI tool's move went on and the arm moved to its goal. The terminal stayed about 30 s after `shutting down: asked from…`. The page in AR did not show "lab-os is off". The checklist also asked for the "Start lab-os" icon before step 11.1 had made it, so the icon opened as a text file.
-**Fix:** quick job 44. The checklist's rules now say: a step comes after the steps that it needs.
-
-### 2026-11-19 — Lab day: STOP was not on the hub during the visitor wave
-**What:** F.11. To stop the wave, the builder had to open Monitor quickly: the designed hub had no STOP button in view. The wave itself works but does not look much like a wave.
-**Fix:** quick jobs 43 (STOP) and 52 (the wave).
-
-### 2026-11-19 — Lab day: Top Speed gave "500 Internal Server Error", then Settings was empty
-**What:** F.14. A change to Top Speed showed `500 Internal Server Error` under the field, no "✓ Saved", and the amber bar only at the top of the page. Restart Now did nothing. After ⚙ was closed and opened again, the page showed nothing. After the brain was stopped and started again, all of it worked (Saved, Restart Now, the arm connected again). Changing a number and changing it back still asked for a restart. The order arrows of Buttons Around the Core do not line up and look like lines.
-**Fix:** quick job 45.
-
 ### 2026-11-19 — Lab day: smaller findings
 **What:**
 - Every move to `home` says "clipped" on AI Control, because two of home's numbers are past the soft limits (quick job 30). The arm still arrives where it should (F.3; quick job 50). (2026-11-20, quick job 50: home is now at the soft limits, so it no longer says "clipped".)
@@ -251,11 +222,6 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 - When the Newline's hub speaks, the desktop's core shows the speaking animation too.
 - A lot of content text is all lowercase ("clipped", "arrived", status words; quick job 53).
 - People who see the hub look at "JARVIS" first, although it is in two small places.
-
-### 2026-11-19 — The pages' 3D arm takes every `arm_command`, whatever its `device`
-**What:** two arms at once (preview 3). Every `arm_command`, `arm_stop` and `arm_resume` has a `device` field, but `ArmFeed` (`teleop/web/arm/arm-feed.js`) never reads it. A second arm's commands on `/ws` would make the 3D arm jump between the two arms, and its `arm_stop` would show the right arm as frozen.
-**Fix:** the second loop sends no `arm_*` messages. Its state goes in `status.left_arm`. A 3D view of two arms must first make `ArmFeed` filter by `device`.
-**Replaced the same day:** `ArmFeed` now follows one arm (right or left) and takes only messages whose `device` is that arm, so both arms send `arm_*` messages again.
 
 ### 2026-11-19 — Two 3D arms loaded at the same time: the second one never moved
 **What:** with two arms, the teleop page loaded both SO-101 models at once. The second model stood still in its rest pose, without the frozen colour, although it got every joint angle. Most likely, three.js shares a file request that is already running, so the second loader's manager said "done" before its meshes were in, and the model was made without them.
@@ -304,11 +270,6 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 **What:** quick job 27. When a step failed (e.g. the arm stopped answering), the loop froze the arm, and that freeze wrote to the arm again (`stop()` holds where the motors are). With the USB gone that write fails too, inside the error handler, so the loop task would end: every page "connected", nothing moving, no message (as in the 2026-10-29 entry; a second way in). That may be part of what lab check 10.5 saw ("following" but nothing moved after replugging); the repeated "read failed" lines come from the status broadcast, which kept running. Not confirmed on the real arm.
 **Fix:** a freeze never lets a failing `stop()` out (it's logged), and a failed step checks the USB at once, so an unplug is reported as one line, not a traceback per tick.
 
-### 2026-11-17 — Unplugging a real arm while the brain runs: the hub doesn't notice, and after replugging it's stuck
-**What:** lab check 10.5. With `so101-white` driven by the brain, its USB cable was unplugged: the hub still showed it connected. Plugged back in, teleop showed "following" but the arm didn't move, and the brain repeated `so101-white: read failed (Failed to sync read 'Present_Position' … [TxRxResult] Port is in use!); using the last reading`. Likely (not checked): the brain keeps the old port open after the cable goes, and never opens the new one.
-**Fix:** quick job 27 (notice the unplug, say so on every page, reconnect when it's back). Until then: after replugging an arm, stop the brain (Ctrl+C) and start it again.
-**2026-11-18:** built (quick job 27): the brain checks the arm's `/dev/serial/by-id/` name every half second, lets go of the port when it's gone and opens it again when it's back. Not yet tried on the real arm (lab check F.4–F.5).
-
 ### 2026-11-17 — The Quest's wake word misses just under the line
 **What:** lab check 10.4: of 10 "Hey Jarvis" on the Quest, the misses printed `a screen heard something like "hey Jarvis" (0.40; it takes 0.50 at sensitivity 5)` and `(0.47; …)`. It heard the words; the score was just short.
 **Fix:** raise the Quest's sensitivity (⚙ → This device → Wake word sensitivity, 6 or 7). Lab check F.6.
@@ -317,22 +278,13 @@ This fits "came back much later" (visitor mode) and maybe the others; not proven
 **What:** lab check 10.4: twice, a spoken English request was taken as another language and answered in it. Mandarin, said on purpose, worked (it opened and closed Monitor).
 **Fix:** quick job 33: an input and an output language per device, each "Any" or "English". Built 2026-11-18: Output English is an instruction to the AI and works with any voice; Input English only reaches OpenAI's transcription. Gemini's live transcriber (the lab's voice at the time; OpenAI's since its key went into `.env` the same day) has no language setting; a test with English said by macOS's French, Chinese and German voices was heard right with and without an instruction, so the misheard English wasn't reproduced (`docs/guides/voice.md`).
 
-### 2026-11-17 — The VR hub's far-away dot cluster only shows in AR
-**What:** lab check 10.1: the cluster is visible only in AR (passthrough), straight ahead, behind the idle circle, not moving. In VR it's probably there too but black on black. When the hub's network bursts into place, its dots seem to fly out of that cluster.
-**Fix:** quick job 10 (2026-11-18): found, see the entry below.
-
 ### 2026-11-18 — In AR, additive blending covers the room: a black glow is a dark shape
-**What:** the VR hub's cluster of dots (above) was the network's links, drawn black while the dots wait in a tight clump far ahead for the jump. Three's `AdditiveBlending` adds colour but also writes opacity, and in AR the headset shows the room only where the picture is see-through, so black lines with opacity covered it as a dark clump (in VR: black on black, invisible). The faint stars of the start screen were dark specks the same way. Seen without a headset: `/xr?preview&passthrough` draws the AR way (transparent), over a light page.
+**What:** the VR hub's cluster of dots (lab check 10.1, entry in `docs/archive/gotchas-out-of-date-2026-11-25.md`) was the network's links, drawn black while the dots wait in a tight clump far ahead for the jump. Three's `AdditiveBlending` adds colour but also writes opacity, and in AR the headset shows the room only where the picture is see-through, so black lines with opacity covered it as a dark clump (in VR: black on black, invisible). The faint stars of the start screen were dark specks the same way. Seen without a headset: `/xr?preview&passthrough` draws the AR way (transparent), over a light page.
 **Fix:** every glow in the VR hub uses `GLOW` (`xr/draw.js`): it adds light like before but leaves the opacity alone (`blendSrcAlpha` zero, `blendDstAlpha` one), so a glow can only brighten the room. A test fails if `AdditiveBlending` comes back. On the Quest itself: lab-checklist F.10.
 
 ### 2026-11-17 — Hiwonder glove: all five LEDs must be lit to drive the xArm
 **What:** with the glove paired to `xarm1`, only the base followed the hand; the other five servos bent to one end and clacked. Both gloves had been switched to a robot-hand mode (each finger drives its own servo, tilt drives servo 6 = the xArm's base). The arm and lab-os were fine.
 **Fix:** press **K3** on the glove until **all five LEDs (D1–D5)** are lit ("robotic arm, bus servo" mode; one LED is the right-hand robot-hand mode). After every glove restart: right hand, palm down, fist; switch on; when the LEDs go off, open the hand. To re-pair, press **DEL** with the arm on. Manuals: `docs/device_manuals/Hiwonder_Wireless_Glove_*.pdf`.
-
-### 2026-11-17 — so101-white's two cameras answer to each other's names
-**What:** during an AI pick, `camera_snapshot so101-white-cam-wrist` showed the table from above (the arm, the Quest, a box), and `so101-white-cam-stand` showed the view along the jaws (the cube between them). The names in `config/devices.yaml` point at the wrong video ports.
-**Fix:** lab check 3.9 (2026-11-17): unplugging the wrist camera removed `usb-0:7`, so the wrist camera is socket 7 and the stand camera socket 8, as on the green set. Swap them in `config/devices.yaml`: quick job 29.
-**2026-11-18:** swapped (quick job 29): `so101-white-cam-wrist` is `usb-0:7`, `so101-white-cam-stand` `usb-0:8`. Lab check F.1.
 
 ### 2026-11-17 — so101-white stands on a ~1.6 cm plate, so its "z = 0" is above the table
 **What:** the arm sits on the stand camera's base plate. Its z = 0 is the bottom of the arm's own base, so the real table is about z −1.6 cm (the builder measured the jaw tips 3 cm off the table at a reading of 1.4 cm). `pick_at` goes down to half the object's height *in the arm's numbers*, so it would close near the top of a 3 cm cube; the 0.5 cm floor also stops the tips ~1 cm above the real table. Done by hand instead (open, `move_to` z 0 ≈ the cube's middle, close, lift): picked and placed fine. The elbow also sags ~3° on most moves (the gripper ends ~1 cm low/short): harmless at this size.
@@ -365,19 +317,8 @@ After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and 
 **Fix:** moved the commit to its branch and reset local `main` (nothing pushed). Two sessions at once each work in their own `git worktree`.
 
 ### 2026-11-17 — Green arms: LeLab's two "robots" were each the whole pair, and training never used LeLab
-**What:** untangling the entry below. A LeLab robot entry (`~/.cache/huggingface/lerobot/robots/<name>.json`) holds both arms: both ports, a leader file, a follower file, one camera. Its two entries, `SO-101_Green_Follower` and `SO-101_Green_Leader`, were the same pair. LeLab names a calibration file after the name on its calibration page (by default the entry's), so `SO-101_Green_Leader.json` was the *follower's* calibration and `SO-101_Green_Follower.json` the *leader's*; the numbers showed each in the right arm's folder. The follower folder also held a `shepherd.json` with the leader's numbers, from `lerobot-calibrate --robot.type=so101_follower --robot.id=shepherd` (unused). The training (cube-to-box, 2026-11-05) was recorded from the command line with `--robot.id=sheep --teleop.id=shepherd` (shell history), not LeLab. On the command line, when the motors hold another calibration, LeRobot asks: ENTER writes the file back into the motors, `c` recalibrates and **overwrites** it.
+**What:** untangling the entry of 2026-11-16 (now in `docs/archive/gotchas-out-of-date-2026-11-25.md`). A LeLab robot entry (`~/.cache/huggingface/lerobot/robots/<name>.json`) holds both arms: both ports, a leader file, a follower file, one camera. Its two entries, `SO-101_Green_Follower` and `SO-101_Green_Leader`, were the same pair. LeLab names a calibration file after the name on its calibration page (by default the entry's), so `SO-101_Green_Leader.json` was the *follower's* calibration and `SO-101_Green_Follower.json` the *leader's*; the numbers showed each in the right arm's folder. The follower folder also held a `shepherd.json` with the leader's numbers, from `lerobot-calibrate --robot.type=so101_follower --robot.id=shepherd` (unused). The training (cube-to-box, 2026-11-05) was recorded from the command line with `--robot.id=sheep --teleop.id=shepherd` (shell history), not LeLab. On the command line, when the motors hold another calibration, LeRobot asks: ENTER writes the file back into the motors, `c` recalibrates and **overwrites** it.
 **Fix:** the training files are the source of truth (`docs/plan/log.md`, 2026-11-17): lab-os drives with its copy in `calibration/` and refuses if it differs; LeLab gets one entry with its own copy (`scripts/green-lelab-from-training.sh`, which backs up and moves the old entries and files to `~/green-calibration-backup/`). At the command line's calibration question, press ENTER, never `c`.
-
-### 2026-11-16 — Green arms: LeLab writes a calibration into the motors at every teleop start, and it has two setups
-**What:** lab check part 8. `--watch` on `so101-green` worked with `calibration_file` set to `sheep.json`, then later refused: "motors hold a different calibration than its file". Cause, read from LeLab's code and saved setups (nothing written): LeLab's teleop writes the chosen setup's two calibration files into both arms' motors every time it starts. LeLab has **two saved setups for the same green pair**, and their names are crossed:
-
-| LeLab setup | follower file (written to the follower) | leader file |
-|---|---|---|
-| `SO-101_Green_Follower` | `sheep.json` | `SO-101_Green_Follower.json` |
-| `SO-101_Green_Leader` | `SO-101_Green_Leader.json` | `shepherd.json` |
-
-`sheep` and `shepherd` are the builder's own calibrations from LeRobot's command line (the ones used for training, as far as the builder remembers); the two `SO-101_Green_…` files came from LeLab's calibration page. The two follower files differ by up to 43 motor steps (about 3°). So the motors hold whichever setup LeLab ran last, and a lab-os pinned to one file refuses after the other. Each setup also saves only one camera (one `wrist_cam`, the other `overhead_camera`, both camera number 2); adding cameras in LeLab is finicky (they don't always show up or save).
-**Fix:** decided 2026-11-16: lab-os matches the motors. It uses whichever file in LeLab's follower folder equals what the motors hold, says which, and refuses only if none does (quick job 18, built 2026-11-17: it reads the motors' homing offsets and ranges, compares them as LeRobot does, and looks in the arm's own role folder first, then the other; the leader the same way; `calibration_file` is gone from `devices.yaml`). Still read-only. Lab check: part 8b. For training, the builder keeps to one LeLab setup, so recordings and the policy use the same calibration.
 
 ### 2026-11-16 — The training launcher started LeLab while the brain was driving the green arm
 **What:** lab check 8.12: with `lab-os serve --arm so101-green` running, the "SO-101 Training (LeLab)" icon started LeLab instead of refusing. The brain then logged `so101-green: read failed (… Incorrect status packet!); using the last reading`: two programs on one port, which rule 4 forbids. The launcher skips its "is the port open elsewhere" check when LeLab's page already answers ("then it's LeLab's"), `green.check`.
@@ -421,7 +362,7 @@ After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and 
 **Fix:** neither is used. The sensitivity slider sets openWakeWord's threshold and patience (`ai/wake.py` → `SENSITIVITY`); the browser's own noise suppression already runs on the microphone. `docs/guides/voice.md` → "Sensitivity".
 
 ### 2026-11-14 — The Quest's missed wake word: the page's sound can stop without telling anyone (likely cause, not yet seen in the lab)
-**What:** looking for why the Quest sometimes misses "hey Jarvis" while push-to-talk always works (entry 2026-11-13): the page sends the microphone through its WebAudio recorder. If the browser suspends the page's sound (the headset sleeps when taken off, or the browser loses audio focus) or mutes the microphone track, the recorder stops and nothing reaches the brain; the microphone counted as "open", so nothing tried again. A push-to-talk press resumes the sound (`unlock()`), which is why push-to-talk always worked and the wake word worked again after it. Not reproduced on a real Quest (no headset here): that's the code's only path where the wake word goes deaf while push-to-talk works.
+**What:** looking for why the Quest sometimes misses "hey Jarvis" while push-to-talk always works (entry 2026-11-13, now in `docs/archive/gotchas-out-of-date-2026-11-25.md`): the page sends the microphone through its WebAudio recorder. If the browser suspends the page's sound (the headset sleeps when taken off, or the browser loses audio focus) or mutes the microphone track, the recorder stops and nothing reaches the brain; the microphone counted as "open", so nothing tried again. A push-to-talk press resumes the sound (`unlock()`), which is why push-to-talk always worked and the wake word worked again after it. Not reproduced on a real Quest (no headset here): that's the code's only path where the wake word goes deaf while push-to-talk works.
 **Fix (2026-11-14):** while the wake word is on, the page checks every second: no audio for 1.5 s or the sound not running → resume it, else open the microphone again; while it can't, the dot turns orange and the brain logs `voice: quest's microphone: …`; the brain also logs gaps in the audio and near misses (a score over 0.25 but under the threshold). If the Quest still misses with audio flowing and no near misses logged, it's something else (lab checklist part 10). Other things found on the way: the old wake turns waited 0.25 s for other screens even with one, and a noisy room could keep the page's silence watch from ever ending the question (20 s), both fixed.
 
 ### 2026-11-14 — A hearing's WebSocket close could hang until the server went away
@@ -440,17 +381,9 @@ After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and 
 **What:** testing several hub pages as devices in one headless Chrome. (1) Pages opened as tabs (`/json/new`) are background tabs except the last; their `setTimeout`s run late, so the designed hub's 0.7 s module-close animation hadn't finished when the next step clicked, and the module looked stuck open. Real devices are each the front window of their own browser. (2) `PUT /json/new?http://…/design#skip`: the HTTP client treats `#skip` as the request's own fragment and never sends it, so the page started at its start screen.
 **Fix:** open each page in a window of its own (the browser's DevTools socket, `Target.createTarget` with `newWindow: true`), and pass the address there (or escape `#` as `%23`). Also found that way: while closing, the designed hub still told the brain it showed the page; it says "nothing" from the moment Back is pressed now.
 
-### 2026-11-13 — The Newline by HDMI is choppy at 1920×1080 though the desktop draws 60 fps (open)
-**What:** the lab desktop on the Newline's HDMI (+ the touch cable), the Newline as its screen. `/perf` showed the desktop's numbers, a steady 60 fps, but the picture on the Newline was still very choppy. After lowering the desktop's resolution to **1600×900** (Ubuntu Settings → Displays) it was smooth. So the drawing isn't the problem; the lag is between the HDMI output and the Newline's panel at 1080p. Push-to-talk showed up (whose microphone, the desktop's USB one or the Newline's over the touch cable, isn't clear) and its transcription was poor. The wake word wasn't tried.
-**Fix:** open. Workaround: 1600×900. To check next: the refresh rate Ubuntu picks at 1920×1080 (Displays: 60 Hz, or 30/50?), and the Newline's picture mode (a "game" or low-latency mode in its menu; manual in `docs/device_manuals/`).
-
 ### 2026-11-13 — The Newline's own Chrome: 44–59 fps on /perf, but the startup still lags, and no mic button
 **What:** the Newline on an Ethernet cable from the lab desktop, its own Chrome at `http://<desktop>:8080`. `/perf`: average **43.8 fps** over 10 s, slowest frame 50 ms, canvas 2926×1646 (1463×823 at 2×, device pixel ratio 2.625), 108 dots, 3000 stars; **59 fps with 1000 stars**. The startup itself was still very laggy, so laggy that after the tap about half the animation never showed. The Newline's microphones work (Chrome's voice search understood well), but the hub showed **no mic button**: the page is `http://<ip>`, which isn't a secure page, so the browser hides the microphone (`docs/guides/voice.md` → secure pages). STOP from the Newline stopped the arm on the desktop.
 **Fix:** open. The mic: Chrome's flag on the Newline (`chrome://flags` → "Insecure origins treated as secure" → `http://<desktop>:8080`). The lag: `/perf` is near fine with fewer stars, so the startup does more than `/perf` (focus step 12).
-
-### 2026-11-13 — The Quest's wake word sometimes doesn't fire
-**What:** in the headset, "hey jarvis" usually works but sometimes nothing happens; push-to-talk always works. On the lab desktop with a USB microphone both work, though sometimes only when spoken louder (the microphone isn't great).
-**Fix:** open. Cause unknown (the Quest browser pausing the microphone, the level, or the detector's threshold).
 
 ### 2026-11-13 — "Don't ask again" for the arm's move tools lasted one session
 **What:** during the cube pick the builder told Claude Code not to ask again for the move tools. The next session asked again: nothing was saved, and the `ask` list in `.claude/settings.json` wins over a saved "allow" anyway (in Claude Code, ask beats allow).
@@ -465,10 +398,6 @@ After that, readings were steady, a 5° shoulder test moved 5.1° smoothly, and 
 Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.2, 5) with 179°; 170° worked.
 **2026-11-24, seen again (tic-tac-toe):** at a reported z 0.9–1.4 cm the jaws closed above a 3 cm red piece, three times (the builder watched: "not reaching low enough"). The piece the stand camera put at spot 3 (15, 13) was between the jaws only at about (18.5, 11), so x and y were also ~3.5 cm off. `pick_at` also stopped at its first step: the arm sagged 1.6 cm short above the piece. The builder lowered the floor to 0.2 cm; quick job 106 measures the real numbers.
 **Fix:** open. First check how high the jaw tips really are when the tools say z = 1 (ruler), and whether the cube sat beside the jaws or in line with them. Fix ideas are in `docs/plan/ideas.md` ("AI picking: height, sag and camera placement"). **2026-11-24:** the low height is fixed (the shoulder offset, the 2026-11-24 entry "The white arm's shoulder reads 4.7° forward"); the sag under load is still open.
-
-### 2026-11-12 — Which white-arm camera sees what
-**What:** the `camera_snapshot` tool told the AI this wasn't written down. From the pick run: **`so101-white-cam-a`** is fixed above the table, behind the arm, looking forward over it (the arm comes in at the bottom right; the box and pliers are top right). **`so101-white-cam-b`** is on the wrist, looking along the jaws (both jaw tips at the bottom of the picture). The exposure settles slowly: cam-a gave three very dark pictures in a row while the arm moved under it, and cam-b one washed-out yellow-white picture, both fine again on the next snapshot.
-**Fix:** written into the cameras' notes in `config/devices.yaml` and the tool's description, which also says to take another picture when one is too dark or too bright.
 
 ### 2026-11-12 — Asked to say each move first, the AI made most moves without a word
 **What:** in the same run the builder asked: "tell me before each move what you'll do. One move at a time." Claude (Fable 5.2) said what it would do before only 3 or 4 of its 17 moves (gripper included), and in chat it didn't wait for a go-ahead between moves. Each move was still a separate, small tool call with a look in between, but the builder couldn't follow along or stop a move before it started. Bad for the 2026-11-19 demo, where people follow the arm through what the AI says.
@@ -545,10 +474,6 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 **What:** after a while of Quest teleop, `so101-white`'s elbow straightened and the arm hit the table. Reproduced offline (a wandering hand through `ClutchMapper` + the SO-101 model): with the hand 2 m forward, shoulder_lift 89°, elbow −75° (straight is −90°), the gripper 8.6 cm *below* the table. Nothing knew where the table was, and relative control lets the arm wander as the hand re-grabs. Also, each joint's speed was limited on its own, so at low speed the joints arrived at different times and the gripper didn't move along the hand's line ("doesn't follow exactly").
 **Fix:** the IK mapping keeps the gripper and wrist `floor_m` (1 cm) above the base's bottom (the table) and slips there like a joint limit; a step that would dip goes as far as it can; all joints slow down together. (A rule keeping the elbow 15° from straight was tried and dropped the same day: the builder found it got in the way of some movements.) Tuning: `docs/guides/quest-setup.md` → "Tuning". Still possible: the real arm sags when stretched out flat near the table; raise `floor_m` if it touches.
 
-### 2026-11-10 — The Newline doesn't look like 60 Hz from a laptop (open)
-**What:** the laptop says the Newline runs at 60 Hz, but motion looks no smoother. Several ways tried by the builder; not solved yet. Likely suspects, cheapest first: the browser's energy saver (Chrome/Edge/Brave cap pages at 30 frames a second on battery: plug in, or turn it off under Settings → Performance / System); a 4K signal (60 Hz at 4K needs HDMI 2.0 at both ends and a "Premium High Speed" cable, and 4× the pixels for a laptop's graphics to draw: set the laptop to 1920×1080 at 60 Hz and let the Newline scale it); the Newline's HDMI/EDID version setting (1.4 vs 2.0) on its input menu, where the model has one; its USB-C input instead of HDMI, if both ends carry video over USB-C. Measure with `/perf` (frames the browser actually draws) on the Newline.
-**Later the same day:** still stuck at a low rate from the laptop, though it says 60 Hz. And the hub in the Newline's own Chrome (through `pi01`) is laggy too, even at `?quality=reduced`: probably its browser on its phone-class chip. The builder now questions the Newline as the hub's screen; `/perf` numbers on it would settle how much it can carry. The builder also connected a lab desktop by HDMI (maybe DisplayPort): just as laggy as the laptop (a Mac). So it's the Newline itself (its input or how it scales the picture), not the computer behind it, and another computer on its HDMI isn't expected to help.
-
 ### 2026-11-10 — Editing `.env` does nothing until the brain restarts
 **What:** the hub's core stayed red and the brain kept trying OpenAI ("OpenAI refused the API key") although `OPENAI_API_KEY` was already commented out in `.env`: the brain had started before that edit, with a placeholder key still in `.env`. `.env` is read once, at start. The core also said "No answer" for this standing problem, and the ⏻ button couldn't clear it (the page copies the brain's state every 3 s).
 **Fix:** restart the brain after editing `.env`. The designed hub now says "AI not connected" with the brain's sentence for a standing problem; "No answer" is only for a question that failed.
@@ -612,10 +537,6 @@ Also: straight down was refused at (24.6, 0.2, 9) cm with 180° and at (29.1, 8.
 ### 2026-11-09 — Ctrl+C tests: background jobs from a script ignore SIGINT
 **What:** A server started with `&` from a non-interactive shell (as Claude's tool calls are) inherits SIGINT as *ignored*, so `kill -INT` does nothing and Ctrl+C handling looks broken.
 **Fix:** test Ctrl+C from a launcher that resets the signal (`subprocess.Popen(..., preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))`), or in a real terminal.
-
-### 2026-11-09 — New devices can't join the lab Wi-Fi quickly
-**What:** only campus IT can add a device (by MAC address) to the lab Wi-Fi. The Raspbots were sent in about two weeks ago and still aren't on (IT tried; it didn't work, cause unknown). Planning had assumed the Newline could just join it.
-**Fix:** plan around it: only devices already on it (the desktops, the Pis) use it; the Newline reaches the brain by cable, through a Pi, or by a phone hotspot until the lab router exists (`docs/guides/network-setup-checklist.md` → "Networks before the router").
 
 ### 2026-11-09 — Headless Chrome refuses full screen and pointer lock
 **What:** In headless Chrome (`--headless=new`), `requestFullscreen()` and `requestPointerLock()` are refused even after a real (DevTools-sent) click. So the hub's tap 1 takes its "can't go full screen" path (straight to tap 2), and teleop's Desktop control never starts. Not a bug in the pages: the standalone `/teleop` page behaves the same.
@@ -731,10 +652,6 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 **What:** Watched by the builder, +40 raw units from upright: base turns counter-clockwise from above; shoulder, `wrist_flex` tilt toward the **controller-board side**; elbow tilts away from it; `wrist_roll` turns counter-clockwise from above; gripper closes (builder's script: 302 open, 750 closed). The arm has no obvious front, so **"front" = the board side** (stand there when calibrating teleop).
 **Fix:** `SIGNS` in `robots/xarm.py`: pan −1, lift +1, elbow −1, wrist_flex +1, wrist_roll +1 (shared convention: +pan to the arm's right, +lift/elbow/wrist_flex forward, +roll counter-clockwise from above). Gripper mapped 750 → 0° (closed), 302 → 90° (open).
 
-### 2026-10-27 — Hook blocks shell commands that merely contain green's serial numbers
-**(Gone since step 11, 2026-11-12: the hook doesn't look for the green serials any more.)**
-**What:** `guard.sh` denies any Bash command containing so101-green's serials, even when only writing them into the block list. Editing `config/devices.yaml` and the tests with the editor tools (not shell heredocs) works.
-
 ### 2026-10-27 — The xArm 1S is a HID device, and `lsusb` calls it an "LED badge"
 **What:** The xArm doesn't appear under `/dev/serial/by-id/`. It's a USB HID device (like a keyboard), `/dev/hidraw*`. `lsusb` names its ID `0483:5750` "STMicroelectronics LED badge", because that's a generic chip-maker ID that other gadgets share. Its own strings say manufacturer "Hiwonder", product "xArm", serial `720710C0D60063300023D4D4`. By default only root can open `/dev/hidraw*`.
 **Fix:** Identify it by USB ID **plus** product/serial, not the ID alone. One-time setup on each Linux brain (normal terminal, not Claude's):
@@ -764,16 +681,6 @@ Then unplug and re-plug the xArm's USB.
 ### 2026-10-24 — WebXR needs a secure context: use `localhost`, not an IP
 **What:** Browsers only allow WebXR on `https://` or `http://localhost`. Opening the page via the desktop's IP address shows "WebXR not available".
 **Fix:** On the Quest, use `adb reverse tcp:8080 tcp:8080` over USB and open `http://localhost:8080` (docs/guides/quest-setup.md). Re-run `adb reverse` after every re-plug. (Since 2026-11-20, quick job 73: `lab-os serve` runs it by itself when the Quest connects.)
-
-### 2026-10-24 — Never open so101-green's serial ports
-**What:** The lab desktop has so101-green's leader + follower plugged in. Both show up as CH343 adapters (`1a86:55d3`, "USB Single Serial"), exactly what so101-white will look like.
-**Why it matters:** so101-green is the training project's arm (the builder's own, separate from lab-os). Opening its port (even to read) can disturb their session.
-**Rule:** Never open these:
-- `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41531599-if00`
-- `/dev/serial/by-id/usb-1a86_USB_Single_Serial_5B41533501-if00`
-
-They're `off_limits` in `config/devices.yaml`; `lab_os.devices` refuses them, and a Claude Code hook blocks commands that name them. The arm may be unplugged at times; that doesn't change the rule.
-**Since 2026-11-12 (step 11):** loosened by the builder. lab-os may open them, but never while another program (LeLab, a run) has them open; they're `borrowed`, not `off_limits` (CLAUDE.md, "Hard rules").
 
 ### 2026-10-24 — ttyACM0/ttyACM1 swap
 **What:** `/dev/ttyACM0` and `/dev/ttyACM1` are numbered in plug-in order, so they can swap after a reboot or re-plug.
