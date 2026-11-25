@@ -1,0 +1,56 @@
+# Command Center: the spec
+
+The builder's spec (2026-11-25), for quick job 134. Follow `docs/design/DESIGN.md` for the look. The far-future parts (a 3D lab scene, gestures) are in `docs/plan/ideas.md` → "Far future".
+
+## Overview
+The Command Center is a page, only on the brain for now, to see and manage the lab's connected devices and screens. It feels like a monitor wall for the lab. Users see the devices and what is open on their screens, and arrange the screens in one virtual space. The first version is a 2D workspace. A 3D view can come later.
+
+## Main tasks
+1. See all connected devices and screens at once.
+2. Select several devices or screens, and change a setting or the page they show, on all of them at once.
+3. Focus on one device: see its screen or screens in detail, with its actions and modules.
+
+**Highlight and focus are different.** Selecting an item highlights it, to arrange and select items in the workspace. Focusing opens a modal with the device's screens and its actions, pages and modules.
+
+## Workspace and layout
+- Show each connected device and its screens (the live device list, quick job 109).
+- Users move screens and devices to new places in the virtual workspace.
+- Users group several screens under one device. Group a device's monitors by itself where possible.
+- Users give a screen a page or view, as with Open on….
+- The virtual layout is separate from the real devices. Moving an item changes only its place in the workspace. Moving a window or its state between devices is a future idea.
+
+## Screen previews
+- A light preview of each connected screen, for about 20 screens (or as many as on demo day), without high load or lag in the page.
+- The previews show what is open on each screen. They need not stream at full quality, but the best quality possible is good.
+- Select a preview to highlight it. Focus on it to open the modal.
+
+## Layout of the page
+- Left: a list of devices. Center: the virtual workspace. Right: a list of screens or windows.
+- An item selected in a list is highlighted in the workspace, and an item selected in the workspace is highlighted in its list.
+- Highlighting never opens the focus modal. Focus has its own action, for example a small icon.
+- Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
+- A search, and a way to show or hide items in the workspace.
+- Use the same names as Open on…. When display names exist (quick job 132), show both.
+
+## Device controls and the focus modal
+- The focus modal shows the device's screens and its actions, pages and modules.
+- Modules match the device, for example diagnostics and teleop for the Raspbot, Monitor for an arm. These are examples, not a fixed list. A module opens in a modal, as usual, or as its own page.
+- On a device that is not selected: a ⚙ or ⋯ menu for its settings and actions.
+- The controls include the teleop permission (which devices may drive a real arm, today `drive_from` in `config/place.yaml`), the device's settings, and the screen and window actions.
+- With as few words as possible, the design makes clear which actions change the real device and which change only the virtual workspace.
+
+## Several items at once
+- Select several devices or screens and apply a change to all of them.
+- Show only the actions that apply to every selected item. Make clear when an action changes more than one device or screen.
+
+## 2D and 3D
+The 2D workspace is the first version and does every main task by itself. Keep the design open to a 3D view later. 3D is not part of the first version.
+
+## Order of the work
+1. The 2D workspace for devices and screens.
+2. Light previews, grouping, search, show and hide.
+3. Highlight (for arranging and selecting several) and focus (the modal).
+4. Give pages or views to screens, also to several screens at once.
+5. The device controls and the related modules.
+6. Keep the virtual layout separate from changes to real devices.
+7. Keep the design open to a 3D lab scene and new ways to interact.
