@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — OpenAI's voice audio has no quiet at its edges, and its speed cuts words (quick job 111)
+**What:** the builder heard the answer too fast, with the start or end of a word missing. A measure of `tts-1-hd` (`fable`) showed two causes. (1) `speed: 1.15` made a sentence 2.92 s → 2.42 s (about 1.2 times faster, not 1.15), and the audio then ended with sound in its last 20 ms: the end of the last word was cut. (2) Each piece starts with sound in its first sample, and the page plays the pieces end to end, so a word edge was lost and the sentences ran together. The page joins the pieces correctly (in order, each after the one before).
+**Fix:** the normal speed (no `speed:` in `config/models.yaml`). The brain adds 0.08 s of quiet before and 0.22 s after each spoken piece, with a 6 ms fade at both edges (`pad_wav`, both voice services). The greeting recordings are made again once ("v3").
+
 ### 2026-11-25 — Chrome on a laptop: "This site can't be reached", Firefox works (quick job 130)
 **What:** in the lab, the builder's laptop could not open the hub in Chrome. Firefox on the same laptop opened it. The brain sends no `https://` redirect and no HSTS, and the hub pages fetch nothing from `localhost`, so nothing in lab-os makes Chrome refuse. The causes on the laptop: on macOS 15 and later, an app needs the Local Network permission to reach a `192.168.…` address (else `ERR_ADDRESS_UNREACHABLE`), and the permission can be off for Chrome only; a VPN, proxy or extension that only Chrome uses; a typed address without `http://` that Chrome changed to `https://`. Chrome's Local Network Access prompt (Chrome 141 and later) is for a page's requests, not for a typed address.
 **Fix:** the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". Lab step M.6 asks for the error code. If the code is not one of these, add it here.
