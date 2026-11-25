@@ -78,7 +78,8 @@ voices:
     # a persona's `speakers:` wins (quick job 100: J.A.R.V.I.S. fable, the British voice; the Lab Assistant nova)
     # `style:` (accent, mood, manner) works only with gpt-4o-mini-tts and newer, e.g.:
     # style: A lively, warm British accent (Received Pronunciation). Upbeat and engaged.
-    speed: 1.15                        # 1 = normal; the style alone doesn't change the pace
+    # speed: 1                          # 1 = normal (OpenAI: 0.25–4). 1.15 until quick job 111:
+    # tts-1-hd then spoke about 1.2 times faster and cut the end of the last word.
     key_env: OPENAI_API_KEY
     price_per_min: {heard: 0.003, spoken: 0.015}
     fallback: backup           # no OPENAI_API_KEY in .env → Gemini's free key
