@@ -32,3 +32,15 @@ Each camera and the USB microphone send their data on a fixed timetable. One USB
 5. Open the Cameras page. Make sure that each picture is under the correct name.
 
 **Caution:** Do not start lab-os on the green arms while LeLab runs (`AGENTS.md` → "Hard rules").
+
+## Open the hub on another computer
+Open the hub at `http://192.168.8.130:8080/?device=<its name>`. Type `http://` at the start: Chrome can change an address without it to `https://`. The computer must be on the router: its Wi-Fi, or a cable to the big switch.
+
+If Chrome shows "This site can't be reached" and Firefox opens the hub, do these steps in this order. Try the address again after each step. Quick job 130.
+1. Read the error code under Chrome's message (for example `ERR_ADDRESS_UNREACHABLE`).
+2. On a Mac, open System Settings → Privacy & Security → Local Network. Turn on Google Chrome. If it is on, turn it off and on again. If two Chrome lines show, turn on both. Since macOS 15, an app without this permission cannot reach the lab's addresses, and Chrome gives `ERR_ADDRESS_UNREACHABLE`.
+3. In Chrome, open `chrome://settings/security`. Turn off **Always use secure connections**. (The hub is a plain `http://` page.)
+4. Open `chrome://net-internals/#proxy`. If a proxy shows, turn off the VPN or the proxy, or add `192.168.8.130` to its exceptions. Firefox has its own proxy setting, so it can work when Chrome does not.
+5. Open `chrome://extensions`. Turn off each VPN, proxy or ad-blocker extension.
+6. Open `chrome://policy`. If many policies show, the laptop is managed (for example by the university). Then use Firefox on this laptop.
+

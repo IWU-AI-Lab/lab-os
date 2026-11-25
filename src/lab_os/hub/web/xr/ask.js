@@ -70,7 +70,7 @@ export class Ask {
     V.unlock();
     this.greeting = false;
     if (this.voiced) { V.stopSpeaking(); this.turn?.pacer.free(); this._end(); } // stops the answer (quick job 57)
-    this.voiced = true;
+    this.voiced = true; this.wake = false;
     this._show("Listening…", "", now);
     this.state = "listening"; this.sfx.listen();
     if (!(await V.press("ask"))) this._end();
@@ -88,11 +88,11 @@ export class Ask {
     if (ev.type === "wake") { // the brain heard the phrase on this headset's microphone
       this.greeting = false;
       if (this.voiced) { this.turn?.pacer.free(); this._end(); } // the brain stopped the answer (quick job 57)
-      this.voiced = true; this._show("Listening…", "", now); this.state = "listening"; this.sfx.listen();
-      this.watch = this.VM.silenceWatch((spoke) => {
+      this.voiced = true; this.wake = true; this._show("Listening…", "", now); this.state = "listening"; this.sfx.listen();
+      this.watch = this.VM.silenceWatch(() => {
         this.watch = null;
-        if (spoke) { this.V.finish(); this.state = "thinking"; }
-        else { this.V.cancel(); this._show("I didn't hear a question.", "", now); this._end(); }
+        // nothing loud enough here: the transcriber still decides (quick job 112: quiet microphones dropped it)
+        this.V.finish(); this.state = "thinking";
       }, { quietMs: this.VM.WAKE_QUIET_MS, idleMs: 6000, maxMs: 20_000, floor: this.V.noiseFloor });
       return;
     }
@@ -110,7 +110,7 @@ export class Ask {
       if (!this.turn) this.q = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
       this.replyAt = now;
       if (!ev.final) return;
-      if (!ev.text) { this.q = "I didn't catch that. Hold the trigger while you talk."; this._end(); return; }
+      if (!ev.text) { this.q = this.wake ? "I didn't hear a question." : "I didn't catch that. Hold the trigger while you talk."; this._end(); return; }
       if (ev.command) { this._end(); return; } // "that's all": not a question, no answer comes (quick job 83)
       // the answer appears as it's said (the pieces' "playing"), like the screen's
       const answer = { text: "" };
