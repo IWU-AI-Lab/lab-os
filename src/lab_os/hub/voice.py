@@ -22,9 +22,10 @@ like a push-to-talk press. If several screens hear it, the one that heard it bes
 Snappier (2026-11-14): one screen listening answers at once (no wait for others); a hearing is kept
 connected ahead of time while a screen listens for the phrase (Gemini's Live API takes a moment to
 connect); the audio from just before the phrase was detected goes to the hearing (no lost first
-words); the question ends when the service hears a pause after it, or after the page's shorter
-silence; the chat's and the voice's connections are opened while the person talks. Each turn's
-timing is logged ("voice timing …") and kept for `GET /api/voice/timings`.
+words); the question ends when the service hears a pause after it, when the turn model hears
+a finished sentence (quick job 110, lab_os.ai.turn), or after the page's silence; the chat's and
+the voice's connections are opened while the person talks. Each turn's timing is logged
+("voice timing …") and kept for `GET /api/voice/timings`.
 """
 
 import asyncio
@@ -53,6 +54,7 @@ from lab_os.ai.assistant import Assistant
 from lab_os.ai.chat import Conversation
 from lab_os.ai.languages import LANGUAGES, clean_language
 from lab_os.ai.speech import Hearing, VoiceError, hearing_for, speak_any, wav_seconds
+from lab_os.ai.turn import FINISHED, TurnModel, TurnWatch
 from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices, pick_voice
 from lab_os.ai.wake import (
     DEFAULT_SENSITIVITY,
@@ -107,6 +109,9 @@ WAKE_END_HOLD_S = 0.35  # the service heard a pause after the question: end if i
 # ... but the words so far don't end a sentence ("37 times 48, then"): wait longer (quick job 83;
 # 1.2 s until quick job 98)
 WAKE_MID_HOLD_S = 1.6
+# Quick job 110: the turn model doesn't end a question whose words so far (Gemini's, while it hears)
+# stop on one of these: the person goes on ("37 times 48, … then add 199")
+GOES_ON = re.compile(r"(,|\b(and|then|or|but|plus|minus|times|so|um|uh|er))\s*$", re.I)
 STANDBY_MAX_S = 240.0  # a hearing kept connected ahead of time is renewed after this long
 STANDBY_RETRY_S = 30.0  # it couldn't connect: try again after this long
 WARM_EVERY_S = 5.0  # how often a listening screen checks the warm hearing
@@ -198,7 +203,7 @@ class TurnTiming:
     how: str  # "wake word", "push-to-talk", "dictation"
     device: str = ""
     warm: bool = False  # the hearing was connected ahead of time
-    ended_by: str = ""  # "pause" (the service), "page" (the page's silence or a release)
+    ended_by: str = ""  # "pause" (the service), "turn model" (job 110), "page" (silence, a release)
     marks: dict = field(default_factory=dict)
 
     def mark(self, step: str, at: float | None = None) -> None:
@@ -314,6 +319,7 @@ class VoiceDesk:
     # a typed turn's answer to speak (visitor mode's welcome, quick job 35), taken once; None = none
     say: Callable[[], str | None] = lambda: None
     wake_models: WakeModels = field(default_factory=WakeModels)
+    turn_model: TurnModel = field(default_factory=TurnModel)  # a finished question? (quick job 110)
     timings: deque = field(default_factory=lambda: deque(maxlen=TIMINGS_KEPT))
     _session: aiohttp.ClientSession | None = None
     _wake_candidates: dict | None = None  # screens that heard the phrase in this window → score
@@ -708,6 +714,7 @@ class VoiceLink:
         self._second: list = [0.0, 0.0, 0.0, False]  # this second: start, best score, loudest, woke
         self._word_checked = 0.0
         self._rewaking: asyncio.Task | None = None
+        self._turn_watch: TurnWatch | None = None  # the question after the wake word: finished yet?
         self.timing: TurnTiming | None = None  # this turn's steps
         self.pages: dict | None = None  # what this page can show (the assistant opens them)
         self.hear_in: str | None = None  # this device's assistant languages (None = any)
@@ -823,6 +830,10 @@ class VoiceLink:
         now = time.monotonic()
         if self.hearing is not None:
             self.hearing.feed(pcm)
+            if self._turn_watch is not None and self.from_wake and self._turn_watch.feed(pcm):
+                asyncio.get_running_loop().create_task(
+                    self._ask_turn(self.hearing, self._turn_watch)
+                )
             limit = WAKE_UTTERANCE_S if self.from_wake else MAX_UTTERANCE_S
             if now - self.started_at > limit:
                 self.end()
@@ -970,6 +981,7 @@ class VoiceLink:
         else:
             self.from_wake = True
             self.hearing.on_pause = lambda h=self.hearing: self._question_paused(h)
+            self._turn_watch = TurnWatch(self._floor, b"".join(preroll))
             for pcm in preroll:  # the words right after the phrase may already be here
                 self.hearing.feed(pcm)
             self.desk.chat_warm()
@@ -1019,6 +1031,7 @@ class VoiceLink:
             return
         self.from_wake = True
         self.hearing.on_pause = lambda h=self.hearing: self._question_paused(h)
+        self._turn_watch = TurnWatch(self._floor)
 
     def _converse_next(self) -> None:
         """After an answer (or nothing heard), listen again, a moment later."""
@@ -1033,6 +1046,38 @@ class VoiceLink:
             return
         loop = asyncio.get_running_loop()
         loop.call_later(pause_hold(hearing.text), self._end_if_quiet, hearing)
+
+    async def _ask_turn(self, hearing: Hearing, watch: TurnWatch) -> None:
+        """A short quiet after speech: ask the turn model if the question is finished (quick job
+        110). Finished → it ends now; not → the page's silence watch still ends it later."""
+        model = self.desk.turn_model
+        if model.why_not:
+            return  # it didn't load (logged once)
+        loop = asyncio.get_running_loop()  # the first question loads it (~0.2 s), off the loop
+        score = await loop.run_in_executor(None, model.finished, watch.audio())
+        if (
+            model.why_not
+            or self.hearing is not hearing
+            or self._turn_watch is not watch
+            or watch.quiet_s <= 0
+        ):
+            return  # ended meanwhile, or the person talks again
+        text = getattr(hearing, "text", "") or ""
+        if text and not strip_wake(text, self.desk.wake_phrase()):
+            return  # only the phrase so far
+        going_on = bool(text and GOES_ON.search(text))
+        log.info(
+            "voice: %s: the turn model says %s (%.2f)%s",
+            self.device or "a screen",
+            "finished" if score >= FINISHED else "not finished",
+            score,
+            ", but the words go on" if going_on and score >= FINISHED else "",
+        )
+        if score >= FINISHED and not going_on:
+            if self.timing:
+                self.timing.ended_by = "turn model"
+            self.send({"type": "ended"})  # the page stops its own silence watch
+            self.end()
 
     def _end_if_quiet(self, hearing: Hearing) -> None:
         if self.hearing is hearing and not hearing.in_speech:
@@ -1101,6 +1146,7 @@ class VoiceLink:
         if self.hearing is None:
             return
         hearing, self.hearing = self.hearing, None
+        self._turn_watch = None
         if self.timing:
             self.timing.ended_by = self.timing.ended_by or "page"
             self.timing.mark("ended")
@@ -1212,6 +1258,7 @@ class VoiceLink:
 
     async def cancel(self) -> None:
         self.from_wake = False
+        self._turn_watch = None
         self.timing = None
         if self.hearing is not None:
             hearing, self.hearing = self.hearing, None
