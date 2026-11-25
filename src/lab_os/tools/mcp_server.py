@@ -336,8 +336,10 @@ def add_project_tools(server: MCPServer, project: ProjectTools, calls) -> None:
     @server.tool(annotations=READ)
     def list_devices() -> dict:
         """The place's devices (config): name, kind, off limits, borrowed (another project's:
-        usable, but never set up or recalibrated by lab-os), active in this venue, notes.
-        Whether a device is switched on isn't known yet."""
+        usable, but never set up or recalibrated by lab-os), active in this venue, notes. With
+        the brain running, also what is connected now: `connected` for each device,
+        `motor_power` for the arms the brain drives, `other_connected` (devices the config
+        doesn't know) and `screens` (the hub open). Use it for "which devices are connected"."""
         return run("list_devices")
 
 

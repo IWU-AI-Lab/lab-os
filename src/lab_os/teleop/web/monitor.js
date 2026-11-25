@@ -1,5 +1,7 @@
 // Live view of the arm: one bar per joint, driven by the server's `status` messages. Two arms at once
 // (status.left_arm): the left arm's bars in their own card, and its state next to the right arm's.
+// An arm whose USB is unplugged (quick job 109): its joints card goes, and its chip says "unplugged",
+// within a second (the brain checks the USB every half second); it comes back when it is plugged in.
 "use strict";
 
 const $ = (id) => document.getElementById(id);
@@ -25,7 +27,7 @@ function row(name, lo, hi, box = "joints") {
 }
 
 function armState(el, a) {
-  if (a.connected === false) setPill(el, "arm disconnected (USB)", "warn");
+  if (a.connected === false) setPill(el, `${a.name || "arm"}: unplugged (USB)`, "warn");
   else if (a.frozen) setPill(el, a.needs_release ? "frozen: release grip" : "frozen", "warn");
   else if (a.clutch) setPill(el, "following (clutch)", "on");
   else setPill(el, "holding", "off");
@@ -44,13 +46,16 @@ function show(s) {
   setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
   const who = { free: "free", ai: "the AI tools" }[s.control] || "an input page";
   setPill($("control"), who, s.control === "free" ? "off" : "on");
-  armState($("state"), { ...s, connected: s.arm?.connected });
+  const gone = s.arm?.connected === false;
+  armState($("state"), { ...s, connected: s.arm?.connected, name: s.arm?.name });
   bars(s.joints, s.limits, "joints");
+  $("joints").closest(".card").classList.toggle("unplugged", gone);
   const l = s.left_arm;
   if (!$("left-card")) return; // a page without the left-arm chip or card
-  $("left-chip").hidden = $("left-card").hidden = !l;
+  $("left-chip").hidden = !l;
+  $("left-card").hidden = !l || l.connected === false;
   $("arm-label").textContent = l ? "Right arm" : "Arm";
-  $("joints-title").textContent = l ? "Right arm" : "Joints";
+  $("joints-title").textContent = gone ? `${s.arm?.name || "The arm"} is unplugged` : l ? "Right arm" : "Joints";
   if (!l) return;
   armState($("left-state"), l);
   $("left-name").textContent = l.name;

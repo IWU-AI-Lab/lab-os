@@ -18,6 +18,7 @@ borrowed or not).
 
 import logging
 import os
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
@@ -332,6 +333,23 @@ def check_not_in_use(name: str, paths: list[str], proc: Path = Path("/proc")) ->
 
 
 # ---- cameras (by USB socket) ------------------------------------------------------------------
+UNKNOWN_CAMERA = "camera-usb-"  # a camera devices.yaml doesn't list: named by its socket
+
+
+def unknown_camera_name(socket: str) -> str:
+    """The name a camera that devices.yaml doesn't list gets (the live device list, the Cameras
+    page): its socket, "usb-0:3.2" → "camera-usb-0-3.2"."""
+    return UNKNOWN_CAMERA + socket.removeprefix("usb-").replace(":", "-", 1)
+
+
+def unknown_camera_socket(name: str) -> str | None:
+    """The socket in such a name, or None: "camera-usb-0-3.2" → "usb-0:3.2"."""
+    bus, _, port = name.removeprefix(UNKNOWN_CAMERA).partition("-")
+    if not name.startswith(UNKNOWN_CAMERA) or not bus.isdigit():
+        return None
+    return f"usb-{bus}:{port}" if re.fullmatch(r"\d+(\.\d+)*", port) else None
+
+
 def camera_paths(
     name: str, registry: Registry | None = None, by_path: str = BY_PATH_DIR
 ) -> list[str]:
@@ -339,6 +357,14 @@ def camera_paths(
     metadata), picture first. Lists a directory; opens nothing."""
     registry = registry or load_registry()
     device = registry.devices.get(name)
+    unknown = unknown_camera_socket(name) if device is None else None
+    if unknown:  # a camera that devices.yaml doesn't list (the webcam): by its socket
+        owners = [
+            d for d in registry.devices.values() if d.kind == "camera" and d.socket == unknown
+        ]
+        if any(d.off_limits for d in owners):
+            raise PortNotAllowed(f"{name}: socket {unknown} belongs to an off-limits camera")
+        device = Device(name=name, kind="camera", socket=unknown)
     if device is None:
         raise KeyError(f"unknown device {name!r}; add it to devices.yaml (docs/dev/places.md)")
     if device.off_limits:

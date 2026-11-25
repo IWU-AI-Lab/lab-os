@@ -274,7 +274,19 @@ The place's devices from `devices.yaml` (no ports, nothing opened or probed):
  "devices": [{"name": "so101-green", "kind": "so101", "off_limits": false, "borrowed": true, "active_in_venue": true, "notes": "…", "linked": false},
              {"name": "fake-arm", "kind": "fake", "off_limits": false, "borrowed": false, "active_in_venue": true, "notes": "…", "linked": true}]}
 ```
-`linked`: the arm this brain drives. `borrowed`: another project's device that lab-os may use with its rules (`docs/dev/places.md`). Whether a device is switched on isn't known until the roll call (lab router).
+`linked`: the arm this brain drives. `borrowed`: another project's device that lab-os may use with its rules (`docs/dev/places.md`). What is connected now: `/api/live-devices` (below). The system diagram and the VR hub's panels use this list.
+
+### `/api/live-devices` (quick job 109)
+The brain's live device list (`src/lab_os/hub/live_devices.py`): every device seen here, connected or not. The brain looks every 2 s (Linux: `/sys`, and `adb devices`; it opens nothing). The Devices panel, the Cameras page and the assistant's `list_devices` use it.
+```json
+{"devices": [{"id": "so101-white", "name": "so101-white", "kind": "arm", "known": true, "connected": true,
+              "what": "Follower.", "via": "USB", "driven": true, "power": "on", "volts": 12.1, "problem": null,
+              "first_seen": "2026-11-25 14:02", "last_seen": "2026-11-25 14:02"},
+             {"id": "usb:0c45:7403:usb-0:4", "name": "Reader", "kind": "usb", "known": false, "connected": false,
+              "what": "Unknown: Card Reader (USB 0c45:7403)", "via": "USB", "last_seen": "2026-11-25 14:10"}]}
+```
+`kind`: `arm`, `camera` (with `names`: every name for its USB socket; a camera `devices.yaml` doesn't list is `camera-usb-<bus>-<port>`), `headset` (a Quest that adb lists, by cable or Wi-Fi), `robot` (raspbot1 while connected), `screen` (`screen:<name>`: the hub open there), `usb` (any other USB device; hubs are left out). `power` (arms the brain drives only): `on`, `off` (the motors don't answer), or `null` (not known). Connected devices come first. Off-limits devices are never listed. The seen devices are kept in the place's `local/seen-devices.yaml` (not in git).
+`POST /api/live-devices/remove` `{"id": "…"}` → `{"ok": true, "devices": […]}`; `404` when it is not on the list. A device that is connected stays off the list until it connects again. Every hub page gets the new list.
 
 ### `/api/hub`
 ```json
@@ -349,6 +361,7 @@ Focus step 8 (`docs/archive/guides-2026-11-25/hub.md` → "Devices"). Every hub 
 - `{"type": "open", "module": "monitor", "from": "newline", "from_window": "w-…"}`: show this module now (sent from another device: "Open on…"). From the start screen too, without a startup or a new conversation; an open module gives way.
 - `{"type": "close"}`: close the module ("Bring it back" on the device that sent it).
 - `{"type": "settings", "settings": {...}}`: this device's settings changed (every window of it gets them).
+- `{"type": "live-devices", "devices": [...]}` (quick job 109): the live device list changed (a plug, an unplug, a connect or a disconnect, a Remove); the list as in `GET /api/live-devices`.
 
 **Page → brain**
 - `{"type": "hello", "look": "plain" | "design", "stage": "start" | "hub", "showing": "monitor" | null, "from": "newline", "from_window": "w-…", "screen": {"label": "DELL U2720Q", "left": 1920, "top": 0, "width": 1920, "height": 1080}}`: after the welcome. `showing`: the module page open there (null: none, or a chat or details page); `from`: who sent it (`""`: opened there). `screen`: which monitor (position in the desktop; `label` only where the browser already allowed "window management").

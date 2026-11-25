@@ -1928,32 +1928,43 @@ function renderCommits(c) {
 }
 
 /* ---------- devices: a star around the brain for a few, a hive grouped by kind for many; tap one for details ---------- */
-const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], camera: ["i-cam", "Cameras"], pc: ["i-pc", "Computers"], pi: ["i-pi", "Raspberry Pis"] };
-// the place's devices (devices.yaml, from /api/devices). `brain` = linked: the arm this brain drives. Whether
-// a device is switched on isn't known until the roll call (the lab router), so `on` stays unknown (never
-// guessed). `lock` = off limits (another project's): shown, never opened.
+const KINDS = { arm: ["i-arm", "Arms"], robot: ["i-pi", "Robots"], camera: ["i-cam", "Cameras"], headset: ["i-headset", "Headsets"], pc: ["i-screen", "Screens"], usb: ["i-chip", "Other USB devices"] };
+// the live device list (quick job 109, /api/live-devices and the "live-devices" message): every device seen
+// here, connected or not, as the brain sees it now. `on` = connected now; `power` = the motors' power of an arm
+// the brain drives ("on" / "off" / null: not known). An unknown device says what the system says it is.
 let LAB = [];
-const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
-function setDevices(list) {
+const KIND_OF = { arm: "arm", robot: "robot", camera: "camera", headset: "headset", screen: "pc", usb: "usb" };
+function setDevices(list) {  // the place's devices.yaml (/api/devices): the system diagram only
   S.devRaw = list;
   if (S.showing === "system") drawSystem();
+}
+function setLive(list) {
   LAB = list.map((d) => ({
-    name: d.name, kind: KIND_OF[d.kind] || "pc", brain: !!d.linked, on: d.linked ? true : undefined,
-    lock: d.off_limits ? "another project's (never opened)" : "", use: d.notes || d.kind,
+    id: d.id, name: d.name, kind: KIND_OF[d.kind] || "usb", brain: !!d.connected, on: !!d.connected,
+    power: d.kind === "arm" ? d.power ?? null : undefined, volts: d.volts, problem: d.problem || "", driven: !!d.driven,
+    known: !!d.known, use: d.what || d.kind, via: d.via || "", last: d.last_seen || "", lock: "",
   }));
   renderDevices();
+  const open = S.showing === "devices" && $("#mod-slot .detail");
+  if (open) { open.remove(); showDetail("devices"); }  // the open details page follows the list
+}
+async function refreshLive() { const r = await getJSON("/api/live-devices"); if (r) setLive(r.devices); }
+async function removeDevice(id) {
+  const r = await fetch("/api/live-devices/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }).catch(() => null);
+  if (r?.ok) { hideDevice(); setLive((await r.json()).devices); }
 }
 // columns the device table can show; hub.device_columns picks which, in order
 const word = (ok, yes, no) => `<span class="sw${ok ? " ok" : ""}"><i></i>${ok ? yes : no}</span>`;
+const powerWord = (d) => (d.power === undefined ? "" : d.power === "on" ? word(true, "On", "") : d.power === "off" ? word(false, "", "Off") : `<span class="sw">${d.driven ? "Not known yet" : "Not known"}</span>`);
 const COLUMNS = {
-  id: { head: "Device", title: "Sticker on the device, and its lab-os name", cell: (d) => (d.sticker ? `${d.sticker}<small>${d.name}</small>` : d.name) },
-  on: { head: "Power", title: "On (plugged in, or answers on the network); not known until the roll call", cell: (d) => (d.lock ? `<span class="sw lock"><svg class="ico"><use href="#i-lock"/></svg>Locked</span>` : d.on === undefined ? `<span class="sw">not known</span>` : word(d.on, "On", "Off")) },
-  linked: { head: "Linked", title: "Linked to the brain (talking to it)", cell: (d) => (d.lock ? "" : word(d.brain, "Yes", "No")) },
-  use: { head: "Use", title: "What it's used for", cell: (d) => d.use },
-  host: { head: "Computer name", title: "The computer's own name", cell: (d) => d.host || "" },
-  ip: { head: "IP", title: "IP address (hidden on public screens)", cell: (d) => d.ip || "" },
+  id: { head: "Device", title: "Its lab-os name, or what the system calls it", cell: (d) => (d.known ? esc(d.name) : `${esc(d.name)}<small>Unknown</small>`) },
+  on: { head: "Connected", title: "Plugged in or on the network now", cell: (d) => word(d.on, "Yes", "No") },
+  power: { head: "Motor power", title: "The motors' power, for the arms the brain drives", cell: powerWord },
+  use: { head: "What it is", title: "From devices.yaml, or what the system says it is", cell: (d) => esc(d.use) },
+  seen: { head: "Last seen", title: "When it last connected or disconnected", cell: (d) => (d.on ? "Now" : esc(d.last)) },
+  remove: { head: "", title: "Remove it from this list", cell: (d) => `<button type="button" class="btn small" data-remove="${esc(d.id)}" title="Remove it from this list. It comes back when it connects again.">Remove</button>` },
 };
-let DEVICE_COLUMNS = ["id", "on", "linked"];
+let DEVICE_COLUMNS = ["id", "on", "power"];
 const deviceList = () => LAB;
 let GRAPH_MAX = 8;
 function nodeFor(d, parent) {
@@ -2009,32 +2020,34 @@ function renderDevices() {
   $("#devlist").innerHTML = `<table><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>` + Object.entries(KINDS).map(([kind, [ico, label]]) => {
     const list = devs.filter((d) => d.kind === kind);
     if (!list.length) return "";
-    return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}</th></tr>` + list.map((d) => `<tr tabindex="0" data-dev="${d.name}"><td><svg class="ico"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}</th></tr>` + list.map((d) => `<tr tabindex="0" data-dev="${esc(d.id)}"><td><svg class="ico"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
   }).join("") + "</table>";
   $("#devlist").querySelectorAll("tr[data-dev]").forEach((tr) => {
-    const open = (e) => { e.stopPropagation(); showDevice(devs.find((d) => d.name === tr.dataset.dev), tr); };
+    const open = (e) => { e.stopPropagation(); showDevice(devs.find((d) => d.id === tr.dataset.dev), tr); };
     tr.addEventListener("click", open); tr.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && open(e));
   });
   const conn = devs.filter((d) => d.brain).length;
-  $("#devcount").innerHTML = `<b>${conn}</b> of ${n} linked`;
+  $("#devcount").innerHTML = n ? `<b>${conn}</b> of ${n} connected` : "No devices seen yet";
 }
 function showDevice(d, from) {
-  // first: which device this is (the sticker on it, its name); then the two statuses; then the rest
-  const card = $("#devcard"), [ico] = KINDS[d.kind], usb = d.kind === "arm" || d.kind === "camera";
+  if (!d) return;
+  // first: which device this is; then whether it is connected (and its motors' power); then the rest
+  const card = $("#devcard"), [ico] = KINDS[d.kind] || KINDS.usb;
   const dot = (ok, yes, no) => `<div class="row${ok ? " on" : ""}"><span class="dot"></span>${ok ? yes : no}</div>`;
-  const power = d.on === undefined ? `<div class="row"><span class="dot"></span>Power: not known until the roll call</div>`
-    : dot(d.on, usb ? "Plugged in" : "On the network", usb ? "Not plugged in" : "Off, or not on the network");
-  const status = d.lock
-    ? `<div class="row lock"><svg class="ico"><use href="#i-lock"/></svg>Locked: ${esc(d.lock)}</div><div>The hub shows it but never opens its ports.</div>`
-    : power + dot(d.brain, "Linked to the brain", "Not linked");
+  const conn = dot(d.on, `Connected${d.via ? ` (${esc(d.via)})` : ""}`, `Not connected${d.last ? `. Last seen ${esc(d.last)}` : ""}`);
+  const power = d.power === undefined || !d.on ? "" : d.power === "on" ? dot(true, `Motor power: on${d.volts ? ` (${d.volts} V)` : ""}`, "")
+    : d.power === "off" ? dot(false, "", "Motor power: off, or the motors do not answer") : `<div class="row"><span class="dot"></span>Motor power: ${d.driven ? "not known yet" : "not known (the brain does not drive this arm)"}</div>`;
+  const problem = d.problem ? `<div>${esc(d.problem)}</div>` : "";
   card.querySelector(".in").innerHTML = `<div class="t"><svg class="ico"><use href="#${ico}"/></svg>${esc(d.name)}<button type="button" aria-label="Close">×</button></div>
-    <div>${esc(d.use)}</div>${status}`;
+    <div>${esc(d.use)}</div>${conn}${power}${problem}
+    <div class="row"><button type="button" class="btn small" data-remove="${esc(d.id)}" title="It comes back when it connects again.">Remove from the list</button></div>`;
   card.hidden = false;
   // beside what was tapped, kept on screen
   const b = from.getBoundingClientRect(), pb = (from.closest(".panel") || from).getBoundingClientRect(), cw = card.offsetWidth, ch = card.offsetHeight;
   let x = pb.left - cw - 12; if (x < 16) x = Math.min(innerWidth - cw - 16, b.right + 14);
   card.style.left = `${x}px`; card.style.top = `${clamp(b.top + b.height / 2 - ch / 2, 16, innerHeight - ch - 16)}px`;
   card.querySelector("button").addEventListener("click", hideDevice);
+  card.querySelector("[data-remove]").addEventListener("click", (e) => { e.stopPropagation(); removeDevice(d.id); });
   SFX.blip();
 }
 function hideDevice() { $("#devcard").hidden = true; }
@@ -2716,19 +2729,20 @@ function showDetail(id) {
       <div class="d-stats"><div><b>${total}</b>commits</div><div><b>${active}</b>days with commits</div><div><b>${Math.max(...C)}</b>on ${dayName(n - 1 - top)}, the busiest day</div></div></div>
       <div><div class="d-line">Latest</div><ul class="d-list">${recent}</ul></div></div>`;
   } else if (id === "devices") {
-    const devs = deviceList(), cols = ["id", "on", "linked", "use"].map((k) => [k, COLUMNS[k]]);
+    const devs = deviceList(), cols = ["id", "on", "power", "use", "seen", "remove"].map((k) => [k, COLUMNS[k]]);
     const rows = Object.entries(KINDS).map(([kind, [ico, label]]) => {
       const list = devs.filter((d) => d.kind === kind);
       if (!list.length) return "";
-      return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}<span style="float:right">${list.filter((d) => d.brain).length} of ${list.length} linked</span></th></tr>` + list.map((d) => `<tr data-dev="${esc(d.name)}"><td><svg class="ico" style="color:var(--c)"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+      return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}<span style="float:right">${list.filter((d) => d.on).length} of ${list.length} connected</span></th></tr>` + list.map((d) => `<tr data-dev="${esc(d.id)}"><td><svg class="ico" style="color:var(--c)"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     }).join("");
-    html = `<div class="detail wide"><div><div class="d-line">${devs.filter((d) => d.brain).length} of ${devs.length} linked to the brain · from devices.yaml; power comes with the roll call</div>
+    html = `<div class="detail wide"><div><div class="d-line">${devs.length ? `${devs.filter((d) => d.on).length} of ${devs.length} connected now · every device seen here; Remove takes one off the list until it connects again` : "No devices seen yet. A device shows here when it is plugged in or connects."}</div>
       <table class="d-table"><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>${rows}</table></div></div>`;
   }
   if (id === "system") html = `<div class="sysbox" aria-live="polite"></div>`;
   slot.insertAdjacentHTML("beforeend", html);
   if (id === "system") drawSystem();
-  slot.querySelectorAll(".detail tr[data-dev]").forEach((tr) => tr.addEventListener("click", (e) => { e.stopPropagation(); showDevice(deviceList().find((d) => d.name === tr.dataset.dev), tr); }));
+  slot.querySelectorAll(".detail [data-remove]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); removeDevice(b.dataset.remove); }));
+  slot.querySelectorAll(".detail tr[data-dev]").forEach((tr) => tr.addEventListener("click", (e) => { e.stopPropagation(); showDevice(deviceList().find((d) => d.id === tr.dataset.dev), tr); }));
 }
 // the system diagram: the same facts as the panels (devices.yaml, the devices with the hub open, the AI), redrawn
 // when they change while it's open
@@ -3396,6 +3410,7 @@ async function refreshFacts() {
   }
   renderProject(); renderSpend(); renderCommits(c);
   if (d) setDevices(d.devices);
+  await refreshLive();
   buildLogLines();
   requestAnimationFrame(() => { layoutTraces(); if (S.booted) showTraces(); });
 }
@@ -3659,6 +3674,7 @@ import("/web/device.js").then((m) => {
     }),
     onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
     onClose: () => { if (S.moduleOpen) closeModule(); },
+    onLive: (list) => setLive(list),
     onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),

@@ -143,14 +143,19 @@ async def test_the_cameras_page(aiohttp_client, monkeypatch):
     switches for each device."""
     from test_hub_server import SRC
 
-    monkeypatch.setattr(
-        camera_feed,
-        "all_cameras",
-        lambda: [{"id": "white-cam-stand", "names": ["white-cam-stand"]}],
-    )
+    from lab_os.hub import server
+
+    # quick job 109: the cameras plugged in now (the live list), not every one in devices.yaml
+    cam = {"video": "/dev/video0", "title": "USB Camera", "usb": "1-8", "socket": "usb-0:8"}
+    webcam = {"video": "/dev/video2", "title": "HD Webcam C615", "usb": "3-2", "socket": "usb-0:2"}
+    monkeypatch.setattr(server, "scan_system", lambda: ([], [cam, webcam], []))
     client = await aiohttp_client(make_app())
-    got = await (await client.get("/api/cameras")).json()
-    assert got["cameras"][0]["id"] == "white-cam-stand"
+    await server.look_at_devices(client.app)
+    got = (await (await client.get("/api/cameras")).json())["cameras"]
+    # socket 8 has a white and a green name: the white set's (not borrowed) comes first
+    assert [c["id"] for c in got] == ["so101-white-cam-stand", "camera-usb-0-2"]
+    assert got[0]["names"] == ["so101-white-cam-stand", "so101-green-cam-stand"]
+    assert got[1]["known"] is False and "C615" in got[1]["title"]
     page = await (await client.get("/cameras")).text()
     assert "/web/design/kit.css" in page and "/api/cameras" in page
     assert "/api/camera-feed/" in page and "document.hidden" in page
@@ -185,14 +190,12 @@ async def test_the_board_drawn_on_the_live_picture(aiohttp_client, monkeypatch):
             pass
 
     monkeypatch.setattr(server.table_map, "load", lambda cam: _plain_map(cam))
-    monkeypatch.setattr(
-        camera_feed,
-        "all_cameras",
-        lambda: [
-            {"id": "other-cam", "names": [game.camera, "other-cam"]},  # one socket, two names
-            {"id": "wrist-cam", "names": ["wrist-cam"]},
-        ],
-    )
+    cams = [
+        {"id": "other-cam", "names": [game.camera, "other-cam"]},  # one socket, two names
+        {"id": "wrist-cam", "names": ["wrist-cam"]},
+    ]
+    monkeypatch.setattr(camera_feed, "all_cameras", lambda: cams)
+    monkeypatch.setattr(server, "live_cameras", lambda app: [dict(c) for c in cams])
     app = make_app()
     app[server.FEEDS] = Feeds()
     client = await aiohttp_client(app)
