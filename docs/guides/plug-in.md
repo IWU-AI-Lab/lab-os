@@ -9,6 +9,7 @@ This guide tells you what to plug in where on the lab desktop (the brain), and w
 - **The Quest** is in the front USB-C port, for adb. Usually it uses the Wi-Fi.
 - **The mouse and the keyboard** are in the other free sockets.
 - **The card reader and the webcam** go on another computer of the room (a Windows desktop or a laptop). Open the hub on that computer. The card reader types into that computer's hub, and its swipe starts that hub. Open `/webcam` on that computer for webcam teleop: it uses the webcam of the computer that opens the page.
+- **The card reader on the brain** (quick job 113): with the card reader in a socket of the lab desktop, a swipe starts the hub on the desktop also when another window has the focus. The brain reads the reader. On another computer, the hub page must have the focus.
 - **The xArm** goes in a free back socket only when you use it.
 
 Each camera and the USB microphone send their data on a fixed timetable. One USB 2.0 controller has room for only a few of them. For this reason, keep the cameras and the microphone on different controllers when you can. `lab-os usb` shows which controller each device is on.
@@ -32,6 +33,17 @@ Each camera and the USB microphone send their data on a fixed timetable. One USB
 5. Open the Cameras page. Make sure that each picture is under the correct name.
 
 **Caution:** Do not start lab-os on the green arms while LeLab runs (`AGENTS.md` → "Hard rules").
+
+## The card reader on the brain
+Do these steps one time on the lab desktop. Quick job 113.
+1. Open a terminal. Run this command:
+   ```bash
+   sudo usermod -aG input $USER
+   ```
+2. Log out and log in again. The brain can then read the card reader.
+3. Start the brain. When you plug in the card reader, the brain's log says "card reader … the brain reads its swipes".
+
+If the log says "no permission to read it", do step 1 and step 2 again. If the brain does not find the card reader, run `uv run lab-os usb`. Add the reader's USB ids to `config/devices.yaml` as `kind: card-reader` (see the comment at the top of the file).
 
 ## Open the hub on another computer
 Open the hub at `http://192.168.8.130:8080/?device=<its name>`. Type `http://` at the start: Chrome can change an address without it to `https://`. The computer must be on the router: its Wi-Fi, or a cable to the big switch.

@@ -69,6 +69,7 @@ import asyncio
 import json
 import logging
 import math
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -85,7 +86,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import Registry, load_registry, users_of
-from lab_os.hub import launch, wake_clips
+from lab_os.hub import card_reader, launch, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
@@ -1366,6 +1367,21 @@ async def _live_devices_task(app: web.Application):
     task.cancel()
 
 
+async def _card_reader_task(app: web.Application):
+    """The card swipe without the page in focus (quick job 113): on Linux, the brain reads its own
+    card reader and starts the hub pages on this computer."""
+    task = None
+    if sys.platform == "linux":
+
+        async def swipe() -> None:
+            await app[HUB_DEVICES].tell_here({"type": "card"})
+
+        task = asyncio.create_task(card_reader.run(load_registry(), swipe))
+    yield
+    if task:
+        task.cancel()
+
+
 async def api_live_devices(request: web.Request) -> web.Response:
     return web.json_response({"devices": request.app[LIVE].listing()})
 
@@ -1887,6 +1903,7 @@ def create_brain_app(
     app.cleanup_ctx.append(_new_arm_task)
     app.cleanup_ctx.append(_adb_reverse_task)
     app.cleanup_ctx.append(_live_devices_task)
+    app.cleanup_ctx.append(_card_reader_task)
     app.cleanup_ctx.append(_camera_feeds_task)
     app.cleanup_ctx.append(_lerobot_teleop_task)
     app.on_shutdown.insert(0, _tell_off_on_stop)  # before the teleop server closes its pages

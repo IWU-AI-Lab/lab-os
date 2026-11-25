@@ -360,6 +360,7 @@ Focus step 8 (`docs/archive/guides-2026-11-25/hub.md` → "Devices"). Every hub 
 - `{"type": "devices", "devices": [...]}`: the list changed (a page came or went, or shows something else).
 - `{"type": "open", "module": "monitor", "from": "newline", "from_window": "w-…"}`: show this module now (sent from another device: "Open on…"). From the start screen too, without a startup or a new conversation; an open module gives way.
 - `{"type": "close"}`: close the module ("Bring it back" on the device that sent it).
+- `{"type": "card"}`: the brain read a card swipe (a plain number) on its own computer's card reader (quick job 113). Only the pages on the brain's computer get it (a loopback address, or the address the page reached the brain at). A page on its start screen starts as with a swipe there. The card's data is never sent.
 - `{"type": "settings", "settings": {...}}`: this device's settings changed (every window of it gets them).
 - `{"type": "live-devices", "devices": [...]}` (quick job 109): the live device list changed (a plug, an unplug, a connect or a disconnect, a Remove); the list as in `GET /api/live-devices`.
 

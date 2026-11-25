@@ -181,6 +181,7 @@ class Window:
     sent_from_window: str = ""
     screen: dict = field(default_factory=dict)  # label, left, top, width, height (as the page saw)
     since: float = field(default_factory=time.time)
+    here: bool = False  # open on the brain's own computer (the card reader there starts it)
 
     @property
     def key(self) -> str:
@@ -290,6 +291,10 @@ class HubDevices:
         """One message to every hub page (e.g. lab-os is off)."""
         await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values())))
 
+    async def tell_here(self, msg: dict) -> None:
+        """One message to every hub page on the brain's own computer (a swipe, quick job 113)."""
+        await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values()) if w.here))
+
     async def push_settings(self, device: str, values: dict) -> None:
         msg = {"type": "settings", "settings": values}
         await asyncio.gather(*(self._send(w, msg) for w in self.of(device)))
@@ -395,7 +400,7 @@ class HubDevices:
             wid = "w-" + secrets.token_urlsafe(6)
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
-        w = Window(wid, name, ws, request.remote or "")
+        w = Window(wid, name, ws, request.remote or "", here=on_this_computer(request))
         self.windows[wid] = w
         log.info("device %s connected (%s, window %s)", name or "(no name)", w.address, wid)
         try:
@@ -429,6 +434,16 @@ class HubDevices:
             log.info("device %s left (window %s)", name or "(no name)", wid)
             await self.broadcast()
         return ws
+
+
+def on_this_computer(request: web.Request) -> bool:
+    """Is the page on the brain's own computer: from a loopback address, or from the address it
+    reached the brain at (`http://192.168.8.130:8080/` opened on the brain itself)."""
+    remote = request.remote or ""
+    if remote in ("127.0.0.1", "::1") or remote.startswith("127."):
+        return True
+    sock = request.transport.get_extra_info("sockname") if request.transport else None
+    return bool(remote and sock and sock[0] == remote)
 
 
 def address_key(address: str) -> str:
