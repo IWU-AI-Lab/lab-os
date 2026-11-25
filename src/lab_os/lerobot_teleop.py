@@ -17,8 +17,9 @@ The green rules (AGENTS.md → "Hard rules") and how this keeps them:
 
 Stop is like Ctrl+C: LeRobot lets go of the arms, so the follower goes limp. It bypasses lab-os's
 own safety layer (STOP on the pages, the soft limits): it is LeRobot's tool, as LeLab is.
-Rerun opens in its own window on this computer (not in the page: Rerun's web viewer in a frame
-crashed the browser tab, 2026-11-24). The brain starts that window, so Stop closes it too.
+LeRobot opens Rerun in its own window on this computer (`rr.spawn`), as in the builder's working
+command. Not in the page (Rerun's web viewer in a frame crashed the browser tab), and not a window
+the brain starts (it froze), 2026-11-24. The window stays open after Stop.
 """
 
 import contextlib
@@ -32,7 +33,6 @@ import signal
 import subprocess
 import tempfile
 import threading
-import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -45,7 +45,6 @@ log = logging.getLogger(__name__)
 
 FOLLOWER_ID, LEADER_ID = "sheep", "shepherd"  # the training files' ids (AGENTS.md)
 CAMERAS = ("so101-green-cam-stand", "so101-green-cam-wrist")
-RERUN_PORT = 9876  # Rerun's data server (LeRobot sends there)
 # LeRobot's lines when it would calibrate (lerobot 0.6.1, so_follower.py / so_leader.py)
 CALIBRATION_SIGNS = (
     "Mismatch between calibration values",
@@ -172,12 +171,19 @@ def _group(user: str, proc: Path) -> int | None:
     return int(fields[2]) if len(fields) > 2 else None
 
 
-def command(plan: Plan, calibration_dir: Path, rerun_port: int | None = RERUN_PORT) -> list[str]:
+def command(plan: Plan, calibration_dir: Path) -> list[str]:
     """LeRobot's teleop command for the green set. `calibration_dir`: the temporary copy (robot/
-    and teleop/ inside). `rerun_port`: send to the brain's Rerun window, or None: LeRobot opens
-    a Rerun window itself."""
+    and teleop/ inside). LeRobot opens its own Rerun window, as in the builder's working command
+    (a Rerun window that the brain started froze, 2026-11-24)."""
     cameras = {
-        name: {"type": "opencv", "index_or_path": path, "width": 640, "height": 480, "fps": 30}
+        name: {
+            "type": "opencv",
+            "index_or_path": path,
+            "width": 640,
+            "height": 480,
+            "fps": 30,
+            "fourcc": "MJPG",  # as in the builder's working command: two cameras on one USB hub
+        }  # fmt: skip
         for name, path in plan.cameras.items()
     }
     argv = [
@@ -193,24 +199,7 @@ def command(plan: Plan, calibration_dir: Path, rerun_port: int | None = RERUN_PO
         f"--teleop.calibration_dir={calibration_dir / 'teleop'}",
         "--display_data=true",
     ]  # fmt: skip
-    if rerun_port:
-        argv += ["--display_ip=127.0.0.1", f"--display_port={rerun_port}"]
     return argv
-
-
-def viewer_command() -> list[str]:
-    """Rerun's own window, which listens for LeRobot on this computer only."""
-    return [
-        "uv",
-        "run",
-        "--extra",
-        "so101",
-        "rerun",
-        "--bind",
-        "127.0.0.1",
-        "--port",
-        str(RERUN_PORT),
-    ]
 
 
 def copy_calibration(plan: Plan) -> Path:
@@ -226,16 +215,14 @@ def copy_calibration(plan: Plan) -> Path:
 
 
 class Runner:
-    """The one LeRobot teleop the brain started (and its Rerun server). `popen` for the tests."""
+    """The one LeRobot teleop the brain started. `popen` for the tests."""
 
     def __init__(self, popen=subprocess.Popen):
         self.popen = popen
         self.proc = None
-        self.viewer = None
         self.tmp: Path | None = None
         self.lines: deque[str] = deque(maxlen=30)
         self.said = ""
-        self.window = False  # the brain opened Rerun's window (Stop closes it)
         self.lock = threading.Lock()
 
     def running(self) -> bool:
@@ -252,15 +239,14 @@ class Runner:
             "log": list(self.lines)[-12:],
         }
 
-    def start(self, plan: Plan, wait_viewer_s: float = 20.0) -> str:
+    def start(self, plan: Plan) -> str:
         with self.lock:
             if self.running():
                 return "LeRobot's teleop is already running."
             self.lines.clear()
             self.said = ""
             self.tmp = copy_calibration(plan)
-            self.window = self._start_viewer(wait_viewer_s)
-            argv = command(plan, self.tmp, RERUN_PORT if self.window else None)
+            argv = command(plan, self.tmp)
             log.info("LeRobot teleop: %s", " ".join(argv))
             self.proc = self.popen(
                 argv,
@@ -273,83 +259,50 @@ class Runner:
                 bufsize=1,
                 start_new_session=True,  # its own group: Stop reaches uv and LeRobot alike
             )
-            threading.Thread(target=self._read, args=(self.proc,), daemon=True).start()
+            reader = threading.Thread(target=self._read, args=(self.proc,), daemon=True)
+            reader.start()
+            threading.Thread(target=self._wait, args=(self.proc, reader), daemon=True).start()
             return "Starting LeRobot's teleop: the follower follows the leader."
 
-    def _start_viewer(self, wait_s: float) -> bool:
-        if shutil.which("uv") is None or wait_s <= 0:
-            return False
-        try:
-            self.viewer = self.popen(
-                viewer_command(),
-                cwd=REPO_ROOT,
-                env=child_env(),
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,  # into the brain's log: a crash says why
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                start_new_session=True,
-            )
-        except OSError:
-            return False
-        threading.Thread(target=self._read_viewer, args=(self.viewer,), daemon=True).start()
-        end = time.monotonic() + wait_s
-        while time.monotonic() < end:
-            if self.viewer.poll() is not None:
-                return False
-            if _answers(RERUN_PORT):
-                return True
-            time.sleep(0.3)
-        return False  # LeRobot then opens a Rerun window itself
-
     def _read(self, proc) -> None:
+        """LeRobot's lines (and its Rerun window's: the window keeps this pipe open after
+        LeRobot exits, so the end of LeRobot is in `_wait`)."""
         for raw in proc.stdout:
             line = ANSI.sub("", raw).rstrip()
-            if line:
-                self.lines.append(line)
+            if not line:
+                continue
+            self.lines.append(line)
+            if " WARN " in line or " ERROR " in line or "panicked" in line:
+                log.info("LeRobot teleop: %s", line)  # Rerun's warnings, in the brain's log
             if any(sign in line for sign in CALIBRATION_SIGNS):
                 self.said = CALIBRATION_REFUSED
                 log.warning("LeRobot teleop: %s (%s)", CALIBRATION_REFUSED, line)
                 self._signal(proc, signal.SIGTERM)  # not torqued yet: it was still connecting
+
+    def _wait(self, proc, reader: threading.Thread) -> None:
         code = proc.wait()
+        reader.join(timeout=1.0)  # its last lines
         if not self.said:
             last = next((x for x in reversed(self.lines) if "Error" in x), "")
             self.said = "LeRobot's teleop stopped." + (f" {last}" if code and last else "")
-        self._stop_viewer()
-
-    def _read_viewer(self, viewer) -> None:
-        """Rerun's own words go to the brain's log; its warnings and errors also to the page."""
-        for raw in viewer.stdout:
-            line = ANSI.sub("", raw).rstrip()
-            if line:
-                log.info("Rerun: %s", line)
-                if " WARN " in line or " ERROR " in line or "panicked" in line:
-                    self.lines.append(f"Rerun: {line}")
-        code = viewer.wait()
-        if code not in (0, -signal.SIGTERM):
-            said = f"The Rerun window closed (exit code {code})."
-            log.warning("Rerun: %s", said)
-            self.lines.append(said)
+        self._clean_up()
 
     @staticmethod
     def _signal(proc, sig) -> None:
         with contextlib.suppress(ProcessLookupError, PermissionError):  # already gone
             os.killpg(proc.pid, sig)
 
-    def _stop_viewer(self) -> None:
-        if self.viewer is not None and self.viewer.poll() is None:
-            self._signal(self.viewer, signal.SIGTERM)
-        self.viewer = None
+    def _clean_up(self) -> None:
         if self.tmp is not None:
             shutil.rmtree(self.tmp, ignore_errors=True)
             self.tmp = None
 
     def stop(self, wait_s: float = 5.0) -> str:
-        """Like Ctrl+C: LeRobot lets go of the arms (the follower goes limp), then exits."""
+        """Like Ctrl+C: LeRobot lets go of the arms (the follower goes limp), then exits. The
+        Rerun window stays open, as after Ctrl+C in a terminal."""
         proc = self.proc
         if proc is None or proc.poll() is not None:
-            self._stop_viewer()
+            self._clean_up()
             return "LeRobot's teleop isn't running."
         self._signal(proc, signal.SIGINT)
         try:
@@ -360,7 +313,7 @@ class Runner:
                 proc.wait(timeout=2.0)
             except subprocess.TimeoutExpired:
                 self._signal(proc, signal.SIGKILL)
-        self._stop_viewer()
+        self._clean_up()
         self.said = "LeRobot's teleop stopped. The green follower is limp."
         return self.said
 

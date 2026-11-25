@@ -105,22 +105,6 @@ def test_the_brains_own_teleop_is_not_another_program(tmp_path):
     assert any("lerobot-teleope (pid 697362)" in t for ok, t in c.lines if not ok)
 
 
-def test_the_rerun_windows_words_reach_the_log(caplog):
-    """Rerun's output goes to the brain's log; a crash also to the page, with its exit code."""
-    viewer = subprocess.Popen(
-        [sys.executable, "-c", "print('x WARN out of memory'); raise SystemExit(3)"],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-    )  # fmt: skip
-    runner = lt.Runner()
-    with caplog.at_level("INFO", logger=lt.__name__):
-        runner._read_viewer(viewer)
-    assert "Rerun: x WARN out of memory" in caplog.text
-    assert list(runner.lines) == [
-        "Rerun: x WARN out of memory",
-        "The Rerun window closed (exit code 3).",
-    ]
-
-
 def test_the_command_line(tmp_path):
     """LeRobot's teleop through lab-os's so101 extra, with the training files' ids, read from a
     temporary copy: LeRobot never touches its cache. Its data view on, sent to our Rerun."""
@@ -137,10 +121,12 @@ def test_the_command_line(tmp_path):
         assert f"--robot.calibration_dir={copy / 'robot'}" in argv
         assert f"--teleop.calibration_dir={copy / 'teleop'}" in argv
         assert "--display_data=true" in argv
-        assert "--display_ip=127.0.0.1" in argv and f"--display_port={lt.RERUN_PORT}" in argv
+        # LeRobot opens its own Rerun window, as in the builder's working command
+        assert not any(a.startswith(("--display_ip", "--display_port")) for a in argv)
         cams = json.loads(
             next(a for a in argv if a.startswith("--robot.cameras=")).split("=", 1)[1]
         )
+        assert cams["stand"]["fourcc"] == "MJPG"
         assert cams["stand"]["type"] == "opencv" and cams["stand"]["index_or_path"].endswith(
             "index0"
         )
@@ -149,8 +135,6 @@ def test_the_command_line(tmp_path):
         assert (copy / "robot/sheep.json").read_bytes() == plan.follower_calibration.read_bytes()
         assert (copy / "teleop/shepherd.json").read_bytes() == plan.leader_calibration.read_bytes()
         assert not str(copy).startswith(str(tmp_path / "calibration"))
-        # without our Rerun: Rerun's own window
-        assert not any(a.startswith("--display_ip") for a in lt.command(plan, copy, None))
     finally:
         import shutil
 
@@ -193,7 +177,6 @@ def fake_runner(tmp_path, mode):
 
 def started(tmp_path, runner):
     _, plan = lt.check(**world(tmp_path))
-    runner._start_viewer = lambda wait_s: False  # no Rerun in the tests
     runner.start(plan)
 
 
@@ -225,13 +208,25 @@ def test_stop_is_like_ctrl_c(tmp_path):
     assert runner.stop() == "LeRobot's teleop isn't running."
 
 
-def test_rerun_opens_its_own_window():
-    """Rerun's own window, not its web viewer (in the page's frame it crashed the browser tab)."""
-    argv = lt.viewer_command()
-    assert argv[:5] == ["uv", "run", "--extra", "so101", "rerun"]
-    assert "--serve-web" not in argv and "--web-viewer-port" not in argv
-    assert argv[argv.index("--bind") + 1] == "127.0.0.1"  # this computer only
-    assert argv[argv.index("--port") + 1] == str(lt.RERUN_PORT)  # where LeRobot sends
+def test_a_window_that_keeps_the_pipe_open_does_not_hide_the_end(tmp_path):
+    """LeRobot's Rerun window keeps LeRobot's output pipe open after LeRobot exits: the page must
+    still see that LeRobot stopped, and the temporary copy must still go."""
+    script = tmp_path / "exits_but_child_stays.py"
+    script.write_text(
+        "import subprocess, sys\n"
+        "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(20)'])\n"
+        "print('Error: gone', flush=True)\n"
+        "sys.exit(1)\n"
+    )
+    runner = lt.Runner(
+        popen=lambda argv, **kw: subprocess.Popen([sys.executable, str(script)], **kw)
+    )
+    _, plan = lt.check(**world(tmp_path))
+    runner.start(plan)
+    assert wait_for(lambda: runner.said, s=5.0)
+    assert runner.said == "LeRobot's teleop stopped. Error: gone"
+    assert wait_for(lambda: runner.tmp is None, s=2.0)
+    runner._signal(runner.proc, 15)  # the "window" too
 
 
 def test_a_hack_line_for_rerun_usage_data():
