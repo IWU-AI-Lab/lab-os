@@ -195,7 +195,7 @@ Quick job 87. Use the lab desktop's Chrome with the **Immersive Web Emulator** e
 ## E. LeRobot teleop with Rerun (15 min)
 Quick job 91. The green leader drives the green follower through LeRobot's own command. Run `uv sync --extra so101` once before. Stop LeLab. Plug in both green arms and their two cameras. Run `uv run --extra so101 lab-os serve --arm fake`.
 - **E.1** On the lab desktop, open the hub's **Training** page. → are all lines in the "LeRobot teleop with Rerun" card fine? (yes / no; if no, copy the lines with a warning)
-- **E.2** Put the leader and the follower in the same pose. Press **Start**. Wait 20 seconds. → does Rerun show in the page, with the two camera pictures and the joints? (yes / no) Move the leader. → does the follower follow? (yes / no)
+- **E.2** Put the leader and the follower in the same pose. Press **Start**. Wait 20 seconds. → does Rerun open in its own window, with the two camera pictures and the joints? (yes / no) Move the leader. → does the follower follow? (yes / no)
 - **E.3** Hold the follower. Press **Stop**, then OK. → did the follower go limp? (yes / no) Does the card say "LeRobot's teleop stopped"? (yes / no)
 
 ## C. The Cameras page (15 min)
