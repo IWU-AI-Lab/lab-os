@@ -680,7 +680,7 @@ function onChatEvent(ev, answer, paced = false) {
 /* ---------- voice (step 7, docs/archive/guides-2026-11-25/voice.md): hold the mic or Space, talk, let go; the answer is spoken ----------
    web/voice.js records and plays; the brain hears, thinks (the same conversation) and speaks. No secure page,
    no microphone or no voice at the brain: no mic button, typing unchanged. */
-const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0 };
+const VS = { turn: null, voiced: false, greeting: false, shown: null, freeTimer: 0, wake: false };
 const voice = createVoice({
   pages: () => pagesHere(),
   onEvent: onVoiceEvent,
@@ -720,6 +720,7 @@ function wakeTurnStart(ev = {}) {
   if (VS.voiced) endVoice(); // the brain stopped the spoken answer (quick job 57)
   if (prefs().sound !== false) voice.chime(); // "I heard you", at once
   S.asking = VS.voiced = true;
+  VS.wake = true;
   showError(null);
   const talk = !!ev.conversation; // a conversation's next question (quick job 68): no "didn't hear"
   $("#reply .q").textContent = talk ? "In a conversation: listening… (say \"that's all\" to end)" : "Listening…";
@@ -728,12 +729,13 @@ function wakeTurnStart(ev = {}) {
   VW = silenceWatch(
     (spoke) => {
       VW = null;
-      if (spoke) {
+      // nothing loud enough here: the transcriber still decides (quick job 112: the Windows desktops'
+      // quiet microphones never passed the level, so every question was dropped). A conversation stays quiet.
+      if (spoke || !talk) {
         voice.finish();
         setAssistant("thinking", 0);
       } else {
         voice.cancel();
-        if (!talk) $("#reply .q").textContent = "I didn't hear a question.";
         endVoice();
         setAssistant("idle", 0);
       }
@@ -845,6 +847,7 @@ async function talkStart() {
   }
   if (S.asking) return;
   S.asking = VS.voiced = true;
+  VS.wake = false;
   showError(null);
   $("#reply .q").textContent = "Listening…";
   $("#reply .a").textContent = "";
@@ -913,7 +916,7 @@ function onVoiceEvent(ev) {
     if (!VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
     if (!ev.final) return;
     if (!ev.text) {
-      $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk.";
+      $("#reply .q").textContent = VS.wake ? "I didn't hear a question." : "I didn't catch that. Hold the mic while you talk.";
       endVoice();
       return;
     }

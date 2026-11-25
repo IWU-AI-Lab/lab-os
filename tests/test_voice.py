@@ -487,17 +487,33 @@ async def test_dictation_only_hears(aiohttp_client, aiohttp_server, key, tmp_pat
     await ws.close()
 
 
-async def test_nothing_heard_asks_nothing(aiohttp_client, aiohttp_server, key, tmp_path):
+async def test_nothing_heard_asks_nothing(aiohttp_client, aiohttp_server, key, tmp_path, caplog):
+    import logging
+
     app, conv, _ = await voice_app(aiohttp_server, tmp_path, heard="")
     client = await aiohttp_client(app)
-    ws = await client.ws_connect("/ws/voice")
-    await ws.send_json({"type": "listen", "mode": "ask"})
-    await ws.send_bytes(SECOND)
-    await ws.send_json({"type": "end"})
-    ev = await until(ws, "heard", [])
+    ws = await client.ws_connect("/ws/voice?device=windows-02")
+    with caplog.at_level(logging.INFO, logger="lab_os.hub.voice"):
+        await ws.send_json({"type": "listen", "mode": "ask"})
+        await ws.send_bytes(SECOND)
+        await ws.send_json({"type": "end"})
+        ev = await until(ws, "heard", [])
     assert ev == {"type": "heard", "text": "", "final": True}
     assert conv.messages == []
+    assert "no words in the question on windows-02" in caplog.text  # quick job 112
     await ws.close()
+
+
+def test_a_quiet_microphone_still_sends_the_question():
+    """Quick job 112: on the Windows desktops the page's silence watch never heard speech, so it
+    dropped every question after the wake word. Now the transcriber decides."""
+    from test_hub_server import SRC
+
+    for page in ("hub/web/design.html", "hub/web/hub.js", "hub/web/xr/ask.js"):
+        text = (SRC / page).read_text()
+        watch = text[text.index("silenceWatch(") :][:700]
+        assert "finish()" in watch and "spoke ||" in watch or "(spoke)" not in watch, page
+        assert "I didn't hear a question." in text and "wake = true" in text, page
 
 
 async def test_a_tts_failure_keeps_the_text(aiohttp_client, aiohttp_server, key, tmp_path):

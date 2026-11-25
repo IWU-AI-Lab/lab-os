@@ -2261,7 +2261,7 @@ async function ask(q, fromCore) {
    web/voice.js records and plays; the brain hears, thinks (the same conversation as typing) and speaks. No
    secure page, no microphone or no voice at the brain: no mic button, typing unchanged. */
 let V = null, VM = null;  // the voice (loaded below) and its module
-const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: false, shown: null, freeTimer: 0 };
+const VS = { turn: null, fromCore: true, voiced: false, heard: "", greeting: false, shown: null, freeTimer: 0, wake: false };
 // the spoken answer's text: shown as it's said; all of it once the voice is done (or never came)
 function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = null; }
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
@@ -2301,7 +2301,7 @@ function wakeTurnStart(ev = {}) {
   VS.greeting = false;
   if (S.asking && !VS.voiced) { V.cancel(); return; }  // a typed question is being answered
   if (VS.voiced) { cutTurn(); endVoice(); }  // the brain stopped the spoken answer (quick job 57)
-  S.asking = true; VS.fromCore = true; VS.voiced = true; VS.heard = "";
+  S.asking = true; VS.fromCore = true; VS.voiced = true; VS.heard = ""; VS.wake = true;
   clearTimeout(replyTimer);
   const r = $("#reply");
   r.querySelector(".q").textContent = "Listening…"; r.querySelector(".q").classList.add("heard"); r.querySelector(".a").innerHTML = ""; r.classList.add("on");
@@ -2311,8 +2311,10 @@ function wakeTurnStart(ev = {}) {
   if (talk) r.querySelector(".q").textContent = "Listening… (say \"that's all\" to end)";
   VW = VM.silenceWatch((spoke) => {
     VW = null;
-    if (spoke) { V.finish(); setState("thinking"); }
-    else { V.cancel(); if (!talk) r.querySelector(".q").textContent = "I didn't hear a question."; endVoice(); }
+    // nothing loud enough here: the transcriber still decides (quick job 112: the Windows desktops' quiet
+    // microphones never passed the level, so every question was dropped). A conversation stays quiet.
+    if (spoke || !talk) { V.finish(); setState("thinking"); }
+    else { V.cancel(); endVoice(); }
   }, { quietMs: VM.WAKE_QUIET_MS, idleMs: talk ? 15_000 : 6000, maxMs: talk ? 30_000 : 20_000, floor: V.noiseFloor });
 }
 function renderMic() {
@@ -2329,7 +2331,7 @@ async function talkStart(fromCore) {
   VS.greeting = false;
   if (VS.voiced) { V.stopSpeaking(); cutTurn(); endVoice(); }  // talking over the last answer stops it (quick job 57)
   if (S.asking) return;
-  S.asking = true; VS.fromCore = fromCore; VS.heard = ""; VS.voiced = true;
+  S.asking = true; VS.fromCore = fromCore; VS.heard = ""; VS.voiced = true; VS.wake = false;
   clearTimeout(replyTimer);
   const r = $("#reply");
   if (fromCore) { r.querySelector(".q").textContent = "Listening…"; r.querySelector(".q").classList.add("heard"); r.querySelector(".a").innerHTML = ""; r.classList.add("on"); }
@@ -2418,7 +2420,7 @@ function onVoiceEvent(ev) {
     VS.heard = ev.text;
     if (VS.fromCore && !VS.turn) $("#reply .q").textContent = ev.text ? ev.text + (ev.final ? "" : " …") : "Listening…";
     if (!ev.final) return;
-    if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
+    if (!ev.text) { if (VS.fromCore) $("#reply .q").textContent = VS.wake ? "I didn't hear a question." : "I didn't catch that. Hold the mic while you talk."; endVoice(); return; }
     if (ev.command) { endVoice(); return; }  // "that's all", "conversation mode": not a question, no answer comes (quick job 83)
     $("#reply .q").classList.remove("heard");
     VS.turn = VS.shown = beginTurn(ev.text, VS.fromCore, true);

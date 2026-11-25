@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — The Windows desktops woke, then dropped every question (quick job 112)
+**What:** in the brain's log of 2026-11-24, `windows-02` and `windows-03` heard the wake word 9 times and never logged a "question on" line. Each time, the page sent the question's audio for 6 s and then cancelled it. The page's silence watch (`web/silence.js`) counts a piece as speech only when it is 3 times the room's level and at least 0.02. On those microphones, the wake word was only 4 to 11 dB over the room (the desk: 10 to 36 dB), so the watch never heard speech and stopped after its 6 s with nothing said.
+**Fix:** after the wake word, a question that the watch did not hear still goes to the transcriber; the transcriber decides. No words: the page says "I didn't hear a question.", and the log says "no words in the question on …". Conversation mode still drops a quiet turn (so that a silent room is not sent every 15 s). The answer on a quiet microphone comes about 6 s after the wake word, not after a short pause.
+
 ### 2026-11-25 — The turn model hears the tone of the voice, not the words (quick job 110)
 **What:** Smart Turn (`lab_os.ai.turn`) judges a pause by the sound only. On macOS's `say` voice, "Calculate 37 times 48," scored 0.99 (finished), because that voice falls in tone at a comma; "…, and then" scored 0.01. A real person's voice usually stays up in a pause in the middle of a sentence, but a person who drops their voice at a pause can have the question cut.
 **Fix:** none in the model. With the Gemini voice (words while it hears), the brain does not end a question whose words end on a comma or a word like "and", "then" or "times". With the OpenAI voice there are no words before the end. The brain logs each check ("the turn model says finished (0.97)"), so a cut question shows in `uv run lab-os logs`.
