@@ -3,10 +3,12 @@ of the arm (stand and wrist). The brain opens a camera only while someone looks 
 picture asked for opens it, and it closes `IDLE_S` after the last one. A camera another program has
 open (LeLab, a recording: the green set's rule) is refused with a sentence, before it's opened.
 
-One reader thread per camera keeps its newest frame; `jpeg(name)` gives it as a JPEG, `frame(name)`
-gives the raw frame to `camera_snapshot` while the camera is open here (two opens of one camera in
-the same program can fail). Cameras are keyed by their device file: two names for one camera share
-one reader.
+One reader thread per camera keeps its newest frame; `jpeg(name)` gives it as a JPEG for a page,
+`frame(name)` and `grab(name, path)` give the raw frame to `camera_snapshot` (two opens of one
+camera in the same program can fail: quick job 116). Cameras are keyed by their device file: two
+names for one camera (the white set's and the green set's for one socket) share one reader, so the
+AI and the Cameras page see through one open camera.
+Other programs still get "in use" (`devices.InUse`).
 """
 
 import logging
@@ -22,6 +24,7 @@ IDLE_S = 5.0  # no picture asked for this long: the camera closes
 FPS = 4.0  # pictures a second, at most
 WIDTH_PX = 480  # the pictures' width
 FIRST_WAIT_S = 6.0  # the first picture after opening (the camera settles its exposure)
+SETTLE_S = 6.0  # the AI's picture: wait at most this long for the exposure to hold still
 
 
 class CameraError(Exception):
@@ -41,6 +44,16 @@ def _open_capture(path: str):
     return cap
 
 
+def _level(frame) -> float:
+    """A frame's brightness (0 to 255)."""
+    return float(frame.mean())
+
+
+def _locate(name: str) -> str:
+    """The device file of camera `name`, with no check of who has it open (to find it here)."""
+    return devices.camera_paths(name)[0]
+
+
 def _encode(frame, width_px: int) -> bytes:
     import cv2
 
@@ -54,15 +67,28 @@ def _encode(frame, width_px: int) -> bytes:
 
 
 class _Feed:
-    def __init__(self, path: str, cap, encode: Callable):
-        self.path, self.cap, self.encode = path, cap, encode
+    def __init__(self, path: str, cap, encode: Callable, level: Callable = _level):
+        self.path, self.cap, self.encode, self.level = path, cap, encode, level
         self.frame = None
+        self.settled = threading.Event()  # the exposure held still (or SETTLE_S went by)
+        self.opened = time.monotonic()
+        self._steady, self._last_level = 0, None
         self.jpeg: bytes | None = None
         self.error = ""
         self.asked = time.monotonic()
         self.got = threading.Event()
         self.done = False
         self.thread = threading.Thread(target=self._run, name=f"camera {path}", daemon=True)
+
+    def _settle(self, frame) -> None:
+        """These cameras start black, then auto-exposure overshoots to white: settled once the
+        brightness has held still for a few frames (as `tools.robot.grab_frame`)."""
+        level = self.level(frame)
+        before = self._last_level
+        self._steady = self._steady + 1 if before is not None and abs(level - before) < 3 else 0
+        self._last_level = level
+        if (self._steady >= 4 and 8 < level < 245) or time.monotonic() - self.opened > SETTLE_S:
+            self.settled.set()
 
     def _run(self) -> None:
         last = 0.0
@@ -73,6 +99,8 @@ class _Feed:
                     time.sleep(0.05)
                     continue
                 self.frame = frame
+                if not self.settled.is_set():
+                    self._settle(frame)
                 now = time.monotonic()
                 if now - last >= 1 / FPS:
                     last = now
@@ -95,44 +123,82 @@ class CameraFeeds:
         device: Callable[[str], str] = devices.camera_device,
         capture: Callable[[str], object] = _open_capture,
         encode: Callable = _encode,
+        locate: Callable[[str], str] = _locate,
+        level: Callable = _level,
     ):
         self.device, self.capture, self.encode = device, capture, encode
+        self.locate, self.level = locate, level
         self.feeds: dict[str, _Feed] = {}  # by device file
         self.paths: dict[str, str] = {}  # camera name → its device file, once opened
         self.lock = threading.Lock()
 
-    def _path_if_open(self, name: str) -> str | None:
+    def _path_if_open(self, name: str, find: bool = False) -> str | None:
+        """`name`'s device file while it's open here. `find`: also when it's open under another
+        name for the same socket (the white and the green names: GOTCHAS 2026-11-24)."""
         path = self.paths.get(name)
+        if path is None and find:
+            try:
+                path = self.locate(name)
+            except (KeyError, LookupError, devices.PortNotAllowed):
+                return None
         feed = self.feeds.get(path) if path else None
-        return path if feed and not feed.done else None
+        if feed and not feed.done:
+            self.paths[name] = path
+            return path
+        return None
+
+    def _open(self, name: str, path: str, why: str) -> _Feed:
+        """The reader of `path` (lock held): the one open now, or a new one."""
+        self.paths[name] = path
+        feed = self.feeds.get(path)
+        if feed is None or feed.done:  # not open under another name for the same socket
+            feed = _Feed(path, self.capture(path), self.encode, self.level)
+            self.feeds[path] = feed
+            feed.thread.start()
+            log.info("camera %s (%s) opened for %s", name, path, why)
+        feed.asked = time.monotonic()
+        return feed
 
     def jpeg(self, name: str) -> bytes:
         """The newest picture of camera `name`, opening it if needed (blocks up to FIRST_WAIT_S).
         Raises CameraError with the reason (not listed, unplugged, in use by another program)."""
         with self.lock:
-            path = self._path_if_open(name)
+            path = self._path_if_open(name, find=True)
             if path is None:
                 try:
                     path = self.device(name)  # the checks: listed, plugged in, nobody else has it
                 except (KeyError, LookupError, devices.InUse, devices.PortNotAllowed) as e:
                     raise CameraError(str(e).strip("'\"")) from None
-                self.paths[name] = path
-                old = self.feeds.get(path)
-                if old is None or old.done:  # not open under another name for the same socket
-                    feed = _Feed(path, self.capture(path), self.encode)
-                    self.feeds[path] = feed
-                    feed.thread.start()
-                    log.info("camera %s (%s) opened for a page", name, path)
-            feed = self.feeds[path]
-            feed.asked = time.monotonic()
+            feed = self._open(name, path, "a page")
         if not feed.got.wait(FIRST_WAIT_S):
             raise CameraError(f"{name} gave no picture yet")
         return feed.jpeg
 
     def frame(self, name: str):
-        """The newest raw frame while `name` is open here, else None (then open it yourself)."""
-        path = self._path_if_open(name)
-        return self.feeds[path].frame if path else None
+        """The newest settled raw frame while `name`'s camera is open here, under any of its
+        names, else None (then check it and `grab` it)."""
+        with self.lock:
+            path = self._path_if_open(name, find=True)
+            feed = self.feeds[path] if path else None
+            if feed is None or not feed.settled.is_set() or feed.frame is None:
+                return None
+            feed.asked = time.monotonic()
+            return feed.frame
+
+    def grab(self, name: str, path: str):
+        """One settled raw frame of camera `name` at `path` (checked by the caller: nobody else
+        has it). It stays open IDLE_S after, so a page that asks shares it. Blocks up to
+        SETTLE_S + FIRST_WAIT_S. Raises CameraError."""
+        with self.lock:
+            feed = self._open(name, path, "the AI")
+        end = time.monotonic() + SETTLE_S + FIRST_WAIT_S
+        while not feed.settled.wait(0.5):
+            feed.asked = time.monotonic()  # keep it open while it settles
+            if feed.done or time.monotonic() > end:
+                break
+        if feed.frame is None:
+            raise CameraError(f"{name} gave no picture")
+        return feed.frame
 
     def open_names(self) -> list[str]:
         """The cameras open now, by name (LeRobot's teleop must not open them: quick job 91)."""
