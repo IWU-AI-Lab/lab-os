@@ -30,7 +30,7 @@ With the controllers:
 
 The arm freezes when you release the grip, when tracking stops, when the connection drops, or when the session ends. After a freeze, release the grip and press it again.
 
-**Bare hands:** put the controllers down. The Quest changes to hand tracking by itself.
+**Bare hands:** in the hub's VR or AR Teleop, select **Options** → **Hand → Arm** → **Hands**, then put the controllers down. Hands drive in Relative. If you put the controllers down without Hands, the arm holds still. **Switch to Hands by Itself** (Off by default) brings back the old way: the hands drive while the controllers are down.
 - The **right wrist** moves the arm, like the controller.
 - Hold a **left pinch** (thumb on index finger): the clutch.
 - **Right pinch:** the gripper. Fingers apart = open. Fingers together = closed.
