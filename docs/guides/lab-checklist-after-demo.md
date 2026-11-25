@@ -232,3 +232,7 @@ There are no other people in the lab before the demo.
 ## M4. After the demo: "set up the room" (10 min)
 Skipped on 2026-11-24. Open the hub on each computer first (`/design?device=<its name>`).
 - **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
+
+## M6. After the demo: the hub in Chrome on a laptop (10 min)
+Moved from the demo run on 2026-11-25 (the builder). Before the demo, use Firefox on the laptop.
+- **M.6** Quick job 130. On the builder's laptop, open Chrome. Type `http://192.168.8.130:8080/?device=laptop`. If Chrome shows "This site can't be reached", do the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". → which error code was under Chrome's message? (the code, or "none") Did the hub open? (yes / no: after which step)
