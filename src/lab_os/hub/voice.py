@@ -1215,6 +1215,8 @@ class VoiceLink:
             setup.hear,
             f"; letters not in English: {', '.join(other)}" if other else "",
         )
+        if not text.strip():  # quick job 112: say so, the page shows "I didn't hear a question"
+            log.info("voice: no words in the question on %s", self.device or "a screen")
 
     def _timing_done(self) -> None:
         timing, self.timing = self.timing, None

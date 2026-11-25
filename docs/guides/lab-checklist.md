@@ -91,5 +91,5 @@ Each step checks one more moment of the demo, once. Plug in `so101-white` (its U
 
 ## M. Every screen in the room (15 min)
 The plan for the demo: `docs/plan/current-focus.md` → item 10. Each computer must be on the router: its Wi-Fi, or a cable to the big switch. A computer on the campus network cannot reach the hub at `192.168.8.130`. Open the hub on each computer as on 2026-11-24 (`/design?device=<its name>`).
-- **M.2** Quick job 112. On each Windows desktop, say "(wake word), what time is it?". → did it answer the question? (yes / no: what it said)
+- **M.2** Quick job 112 (fixed on 2026-11-25). On each Windows desktop and on the Newline's own Chrome, say "(wake word), what time is it?". → did it answer the question? (yes / no: what it said) → how long did the answer take after you stopped talking? (about 1 s / about 5 s / longer)
 - **M.3** Quick job 109. On the desktop's hub, open the Devices panel's details. Unplug the white arm's USB cable. → did "Connected" change to "No" within 5 s? (yes / no) Plug it in again. → did it change to "Yes", with the motor power "On"? (yes / no) Close the hub on one computer. → did that screen change to "No"? (yes / no)
