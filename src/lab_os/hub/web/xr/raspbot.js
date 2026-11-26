@@ -8,8 +8,12 @@
 //     right stick) sets it again. The Raspbot keeps each servo inside its own limits.
 //   - PICTURE saves one picture and RECORD starts and stops a recording, on the brain's computer; the
 //     status line says where. STOP (or A / X) stops the car. B or Y closes the module, as do Back and Exit.
+//   - LABELS (quick job 128; off each time the window opens) puts a thin box around each object the camera sees,
+//     with its name and how sure the detector is; the object in front of the car also gets the ultrasonic
+//     distance (`/web/object-labels.js`: MediaPipe's object detector in a Web Worker).
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, icon, rgba, spaced } from "./draw.js";
+import { ObjectLabels, drawLabels, frontIndex } from "/web/object-labels.js";
 
 const PX = 900;
 const DEAD = 0.15; // stick dead zone
@@ -26,6 +30,7 @@ const BAR = [
   { kind: "rasp", op: "centre", label: "CENTRE", ico: "i-target" },
   { kind: "rasp", op: "picture", label: "PICTURE", ico: "i-cam" },
   { kind: "rasp", op: "record", label: "RECORD", ico: "i-hist" },
+  { kind: "rasp", op: "labels", label: "LABELS", ico: "i-eye" },
 ];
 const clampDeg = (v) => Math.max(-LOOK_MAX, Math.min(LOOK_MAX, v));
 
@@ -82,6 +87,12 @@ export class RaspbotModule {
     this.stick = { pan: 0, tilt: 0 };
     this.look = { ...this.stick };
     this._connect();
+    this.labels = new ObjectLabels();
+    this.labels.onState = (state, why) => {
+      if (state === "loading") this._say("Loading the object detector…");
+      else if (state === "ready") this._say("Labels on.");
+      else if (state === "failed") this._say(`No labels: ${why}`, true);
+    };
     this.img = document.createElement("img");
     this.img.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
     this.img.onerror = () => { this.imgOk = false; this.retry = setTimeout(() => this._camera(), 3000); };
@@ -93,6 +104,8 @@ export class RaspbotModule {
     this.closed = true;
     clearTimeout(this.retry);
     if (this.ws) { this._send({ type: "release" }); this.ws.close(); this.ws = null; } // the car stops
+    this.labels?.close();
+    this.labels = null;
     if (this.img) { this.img.onload = this.img.onerror = null; this.img.removeAttribute("src"); this.img.remove(); this.img = null; }
   }
   _camera() { if (this.img) { this.imgOk = false; this.img.src = `/api/raspbot/camera.mjpg?t=${Date.now()}`; } }
@@ -146,6 +159,10 @@ export class RaspbotModule {
         "Left stick moves the car. Right stick turns the car.");
     } else if (what.op === "picture") this._send({ type: "picture" });
     else if (what.op === "record") this._send({ type: "record", on: !this.status?.recording });
+    else if (what.op === "labels" && this.labels) {
+      this.labels.setOn(!this.labels.on);
+      if (!this.labels.on) this._say("Labels off.");
+    }
   }
 
   /** Each XR frame (xr-hub.js): the head turns the camera, the sticks drive and turn it, A / X is STOP. */
@@ -256,7 +273,15 @@ export class RaspbotModule {
     this.vidT = now;
     const g = this.video.g, w = this.video.canvas.width, h = this.video.canvas.height;
     if (this.imgOk && this.img?.naturalWidth) {
-      try { g.drawImage(this.img, 0, 0, w, h); this.video.tex.needsUpdate = true; this.video.key = null; return; } catch { /* not decoded yet */ }
+      try {
+        g.drawImage(this.img, 0, 0, w, h);
+        if (this.labels?.on) {
+          this.labels.feed(this.img, now);
+          const found = this.labels.found, s = this.status;
+          drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: rgba(C.bg, 0.85), font: FONT.lines });
+        }
+        this.video.tex.needsUpdate = true; this.video.key = null; return;
+      } catch { /* not decoded yet */ }
     }
     this.video.paint((g2) => {
       g2.fillStyle = rgba(C.bg, 0.9); g2.fillRect(0, 0, w, h);
@@ -272,8 +297,8 @@ export class RaspbotModule {
       const bw = w / BAR.length, gap = h * 0.1;
       BAR.forEach((b, i) => {
         const x = i * bw + gap / 2, on = over === `${b.kind}${b.op || ""}`, lit = b.op === "record" && rec;
-        const head = b.op === "head", legacy = b.op === "legacy";
-        const active = lit || (head && this.headOn) || (legacy && this.legacy);
+        const head = b.op === "head", legacy = b.op === "legacy", labels = b.op === "labels";
+        const active = lit || (head && this.headOn) || (legacy && this.legacy) || (labels && !!this.labels?.on);
         const col = b.danger || lit ? C.danger : C.primary, cut = h * 0.22, width = bw - gap;
         g.save(); g.translate(x, 0);
         g.beginPath(); g.moveTo(cut, 0); g.lineTo(width, 0); g.lineTo(width, h - cut); g.lineTo(width - cut, h); g.lineTo(0, h); g.lineTo(0, cut); g.closePath();
@@ -284,11 +309,11 @@ export class RaspbotModule {
         g.font = `700 ${h * 0.23}px ${FONT.ui}`; spaced(g, 0.1);
         g.fillStyle = on ? C.hot : C.text; g.textAlign = "left"; g.textBaseline = "middle";
         let label = lit ? "END REC" : b.label;
-        if (head || legacy) label += (head ? this.headOn : this.legacy) ? " ON" : " OFF";
+        if (head || legacy || labels) label += (head ? this.headOn : legacy ? this.legacy : !!this.labels?.on) ? " ON" : " OFF";
         g.fillText(label, h * 0.72, h / 2, width - h * 0.8); spaced(g, 0);
         g.restore();
       });
-    }, `${over}|${rec}|${this.headOn}|${this.legacy}`);
+    }, `${over}|${rec}|${this.headOn}|${this.legacy}|${!!this.labels?.on}`);
   }
   _paintTally() {
     this.tally.mesh.visible = !!this.status?.recording;

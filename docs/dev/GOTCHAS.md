@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — MediaPipe in a module worker, and its int8 object model (quick job 128)
+**What:** (1) MediaPipe's loader runs its wasm loader with `importScripts()`, which a module worker does not have; the fallback `import()` runs it as a module, so its `ModuleFactory` is not global and the detector does not start. (2) On MediaPipe's test picture (2 dogs, 2 cats), EfficientDet-Lite0 int8 found the cats and a "horse", not the dogs; EfficientDet-Lite2 (int8 and float16) found "horses".
+**Fix:** (1) the worker sets `self.import`, which the loader calls first: it fetches the script and runs it as global code (`src/lab_os/web/object-labels-worker.js`). (2) EfficientDet-Lite0 float16 (7.3 MB), the model of MediaPipe's own web example: it found all four. The small copy for the detector keeps the picture's shape (a squashed picture made dogs read as cats).
+
 ### 2026-11-26 — A screen started from another device has had no press (quick job 139)
 **What:** a browser allows full screen and sound only after a press on the page. A start screen that another device starts (a message from the brain) has had no press. Full screen fails, and Chrome keeps the page's sound off.
 **Fix:** that screen goes full screen at its next tap or key. lab-os's own browser (`lab-os serve --open`, the "Start lab-os" icon) and the "Lab Hub" icon from ⚙ → This Device start Chrome with `--autoplay-policy=no-user-gesture-required`, so the startup's sound plays. A "Lab Hub" icon made before 2026-11-26 does not have it: make it again. The flag works only when Chrome was not already open with the same profile. Lab step C.5 tells.
