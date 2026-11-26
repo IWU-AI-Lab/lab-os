@@ -59,6 +59,29 @@ In the project's `.claude/settings.json` (permission rules):
 
 ---
 
+## A new brain computer (quick job 150, 2026-11-26)
+Run `./scripts/install.sh` in the repository folder (`README.md` → "Install"). It installs uv, runs `uv sync --extra so101`, then `uv run lab-os setup` (`src/lab_os/brain_setup.py`). The setup checks each part below and prints one line for each: **OK**, **DONE** (it did it now), **TO DO** or **OPTIONAL**. It does the steps without `sudo` itself. It never runs `sudo`: it prints those commands at the end, in one block to paste. Run it again after them: a part that is ready stays as it is. `--no-so101`: a computer that drives no SO-101 arm.
+
+| Part | Why the brain needs it | The setup |
+|---|---|---|
+| uv and `.venv` (Python 3.12) | everything | `install.sh` installs uv and runs `uv sync` |
+| LeRobot (the `so101` extra, ~5 GB) | the SO-101 arms, and OpenCV for the cameras | `install.sh`; a plain `uv sync` removes it again |
+| The models in git (`models/openwakeword/`, `models/smart-turn/`, the robot models) | the wake word, the end of a spoken question, the 3D views | checks them |
+| The labels model (`models/labels/yoloe-26m.onnx`, not in git) | the Raspbot's labels | builds it when it is missing or the words changed (`lab-os labels build`: the internet, a few GB, some minutes) |
+| scrcpy (`downloads/scrcpy/`) | Quest view | downloads it (`lab-os quest-view --install`) |
+| `.env` and an AI key (`OPENAI_API_KEY` or `GEMINI_API_KEY`) | the chat and the voice | makes `.env` from `.env.example`; you put the real keys in it |
+| `ffmpeg`, `adb`, `lsof`, `ssh`, `rsync` (apt) | the Raspbot's `.mp4` recordings, the Quest, the check that no other program uses a port, the Raspbot | `sudo apt install …` |
+| A Chrome-like browser | the hub's own window (`lab-os serve --open`, the icon) | Google Chrome's `.deb` |
+| The `dialout` group, and the `video` group when a camera is closed | the arms' serial ports, the cameras | `sudo usermod -aG …`, then log out and in |
+| `libhidapi-hidraw0` and the xArm USB rule (when `devices.yaml` has an xArm) | the xArm arms | `sudo apt install …`, `sudo tee /etc/udev/rules.d/99-xarm.rules` |
+| `ssh raspbot1` (each Raspbot in `devices.yaml`) | `lab-os raspbot deploy`, the Raspbot's labels | adds its name to `~/.ssh/config`; you run `ssh-keygen` and `ssh-copy-id` |
+| LeLab (optional) | the Training page (green arms) | `uv tool install …` |
+| The "Start lab-os" icon (optional) | start the brain with one press | `uv run lab-os icon --device desk` |
+
+Not checked (only for working on lab-os): Node (the JS tests, `~/.local/bin`), `gh`, VS Code and Claude Code. uv installs Python packages only, so the system parts stay apt commands (the usual bootstrap and "doctor" pattern: GitHub's "Scripts to Rule Them All", `flutter doctor`).
+
+---
+
 ## Branches and folders (2026-10-28)
 - **`main` always runs.** Every change reaches it through a pull request (PR).
 - **One branch per coding task** (e.g. `xarm-driver`), merged to `main` when tested, then deleted. GitHub can delete merged branches automatically: repo **Settings → General → "Automatically delete head branches"**.
