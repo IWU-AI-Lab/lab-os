@@ -55,6 +55,24 @@
     .pad [data-dir="left"] { --turn: -90deg; }
     .pad [data-dir="right"] { --turn: 90deg; }
     .pad [data-dir="back"] { --turn: 180deg; }
+    #drive-pad {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px;
+      aspect-ratio: auto;
+    }
+    #drive-pad .btn {
+      position: relative; inset: auto; translate: none; rotate: none;
+      width: 100%; height: var(--key); clip-path: polygon(
+        5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+    }
+    #drive-pad .btn .ico { rotate: calc(var(--turn, 0deg) - 90deg); }
+    #drive-pad .turn { grid-column: 1 / -1; display: flex; gap: 2px; }
+    #drive-pad .turn .btn { font-size: 1.35rem; }
+    #drive-pad [data-dir="forward-left"] { --turn: -45deg; }
+    #drive-pad [data-dir="forward-right"] { --turn: 45deg; }
+    #drive-pad [data-dir="strafe-left"] { --turn: -90deg; }
+    #drive-pad [data-dir="strafe-right"] { --turn: 90deg; }
+    #drive-pad [data-dir="back-left"] { --turn: -135deg; }
+    #drive-pad [data-dir="back-right"] { --turn: 135deg; }
     .speed { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
     .speed input { width: 100%; min-height: 2.6rem; margin: 0; }
     .speed output { font-variant-numeric: tabular-nums; color: var(--c); }
@@ -116,10 +134,19 @@
       <section class="card"><div class="in">
         <h2>Drive</h2>
         <div id="drive-pad" class="pad" role="group" aria-label="Hold a button to drive">
-          <button class="btn" type="button" data-dir="forward" aria-label="Forward" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
-          <button class="btn" type="button" data-dir="left" aria-label="Turn left" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
-          <button class="btn" type="button" data-dir="right" aria-label="Turn right" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
-          <button class="btn" type="button" data-dir="back" aria-label="Back" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="forward-left" aria-label="Forward left" title="Forward left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="forward" aria-label="Forward" title="Forward" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="forward-right" aria-label="Forward right" title="Forward right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="strafe-left" aria-label="Sideways left" title="Sideways left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <span></span>
+          <button class="btn" type="button" data-dir="strafe-right" aria-label="Sideways right" title="Sideways right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back-left" aria-label="Back left" title="Back left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back" aria-label="Back" title="Back" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back-right" aria-label="Back right" title="Back right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <div class="turn">
+            <button class="btn" type="button" data-dir="left" aria-label="Turn left" title="Turn left" disabled>↶</button>
+            <button class="btn" type="button" data-dir="right" aria-label="Turn right" title="Turn right" disabled>↷</button>
+          </div>
         </div>
         <label class="speed"><span>Speed</span><input id="speed" type="range" min="0" max="100" step="5" value="50" disabled><output id="speed-out" for="speed">50%</output></label>
       </div></section>
@@ -172,7 +199,12 @@
 <script type="module">
   const $ = (s) => document.querySelector(s);
   const device = new URLSearchParams(location.search).get("device") || "";
-  const WORDS = { forward: "Forward", back: "Back", left: "Turning left", right: "Turning right", stick: "Driving" };
+  const WORDS = {
+    forward: "Forward", back: "Back", left: "Turning left", right: "Turning right", stick: "Driving",
+    "forward-left": "Forward left", "forward-right": "Forward right",
+    "strafe-left": "Sideways left", "strafe-right": "Sideways right",
+    "back-left": "Back left", "back-right": "Back right",
+  };
   const KEYS = { ArrowUp: "forward", w: "forward", ArrowDown: "back", s: "back", ArrowLeft: "left", a: "left", ArrowRight: "right", d: "right" };
   const LOOK = { forward: [0, 4], back: [0, -4], left: [4, 0], right: [-4, 0] };
   const drivePad = $("#drive-pad");

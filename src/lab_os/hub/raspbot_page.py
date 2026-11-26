@@ -245,7 +245,10 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                     await desk.release(ws)
                 elif kind == "drive":
                     stick = raw.get("stick")
-                    stick = (float(stick[0]), float(stick[1])) if stick else None
+                    if stick is not None:
+                        if not isinstance(stick, list) or len(stick) not in (2, 3):
+                            raise ValueError("expected two or three drive axes")
+                        stick = tuple(float(axis) for axis in stick)
                     why = "View only."
                     if drives:
                         why = await desk.press(ws, str(raw.get("dir")), stick)

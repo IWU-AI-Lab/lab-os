@@ -6,7 +6,8 @@ Robots stay thin: this one file, the Python 3 of the Raspbot and Yahboom's own `
 never edit it on the Raspbot.
 
     TCP  :8765   the brain's commands, one JSON line each (lab_os/robots/raspbot.py):
-                 {"drive": [left, right]} (-1.0 … 1.0), {"stop": true},
+                 {"drive": [fl, rl, fr, rr]} or {"drive": [left, right]} (-1.0 … 1.0),
+                 {"stop": true},
                  {"look": [pan, tilt]}: the camera's two servos, degrees from their centre
                  (pan + = left, tilt + = up), kept inside PAN_RANGE and TILT_RANGE (quick job 107)
                  {"diagnostics": true}: read the ultrasonic distance in mm
@@ -25,6 +26,7 @@ import argparse
 import contextlib
 import json
 import logging
+import math
 import signal
 import socket
 import socketserver
@@ -42,7 +44,7 @@ CAMERA_FPS = 10
 CAMERA_IDLE_S = 5.0  # the camera closes this long after the last viewer left
 # Yahboom's motor numbers (Raspbot_Lib.Ctrl_Muto): 0 front left, 1 back left, 2 front right,
 # 3 back right
-LEFT, RIGHT = (0, 1), (2, 3)
+MOTORS = (0, 1, 2, 3)
 # The camera's pan-and-tilt mount (Raspbot_Lib.Ctrl_Servo): servo 1 turns left and right, servo 2 up
 # and down. Yahboom's own code centres them at 90 and 25, and keeps servo 2 at 110 or less. Its
 # library checks the angle only after it has made the I2C data, so lab-os keeps the limits itself.
@@ -85,7 +87,7 @@ class FakeBoard:
     """No car: keeps the speeds, for tests and `--fake`."""
 
     def __init__(self) -> None:
-        self.speeds = {m: 0 for m in LEFT + RIGHT}
+        self.speeds = {m: 0 for m in MOTORS}
         self.servos = {}
         self.distance = None
 
@@ -122,30 +124,37 @@ class Car:
             return "sensor_unavailable" if self._require_clear else ""
         return "obstacle" if distance <= OBSTACLE_STOP_MM else ""
 
-    def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
-        def speed(v: float) -> int:
-            return int(round(max(-1.0, min(float(v), 1.0)) * SPEED_CAP))
+    def drive(self, wheels: list[float], *, require_clear: bool = False) -> None:
+        """Apply four wheel speeds, or expand an older left/right command."""
+        if not isinstance(wheels, list) or len(wheels) not in (2, 4):
+            raise ValueError("expected two or four wheel speeds")
+        if not all(math.isfinite(value) for value in wheels):
+            raise ValueError("wheel speeds must be finite")
+        if len(wheels) == 2:
+            left, right = wheels
+            wheels = [left, left, right, right]
+        limited = [max(-1.0, min(value, 1.0)) for value in wheels]
+        speeds = [round(value * SPEED_CAP) for value in limited]
 
         with self._lock:
             if require_clear and self._drive_stop:
                 return  # a stopped AI drive cannot restart before it releases control
-            left_speed, right_speed = speed(left), speed(right)
-            self._forward = left_speed + right_speed > 0
+            # The average of the four wheels is the forward component. Check both the
+            # request and the motor speeds because rounding can change the average.
+            self._forward = math.fsum(limited) > 0 or sum(speeds) > 0
             self._require_clear = require_clear
             reason = self._clearance_stop() if self._forward else ""
             if reason:
                 self._stop_locked(reason)
                 return
-            for m in LEFT:
-                self.board.set_motor(m, left_speed)
-            for m in RIGHT:
-                self.board.set_motor(m, right_speed)
-            self._moving = bool(left_speed or right_speed)
+            for motor, speed in zip(MOTORS, speeds, strict=True):
+                self.board.set_motor(motor, speed)
+            self._moving = any(speeds)
             self._last = time.monotonic()
 
     def _stop_locked(self, reason: str = "") -> None:
         self._drive_stop = reason if self._require_clear else ""
-        for m in LEFT + RIGHT:
+        for m in MOTORS:
             self.board.set_motor(m, 0)
         self._moving = False
 
@@ -193,8 +202,7 @@ class Car:
             pan, tilt = msg["look"]
             self.look(pan, tilt)
         elif "drive" in msg:
-            left, right = msg["drive"]
-            self.drive(left, right, require_clear=msg.get("require_clear") is True)
+            self.drive(msg["drive"], require_clear=msg.get("require_clear") is True)
         else:  # {"stop": true}, and anything not understood
             self.stop()
 
@@ -227,6 +235,7 @@ class CommandHandler(socketserver.StreamRequestHandler):
             "hello": socket.gethostname(),
             "camera_port": srv.camera_port,
             "diagnostics": True,
+            "mecanum": True,
             "obstacle_stop_mm": OBSTACLE_STOP_MM,
             "look_limits": [
                 sorted((angle - centre) * sign for angle in limits)
