@@ -1,8 +1,9 @@
 // The hub's VR and AR Raspbot (quick job 107): drive raspbot1 with its camera as your eyes.
-//   - The left stick drives (forward, back, turn), through the Raspbot page's socket (/ws/raspbot): the
-//     same brain path, STOP and freeze as the Raspbot page (quick job 72). Let go: the car stops.
+//   - The left stick drives forward, back and sideways. The right stick turns the car.
+//     LEGACY switches to the earlier controls: the left stick drives and the right stick looks.
+//     Both modes use /ws/raspbot, with the same STOP and input timeout as the Raspbot page.
 //   - The window opens in front of you. Point at it and hold a grip to move it.
-//     The head and the right stick turn the camera's servos. HEAD turns head control on or off.
+//     HEAD turns the camera's head control on or off.
 //   - The direction you look when the module opens is the camera's centre. CENTRE (or a press on the
 //     right stick) sets it again. The Raspbot keeps each servo inside its own limits.
 //   - PICTURE saves one picture and RECORD starts and stops a recording, on the brain's computer; the
@@ -21,6 +22,7 @@ const RAD = Math.PI / 180;
 const BAR = [
   { kind: "stop", label: "STOP", ico: "i-stop", danger: true },
   { kind: "rasp", op: "head", label: "HEAD", ico: "i-hand" },
+  { kind: "rasp", op: "legacy", label: "LEGACY", ico: "i-pad" },
   { kind: "rasp", op: "centre", label: "CENTRE", ico: "i-target" },
   { kind: "rasp", op: "picture", label: "PICTURE", ico: "i-cam" },
   { kind: "rasp", op: "record", label: "RECORD", ico: "i-hist" },
@@ -53,7 +55,10 @@ export class RaspbotModule {
     this.tally.mesh.visible = false;
     this.group.add(this.tally.mesh);
     this.hover = null;
-    this.link = { send: (m) => this._send(m) }; // STOP from the bar (hub.js sends it)
+    this.link = { send: (m) => {
+      if (m.type === "stop") this.waitForNeutral = true;
+      return this._send(m);
+    } }; // STOP from the bar (hub.js sends it)
   }
   targets() { return [this.bar.mesh, this.video.mesh]; }
   hit(u) { const b = BAR[Math.min(BAR.length - 1, Math.floor(u * BAR.length))]; return b.op ? { kind: b.kind, op: b.op } : { kind: b.kind }; }
@@ -64,6 +69,8 @@ export class RaspbotModule {
     this.drag = null;
     this.grips = {};
     this.headOn = true;
+    this.legacy = false;
+    this.waitForNeutral = false;
     this.lastT = now;
     this.status = null;
     this.said = { text: "", t: -Infinity, bad: false };
@@ -128,6 +135,15 @@ export class RaspbotModule {
       this.headOn = !this.headOn;
       this.stick = { ...this.look }; // switching modes keeps the camera's current direction
       this.centre = null;
+    } else if (what.op === "legacy") {
+      this.legacy = !this.legacy;
+      this.waitForNeutral = true;
+      if (this.sent.driving) {
+        this._send({ type: "release" });
+        this.sent.driving = false;
+      }
+      this._say(this.legacy ? "Left stick drives. Right stick turns the camera." :
+        "Left stick moves the car. Right stick turns the car.");
     } else if (what.op === "picture") this._send({ type: "picture" });
     else if (what.op === "record") this._send({ type: "record", on: !this.status?.recording });
   }
@@ -148,7 +164,7 @@ export class RaspbotModule {
     this.moveWindow(frame, ref, hitOf);
     const dt = Math.min(0.1, (now - (this.lastT || now)) / 1000);
     this.lastT = now;
-    let drive = null;
+    let forward = 0, sideways = 0, turn = 0, rightStickActive = false;
     for (const src of frame.session.inputSources) {
       const gp = src.gamepad, key = src.handedness;
       if (!gp || (key !== "left" && key !== "right")) continue;
@@ -156,10 +172,18 @@ export class RaspbotModule {
       const a = !!gp.buttons[4]?.pressed; // A (right) / X (left): STOP
       if (a && !this.btn[`a${key}`]) this.link.send({ type: "stop" });
       this.btn[`a${key}`] = a;
-      if (key === "left") { if (Math.hypot(x, y) > DEAD) drive = [-y, x]; }
-      else {
-        if (Math.abs(x) > DEAD) this.stick.pan = clampDeg(this.stick.pan - x * STICK_DEG_S * dt);
-        if (Math.abs(y) > DEAD) this.stick.tilt = clampDeg(this.stick.tilt - y * STICK_DEG_S * dt);
+      if (key === "left") {
+        if (Math.hypot(x, y) > DEAD) {
+          forward = -y;
+          if (this.legacy) turn = x;
+          else sideways = x;
+        }
+      } else {
+        rightStickActive = Math.hypot(x, y) > DEAD;
+        if (this.legacy) {
+          if (Math.abs(x) > DEAD) this.stick.pan = clampDeg(this.stick.pan - x * STICK_DEG_S * dt);
+          if (Math.abs(y) > DEAD) this.stick.tilt = clampDeg(this.stick.tilt - y * STICK_DEG_S * dt);
+        } else if (Math.abs(x) > DEAD) turn = x;
         const press = !!gp.buttons[3]?.pressed; // the right stick, pressed: the centre again
         if (press && !this.btn.stick) this.press({ op: "centre" });
         this.btn.stick = press;
@@ -175,8 +199,21 @@ export class RaspbotModule {
     if (moved && now - s.lookT > LOOK_MS && this._send({ type: "look", ...this.look })) {
       s.look = { ...this.look }; s.lookT = now;
     }
-    if (drive && now - s.driveT > DRIVE_MS) { this._send({ type: "drive", dir: "stick", stick: drive }); s.driveT = now; s.driving = true; }
-    else if (!drive && s.driving) { this._send({ type: "release" }); s.driving = false; }
+    const driving = !!(forward || sideways || turn);
+    if (this.waitForNeutral) {
+      if (driving || rightStickActive) return;
+      this.waitForNeutral = false;
+    }
+    if (driving && now - s.driveT > DRIVE_MS) {
+      const stick = this.legacy ? [forward, turn] : [forward, sideways, turn];
+      if (this._send({ type: "drive", dir: "stick", stick })) {
+        s.driveT = now;
+        s.driving = true;
+      }
+    } else if (!driving && s.driving) {
+      this._send({ type: "release" });
+      s.driving = false;
+    }
   }
 
   /** Like the 3D arm, the window follows the grip's translation and turn from the grab pose. */
@@ -235,7 +272,8 @@ export class RaspbotModule {
       const bw = w / BAR.length, gap = h * 0.1;
       BAR.forEach((b, i) => {
         const x = i * bw + gap / 2, on = over === `${b.kind}${b.op || ""}`, lit = b.op === "record" && rec;
-        const head = b.op === "head", active = lit || (head && this.headOn);
+        const head = b.op === "head", legacy = b.op === "legacy";
+        const active = lit || (head && this.headOn) || (legacy && this.legacy);
         const col = b.danger || lit ? C.danger : C.primary, cut = h * 0.22, width = bw - gap;
         g.save(); g.translate(x, 0);
         g.beginPath(); g.moveTo(cut, 0); g.lineTo(width, 0); g.lineTo(width, h - cut); g.lineTo(width - cut, h); g.lineTo(0, h); g.lineTo(0, cut); g.closePath();
@@ -245,10 +283,12 @@ export class RaspbotModule {
         icon(g, b.ico, h * 0.45, h / 2, h * 0.36, on ? C.hot : col, 1.6);
         g.font = `700 ${h * 0.23}px ${FONT.ui}`; spaced(g, 0.1);
         g.fillStyle = on ? C.hot : C.text; g.textAlign = "left"; g.textBaseline = "middle";
-        g.fillText(lit ? "END REC" : head ? `HEAD ${this.headOn ? "ON" : "OFF"}` : b.label, h * 0.72, h / 2); spaced(g, 0);
+        let label = lit ? "END REC" : b.label;
+        if (head || legacy) label += (head ? this.headOn : this.legacy) ? " ON" : " OFF";
+        g.fillText(label, h * 0.72, h / 2, width - h * 0.8); spaced(g, 0);
         g.restore();
       });
-    }, `${over}|${rec}|${this.headOn}`);
+    }, `${over}|${rec}|${this.headOn}|${this.legacy}`);
   }
   _paintTally() {
     this.tally.mesh.visible = !!this.status?.recording;

@@ -4,6 +4,11 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — Older Raspbot programs stop when they receive four wheel speeds (quick job 142)
+
+**What:** the older program unpacks exactly two speeds. A four-speed command makes it stop.
+**Fix:** the program reports four-wheel support when it connects. See `docs/dev/protocol.md` → “The Raspbot page”.
+
 ### 2026-11-26 — Docker Hub does not have the Raspbot V2 image tag
 
 **What:** Docker Hub returned `not found` for `yahboomtechnology/ros-humble:0.1.0`. Yahboom's factory disk image contains that tag. Its URDF defines continuous joints for four wheels and both camera axes. The camera joints do not enforce the physical servo limits.
