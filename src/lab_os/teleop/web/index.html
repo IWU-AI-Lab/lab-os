@@ -42,29 +42,32 @@
         <div class="sources">
           <!-- the order (quick job 87): Desktop control, Enter AR, Enter VR; Controls in its own box under them -->
           <button id="desktop" class="btn primary" type="button">Desktop control</button>
-          <button id="enter-ar" class="btn primary" type="button" disabled>Enter AR (passthrough)</button>
-          <button id="enter" class="btn primary" type="button" disabled>Enter VR</button>
+          <button id="enter-ar" class="btn primary" type="button" disabled hidden>Enter AR (passthrough)</button>
+          <button id="enter" class="btn primary" type="button" disabled hidden>Enter VR</button>
         </div>
+        <p id="xr-none" class="hint" hidden>This device has no VR or AR. Use Desktop control, or open Teleop on the Quest.</p>
         <p id="xr-msg" class="msg" aria-live="polite"></p>
         <p id="control-why" class="msg" aria-live="polite" hidden></p>
         <dl class="facts">
           <dt>Gripper</dt><dd id="gripper">—</dd>
           <dt>Speed</dt><dd id="speed">—</dd>
         </dl>
-        <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down: the arm holds still. <b>Hands</b> (hub → VR Teleop → Options): hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper.</p>
-        <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
+        <details class="how"><summary>How to drive</summary>
+          <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down: the arm holds still. <b>Hands</b> (hub → VR Teleop → Options): hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper.</p>
+          <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
+        </details>
       </div></section>
 
       <details id="desk-help" class="card" open><summary>Controls</summary><div class="in">
         <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
-        <label class="row">Hand → arm
+        <label class="row stack">Hand → arm
           <select id="mode-set" disabled>
             <option value="relative">Relative: half scale, grab again to recenter</option>
             <option value="one_to_one">1:1: the gripper goes where the hand is</option>
           </select>
         </label>
         <p class="hint" id="mode-speed"></p>
-        <label class="row">3D arm in the headset
+        <label class="row stack">3D arm in the headset
           <select id="xr-style">
             <option value="">Full model</option>
             <option value="stick">Light (stick figure, if frames drop)</option>
@@ -73,7 +76,7 @@
         <button id="xr-place-reset" class="btn small" type="button" title="The 3D arm starts at its first place again (left Grip moves it in the headset, Y puts it back)">Put the 3D arm back at its first place</button>
         <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>; with two arms, <b>Y</b> and that hand's <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
         <h3>Desktop control</h3>
-        <label class="row">Mode
+        <label class="row stack">Mode
           <select id="desk-mode">
             <option value="keys">Keys: a key pair per motor</option>
             <option value="mouse">Mouse: hold a motor key, move the mouse</option>

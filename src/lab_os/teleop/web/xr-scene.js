@@ -20,6 +20,7 @@ const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
 // Arm/marker and VR room colors from config/theme.yaml (arm3d, vr_room).
 const CLUTCH_COLOR = color("colors.ok");
 const IDLE_COLOR = color("arm3d.idle_marker");
+const AR_EDGE = color("colors.primary"); // the edges of the see-through arm in AR
 
 export class XRScene {
   /**
@@ -103,7 +104,7 @@ export class XRScene {
     if (this.armKind !== kind) return;
     if (this.arm) this.armHolder.remove(this.arm.object);
     this.arm = arm;
-    if (this.ar) arm.setOpacity(0.55);
+    if (this.ar) { arm.setOpacity(0.55); arm.setEdges(AR_EDGE); } // a stronger cyan edge in AR (quick job 155)
     this.armHolder.add(arm.object);
     this._applyFeed();
   }
@@ -116,7 +117,7 @@ export class XRScene {
     if (this.leftKind !== kind) return;
     if (this.armLeft) this.leftHolder.remove(this.armLeft.object);
     this.armLeft = arm;
-    if (this.ar) arm.setOpacity(0.55);
+    if (this.ar) { arm.setOpacity(0.55); arm.setEdges(AR_EDGE); } // a stronger cyan edge in AR (quick job 155)
     this.leftHolder.add(arm.object);
     this._applyLeft();
   }
@@ -128,7 +129,7 @@ export class XRScene {
     if (f.modelKind && f.modelKind !== this.leftKind) this._loadLeft(f.modelKind);
     if (this.armLeft) {
       this.armLeft.setJoints(f.joints);
-      this.armLeft.setHeld(f.frozen); // held still: a rust ring at the base, the body stays steel
+      this.armLeft.setHeld(f.frozen); // held still: a dim ring at the base, the body stays steel
     }
   }
 
@@ -263,7 +264,7 @@ export class XRScene {
       // a faint footprint, so the floating ghost arm reads as "standing" somewhere
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(0.06, 0.07, 48),
-        new THREE.MeshBasicMaterial({ color: color("vr_room.marker"), transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ color: color("colors.primary"), transparent: true, opacity: 0.7, side: THREE.DoubleSide }), // the primary colour (quick job 155: white)
       );
       ring.rotation.x = -Math.PI / 2;
       this.armHolder.add(ring);
@@ -302,14 +303,14 @@ export class XRScene {
 /* ---------- the status panel, in the hub's design (quick job 37; docs/design/DESIGN.md) ----------
    A cut-corner box like the hub's panels: dark see-through fill, a hairline frame with a bright lead-in in
    the state's colour. The state first, as a chip (its colour says how serious: cyan normal, green following,
-   amber waiting or warm, rust held still with a pause icon, gray offline); then Gripper and Speed, small CAPS
+   amber waiting or warm, dim held still with a pause icon, gray offline); then Gripper and Speed, small CAPS
    labels over numbers in the digit font; then the hint in the light font. Colours and fonts from the theme.
    The fill stays nearly opaque so it reads over a bright room in AR as well as in VR. */
 const TC = theme.colors || {};
 const PC = {
   bg: TC.background || "#05080b", line: TC.line || "#1f3d48", text: TC.text || "#d4eef5",
   dim: TC.text_dim || "#6d8c96", primary: TC.primary || "#29d4ff", accent: TC.accent || "#ff9a2e",
-  offline: TC.offline || "#56636a", ok: TC.ok || "#3ee07f", frozen: TC.frozen || "#7a1d00",
+  offline: TC.offline || "#56636a", ok: TC.ok || "#3ee07f",
 };
 const TF = theme.font || {};
 const PF = {
@@ -323,7 +324,7 @@ const BLANK = /DSEG/.test(PF.digits) ? "!" : " "; // a digit-wide blank, so nu
 const W = 960, H = 450; // canvas pixels for the 0.42 × 0.197 m panel
 const LEVEL = { // state → colour, chip text colour, icon
   normal: [PC.primary, PC.primary, null], following: [PC.ok, PC.ok, "dot"], warning: [PC.accent, PC.accent, "warn"],
-  held: [PC.frozen, PC.text, "pause"], offline: [PC.offline, PC.offline, null],
+  held: [PC.dim, PC.dim, "pause"], offline: [PC.offline, PC.offline, null],
 };
 
 /** A canvas-textured plane with the teleop status, redrawn only when what it says changes. */
@@ -397,8 +398,8 @@ function chip(g, x0, width, state, level) {
   const maxW = width - 48 - iconW;
   if (tw > maxW) { g.font = `600 ${Math.floor((52 * maxW) / tw)}px ${PF.ui}`; tw = g.measureText(word).width; }
   cutPath(g, x0, y0, tw + 48 + iconW, chipH, 14);
-  g.fillStyle = level === "held" ? PC.frozen : rgba(col, 0.16); g.fill();
-  g.lineWidth = 2; g.strokeStyle = rgba(col, level === "held" ? 1 : 0.7); g.stroke();
+  g.fillStyle = rgba(col, 0.16); g.fill();
+  g.lineWidth = 2; g.strokeStyle = rgba(col, 0.7); g.stroke();
   if (ico) drawIcon(g, ico, x0 + 24 + 20, y0 + chipH / 2, chipText);
   g.fillStyle = chipText; g.textAlign = "left";
   g.fillText(word, x0 + 24 + iconW, y0 + chipH / 2 + 2);

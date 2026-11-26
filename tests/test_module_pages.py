@@ -283,7 +283,7 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
     assert "grid-template-rows: 1.35rem 1.05rem" in row  # every row the same height
     assert "text-overflow: ellipsis" in css.split(".jf {", 1)[1].split("}", 1)[0]
     assert css.index(
-        "@media (max-width: 900px), (orientation: portrait) {\n  /* narrow: the readout"
+        "@media (max-width: 600px), (orientation: portrait) {\n  /* narrow: the readout"
     ) > css.index(".arm3d-body {")
 
 

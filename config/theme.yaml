@@ -17,8 +17,6 @@ colors:
   danger: "#ff2436"      # aggressive red: critical, a person must act (error, stop). Used by: the designed hub
   offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. Used by: the designed hub, the headset's teleop status panel
   ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line, the headset's teleop status panel
-  frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views, the headset's teleop status panel
-  frozen_text: "#b8604a" # held still as words and marks on the dark background (the pill's pause mark, the 3D arm's ring). Used by: the designed hub, the module pages, the 3D views
 
 font:                    # one font per role; every font in `bundled` ships with the code, so swap freely
   bundled: [Orbitron, Oxanium, Chakra Petch, Rajdhani, Inter, JetBrains Mono, DSEG7, DSEG14, Doto, Share Tech Mono]
@@ -151,7 +149,6 @@ vr_room:                 # the room around the arm in VR Teleop (teleop/web/xr-s
   grid_center: "#4a4f57"
   table: "#8a7458"       # the wood table under the arm
   light_ground: "#666660"
-  marker: "#ffffff"      # the faint footprint under the ghost arm (AR)
 
 labels:                  # the object labels on a camera picture (/web/object-labels.js)
   background: "#05080b"  # behind the words, drawn see-through (background_opacity)

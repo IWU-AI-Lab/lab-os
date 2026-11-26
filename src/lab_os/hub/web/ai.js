@@ -89,7 +89,7 @@ async function pollArm() {
   $("#gx").textContent = p ? p.x.toFixed(1) : "—";
   $("#gy").textContent = p ? p.y.toFixed(1) : "—";
   $("#gz").textContent = p ? p.z.toFixed(1) : "—";
-  $("#gopen").textContent = arm.gripper_open_pct != null ? `${Math.round(arm.gripper_open_pct)}` : "—";
+  $("#gopen").textContent = arm.gripper_open_pct != null ? `${Math.round(arm.gripper_open_pct)}%` : "—"; // a unit (quick job 155)
   $("#side-note").textContent = arm.side_cm ? "Seen from its side, cm" : "No side view for this arm model";
 }
 
@@ -111,21 +111,23 @@ function draw() {
   const C = css("--primary") || "#29d4ff", LINE = css("--line") || "#1f3d48", DIM = css("--text-dim") || "#6d8c96";
   const HOT = css("--hot") || "#eafcff", AMBER = css("--accent") || "#ff9a2e", BG = css("--bg") || "#05080b";
   const fLines = css("--f-lines") || "sans-serif", fDigits = css("--f-digits") || "monospace";
-  const labelW = Math.min(220, w * 0.3);
+  // k: the text and marks grow with the drawing (quick job 155: on the 4K they stayed small)
+  const k = Math.max(1, Math.min(w / 760, h / 440, 4));
+  const labelW = Math.min(220 * k, w * 0.3);
   // the world: 12 cm behind the base to 45 cm in front, the table to 42 cm up
   const R0 = -12, R1 = 45, Z0 = -3, Z1 = 42;
-  const s = Math.min((w - labelW - 30) / (R1 - R0), (h - 30) / (Z1 - Z0));
-  const ox = 20 - R0 * s, oy = h - 20 + Z0 * s;
+  const s = Math.min((w - labelW - 30) / (R1 - R0), (h - 30 * k) / (Z1 - Z0));
+  const ox = 20 - R0 * s, oy = h - 20 * k + Z0 * s;
   const P = (r, z) => [ox + r * s, oy - z * s];
   // floor, with a mark every 5 cm and a number every 10
-  cx.strokeStyle = LINE; cx.fillStyle = DIM; cx.lineWidth = 1; cx.font = `300 11px ${fLines}`;
+  cx.strokeStyle = LINE; cx.fillStyle = DIM; cx.lineWidth = 1; cx.font = `300 ${11 * k}px ${fLines}`;
   cx.beginPath(); cx.moveTo(...P(R0, 0)); cx.lineTo(...P(R1, 0)); cx.stroke();
   for (let r = -10; r <= R1; r += 5) {
     const [x, y] = P(r, 0);
-    cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x, y + (r % 10 ? 4 : 7)); cx.stroke();
-    if (r > 0 && r % 10 === 0) cx.fillText(`${r}${r === 40 ? " cm" : ""}`, x - 6, y + 18);
+    cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x, y + (r % 10 ? 4 : 7) * k); cx.stroke();
+    if (r > 0 && r % 10 === 0) cx.fillText(`${r}${r === 40 ? " cm" : ""}`, x - 6 * k, y + 18 * k);
   }
-  for (let z = 10; z <= 40; z += 10) { const [x, y] = P(R0, z); cx.fillText(String(z), x, y + 4); }
+  for (let z = 10; z <= 40; z += 10) { const [x, y] = P(R0, z); cx.fillText(String(z), x, y + 4 * k); }
   const pts = arm?.side_cm;
   if (!pts) return;
   // ease toward the newest reading
@@ -140,32 +142,34 @@ function draw() {
     const far = Math.hypot(target.x, target.y || 0), out = far > R1 - 2;
     const [tx, ty] = P(Math.min(far, R1 - 2), target.z);
     cx.strokeStyle = AMBER; cx.lineWidth = 1;
-    cx.beginPath(); cx.arc(tx, ty, 7, 0, 2 * Math.PI); cx.moveTo(tx - 12, ty); cx.lineTo(tx + 12, ty); cx.moveTo(tx, ty - 12); cx.lineTo(tx, ty + 12); cx.stroke();
-    cx.fillStyle = AMBER; cx.font = `300 11px ${fLines}`; cx.textAlign = "right"; cx.fillText(out ? `Last target: ${far.toFixed(0)} cm out, off this view` : "Last target", tx - 4, ty + 24); cx.textAlign = "left";
+    const m = 12 * k;
+    cx.beginPath(); cx.arc(tx, ty, 7 * k, 0, 2 * Math.PI); cx.moveTo(tx - m, ty); cx.lineTo(tx + m, ty); cx.moveTo(tx, ty - m); cx.lineTo(tx, ty + m); cx.stroke();
+    cx.fillStyle = AMBER; cx.font = `300 ${11 * k}px ${fLines}`; cx.textAlign = "right"; cx.fillText(out ? `Last target: ${far.toFixed(0)} cm out, off this view` : "Last target", tx - 4 * k, ty + 24 * k); cx.textAlign = "left";
   }
   // the arm: a glowing line through the joints, a hexagon on each, the jaws at the tip
-  cx.strokeStyle = C; cx.lineWidth = 3; cx.shadowColor = C; cx.shadowBlur = 10;
+  cx.strokeStyle = C; cx.lineWidth = 3 * k; cx.shadowColor = C; cx.shadowBlur = 10 * k;
   cx.beginPath(); shown.forEach((p, i) => cx[i ? "lineTo" : "moveTo"](...P(p.r, p.z))); cx.stroke();
   const [bx, by] = P(0, shown[0].z); // the base's bottom: above the table on a plate
   cx.beginPath(); cx.moveTo(bx - 4 * s, by); cx.lineTo(bx + 4 * s, by); cx.stroke();
   cx.shadowBlur = 0;
   const tip = shown.at(-1), wr = shown.at(-2), ang = Math.atan2(-(tip.z - wr.z), tip.r - wr.r), open = ((arm.gripper_open_pct ?? 30) / 100) * 0.6 + 0.12;
-  cx.lineWidth = 2;
+  cx.lineWidth = 2 * k;
   for (const sgn of [-1, 1]) { const [tx, ty] = P(tip.r, tip.z), a = ang + sgn * open; cx.beginPath(); cx.moveTo(tx, ty); cx.lineTo(tx + Math.cos(a) * 3 * s, ty + Math.sin(a) * 3 * s); cx.stroke(); }
   // labels: a column on the right, a leader line to each joint
   const named = shown.filter((p) => ["shoulder_lift", "elbow_flex", "wrist_flex", "tip"].includes(p.name));
-  const lx = w - labelW + 30;
-  named.forEach((p, k) => {
-    const [x, y] = P(p.r, p.z), ly = h * 0.16 + k * Math.min(70, h * 0.17);
-    cx.fillStyle = BG; cx.strokeStyle = C; cx.lineWidth = 1.5;
-    cx.beginPath(); for (let i = 0; i < 6; i++) { const a = (i / 6) * 2 * Math.PI + Math.PI / 6; cx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * 6, y + Math.sin(a) * 6); } cx.closePath(); cx.fill(); cx.stroke();
-    cx.strokeStyle = `${C}80`; cx.lineWidth = 1;
-    cx.beginPath(); cx.moveTo(x + 7, y); cx.lineTo(lx - 30, ly); cx.lineTo(lx - 8, ly); cx.stroke();
+  const lx = w - labelW + 30 * k;
+  named.forEach((p, n) => {
+    const [x, y] = P(p.r, p.z), ly = h * 0.16 + n * Math.min(70 * k, h * 0.17);
+    cx.fillStyle = BG; cx.strokeStyle = C; cx.lineWidth = 1.5 * k;
+    const hr = 6 * k;
+    cx.beginPath(); for (let i = 0; i < 6; i++) { const a = (i / 6) * 2 * Math.PI + Math.PI / 6; cx[i ? "lineTo" : "moveTo"](x + Math.cos(a) * hr, y + Math.sin(a) * hr); } cx.closePath(); cx.fill(); cx.stroke();
+    cx.strokeStyle = `${C}80`; cx.lineWidth = k;
+    cx.beginPath(); cx.moveTo(x + hr + k, y); cx.lineTo(lx - 30 * k, ly); cx.lineTo(lx - 8 * k, ly); cx.stroke();
     const isTip = p.name === "tip", deg = arm.joints?.[p.name];
-    cx.fillStyle = DIM; cx.font = `300 12px ${fLines}`;
-    cx.fillText(isTip ? "Gripper tip, cm" : jointLabel(p.name), lx, ly - 7);
-    cx.fillStyle = HOT; cx.font = isTip ? `500 16px ${css("--f-ui")}` : `18px ${fDigits}`;
-    cx.fillText(isTip ? `${p.r.toFixed(1)} out, ${p.z.toFixed(1)} up` : `${deg >= 0 ? " " : "-"}${Math.abs(deg ?? 0).toFixed(1)}`, lx, ly + 15);
+    cx.fillStyle = DIM; cx.font = `300 ${12 * k}px ${fLines}`;
+    cx.fillText(isTip ? "Gripper tip, cm" : jointLabel(p.name), lx, ly - 7 * k);
+    cx.fillStyle = HOT; cx.font = isTip ? `500 ${16 * k}px ${css("--f-ui")}` : `${18 * k}px ${fDigits}`;
+    cx.fillText(isTip ? `${p.r.toFixed(1)} out, ${p.z.toFixed(1)} up` : `${deg >= 0 ? " " : "-"}${Math.abs(deg ?? 0).toFixed(1)}°`, lx, ly + 15 * k);
   });
 }
 

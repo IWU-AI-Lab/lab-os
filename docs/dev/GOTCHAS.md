@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — `* { box-sizing: border-box }` does not reach `::before`
+**What:** The "Held still" pill's pause mark had its two bars far apart. `kit.css` sets `box-sizing: border-box` on `*`, but `*` does not match pseudo-elements. So the mark's `width` counted without its two borders, and the gap was the full width.
+**Fix:** The mark sets `box-sizing: content-box` and a small `width` (the gap) on purpose (quick job 155). A `::before` or `::after` that uses borders must set its own `box-sizing`.
+
+### 2026-11-26 — The test brain gave a 500 for the camera pictures in a new worktree
+**What:** A new `git worktree` with a plain `uv sync` has no `cv2` (it comes with the `so101` extra). The Cameras page then showed "500 Internal Server Error" in each picture. No camera was opened.
+**Fix:** None needed for a test of the page layout. Run `uv sync --extra so101` in the worktree to see the pictures.
+
 ### 2026-11-26 — Phone Remote could submit before its script loaded
 Chrome could show the question field before the page installed its submit handler. An early submit reloaded the page and cleared the question.
 The form now accepts input after the handler is ready. A failed answer keeps the question for another try.

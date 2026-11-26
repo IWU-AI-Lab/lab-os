@@ -123,7 +123,7 @@ def check(
         if not device.training_calibration or path.stem != ident:
             c.add(False, f"{device.name}: devices.yaml doesn't name the training file {ident}.json")
         elif not path.is_file():
-            c.add(False, f"{device.name}: its training file {path} isn't on this computer")
+            c.add(False, f"{device.name}: {path.name} is missing. Copy the training file to {path}")
         else:
             c.add(True, f"{device.name}: training calibration {path.name} (read only)")
             if device is follower:

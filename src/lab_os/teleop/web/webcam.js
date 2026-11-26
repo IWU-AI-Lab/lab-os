@@ -144,6 +144,16 @@ async function loadModel() {
   return landmarker;
 }
 
+/** What to do when the browser gives no camera (quick job 155: "Permission denied" said no next step). */
+function cameraError(e) {
+  if (e.name === "NotReadableError") return "Another program uses this camera. Close it, or pick another camera.";
+  if (e.name === "NotAllowedError" || e.name === "SecurityError") {
+    return "The browser blocked the camera. Click the camera icon at the left of the address bar, choose Allow, then press Start webcam control again.";
+  }
+  if (e.name === "NotFoundError" || e.name === "OverconstrainedError") return "No camera found. Plug in a camera, then press Start webcam control again.";
+  return `Couldn't start the camera: ${e.message}`;
+}
+
 async function startControl() {
   if (!navigator.mediaDevices?.getUserMedia) {
     say("This page can't use a camera here. Open http://localhost:8080/webcam on the brain's computer.");
@@ -160,9 +170,7 @@ async function startControl() {
   } catch (e) {
     $("start").disabled = false;
     $("start").dataset.busy = "";
-    say(e.name === "NotReadableError"
-      ? "Another program uses this camera. Close it, or pick another camera."
-      : `Couldn't start the camera: ${e.message}`);
+    say(cameraError(e));
     return;
   }
   video.srcObject = stream;

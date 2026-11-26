@@ -130,7 +130,7 @@ async def test_theme_served_fresh(aiohttp_client):
     resp = await client.get("/theme.json")
     assert resp.status == 200
     assert resp.headers["Cache-Control"] == "no-store"
-    assert (await resp.json())["colors"]["frozen"].startswith("#")
+    assert (await resp.json())["colors"]["text_dim"].startswith("#")
 
 
 async def test_static_files_are_never_stale(aiohttp_client):
