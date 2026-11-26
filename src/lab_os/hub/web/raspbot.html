@@ -66,7 +66,7 @@
     }
     #drive-pad .btn .ico { rotate: calc(var(--turn, 0deg) - 90deg); }
     #drive-pad .turn { grid-column: 1 / -1; display: flex; gap: 2px; }
-    #drive-pad .turn .btn { font-size: 1.35rem; }
+    #drive-pad .turn .btn span { position: relative; font-size: 1.35rem; }
     #drive-pad [data-dir="forward-left"] { --turn: -45deg; }
     #drive-pad [data-dir="forward-right"] { --turn: 45deg; }
     #drive-pad [data-dir="strafe-left"] { --turn: -90deg; }
@@ -144,8 +144,8 @@
           <button class="btn" type="button" data-dir="back" aria-label="Back" title="Back" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
           <button class="btn" type="button" data-dir="back-right" aria-label="Back right" title="Back right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
           <div class="turn">
-            <button class="btn" type="button" data-dir="left" aria-label="Turn left" title="Turn left" disabled>↶</button>
-            <button class="btn" type="button" data-dir="right" aria-label="Turn right" title="Turn right" disabled>↷</button>
+            <button class="btn" type="button" data-dir="left" aria-label="Turn left" title="Turn left" disabled><span aria-hidden="true">↶</span></button>
+            <button class="btn" type="button" data-dir="right" aria-label="Turn right" title="Turn right" disabled><span aria-hidden="true">↷</span></button>
           </div>
         </div>
         <label class="speed"><span>Speed</span><input id="speed" type="range" min="0" max="100" step="5" value="50" disabled><output id="speed-out" for="speed">50%</output></label>
