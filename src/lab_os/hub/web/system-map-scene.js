@@ -84,7 +84,8 @@ const links = {
   usb: new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.55 }),
   network: new THREE.LineDashedMaterial({ color: primary, dashSize: 0.16, gapSize: 0.13, transparent: true, opacity: 0.55 }),
 };
-const TRACE_POINTS = 25;  // the trace as a polyline, so it can draw itself in
+const TRACE_POINTS = 25;
+const shellLine = new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.1, depthWrite: false });  // the trace as a polyline, so it can draw itself in
 
 const modelTypes = { so101: "so101", "so101-leader": "so101", xarm1s: "xarm1s", raspbot: "raspbot" };
 const models = new Map();
@@ -196,49 +197,65 @@ function seed(text) {
   return (h >>> 0) / 4294967296;
 }
 
-// Devices sit wherever they fit around the core: each starts where it was (a new one in its kind's
-// direction, so the same kinds stay near each other), devices closer than GAP push apart, a weak pull
-// keeps them near the core, and none comes closer to the core than CORE_GAP.
+// Devices group by kind into clusters (the arms, the robots, the cameras, the screens, …). Each cluster
+// is a ball: its devices sit evenly on a sphere around the cluster's centre (a Fibonacci sphere, turned
+// by a fixed amount per kind), so the map has depth, not one flat level. The clusters spread around the
+// core in 3D, above and below it, and push apart until none overlaps another cluster or the core.
 const KINDS = ["arm", "robot", "camera", "headset", "screen"];
-const GAP = 4.1, CORE_GAP = 4.6;
-function place(devices, before) {
-  const sectors = KINDS.length + 1;
-  const spots = devices.map((device) => {
-    const was = before.get(device.id);
-    if (was) return was.clone();
-    const kind = KINDS.includes(device.kind) ? KINDS.indexOf(device.kind) : KINDS.length;
-    const angle = 2 * Math.PI * (kind + seed(device.id)) / sectors + 0.55;
-    const radius = CORE_GAP + 0.6 + seed(`${device.id}:r`) * Math.sqrt(devices.length) * 1.3;
-    return new THREE.Vector3(Math.cos(angle) * radius, (seed(`${device.id}:y`) - 0.5) * 1.4, Math.sin(angle) * radius);
+const GAP = 3.6, CORE_GAP = 4.4;
+const ELEVATION = [0.42, -0.38, 0.12, -0.55, 0.6, -0.15];  // each cluster's height around the core (radians)
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+function place(devices) {
+  const groups = new Map();
+  for (const device of devices) {
+    const kind = KINDS.includes(device.kind) ? device.kind : "other";
+    if (!groups.has(kind)) groups.set(kind, []);
+    groups.get(kind).push(device);
+  }
+  const order = [...KINDS, "other"].filter((kind) => groups.has(kind));
+  const clusters = order.map((kind, i) => {
+    const members = groups.get(kind).slice().sort((a, b) => a.id.localeCompare(b.id));
+    const n = members.length;
+    const radius = n === 1 ? 0 : Math.max(GAP * 0.62, GAP * Math.sqrt(n / (4 * Math.PI)) * 1.2);
+    const angle = 2 * Math.PI * i / order.length + 0.55;
+    const up = ELEVATION[i % ELEVATION.length];
+    const reach = CORE_GAP + radius + 1.2;
+    const center = new THREE.Vector3(Math.cos(angle) * Math.cos(up), Math.sin(up), Math.sin(angle) * Math.cos(up))
+      .multiplyScalar(reach);
+    return { kind, members, radius, center };
   });
-  const forces = spots.map(() => new THREE.Vector3());
+  // Push clusters apart (and off the core); a weak pull keeps the whole map compact.
   const push = new THREE.Vector3();
-  for (let round = 0; round < 300; round++) {
-    for (const force of forces) force.set(0, 0, 0);
-    for (let i = 0; i < spots.length; i++) {
-      for (let j = i + 1; j < spots.length; j++) {
-        push.subVectors(spots[i], spots[j]);
-        const d = push.length() || 0.01;
-        if (d >= GAP) continue;
-        push.multiplyScalar((GAP - d) / d * 0.5);
-        forces[i].add(push);
-        forces[j].sub(push);
+  for (let round = 0; round < 200; round++) {
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const a = clusters[i], b = clusters[j];
+        push.subVectors(a.center, b.center);
+        const d = push.length() || 0.01, need = a.radius + b.radius + GAP;
+        if (d >= need) continue;
+        push.multiplyScalar((need - d) / d * 0.5);
+        a.center.add(push);
+        b.center.sub(push);
       }
     }
-    spots.forEach((spot, i) => {
-      const force = forces[i];
-      force.x -= spot.x * 0.02;
-      force.z -= spot.z * 0.02;
-      force.y -= spot.y * 0.12;
-      const r = Math.hypot(spot.x, spot.z) || 0.01;
-      if (r < CORE_GAP) {
-        force.x += spot.x / r * (CORE_GAP - r);
-        force.z += spot.z / r * (CORE_GAP - r);
-      }
-      spot.addScaledVector(force, 0.5);
+    for (const cluster of clusters) {
+      const d = cluster.center.length() || 0.01, need = CORE_GAP + cluster.radius + 0.8;
+      if (d < need) cluster.center.multiplyScalar(need / d);
+      else cluster.center.multiplyScalar(1 - 0.01 * (d - need) / d);
+    }
+  }
+  const spots = new Map();
+  for (const { kind, members, radius, center } of clusters) {
+    const turn = new THREE.Euler(seed(`${kind}:x`) * Math.PI, seed(`${kind}:y`) * Math.PI * 2, seed(`${kind}:z`) * Math.PI);
+    members.forEach((device, k) => {
+      const n = members.length;
+      const y = n === 1 ? 0 : 1 - 2 * (k + 0.5) / n;
+      const ring = Math.sqrt(1 - y * y);
+      const point = new THREE.Vector3(Math.cos(k * GOLDEN) * ring, y, Math.sin(k * GOLDEN) * ring);
+      spots.set(device.id, point.applyEuler(turn).multiplyScalar(radius).add(center));
     });
   }
-  return spots;
+  return { spots: devices.map((device) => spots.get(device.id)), clusters };
 }
 
 // The icons, drawn into a screen's picture (the same symbols as the pages, in the main color).
@@ -317,7 +334,7 @@ export function createMap(canvas, labels, onSelect) {
   const highlightedNetwork = links.network.clone();
   highlightedNetwork.color.setHex(hot);
   highlightedNetwork.opacity = 0.91;
-  let edge = 2.2, fitDistance = 0, points = [new THREE.Vector3()];
+  let edge = 2.2, fitDistance = 0, points = [new THREE.Vector3()], shells = [];
   let selected = "", frame = 0, lastDraw = 0, lastTick = 0;
   let seen = new Set(), pulses = [], nextFire = 0, flight = null;
   let spin = 0, lastInput = -Infinity, holding = false, onScreen = true, introduced = false;
@@ -395,6 +412,7 @@ export function createMap(canvas, labels, onSelect) {
       glow.scale.setScalar(2.7 + breath * 0.4);
       centre.material.opacity = 0.42 + breath * 0.2;
       reticle.rotation.y = s * 2 * Math.PI / ringTurns[1];
+      for (const shell of shells) shell.rotation.y = shell.userData.turn * s * 2 * Math.PI / (ringTurns[2] * 1.4);
       for (const node of nodes.values()) {
         if (node.spinner) node.spinner.rotation.y += dt * 2 * Math.PI / MODEL_TURN_S;
       }
@@ -555,7 +573,7 @@ export function createMap(canvas, labels, onSelect) {
     controls.maxTargetRadius = edge;
     controls.update();
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(drawRes(), 1));
+    renderer.setPixelRatio(Math.min(drawRes(), 1.5));  // sharp on a laptop's screen, light on a big one
     renderer.setSize(width, height, false);
     render();
   }
@@ -581,7 +599,7 @@ export function createMap(canvas, labels, onSelect) {
     const key = JSON.stringify(preview);
     if (screenPictures.has(key)) return screenPictures.get(key);
     const aspect = previewAspect(preview);
-    const W = 320, H = Math.round(W * aspect), P = 18;  // P: room for the glow around the frame
+    const W = 768, H = Math.round(W * aspect), P = 40;  // P: room for the glow around the frame
     const image = document.createElement("canvas");
     image.width = W + 2 * P;
     image.height = H + 2 * P;
@@ -593,7 +611,7 @@ export function createMap(canvas, labels, onSelect) {
       ctx.clearRect(0, 0, image.width, image.height);
       ctx.save();
       ctx.shadowColor = `${hex(primary)}88`;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 38;
       ctx.fillStyle = hex(background);
       ctx.fillRect(P, P, W, H);
       ctx.restore();
@@ -603,15 +621,15 @@ export function createMap(canvas, labels, onSelect) {
       ctx.fillStyle = fill;
       ctx.fillRect(P, P, W, H);
       ctx.strokeStyle = hex(primary);
-      ctx.lineWidth = 3;
-      ctx.strokeRect(P + 1.5, P + 1.5, W - 3, H - 3);
+      ctx.lineWidth = 6;
+      ctx.strokeRect(P + 3, P + 3, W - 6, H - 6);
       const cx = P + W / 2, cy = P + H * 0.44;
       if (preview.showing) {
         const size = H * 0.34;
         if (icon) ctx.drawImage(icon, cx - size / 2, cy - size / 2, size, size);
       } else if (preview.stage === "start") {
         ctx.strokeStyle = `${hex(primary)}8c`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 4.5;
         ctx.beginPath();
         ctx.arc(cx, cy, W * 0.16 * Math.min(1, aspect / 0.5625), 0, Math.PI * 2);
         ctx.stroke();
@@ -619,15 +637,15 @@ export function createMap(canvas, labels, onSelect) {
         const r = W * 0.13 * Math.min(1, aspect / 0.5625);
         ctx.save();
         ctx.shadowColor = hex(primary);
-        ctx.shadowBlur = 14;
+        ctx.shadowBlur = 32;
         ctx.strokeStyle = hex(primary);
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 9;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
         ctx.strokeStyle = `${hex(primary)}73`;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 4.5;
         ctx.beginPath();
         ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2);
         ctx.stroke();
@@ -641,12 +659,12 @@ export function createMap(canvas, labels, onSelect) {
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle = hex(textColor);
       ctx.font = `500 ${Math.round(H * 0.12)}px "Chakra Petch", system-ui, sans-serif`;
-      ctx.fillText(fit(screenTitle(preview), W - 24), cx, P + H - H * 0.08);
+      ctx.fillText(fit(screenTitle(preview), W - 56), cx, P + H - H * 0.08);
       if (preview.showing && preview.from) {
         ctx.textAlign = "right";
         ctx.fillStyle = hex(textDim);
         ctx.font = `300 ${Math.round(H * 0.085)}px Inter, system-ui, sans-serif`;
-        ctx.fillText(fit(`From ${preview.from}`, W * 0.7), P + W - 10, P + H * 0.14);
+        ctx.fillText(fit(`From ${preview.from}`, W * 0.7), P + W - 24, P + H * 0.14);
       }
       texture.needsUpdate = true;
       render();
@@ -756,7 +774,16 @@ export function createMap(canvas, labels, onSelect) {
     const fresh = [];
     const nextSeen = new Set();
     const others = devices.slice(1);
-    const targets = place(others, spots);
+    const { spots: targets, clusters } = place(others);
+    // A faint wire ball around each cluster of two or more, turning slowly, so a group reads as one.
+    shells = clusters.filter((c) => c.members.length > 1).map(({ kind, radius, center }) => {
+      const shell = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(radius + 1.25, 1)), shellLine);
+      shell.position.copy(center);
+      shell.rotation.set(seed(`${kind}:s`) * Math.PI, 0, 0);
+      shell.userData.turn = seed(kind) < 0.5 ? -1 : 1;
+      graph.add(shell);
+      return shell;
+    });
     points = [new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(2.2, 0, 0), new THREE.Vector3(-2.2, 0, 0)];
     edge = 2.2;
     const nextSpots = new Map();
@@ -770,7 +797,7 @@ export function createMap(canvas, labels, onSelect) {
         node.moveStart = now;
       }
       nextSpots.set(device.id, target);
-      edge = Math.max(edge, Math.hypot(target.x, target.z) + 1.5);
+      edge = Math.max(edge, target.length() + 1.5);
       points.push(target.clone(), target.clone().setY(target.y + node.height + 0.5));
       const key = `${device.id}:${device.connected}`;
       nextSeen.add(key);

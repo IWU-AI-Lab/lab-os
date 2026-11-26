@@ -57,13 +57,20 @@ function show(rows) {
   }
 }
 
+// A second click soon after the first goes to the device the first one picked: the details above the
+// list can grow by a line when a device is chosen, so the list moves under the pointer between clicks.
+let lastPick = { id: null, at: 0 };
 list.addEventListener("click", (event) => {
+  const now = performance.now();
+  if (lastPick.id !== null && now - lastPick.at < 450) {
+    scene?.focus(lastPick.id);
+    lastPick = { id: null, at: 0 };
+    return;
+  }
   const button = event.target.closest("button");
-  if (button) choose(button.dataset.id);
-});
-list.addEventListener("dblclick", (event) => {
-  const button = event.target.closest("button");
-  if (button) scene?.focus(button.dataset.id);
+  if (!button) return;
+  choose(button.dataset.id);
+  lastPick = { id: button.dataset.id, at: now };
 });
 
 // The list scrolls when it holds more than fits: a fade at the bottom until you reach the end.
