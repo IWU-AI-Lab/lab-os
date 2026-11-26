@@ -11,11 +11,11 @@ const line = color("colors.line");
 const hot = color("colors.hot");
 const pad = new THREE.CylinderGeometry(0.73, 0.81, 0.13, 6);
 const outline = new THREE.EdgesGeometry(pad);
+const marker = new THREE.OctahedronGeometry(0.067);
 const shapes = {
-  brain: new THREE.IcosahedronGeometry(0.63),
   screen: new THREE.BoxGeometry(1.05, 0.66, 0.14),
   camera: new THREE.CylinderGeometry(0.31, 0.38, 0.65, 6).rotateX(Math.PI / 2),
-  headset: new THREE.BoxGeometry(0.95, 0.42, 0.53),
+  headset: new THREE.CylinderGeometry(0.49, 0.54, 0.42, 6),
   usb: new THREE.BoxGeometry(0.55, 0.4, 0.8),
 };
 const edges = Object.fromEntries(Object.entries(shapes).map(([kind, g]) => [kind, new THREE.EdgesGeometry(g)]));
@@ -25,6 +25,10 @@ const wires = {
   off: new THREE.LineBasicMaterial({ color: offline }),
   selected: new THREE.LineBasicMaterial({ color: hot }),
 };
+const point = new THREE.MeshBasicMaterial({ color: primary });
+const crystal = new THREE.MeshStandardMaterial({
+  color: primary, emissive: primary, emissiveIntensity: 0.63, roughness: 0.45,
+});
 const links = {
   usb: new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.65 }),
   network: new THREE.LineDashedMaterial({ color: primary, dashSize: 0.16, gapSize: 0.13, transparent: true, opacity: 0.65 }),
@@ -49,6 +53,70 @@ function modelFor(type) {
   return models.get(type);
 }
 
+function glowTexture() {
+  const image = document.createElement("canvas");
+  image.width = image.height = 64;
+  const ctx = image.getContext("2d");
+  const glow = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  glow.addColorStop(0, "rgba(255,255,255,1)");
+  glow.addColorStop(0.25, "rgba(255,255,255,0.35)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(image);
+}
+
+function halo(texture, tint, opacity, size) {
+  const material = new THREE.SpriteMaterial({
+    map: texture, color: tint, opacity, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(size, size, 1);
+  return sprite;
+}
+
+function arc(radius, start, length, height, material) {
+  const segments = Math.max(8, Math.ceil(length * 13));
+  const points = Array.from({ length: segments + 1 }, (_, i) => {
+    const angle = start + i * length / segments;
+    return new THREE.Vector3(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+  });
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+}
+
+function buildCore(texture) {
+  const core = new THREE.Group();
+  const hub = new THREE.Group();
+  hub.position.y = 0.87;
+  core.add(hub);
+
+  const jewel = new THREE.Mesh(new THREE.IcosahedronGeometry(0.31), crystal);
+  const cage = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.57)), wires.on);
+  hub.add(jewel, cage, halo(texture, primary, 0.75, 2.9), halo(texture, hot, 0.52, 0.74));
+
+  const quiet = new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.3 });
+  const orbit = new THREE.Group();
+  orbit.add(arc(0.85, 0.2, 2.15, 0, wires.selected), arc(0.85, 3.1, 2.1, 0, quiet));
+  orbit.rotation.set(0.67, 0, 0.34);
+  const outer = new THREE.Group();
+  outer.add(arc(1.03, 0.25, 2.7, 0, wires.on), arc(1.03, 3.35, 2.45, 0, quiet));
+  outer.rotation.set(-0.55, 0, -0.78);
+  hub.add(orbit, outer);
+
+  core.add(arc(1.52, 0, Math.PI * 2, 0.02, quiet), arc(2.0, 0, Math.PI * 2, 0.01, quiet));
+  for (let i = 0; i < 4; i++) {
+    core.add(arc(1.76, i * Math.PI / 2 + 0.14, 0.96, 0.02, wires.on));
+  }
+  const ticks = [];
+  for (let i = 0; i < 72; i++) {
+    const angle = i * Math.PI / 36;
+    const edge = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+    ticks.push(edge.clone().multiplyScalar(i % 6 === 0 ? 2.19 : 2.1), edge.multiplyScalar(2.04));
+  }
+  core.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ticks), quiet));
+  return { core, hub };
+}
+
 // Separate the screens and devices into two halves. Add rows when a half fills.
 function place(index, count, side) {
   const columns = Math.ceil(Math.sqrt(count));
@@ -60,7 +128,7 @@ function place(index, count, side) {
 }
 
 export function createMap(canvas, labels, onSelect) {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 250);
   const controls = new OrbitControls(camera, canvas);
@@ -75,11 +143,17 @@ export function createMap(canvas, labels, onSelect) {
   scene.add(light);
 
   const graph = new THREE.Group();
-  scene.add(graph);
+  const signals = new THREE.Group();
+  const texture = glowTexture();
+  const { core, hub } = buildCore(texture);
+  const pulsePool = Array.from({ length: 16 }, () => halo(texture, hot, 0.95, 0.52));
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  scene.add(graph, core, signals);
+  scene.fog = new THREE.FogExp2(color("colors.background"), 0.0105);
   const tile = new THREE.GridHelper(80, 80, line, line);
   tile.position.y = -0.08;
   tile.material.transparent = true;
-  tile.material.opacity = 0.21;
+  tile.material.opacity = 0.28;
   scene.add(tile);
 
   const nodes = new Map();
@@ -89,11 +163,56 @@ export function createMap(canvas, labels, onSelect) {
   const center = new THREE.Vector3();
   const size = new THREE.Vector3();
   const viewOffset = new THREE.Vector3(0, 29, 26);
-  let selected = "", frame = 0;
+  let selected = "", frame = 0, started = 0, lastDraw = -Infinity;
+  let connected = new Set(), paths = [];
+
+  function animate(time) {
+    if (!started) return;
+    const progress = Math.min(1, (time - started) / 1050);
+    const settle = 1 - (1 - progress) ** 3;
+    hub.rotation.y = (settle - 1) * Math.PI * 0.85;
+    hub.scale.setScalar(0.72 + settle * 0.28);
+    paths.forEach(({ curve, pulse }, index) => {
+      const signal = (progress - index * 0.012) * 1.27;
+      pulse.visible = signal > 0 && signal < 1;
+      if (!pulse.visible) return;
+      curve.getPoint(signal, pulse.position);
+      pulse.material.opacity = Math.sin(signal * Math.PI) * 0.95;
+    });
+    if (progress < 1) render();
+    else {
+      started = 0;
+      signals.clear();
+    }
+  }
+
+  function reveal(routes) {
+    signals.clear();
+    paths = routes.slice(0, pulsePool.length).map((curve, i) => {
+      const pulse = pulsePool[i];
+      pulse.visible = false;
+      signals.add(pulse);
+      return { curve, pulse };
+    });
+    if (reducedMotion.matches) {
+      hub.rotation.y = 0;
+      hub.scale.setScalar(1);
+      started = 0;
+      return;
+    }
+    started = performance.now();
+    render();
+  }
   function render() {
     if (frame) return;
-    frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame((time) => {
       frame = 0;
+      if (started && time - lastDraw < 30) {
+        render();
+        return;
+      }
+      lastDraw = time;
+      animate(time);
       const width = canvas.clientWidth, height = canvas.clientHeight;
       if (!width || !height || renderer.getContext().isContextLost()) return;
       renderer.render(scene, camera);
@@ -146,15 +265,17 @@ export function createMap(canvas, labels, onSelect) {
     group.add(base, wire);
     const key = Object.hasOwn(shapes, device.kind) ? device.kind : "usb";
     const simple = new THREE.Mesh(shapes[key], dark);
-    simple.add(new THREE.LineSegments(edges[key], wires[device.connected ? "on" : "off"]));
-    simple.position.y = device.kind === "brain" ? 0.83 : 0.49;
-    group.add(simple);
+    if (device.kind !== "brain") {
+      simple.add(new THREE.LineSegments(edges[key], wires[device.connected ? "on" : "off"]));
+      simple.position.y = 0.49;
+      group.add(simple);
+    }
     const label = document.createElement("span");
     label.className = device.connected ? "map-label" : "map-label off";
     label.textContent = device.name;
     label.hidden = true;
     labels.append(label);
-    const node = { group, wire, label, height: device.kind === "brain" ? 1.65 : 0.98, device };
+    const node = { group, wire, label, height: device.kind === "brain" ? 1.95 : 0.98, device };
     nodes.set(device.id, node);
     const type = Object.hasOwn(modelTypes, device.model) ? modelTypes[device.model] : null;
     if (type) modelFor(type).then((object) => {
@@ -175,6 +296,8 @@ export function createMap(canvas, labels, onSelect) {
     add(devices[0], new THREE.Vector3());
     const screens = devices.slice(1).filter((device) => device.kind === "screen");
     const hardware = devices.slice(1).filter((device) => device.kind !== "screen");
+    const nextConnected = new Set();
+    const newRoutes = [];
     for (const [entries, side] of [[screens, -1], [hardware, 1]]) {
       entries.forEach((device, index) => {
         const target = place(index, entries.length, side);
@@ -189,11 +312,23 @@ export function createMap(canvas, labels, onSelect) {
         const arch = start.clone().lerp(end, 0.5);
         arch.y = 0.22 * target.length();
         const geometry = new THREE.BufferGeometry().setFromPoints([start, arch, end]);
+        const tip = new THREE.Mesh(marker, point);
+        tip.position.copy(end);
+        graph.add(tip);
         const trace = new THREE.Line(geometry, device.via?.includes("USB") ? links.usb : links.network);
         graph.add(trace);
         trace.computeLineDistances();
+        nextConnected.add(device.id);
+        if (!connected.has(device.id)) {
+          const curve = new THREE.CurvePath();
+          curve.add(new THREE.LineCurve3(start, arch));
+          curve.add(new THREE.LineCurve3(arch, end));
+          newRoutes.push(curve);
+        }
       });
     }
+    connected = nextConnected;
+    if (newRoutes.length) reveal(newRoutes);
     const previousCenter = center.clone();
     bounds.getCenter(center);
     bounds.getSize(size);

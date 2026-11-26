@@ -6,6 +6,7 @@ const name = document.querySelector("#device-name");
 const connection = document.querySelector("#device-connection");
 const reset = document.querySelector("#reset-view");
 const message = document.querySelector(".map-message");
+const mapChrome = document.querySelectorAll(".map-controls, .map-key");
 let devices = [brain], selected = brain.id, scene;
 
 function choose(id) {
@@ -98,7 +99,7 @@ refresh();
 const canvas = document.querySelector("canvas");
 function fallback() {
   canvas.hidden = true;
-  document.querySelector(".map-controls").hidden = true;
+  for (const element of mapChrome) element.hidden = true;
   document.querySelector(".map-labels").hidden = true;
   message.hidden = false;
 }
@@ -108,5 +109,5 @@ import("/hub/system-map-scene.js").then(({ createMap }) => {
   reset.addEventListener("click", scene.reset);
   scene.setDevices(devices);
   choose(selected);
-  document.querySelector(".map-controls").hidden = false;
+  for (const element of mapChrome) element.hidden = false;
 }).catch(fallback);
