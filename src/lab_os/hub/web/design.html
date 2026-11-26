@@ -648,20 +648,21 @@ body.waiting #hub, body.waiting #frame, body.waiting #verses, body.waiting #edge
 #ign-orb .burst { fill: none; stroke: var(--hot); opacity: 0; }
 #ignite.unlock #ign-orb .burst { animation: burst 0.8s ease-out 1.2s both; }
 @keyframes burst { from { opacity: 1; scale: 1; stroke-width: 3; } to { opacity: 0; scale: 6; stroke-width: 0.4; } }
-/* a card swipe (quick job 79): the same unlock, faster and harder (~0.9 s). A scan line reads down the core,
+/* a card swipe (quick job 79): the same unlock, harder (~1.8 s: slowed from
+   0.9 s in quick job 136, so that a person can follow it). A scan line reads down the core,
    all the bolts snap back at once, the ring spins open, and the core bursts into the jump. */
 #ign-orb .scan { opacity: 0; }
 #ign-orb .scan rect { fill: var(--hot); filter: drop-shadow(0 0 4px var(--primary)) drop-shadow(0 0 10px var(--primary)); }
-#ignite.card #ign-orb { animation: punch 0.95s cubic-bezier(0.3, 0, 0.2, 1) both; }
+#ignite.card #ign-orb { animation: punch 1.9s cubic-bezier(0.3, 0, 0.2, 1) both; }
 @keyframes punch { 0% { scale: 1; } 28% { scale: 0.86; } 42% { scale: 1.08; } 100% { scale: 1.04; } }
-#ignite.card #ign-orb .scan { animation: scan 0.3s cubic-bezier(0.5, 0, 0.5, 1) both; }
+#ignite.card #ign-orb .scan { animation: scan 0.6s cubic-bezier(0.5, 0, 0.5, 1) both; }
 @keyframes scan { 0% { opacity: 1; translate: 0 -62px; } 85% { opacity: 1; } 100% { opacity: 0; translate: 0 62px; } }
-#ignite.card #ign-orb .bolt { transition: translate 0.16s cubic-bezier(0.7, 0, 0.3, 1) 0.26s, opacity 0.2s 0.32s; translate: 26px 0; }
-#ignite.card #ign-orb .turn { transition: rotate 0.4s cubic-bezier(0.6, 0, 0.2, 1) 0.32s, scale 0.3s cubic-bezier(0.7, 0, 0.84, 0) 0.62s, opacity 0.25s 0.68s; rotate: 220deg; }
-#ignite.card #ign-orb .shut { transition: scale 0.25s cubic-bezier(0.7, 0, 0.84, 0) 0.5s, opacity 0.2s 0.6s; }
-#ignite.card #ign-orb .core-g { transition: scale 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.62s, opacity 0.3s 0.72s; }
-#ignite.card #ign-orb .burst { animation: burst 0.6s ease-out 0.66s both; }
-#ignite.card #ign-what { transition-delay: 0.3s; }
+#ignite.card #ign-orb .bolt { transition: translate 0.32s cubic-bezier(0.7, 0, 0.3, 1) 0.52s, opacity 0.4s 0.64s; translate: 26px 0; }
+#ignite.card #ign-orb .turn { transition: rotate 0.8s cubic-bezier(0.6, 0, 0.2, 1) 0.64s, scale 0.6s cubic-bezier(0.7, 0, 0.84, 0) 1.24s, opacity 0.5s 1.36s; rotate: 220deg; }
+#ignite.card #ign-orb .shut { transition: scale 0.5s cubic-bezier(0.7, 0, 0.84, 0) 1s, opacity 0.4s 1.2s; }
+#ignite.card #ign-orb .core-g { transition: scale 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.24s, opacity 0.6s 1.44s; }
+#ignite.card #ign-orb .burst { animation: burst 1.2s ease-out 1.32s both; }
+#ignite.card #ign-what { transition-delay: 0.6s; }
 #ignite .stack > *, #ignite .ign-foot { transition: opacity 0.35s, translate 0.5s cubic-bezier(0.7, 0, 0.84, 0); }
 #ignite.unlock .stack > *, #ignite.unlock .ign-foot { opacity: 0; translate: 0 14px; }
 #ignite.unlock #ign-icons { transition-delay: 0.05s; } #ignite.unlock .safe { transition-delay: 0.1s; }
@@ -1145,12 +1146,13 @@ const SFX = {
   },
   card() {
     // a card swipe (quick job 79): the reader's quick data chirp, a bright "accepted" note, the bolts' single
-    // hard snap, the ring's short spin, then the chime with the burst
-    for (let i = 0; i < 7; i++) tone({ f: 1800 + i * 260, type: "square", dur: 0.018, vol: 0.02, lp: 5000, delay: i * 0.028 });
-    tone({ f: 1568, type: "triangle", dur: 0.12, vol: 0.06, delay: 0.2 }); tone({ f: 2349, type: "triangle", dur: 0.22, vol: 0.05, delay: 0.25 });
-    tone({ f: 110, f2: 36, dur: 0.5, vol: 0.45, attack: 0.004, delay: 0.27 }); whoosh({ dur: 0.08, vol: 0.14, from: 5000, to: 1500, attack: 0.002, delay: 0.27 });
-    tone({ f: 200, f2: 900, type: "sawtooth", dur: 0.35, vol: 0.03, attack: 0.05, lp: 1800, delay: 0.32 });
-    tone({ f: 1319, type: "triangle", dur: 0.7, vol: 0.035, delay: 0.66 }); tone({ f: 1976, type: "triangle", dur: 0.8, vol: 0.025, delay: 0.7 });
+    // hard snap, the ring's short spin, then the chime with the burst.
+    // Its times are twice quick job 79's, as the picture is (quick job 136).
+    for (let i = 0; i < 7; i++) tone({ f: 1800 + i * 260, type: "square", dur: 0.018, vol: 0.02, lp: 5000, delay: i * 0.056 });
+    tone({ f: 1568, type: "triangle", dur: 0.12, vol: 0.06, delay: 0.4 }); tone({ f: 2349, type: "triangle", dur: 0.22, vol: 0.05, delay: 0.5 });
+    tone({ f: 110, f2: 36, dur: 0.5, vol: 0.45, attack: 0.004, delay: 0.54 }); whoosh({ dur: 0.08, vol: 0.14, from: 5000, to: 1500, attack: 0.002, delay: 0.54 });
+    tone({ f: 200, f2: 900, type: "sawtooth", dur: 0.7, vol: 0.03, attack: 0.1, lp: 1800, delay: 0.64 });
+    tone({ f: 1319, type: "triangle", dur: 0.7, vol: 0.035, delay: 1.32 }); tone({ f: 1976, type: "triangle", dur: 0.8, vol: 0.025, delay: 1.4 });
   },
   sweep() { tone({ f: 160, f2: 1300, type: "triangle", dur: 0.9, vol: 0.06, attack: 0.35, lp: 2600 }); },
   shock() { tone({ f: 90, f2: 40, dur: 1.1, vol: 0.3, attack: 0.01 }); whoosh({ dur: 1.2, vol: 0.08, from: 3000, to: 200, attack: 0.02 }); },
@@ -3116,7 +3118,7 @@ function ignitionText() {
 ignitionText();
 addEventListener("gamepadconnected", () => { hasPad = true; ignitionText(); });
 const UNLOCK_MS_TAP = 1350;  // the unlock finishes before the startup begins
-const CARD_MS = 900;     // a card swipe's faster unlock (quick job 79)
+const CARD_MS = 1800;    // a card swipe's unlock (quick job 79; slower in quick job 136)
 function ignite(how = "tap") {
   const ig = $("#ignite");
   if (!ig || ig.classList.contains("unlock") || performance.now() < S.startGuardUntil) return;
