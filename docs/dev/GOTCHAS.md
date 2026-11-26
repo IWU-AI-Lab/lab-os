@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — `test_one_screen_answers_at_once_warm_and_timed` fails now and then on GitHub
+**What:** On the CI run for pull request #357, it failed with `assert 10 == 9`: the turn's `connected` and `listening` times were 1 ms apart. That change touched only the System Map's JavaScript. A rerun passed.
+**Fix:** None yet. Rerun the failed job (`gh run rerun <id> --failed`). The test compares two millisecond times that can fall on each side of a millisecond.
+
 ### 2026-11-26 — A double-click in the System Map's device list reached no device
 **What:** The first click chooses the device, and the details above the list ("Connected to the brain · Network · SO-101 Monitor") can grow by a line. The list moves down under the pointer, so the second click lands between two rows. The browser then sends `dblclick` to the list, not to a row.
 **Fix:** The list counts a second click within 450 ms as a double-click on the device that the first click chose (`system-map.js`).
