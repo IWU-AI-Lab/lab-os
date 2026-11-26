@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — MediaPipe in a module worker, and its int8 object model (quick job 128)
+**What:** (1) MediaPipe's loader runs its wasm loader with `importScripts()`, which a module worker does not have; the fallback `import()` runs it as a module, so its `ModuleFactory` is not global and the detector does not start. (2) On MediaPipe's test picture (2 dogs, 2 cats), EfficientDet-Lite0 int8 found the cats and a "horse", not the dogs; EfficientDet-Lite2 (int8 and float16) found "horses".
+**Fix:** (1) the worker sets `self.import`, which the loader calls first: it fetches the script and runs it as global code (`src/lab_os/web/object-labels-worker.js`). (2) EfficientDet-Lite0 float16 (7.3 MB), the model of MediaPipe's own web example: it found all four. The small copy for the detector keeps the picture's shape (a squashed picture made dogs read as cats).
+
 ### 2026-11-26 — A class named `page` on a module page fills the screen (quick job 149)
 **What:** The Command Center's activity rows had the class `page` (the event's kind). The kit's `.page` rule (`docs/design`, `kit.css`) gave each row the height of the screen, so only one row showed.
 **Fix:** The rows' kind classes start with `ev-`. On a module page, do not use the kit's class names (`page`, `bar`, `card`, `btn`, `row`) for other things.
