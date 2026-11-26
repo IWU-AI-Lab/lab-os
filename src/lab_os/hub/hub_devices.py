@@ -406,6 +406,43 @@ class HubDevices:
         """One message to every hub page on the brain's own computer (a swipe, quick job 113)."""
         await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values()) if w.here))
 
+    # ---------- one start for every start screen (quick job 139) ----------
+    async def start(
+        self,
+        how: str = "tap",
+        sender: str = "",
+        sender_window: str = "",
+        windows: list[str] | None = None,
+        skip_here: bool = False,
+    ) -> int:
+        """Start the start screen on every window that shows it (only `windows`, when given),
+        except the sender's own window. A window that has already started does not change.
+        Returns how many windows got the start."""
+        how = how if how in ("tap", "card") else "tap"
+        msg = {"type": "start", "how": how, "from": sender}
+        targets = [
+            w
+            for w in list(self.windows.values())
+            if w.stage == "start"
+            and w.id != sender_window
+            and (windows is None or w.id in windows)
+            and not (skip_here and w.here)
+        ]
+        sent = await asyncio.gather(*(self._send(w, msg) for w in targets))
+        for w, ok in zip(targets, sent, strict=True):
+            if ok:  # the page confirms when its startup ends; set here too, so the list is right
+                w.stage = "hub"
+        if targets:
+            log.info("start: %d screen(s) from %s (%s)", sum(sent), sender or "the brain", how)
+            await self.broadcast()
+        return sum(sent)
+
+    async def swipe(self) -> None:
+        """The brain read a card swipe (quick job 113): its own computer's hub pages start as if
+        the card was read there (with the greeting), and every other start screen starts too."""
+        await self.tell_here({"type": "card"})
+        await self.start("card", sender="the card reader", skip_here=True)
+
     async def rename(self, old: str, new: str) -> dict:
         """Give a device another device name (⚙ → This device): its settings move along, and
         every window of it opens again under the new name."""
@@ -588,6 +625,10 @@ class HubDevices:
                 if isinstance(msg, dict) and msg.get("type") in ("hello", "state"):
                     self.apply_state(w, msg)
                     await self.broadcast()
+                elif isinstance(msg, dict) and msg.get("type") == "start":
+                    # a person started this window: every other start screen starts too
+                    who = self.shown(w.key) if w.device else w.address or "another device"
+                    await self.start(str(msg.get("how", "tap")), sender=who, sender_window=wid)
         finally:
             self.windows.pop(wid, None)
             if w.back_timer is not None:

@@ -677,3 +677,70 @@ def test_display_names_are_checked(tmp_path):
             s.update("desk", {"display_name": junk})
     assert s.update("desk", {"display_name": "Desk\n\t3"}) == {"display_name": "Desk 3"}
     assert s.update("desk", {"display_name": "   "}) == {}  # back to the device name
+
+
+async def test_one_start_starts_every_start_screen(aiohttp_client):
+    """Quick job 139: a person's start on one device starts every start screen, the brain's too;
+    a device that has already started does not change."""
+    client = await aiohttp_client(make_app())
+    desk, dw = await page(client, "desk", stage="start")
+    newline, nw = await page(client, "newline", stage="start")
+    quest, _ = await page(client, "quest", stage="hub")  # already started
+    await newline.send_json({"type": "start", "how": "card"})
+    got = await next_of(desk, "start")
+    assert got == {"type": "start", "how": "card", "from": "newline"}
+    listed = (await (await client.get("/api/hub-devices")).json())["devices"]
+    stage = {d["name"]: d["windows"][0]["stage"] for d in listed}
+    assert stage == {"desk": "hub", "newline": "start", "quest": "hub"}  # the sender says so itself
+    await settle(client)
+    for ws in (newline, quest):  # neither the sender nor a started device gets it
+        while True:
+            try:
+                msg = await ws.receive_json(timeout=0.1)
+            except TimeoutError:
+                break
+            assert msg["type"] != "start"
+    # junk "how" is a tap
+    await desk.send_json({"type": "state", "stage": "start"})
+    await quest.send_json({"type": "start", "how": "<script>"})
+    assert (await next_of(desk, "start"))["how"] == "tap"
+    for ws in (desk, newline, quest):
+        await ws.close()
+
+
+async def test_the_command_center_starts_all_or_the_ones_selected(aiohttp_client):
+    client = await aiohttp_client(make_app())
+    desk, dw = await page(client, "desk", stage="start")
+    newline, nw = await page(client, "newline", stage="start")
+    r = await (await client.post("/api/hub-devices/start", json={"windows": [nw["window"]]})).json()
+    assert r == {"ok": True, "started": 1, "message": "Started 1 screen."}
+    assert (await next_of(newline, "start"))["from"] == "the Command Center"
+    r = await (await client.post("/api/hub-devices/start", json={})).json()
+    assert r["started"] == 1  # only the desk still showed the start screen
+    r = await (await client.post("/api/hub-devices/start", json={})).json()
+    assert r == {"ok": True, "started": 0, "message": "No screen shows the start screen."}
+    await desk.close()
+    await newline.close()
+
+
+async def test_a_swipe_on_the_brain_starts_the_other_devices_too():
+    from lab_os.hub.hub_devices import HubDevices, Window
+
+    class Ws:
+        def __init__(self):
+            self.got = []
+
+        async def send_str(self, s):
+            self.got.append(json.loads(s))
+
+    devices = HubDevices(lambda: {})
+    here, there, busy = Ws(), Ws(), Ws()
+    devices.windows = {
+        "a": Window("a", "desk", here, "127.0.0.1", here=True),
+        "b": Window("b", "newline", there, "192.168.8.50"),
+        "c": Window("c", "quest", busy, "192.168.8.51", stage="hub"),
+    }
+    await devices.swipe()
+    assert {"type": "card"} in here.got and not any(m["type"] == "start" for m in here.got)
+    assert {"type": "start", "how": "card", "from": "the card reader"} in there.got
+    assert not any(m["type"] in ("start", "card") for m in busy.got)

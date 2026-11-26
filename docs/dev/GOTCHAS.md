@@ -12,6 +12,13 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 **What:** After Open on…, the brain sets what the page shows at once. The page then wakes (from the start screen) and reports "nothing open" for a moment, then the page. The activity list said "went back to the hub" between the two.
 **Fix:** The activity list reads only what the page reports, and "went back to the hub" waits 1.5 s (`BACK_QUIET_S`). A new page in that time cancels it.
 
+### 2026-11-26 — A screen started from another device has had no press (quick job 139)
+**What:** a browser allows full screen and sound only after a press on the page. A start screen that another device starts (a message from the brain) has had no press. Full screen fails, and Chrome keeps the page's sound off.
+**Fix:** that screen goes full screen at its next tap or key. lab-os's own browser (`lab-os serve --open`, the "Start lab-os" icon) and the "Lab Hub" icon from ⚙ → This Device start Chrome with `--autoplay-policy=no-user-gesture-required`, so the startup's sound plays. A "Lab Hub" icon made before 2026-11-26 does not have it: make it again. The flag works only when Chrome was not already open with the same profile. Lab step C.5 tells.
+### 2026-11-26 — All Pages could open before the hub knew its address
+**What:** With `#skip`, a press on **All Pages** during startup could open `/undefined`.
+**Fix:** Wait for the hub to load its page addresses before opening **All Pages**.
+
 ### 2026-11-26 — Simplifying the whole Raspbot base dropped small parts
 
 **What:** The first mesh reduction removed the front sensor from the base mesh.

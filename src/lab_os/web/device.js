@@ -125,6 +125,7 @@ async function screenInfo() {
  * h.onLive(list): the live device list changed (quick job 109: every device seen, connected or not);
  * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not;
  * h.onCard(): the brain read a card swipe on its own computer's card reader (quick job 113);
+ * h.onStart(how, from): another device started (how: "tap" | "card"; from: its name): start here too (quick job 139);
  * h.onOff(): lab-os was shut down (the page is covered; close the microphone).
  */
 export function connectDevice(h) {
@@ -186,6 +187,7 @@ export function connectDevice(h) {
       else if (m.type === "open") h.onOpen?.(m.module, m.from || "", m.from_window || "");
       else if (m.type === "close") h.onClose?.();
       else if (m.type === "card") h.onCard?.();
+      else if (m.type === "start") h.onStart?.(m.how === "card" ? "card" : "tap", m.from || "");
       else if (m.type === "renamed" && m.device) reopenAs(m.device); // its other monitors too
       else if (m.type === "brain_off") {
         showOff(m);
@@ -209,6 +211,8 @@ export function connectDevice(h) {
     devices: () => list,
     /** Tell the brain what this window shows now (after opening or closing a module, starting, resetting). */
     update: () => send({ type: "state", ...h.state() }),
+    /** A person started this window's start screen: the brain starts every other one (quick job 139). */
+    started: (how = "tap") => send({ type: "start", how }),
     /** Open a module on another device (window: a monitor the brain asked about). */
     openOn: (module, device, window = "") =>
       postJSON("/api/hub-devices/open", { module, device, window, from: name, from_window: wid })

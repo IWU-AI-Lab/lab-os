@@ -1,6 +1,7 @@
 """The Raspbot page (quick job 72): drive the Raspbot from a browser, through the brain.
 
 GET /raspbot                 the touch controller: Drive, camera, Pan and Tilt, STOP, diagnostics
+GET /monitor/raspbot         read-only view of the camera, model and status, with STOP
 WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.RaspbotDesk; status at 5 Hz
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
@@ -35,6 +36,7 @@ log = logging.getLogger(__name__)
 
 RASPBOT = web.AppKey("raspbot", RaspbotDesk)
 PAGE = Path(__file__).parent / "web" / "raspbot.html"
+MONITOR_PAGE = PAGE.with_name("raspbot-monitor.html")
 STATUS_S = 0.2
 NO_CAMERA = "The Raspbot's camera is not there now."
 
@@ -204,6 +206,10 @@ async def raspbot_page(_request: web.Request) -> web.FileResponse:
     return web.FileResponse(PAGE)
 
 
+async def monitor_page(_request: web.Request) -> web.FileResponse:
+    return web.FileResponse(MONITOR_PAGE)
+
+
 def may_drive(request: web.Request) -> bool:
     desk = request.app[RASPBOT]
     return desk.bot.is_fake or is_local(request) or request.remote in request.app[DRIVE_FROM]
@@ -213,14 +219,15 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
     desk, cam = request.app[RASPBOT], request.app[CAMERA]
     ws = web.WebSocketResponse(heartbeat=5.0)
     await ws.prepare(request)
-    drives = may_drive(request)
-    if not drives:
+    monitor = request.query.get("role") == "monitor"
+    drives = not monitor and may_drive(request)
+    if not drives and not monitor:
         log.info("raspbot page from %s connected view-only", request.remote)
 
     async def send_status():
         while not ws.closed:
             msg = desk.status(ws) | {"may_drive": drives} | cam.status()
-            if not drives:
+            if not drives and not monitor:
                 msg["address"] = request.remote or ""
             await ws.send_json(msg)
             await asyncio.sleep(STATUS_S)
@@ -340,6 +347,7 @@ def add_raspbot(app: web.Application, desk: RaspbotDesk) -> None:
     app[RASPBOT] = desk
     app[CAMERA] = RaspbotCamera(desk)
     app.router.add_get("/raspbot", raspbot_page)
+    app.router.add_get("/monitor/raspbot", monitor_page)
     app.router.add_get("/ws/raspbot", raspbot_ws)
     app.router.add_get("/api/raspbot/camera.mjpg", raspbot_camera)
     app.cleanup_ctx.append(_desk_tasks)

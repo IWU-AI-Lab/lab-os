@@ -53,6 +53,9 @@ def browser_command(url: str, profile: Path | None = None) -> list[str] | None:
         "--remote-debugging-port=0",
         "--no-first-run",
         "--no-default-browser-check",
+        # sound with no press on this page: a start from another device plays the startup's
+        # sound here too (quick job 139)
+        "--autoplay-policy=no-user-gesture-required",
     ]
     flags = [f"--app={url}", *own, "--start-fullscreen"]
     if sys.platform == "darwin":

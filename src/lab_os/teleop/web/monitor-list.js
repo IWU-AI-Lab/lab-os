@@ -4,6 +4,7 @@
 import { getLink } from "/static/link.js";
 import { armView } from "/static/arm/arm-feed.js";
 import { KINDS } from "/static/arm/kinds.js";
+import { raspbotMotion, watchRaspbot } from "/web/raspbot-status.js";
 
 const $ = (id) => document.getElementById(id);
 const link = getLink("monitor"); // a watcher: it can only stop
@@ -15,19 +16,52 @@ const EVERY_MS = 200; // at most 5 pictures a second (a Pi's touchscreen)
 let inHub = false;
 try { inHub = parent !== window && parent.location.origin === location.origin && parent.location.pathname === "/"; } catch {}
 
-const cards = {};
-for (const [kind, k] of Object.entries(KINDS)) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "card kind";
-  b.innerHTML = `<div class="in"><h2><span>${k.title}</span><small></small></h2><div class="arms"></div></div>`;
-  b.onclick = () => {
+function addCard(kind, title) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "card kind";
+  button.innerHTML = '<div class="in"><h2><span></span><small></small></h2><div class="arms"></div></div>';
+  button.querySelector("h2 span").textContent = title;
+  button.onclick = () => {
     if (inHub) return parent.postMessage({ type: "lab-os-open-view", id: `monitor-${kind}` }, location.origin);
     location.href = `/monitor/${kind}${location.search}`; // ?device= stays
   };
-  $("kinds").append(b);
-  cards[kind] = { arms: b.querySelector(".arms"), count: b.querySelector("h2 small"), key: "" };
+  $("kinds").append(button);
+  return { arms: button.querySelector(".arms"), count: button.querySelector("h2 small"), key: "" };
 }
+
+const cards = {};
+for (const [kind, k] of Object.entries(KINDS)) cards[kind] = addCard(kind, k.title);
+
+// Only the full hub has a Raspbot view and a Raspbot status socket.
+fetch("/api/hub").then((response) => response.ok ? response.json() : null).then((hub) => {
+  const view = hub?.views.find((v) => v.id === "monitor-raspbot");
+  if (!view) return;
+  const card = addCard("raspbot", view.title);
+  card.arms.innerHTML = `
+    <p class="none">Connecting…</p>
+    <div class="arm raspbot-preview" hidden>
+      <svg viewBox="0 0 160 120" aria-hidden="true">
+        <path class="chassis" d="M63 31h34v59H63z M55 35h8v15h-8z M97 35h8v15h-8z M55 72h8v15h-8z M97 72h8v15h-8z"/>
+        <path class="camera-direction" d="M80 49V28m-6 6 6-6 6 6"/>
+      </svg>
+      <span class="who"></span>
+    </div>`;
+  const placeholder = card.arms.querySelector(".none");
+  const preview = card.arms.querySelector(".raspbot-preview");
+  const camera = preview.querySelector(".camera-direction");
+  const motion = preview.querySelector(".who");
+  watchRaspbot((status) => {
+    const connected = !!status?.connected;
+    card.count.textContent = connected ? status.fake ? "Fake Raspbot" : "Connected" : "Not connected";
+    placeholder.hidden = connected;
+    placeholder.textContent = "No Raspbot is connected to the brain.";
+    preview.hidden = !connected;
+    if (!connected) return;
+    camera.setAttribute("transform", `rotate(${-(status.pan_deg ?? 0)} 80 49)`);
+    motion.textContent = raspbotMotion(status);
+  });
+}).catch(() => {});
 
 /** The side view of one arm: base, upper arm, forearm, wrist and the two fingers (SVG). */
 function picture(kind, j) {

@@ -603,6 +603,13 @@ async function backToHub(targets) {
   await refresh();
   say(said.length ? said.join(" ") : `Back to the hub on ${plural(targets.length, "screen")}.`, !!said.length);
 }
+// one start for every start screen (quick job 139): all of them, or the highlighted ones
+async function startScreens(targets = null) {
+  const r = await postJSON("/api/hub-devices/start", targets ? { windows: targets.map((s) => s.w.id) } : {});
+  await refresh();
+  say(r.message || "It did not start.", !r.ok);
+}
+$("#start-all").addEventListener("click", () => startScreens());
 async function setDrive(hubs, allowed) {
   const addresses = [...new Set(hubs.filter((d) => !d.here && d.address).map((d) => d.address))];
   const r = await postJSON("/api/command-center/drive", { addresses, allowed });
@@ -627,6 +634,8 @@ function actionsFor(keys, devs, scr) {
     acts.push({ kind: "page", real: true, label: one ? "Open" : `Open on ${n}`, title: "Open the chosen page there (or drag a page onto it)", run: (view) => openOn(targets, view) });
     const busy = targets.filter((t) => t.w.showing), m = plural(busy.length, "screen");
     if (busy.length) acts.push({ real: true, icon: "i-back", label: one ? "Back to the hub" : `Hub on ${m}`, title: `Close what ${m} show: back to the hub`, run: () => backToHub(busy) });
+    const waiting = targets.filter((t) => t.w.stage === "start"), st = plural(waiting.length, "screen");
+    if (waiting.length) acts.push({ real: true, icon: "i-power", label: one ? "Start" : `Start ${st}`, title: `Start the start screen on ${st}`, run: () => startScreens(waiting) });
   }
   const hubs = [...new Map(keys.map((k) => hubOf(k, devs, scr)).map((d) => [d?.key, d])).values()];
   if (hubs.length && hubs.every((d) => d && !d.here && d.address)) {
@@ -865,6 +874,7 @@ function render(force = false) {
   S.last = now;
   for (const k of [...S.sel]) if (!devs.some((d) => d.key === k) && !scr.some((s) => s.key === k)) S.sel.delete(k);
   renderLists(devs, scr);
+  $("#start-all").hidden = !scr.some((s) => s.w.stage === "start");
   if (!S.drag) renderWorkspace(devs, scr);
   if (!document.querySelector(".menu")) renderInspector(force);
   if ($("#stage").children.length) requestAnimationFrame(() => autoFit());

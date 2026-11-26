@@ -194,3 +194,20 @@ def test_a_card_swipe_starts_the_hub_its_own_way():
     card_ms = int(re.search(r"const CARD_MS = (\d+);", page)[1])
     tap_ms = int(re.search(r"const UNLOCK_MS_TAP = (\d+);", page)[1])
     assert card_ms >= 1500 and card_ms > tap_ms
+
+
+def test_one_start_starts_every_start_screen():
+    """Quick job 139: a person's start here tells the brain; a start from another device plays the
+    same startup, but only the screen where the person started speaks the greeting and starts a new
+    conversation. The brain's own card reader already started the others (tell = false)."""
+    page = DESIGN.read_text()
+    fn = page.split("function ignite(")[1].split("\n}\n")[0]
+    remote = fn.split("if (remote) {")[1].split("} else {")[0]
+    assert "startChat" not in remote and "spokenGreeting" not in remote and "loadChat" in remote
+    assert "if (tell) D?.started(how);" in fn
+    assert 'onStart: (how, from) => { if ($("#ignite")) ignite(how, from); }' in page
+    assert 'ignite("card", null, false)' in page
+    # a click passes its event: never as `how` or `from`
+    assert 'addEventListener("click", ignite)' not in page
+    dev = (SRC / "web" / "device.js").read_text()
+    assert 'm.type === "start"' in dev and 'send({ type: "start", how })' in dev
