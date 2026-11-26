@@ -1,6 +1,6 @@
 """The Raspbot page (quick job 72): drive the Raspbot from a browser, through the brain.
 
-GET /raspbot                 the page: forward, back, left, right (hold), Speed, STOP, the camera
+GET /raspbot                 the touch controller: Drive, camera, Pan and Tilt, STOP, diagnostics
 WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.RaspbotDesk; status at 5 Hz
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
@@ -195,8 +195,13 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                         why = await desk.press(ws, str(raw.get("dir")), stick)
                     if why:
                         await ws.send_json({"type": "error", "message": why})
-                elif kind == "look" and drives:  # the VR Raspbot's head and stick
-                    why = await desk.look(ws, float(raw["pan"]), float(raw["tilt"]))
+                elif kind == "look" and drives:
+                    why = await desk.look(
+                        ws,
+                        float(raw["pan"]),
+                        float(raw["tilt"]),
+                        relative=raw.get("relative") is True,
+                    )
                     if why:
                         await ws.send_json({"type": "error", "message": why})
                 elif kind in ("picture", "record") and drives:

@@ -4,6 +4,12 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — The factory Raspbot V2 board has no documented battery reading (quick job 126)
+
+**What:** The Raspberry Pi health log measures the Pi's 5 V input. That value cannot give the battery voltage or charge. Yahboom documents the battery specifications and the ultrasonic registers, but gives no battery register.
+
+**Fix:** Diagnostics shows Battery as Unavailable. The distance comes from [Yahboom's ultrasonic register example](https://www.yahboom.net/study/RASPBOT-V2/12110/). See also the [Raspbot V2 firmware test](https://github.com/sandraschi/yahboom-mcp/blob/main/CHANGELOG.md).
+
 ### 2026-11-25 — Webcam teleop: a turn of the hand moved the whole arm (quick job 120)
 **What:** lab check W.1 (2026-11-24): the arm followed, but it was much too sensitive (most of all toward and away), the gripper did not stay closed, and a turn of the wrist moved the whole arm. Two causes for the turn. (1) The page found the hand's distance from the least foreshortened palm line; a turned hand foreshortens them all, so the distance changed, and with it the arm's reach. In a test with perspective, even a fit of the whole hand's size was 4 cm off at a 40° tilt: the landmarks near the camera look bigger. (2) The brain keeps the gripper point still when the hand tilts (right for the Quest), so the shoulder and the elbow move too. The gripper: MediaPipe often puts the thumb and index tips 3 cm apart in a closed pinch, so the amount went up and down around the clutch's 0.6.
 **Fix:** the page places MediaPipe's 3D hand (its world landmarks have the camera's axes) where the camera sees it, by least squares over all 21 landmarks (3 unknowns, a linear fit); the webcam's message asks the brain to turn the gripper about the wrist (`pivot: "wrist"`, `docs/dev/protocol.md`); the hand's moves count 0.8 times (toward and away 0.4 times); the gripper closes above 0.6 and stays closed until the amount falls under 0.25, and a fist counts as closed. Checked with tests (a drawn hand and the SO-101's kinematics), not yet on a real hand: lab step W.1.

@@ -119,6 +119,7 @@ def _free_port() -> int:
 async def test_brain_drives_the_onboard_program_and_a_drop_stops_it():
     mod = onboard()
     board = mod.FakeBoard()
+    board.distance = 325
     port = _free_port()
     server = mod.CommandServer(("127.0.0.1", port), mod.Car(board), 0)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -126,10 +127,10 @@ async def test_brain_drives_the_onboard_program_and_a_drop_stops_it():
     task = asyncio.create_task(bot.run())
     try:
         for _ in range(50):
-            if bot.connected:
+            if bot.distance_mm is not None:
                 break
             await asyncio.sleep(0.02)
-        assert bot.connected
+        assert bot.connected and RaspbotDesk(bot).status()["distance_mm"] == 325
         await bot.drive(0.5, 0.5)
         for _ in range(50):
             if board.speeds[0]:
@@ -203,7 +204,7 @@ async def test_a_real_raspbot_is_view_only_from_another_computer(aiohttp_client)
 
 def test_the_page_lets_go_when_it_loses_the_keys():
     html = (SRC / "hub" / "web" / "raspbot.html").read_text()
-    assert 'addEventListener("blur", letGo)' in html and "visibilitychange" in html
+    assert 'addEventListener("blur", releasePads)' in html and "visibilitychange" in html
     assert "pointercancel" in html and "setInterval" in html
 
 
@@ -381,6 +382,23 @@ async def test_look_turns_the_camera_but_never_takes_control():
     assert "STOP" in await desk.look(a, 0, 0)
     await desk.release(a)
     assert await desk.look(a, 0, 0) == ""
+
+
+async def test_touch_camera_controls_hold_at_the_limit_and_reverse_at_once(aiohttp_client):
+    app = make_app()
+    client = await aiohttp_client(app)
+    async with client.ws_connect("/ws/raspbot") as ws:
+        await ws.send_json({"type": "look", "pan": 20, "tilt": 90})
+        for _ in range(3):
+            await ws.send_json({"type": "look", "pan": 0, "tilt": 4, "relative": True})
+        await ws.send_json({"type": "look", "pan": -4, "tilt": -4, "relative": True})
+        bot = app[RASPBOT].bot
+        for _ in range(10):
+            await ws.receive_json()
+            if bot.looked == (16, 81):
+                break
+        assert bot.looked == (16, 81)
+        assert not bot.sent and app[RASPBOT].driver is None
 
 
 def test_onboard_look_keeps_the_servo_limits():

@@ -207,7 +207,7 @@ Quick job 93. Plug in the white arm's two cameras. Run `uv run lab-os serve`. Op
 ## R. The Raspbot page (25 min)
 Quick job 72. raspbot1 on the router's Wi-Fi, with its battery charged. Put it on a box with the wheels off the floor. Steps: `docs/guides/raspbot.md`.
 - **R.1** Run `ssh raspbot1 sh /home/pi/project_demo/raspbot/killprocess.sh`. Run `uv run lab-os raspbot deploy`. → does the last line say "lab-os's program runs on raspbot1"? (yes / no: copy the last lines)
-- **R.2** Run `uv run lab-os serve`. On the desktop, open **All Pages** → **Raspbot** → **Open**. → does the bar say **Connected**? (yes / no: copy the line under STOP) Does the camera show a picture? (yes / no)
+- **R.2** Run `uv run lab-os serve`. On the desktop, open **All Pages** → **Raspbot** → **Open**. → does **Diagnostics** show **Connected**? (yes / no: copy the message in Diagnostics) Does the camera show a picture? (yes / no)
 - **R.3** Keep a hand at **STOP**. Hold **↑** for 2 seconds, then let go. → did all four wheels turn the same way, forward? (yes / no: which wheel did not?) Did they stop when you let go? (yes / no)
 - **R.4** Hold **←** for 2 seconds. → did the left wheels turn back and the right wheels forward? (yes / no) Hold **↓**, and press **STOP** while you hold it. → did the wheels stop at once? (yes / no) Did they stay stopped while you still held **↓**? (yes / no)
 - **R.5** Hold **↑**. While the wheels turn, turn off the desktop's Wi-Fi. → did the wheels stop within 1 second? (yes / no) Turn the Wi-Fi on again.
