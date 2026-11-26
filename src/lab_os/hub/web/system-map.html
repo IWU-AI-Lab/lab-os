@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>System Map</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/hub/system-map.css">
+  <script type="importmap">
+    {"imports":{"three":"/web/vendor/three/three.module.js","three/examples/jsm/":"/web/vendor/three/examples/jsm/"}}
+  </script>
+</head>
+<body>
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-net"/></svg><span>System Map</span></div>
+    <span class="place"></span>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="map-layout">
+    <section class="map-view" aria-label="3D map">
+      <canvas aria-hidden="true"></canvas>
+      <div class="map-labels" aria-hidden="true"></div>
+      <ul class="map-key" aria-label="Connection types" hidden>
+        <li>USB</li>
+        <li class="network">Network</li>
+      </ul>
+      <p class="map-message" role="status" hidden>The 3D view is unavailable. The device list shows each connection.</p>
+      <div class="map-controls" hidden>
+        <p>Drag to rotate. Scroll or pinch to zoom.</p>
+        <button class="btn small" type="button" id="reset-view">Reset view</button>
+      </div>
+    </section>
+    <aside class="card" aria-label="Devices and screens">
+      <div class="in">
+        <h2>Devices and screens</h2>
+        <p id="list-status" role="status">Waiting for the device list…</p>
+        <section class="map-detail" aria-live="polite">
+          <h3 id="device-name">Brain</h3>
+          <p id="device-connection">Runs lab-os.</p>
+        </section>
+        <ul id="map-devices" aria-label="Select a device"></ul>
+      </div>
+    </aside>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/system-map.js"></script>
+</body>
+</html>

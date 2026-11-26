@@ -172,6 +172,7 @@ MODULES = {
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
     "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
+    "system-map": ("System Map", "/system-map"),
 }
 
 # Every page the brain serves: (address, name, one line). All Pages (`/pages`, a button in the hub's
@@ -223,6 +224,7 @@ PAGES = (
         "Diagnostics",
         "Every device's health: the arms' motors, the cameras' picture rate, the Raspbot's power.",
     ),
+    ("/system-map", "System Map", "The brain and its live devices and screens in 3D."),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
 )
@@ -416,6 +418,10 @@ async def settings_page(request: web.Request) -> web.FileResponse:
 
 async def pages_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "pages.html")
+
+
+async def system_map_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "system-map.html")
 
 
 async def diagnostics_page(request: web.Request) -> web.FileResponse:
@@ -1397,6 +1403,7 @@ def live_entries(
                 "what": " ".join((dev.notes if dev else "").split())[:140] or "Raspbot",
                 "via": "network",
                 "camera": bool(getattr(bot, "camera_port", 0)),
+                "model": "raspbot",
             }
         )
     for screen in app[HUB_DEVICES].listing():
@@ -2018,6 +2025,7 @@ def create_brain_app(
     app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/pages", pages_page)
+    app.router.add_get("/system-map", system_map_page)
     app.router.add_get("/command-center", command_center_page)
     app.router.add_get("/diagnostics", diagnostics_page)
     app.router.add_get("/api/diagnostics", api_diagnostics)

@@ -241,3 +241,7 @@ Quick job 150. Use a lab desktop that does not have lab-os.
 ## M6. After the demo: the hub in Chrome on a laptop (10 min)
 Moved from the demo run on 2026-11-25 (the builder). Before the demo, use Firefox on the laptop.
 - **M.6** Quick job 130. On the builder's laptop, open Chrome. Type `http://192.168.8.130:8080/?device=laptop`. If Chrome shows "This site can't be reached", do the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". → which error code was under Chrome's message? (the code, or "none") Did the hub open? (yes / no: after which step)
+
+## M8. After the demo: System Map (5 min)
+
+- **M8.1** Open **System Map** from the hub on the slowest lab screen. Drag the map to rotate it. Select an SO-101 and the Raspbot. Open the hub on a second screen. Close that hub. → Do both robots show their models? Does the second screen change to **Connected** and then **Disconnected**? Does the map rotate smoothly? (yes / no for each)
