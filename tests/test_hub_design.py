@@ -1,4 +1,4 @@
-"""The designed hub (step 10, previewed at /design) and the facts it reads beyond the plain hub's:
+"""The hub (the designed one, at /; quick job 131) and the facts it reads:
 the arm's joints, the device list, the latest commits. No hardware, no internet."""
 
 from datetime import date
@@ -7,24 +7,32 @@ from pathlib import Path
 from test_hub_facts import _git  # same folder (pytest puts it on the path)
 from test_hub_server import make_app
 
-import lab_os.hub.server as hub_server
 from lab_os.hub.commits import recent_commits
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
 DESIGN = SRC / "hub" / "web" / "design.html"
 
 
-async def test_each_look_has_its_address_and_the_theme_picks_slash(aiohttp_client, monkeypatch):
+async def test_slash_is_the_designed_hub_and_design_goes_there(aiohttp_client):
+    """Quick job 131: one hub. / is the designed hub; /design goes to / with its query."""
     client = await aiohttp_client(make_app())
-    assert (await client.get("/plain")).status == 404  # removed 2026-11-20: / shows it
-    plain = await (await client.get("/")).text()
-    design = await (await client.get("/design")).text()
-    assert "hub.js" in plain and "/web/vendor/fonts/fonts.css" in design
-    assert await (await client.get("/")).text() == plain  # the repo's theme: hub.look: plain
+    assert (await client.get("/plain")).status == 404  # removed 2026-11-20
+    page = await (await client.get("/")).text()
+    assert page == DESIGN.read_text() and "/web/vendor/fonts/fonts.css" in page
+    r = await client.get("/design?device=desk", allow_redirects=False)
+    assert r.status == 302 and r.headers["Location"] == "/?device=desk"
+    assert await (await client.get("/design?device=desk")).text() == page
+    assert not (SRC / "hub" / "web" / "hub.js").exists()  # in docs/archive/plain-hub-2026-11-25/
+    quest = {"User-Agent": "Mozilla/5.0 OculusBrowser/40.0"}
+    xr = await (await client.get("/design", headers=quest)).text()
+    assert xr == (SRC / "hub" / "web" / "xr.html").read_text()  # a Quest still gets its start page
 
-    for look, page in (("design", design), ("nonsense", plain)):  # an unknown look falls back
-        monkeypatch.setattr(hub_server, "load_theme", lambda look=look: {"hub": {"look": look}})
-        assert await (await client.get("/")).text() == page
+
+def test_typing_anywhere_follows_its_setting():
+    """The plain hub's setting "Typing Anywhere Goes to the Ask Line" now works in this hub."""
+    page = DESIGN.read_text()
+    assert "S.typeToChat = hub.type_to_chat !== false" in page
+    assert "S.typeToChat !== false &&" in page
 
 
 async def test_arm_readout(aiohttp_client):

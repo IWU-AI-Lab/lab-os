@@ -34,7 +34,7 @@ class SettingError(ValueError):
 @dataclass(frozen=True)
 class Field:
     file: str  # theme | place | venue
-    path: str  # dotted, e.g. "hub.look"
+    path: str  # dotted, e.g. "hub.layout"
     label: str
     kind: str  # choice | bool | number | text | color | list (an ordered subset of choices)
     help: str = ""
@@ -187,14 +187,6 @@ SECTIONS: list[Section] = [
         "The Lab",
         (
             Field("place", "name", "Name", "text", "The hub's title and the startup's."),
-            Field(
-                "theme",
-                "hub.look",
-                "The Main Address Shows",
-                "choice",
-                "",
-                ("plain", "design"),
-            ),
             Field(
                 "theme",
                 "quality.default",

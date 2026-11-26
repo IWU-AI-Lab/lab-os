@@ -61,15 +61,11 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
         "/training": "/web/design/kit.js",
         "/xr": "/web/design/kit.js",
         "/": 'id="fs-btn"',
-        "/design": 'id="fs-btn"',
     }
     for path, part in pages.items():
         text = await (await client.get(path)).text()
         assert part in text, (path, part)
-    assert 'import("/web/fullscreen.js")' in await (await client.get("/design")).text()
-    for script in ("/hub/hub.js",):
-        text = await (await client.get(script)).text()
-        assert 'from "/web/fullscreen.js"' in text and "fullscreenButton(" in text, script
+    assert 'import("/web/fullscreen.js")' in await (await client.get("/")).text()
 
 
 async def test_a_drawing_resolution_per_screen(aiohttp_client):
@@ -121,16 +117,17 @@ def test_side_view_turns_with_the_pan():
 
 def test_a_change_goes_into_local_with_only_the_changed_values(home):
     repo_theme = (config.DEFAULT_DIR / "theme.yaml").read_text()
-    settings.write("theme:hub.look", "design")
+    settings.write("theme:hub.type_to_chat", False)
     settings.write("theme:hub.modules", ["monitor", "teleop"])
     local = (home / "local" / "theme.yaml").read_text()
     assert local.startswith("# This place's own settings")  # the head comment stays
-    assert "look: design" in local and "modules: [monitor, teleop]" in local
+    assert "type_to_chat: false" in local and "modules: [monitor, teleop]" in local
     assert "layout" not in local and "colors" not in local  # nothing else copied
     assert not (home / "theme.yaml").exists()  # the place's own files: untouched
     assert (config.DEFAULT_DIR / "theme.yaml").read_text() == repo_theme
     theme = load_theme()
-    assert theme["hub"]["look"] == "design" and theme["hub"]["modules"] == ["monitor", "teleop"]
+    assert theme["hub"]["type_to_chat"] is False
+    assert theme["hub"]["modules"] == ["monitor", "teleop"]
     assert theme["hub"]["layout"] == "launcher"  # the rest of the section: the repo's
 
 
@@ -175,7 +172,7 @@ async def test_settings_change_only_from_this_computer(aiohttp_client, home, mon
     assert got["writable"] is True and got["venue"] == "home"
     keys = {f["key"] for s in got["sections"] for f in s["fields"]}
     assert {
-        "theme:hub.look",
+        "theme:hub.type_to_chat",
         "theme:quality.default",
         "place:persona",
         "venue:motion_allowed",
@@ -343,8 +340,7 @@ def test_no_long_press_menu_on_the_hub_pages():
     Every hub page loads the blocker; text fields and a mouse's right click keep the menu."""
     menu = (SRC / "web" / "no-menu.js").read_text()
     assert 'pointerType === "mouse"' in menu and "input, textarea" in menu
-    for page in (SRC / "hub" / "web" / "design.html", SRC / "hub" / "web" / "hub.js"):
-        assert "/web/no-menu.js" in page.read_text(), page.name
+    assert "/web/no-menu.js" in (SRC / "hub" / "web" / "design.html").read_text()
     assert 'import "/web/no-menu.js"' in (SRC / "web" / "design" / "kit.js").read_text()
 
 
@@ -364,6 +360,7 @@ async def test_every_page_is_listed(aiohttp_client):
         if path.endswith((".json", ".js", ".css", ".svg", ".png", ".webmanifest")):
             continue
         served.add(path)
+    served.discard("/design")  # it goes to / (quick job 131)
     listed = {p for p, _, _ in PAGES}
     assert served <= listed, f"pages missing from PAGES: {served - listed}"
     got = await (await client.get("/api/hub")).json()
@@ -373,7 +370,6 @@ async def test_every_page_is_listed(aiohttp_client):
     assert "pagesGroup" not in (SRC / "hub" / "web" / "settings.js").read_text()
     assert "/api/hub" in await (await client.get("/pages")).text()
     assert 'id="pages-btn"' in (SRC / "hub" / "web" / "design.html").read_text()
-    assert 'id="pages-btn"' in (SRC / "hub" / "web" / "index.html").read_text()
 
 
 def test_settings_fixes_from_the_laptop_check():
@@ -396,11 +392,12 @@ def test_settings_fixes_from_the_laptop_check():
 
 async def test_the_unused_pages_are_gone(aiohttp_client):
     """The builder, 2026-11-20: /classic/teleop, /classic/monitor, /plain and /perf go (git keeps
-    them). The plain hub stays at / (hub.look: plain)."""
+    them). Quick job 131: the plain hub goes too (docs/archive/plain-hub-2026-11-25/)."""
     client = await aiohttp_client(make_app())
     for path in ("/classic/teleop", "/classic/monitor", "/plain", "/perf"):
         assert (await client.get(path)).status == 404, path
-    assert "hub.js" in await (await client.get("/")).text()
+    assert "/hub/hub.js" not in await (await client.get("/")).text()
+    assert (await client.get("/hub/hub.js")).status == 404
 
 
 def test_settings_has_a_search_bar():

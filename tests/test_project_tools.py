@@ -268,5 +268,5 @@ async def test_look_ups_are_capped(aiohttp_server, repo, tmp_path, monkeypatch):
 
 
 def test_the_page_names_the_look_ups():
-    js = (REPO / "src" / "lab_os" / "hub" / "web" / "hub.js").read_text()
+    js = (REPO / "src" / "lab_os" / "hub" / "web" / "design.html").read_text()
     assert 'ev.type === "tool"' in js and "copyButton" in js

@@ -237,8 +237,7 @@ def test_pages_hear_it():
     for f in ("teleop/web/link.js", "web/device.js"):
         js = (SRC / f).read_text()
         assert "brain_off" in js and "showOff" in js, f
-    for f in ("hub/web/design.html", "hub/web/hub.js"):
-        assert "onOff:" in (SRC / f).read_text(), f  # and the microphone closes
+    assert "onOff:" in (SRC / "hub/web/design.html").read_text()  # and the microphone closes
     assert "function off()" in (SRC / "web/voice.js").read_text()
     assert "/api/shutdown" in (SRC / "hub/web/settings.js").read_text()
     assert '"power-menu"' in (SRC / "hub/web/design.html").read_text()
@@ -323,7 +322,7 @@ async def test_a_broken_config_file_is_a_sentence(aiohttp_client, monkeypatch, t
     from lab_os import config
 
     bad = tmp_path / "theme.yaml"
-    bad.write_text("hub:\n  look: [plain\n")
+    bad.write_text("hub:\n  layout: [launcher\n")
     real = config.layers
     monkeypatch.setattr(
         config,

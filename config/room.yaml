@@ -13,7 +13,6 @@
 #   chat                              the conversation
 #   settings                          the settings (they change only on the brain's computer)
 #   xr                                the VR hub (only on a headset's browser)
-# The details pages, the system diagram and the conversation need the designed hub on that device.
 # Change it here (or in local/room.yaml, the place's own copy), then set up the room again.
 #
 # The recommended layout (docs/plan/current-focus.md → item 10; the names from lab check M.1):

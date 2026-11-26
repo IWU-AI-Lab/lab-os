@@ -39,8 +39,6 @@ LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 def _banner(port: int, host: str, mcp_port: int) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
-        f"Designed: http://localhost:{port}/design   (the reveal, preview; "
-        "docs/archive/guides-2026-11-25/hub.md)",
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Webcam:   http://localhost:{port}/webcam   (preview; "

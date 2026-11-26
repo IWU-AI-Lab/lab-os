@@ -11,7 +11,7 @@
 /* The designed hub (docs/plan/current-focus.md step 10, the reveal): docs/design/hub-concept.html made real.
    Same look, motion and sound as the approved concept; the concept's controls and made-up data are gone.
    Every fact comes from the brain (/api/...), the numbers from /theme.json, the fonts from
-   /web/vendor/fonts/ (offline). Served at /design, and at / when the theme says hub.look: design. */
+   /web/vendor/fonts/ (offline). Served at / (/design goes there). */
 
 /* Layout: full-screen hub. Far layer = network canvas + verses; frame; middle = panels around the core;
    front = reticle, alerts, module pages. Tokens mirror config/theme.yaml on the design branch.
@@ -3188,7 +3188,7 @@ addEventListener("keydown", (e) => {
   }
   // just start typing: the ask line under the core catches the letter (the conversation page stays closed)
   const inField = /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || (document.activeElement.tagName === "BUTTON" && e.key === " ");
-  if (S.booted && !inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !S.moduleOpen) {
+  if (S.booted && S.typeToChat !== false && !inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !S.moduleOpen) {
     e.preventDefault();
     if (S.layout === "launcher") { $("#quick").focus(); $("#quick").value += e.key; }
     else { $("#ask").focus(); $("#ask").value += e.key; }
@@ -3263,6 +3263,7 @@ function applyTheme(t) {
   if (hub.commits_days?.length) COMMIT_RANGES = hub.commits_days;
   if (hub.device_columns?.length) DEVICE_COLUMNS = hub.device_columns.filter((k) => COLUMNS[k]);
   if (hub.devices_graph_max) GRAPH_MAX = hub.devices_graph_max;
+  S.typeToChat = hub.type_to_chat !== false;  // Settings: Typing Anywhere Goes to the Ask Line
   const mine = screenPrefs();
   S.sound = params.get("sound") !== "0" && mine.sound !== false;
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
@@ -3601,7 +3602,7 @@ $("#pages-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.b
 // view (?view=, quick job 101).
 function viewUrl(id) {
   if (S.page[id]) return `${S.page[id]}?screen=1`;
-  const u = new URL("/design", location.origin);
+  const u = new URL("/", location.origin);
   u.searchParams.set("view", id);
   if (myName()) u.searchParams.set("device", myName());
   return u.pathname + u.search;
@@ -3680,7 +3681,6 @@ function renderSent() {
 import("/web/device.js").then((m) => {
   DM = m;
   D = m.connectDevice({
-    look: "design",
     state: () => ({
       stage: S.booted ? "hub" : "start",
       showing: S.moduleOpen && !S.closing ? S.showing : null,  // a page, a details page or the conversation

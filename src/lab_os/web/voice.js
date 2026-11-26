@@ -20,8 +20,6 @@
 //   v.converse(on)              conversation mode (quick job 68): the brain listens again after each
 //                               answer ("wake" with conversation: true), until "that's all", the same
 //                               button, or voice stops; {type: "converse", on, why} says when it changes
-//   v.chime()                   the short, quiet "I heard you" sound (the plain hub; the designed hub
-//                               and VR play their own listening sound)
 //   v.noiseFloor                the room's level while listening for the phrase (for silenceWatch)
 //   v.micStalled                the microphone gave no audio for a while (the Quest after sleeping)
 //
@@ -111,21 +109,6 @@ export function revealPacer(length, render) {
 const MIC_KEEP_MS = 60_000; // keep the microphone open this long after the last use (no lost words)
 const MIC_STALL_MS = 1500; // the wake word is on but no audio came this long: wake the microphone up
 
-// "I heard you": two short, quiet notes (like the designed hub's listening sound), on the page's own sound.
-export function chimeOn(ctx) {
-  if (!ctx || ctx.state !== "running") return;
-  const t = ctx.currentTime;
-  [[523, 0, 0.1], [784, 0.08, 0.16]].forEach(([f, at, dur]) => {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, t + at);
-    g.gain.exponentialRampToValueAtTime(0.06, t + at + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
-    o.connect(g).connect(ctx.destination);
-    o.start(t + at);
-    o.stop(t + at + dur + 0.02);
-  });
-}
 const QUEUE_MAX = 400; // audio pieces kept while the connection opens (20 s)
 
 export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {}, pages = () => null } = {}) {
@@ -597,7 +580,6 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     wake,
     converse,
     finish,
-    chime: () => chimeOn(st.ctx),
     get noiseFloor() {
       return st.floor;
     },

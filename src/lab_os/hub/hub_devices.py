@@ -174,7 +174,6 @@ class Window:
     device: str  # "" = the page has no name: it can send, but isn't offered as a place to open
     ws: web.WebSocketResponse
     address: str  # where it connected from
-    look: str = "plain"
     stage: str = "start"
     showing: str | None = None  # the module open there (a module id), or None
     sent_from: str = ""  # the device that opened it there ("" = opened there)
@@ -242,7 +241,6 @@ class HubDevices:
                         {
                             "id": w.id,
                             "label": labels[w.id],
-                            "look": w.look,
                             "stage": w.stage,
                             "showing": (
                                 {"id": w.showing, "title": titles.get(w.showing, w.showing)}
@@ -372,8 +370,6 @@ class HubDevices:
 
     # ---------- the page's connection ----------
     def apply_state(self, w: Window, msg: dict) -> None:
-        if msg.get("look") in ("plain", "design"):
-            w.look = msg["look"]
         if msg.get("stage") in STAGES:
             w.stage = msg["stage"]
         if "showing" in msg:
