@@ -6,6 +6,7 @@
 // of that kind (armView), and say so while none is connected. /monitor is the list (monitor-list.js).
 import { armView } from "/static/arm/arm-feed.js";
 import { KINDS, pageKind } from "/static/arm/kinds.js";
+import { held, jointLabel } from "/web/words.js";
 
 const $ = (id) => document.getElementById(id);
 const KIND = pageKind(location.pathname);
@@ -16,9 +17,10 @@ if (KIND) {
 const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=monitor`;
 const rows = {};
 
-function setPill(el, text, cls) {
+function setPill(el, text, cls, why = "") {
   el.textContent = text;
   el.className = `pill ${cls}`;
+  el.title = why;
 }
 
 function row(name, lo, hi, box = "joints") {
@@ -26,7 +28,7 @@ function row(name, lo, hi, box = "joints") {
   if (rows[key]) return rows[key];
   const el = document.createElement("div");
   el.className = "joint";
-  el.innerHTML = `<span class="label">${name}</span>
+  el.innerHTML = `<span class="label" title="${name}">${jointLabel(name)}</span>
     <div class="track"><div class="zero"></div><div class="knob"></div></div>
     <span class="value"></span>`;
   $(box).appendChild(el);
@@ -35,10 +37,10 @@ function row(name, lo, hi, box = "joints") {
 }
 
 function armState(el, a) {
-  if (a.connected === false) setPill(el, `${a.name || "arm"}: unplugged (USB)`, "warn");
-  else if (a.frozen) setPill(el, a.needs_release ? "frozen: release grip" : "frozen", "warn");
-  else if (a.clutch) setPill(el, "following (clutch)", "on");
-  else setPill(el, "holding", "off");
+  if (a.connected === false) setPill(el, `${a.name || "Arm"}: unplugged (USB)`, "warn");
+  else if (a.frozen) { const h = held(a.needs_release); setPill(el, h.text, "held", h.why); }
+  else if (a.clutch) setPill(el, "Following (clutch)", "on");
+  else setPill(el, "Holding", "off");
 }
 
 function bars(joints, limits, box) {
@@ -54,13 +56,13 @@ function bars(joints, limits, box) {
 const plain = (s) => ({ ...s, connected: s.arm?.connected, name: s.arm?.name });
 
 function show(raw) {
-  setPill($("input"), raw.connected ? "live" : "none", raw.connected ? "on" : "off");
-  const who = { free: "free", ai: "the AI tools" }[raw.control] || "an input page";
+  setPill($("input"), raw.connected ? "Live" : "None", raw.connected ? "on" : "off");
+  const who = { free: "Free", ai: "The AI tools" }[raw.control] || "An input page";
   setPill($("control"), who, raw.control === "free" ? "off" : "on");
   const s = armView(raw, "right", KIND);
   document.body.classList.toggle("no-arm", !s);
   if (!s) { // no arm of this page's kind is connected
-    setPill($("state"), "not connected", "off");
+    setPill($("state"), "Not connected", "off");
     $("joints-title").textContent = `No ${KINDS[KIND].robot} is connected`;
     $("right-name").textContent = "";
     $("left-chip").hidden = $("left-card").hidden = true;
@@ -78,7 +80,7 @@ function show(raw) {
   $("arm-label").textContent = l ? "Right arm" : "Arm";
   $("joints-title").textContent = gone ? `${s.arm?.name || "The arm"} is unplugged` : l ? "Right arm" : "Joints";
   // two arms: both cards say the arm's name, in the same place (quick job 119)
-  $("right-name").textContent = l && !gone ? s.arm?.name || "" : gone ? "" : "what the arm reports";
+  $("right-name").textContent = l && !gone ? s.arm?.name || "" : gone ? "" : "What the arm reports";
   document.body.classList.toggle("two-arms", !!l);
   if (!l) return;
   armState($("left-state"), l);
@@ -92,9 +94,9 @@ $("stop").onclick = () => socket?.readyState === WebSocket.OPEN && socket.send(J
 function connect() {
   const ws = new WebSocket(WS_URL);
   socket = ws;
-  ws.onopen = () => setPill($("conn"), "connected", "on");
+  ws.onopen = () => setPill($("conn"), "Connected", "on");
   ws.onclose = () => {
-    setPill($("conn"), "disconnected", "off");
+    setPill($("conn"), "Disconnected", "off");
     setTimeout(connect, 1000);
   };
   ws.onmessage = (e) => {

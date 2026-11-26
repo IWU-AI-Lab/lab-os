@@ -22,6 +22,10 @@
 #arm-view { min-height: 0; position: relative; margin-left: -0.4rem;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 55%, transparent); }
 #arm-view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+/* held still: the pause mark and the words over the view's corner, calm (no glow; quick job 153) */
+.arm-held { position: absolute; left: 0.7rem; top: 0.6rem; z-index: 1; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.25rem 0.6rem; font: 500 0.85rem/1 var(--f-ui); color: var(--frozen-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frozen-text) 55%, transparent); background: color-mix(in srgb, var(--bg) 70%, transparent); }
 #arm-source { margin: 0; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #arm-error { margin: 0; color: var(--accent); }

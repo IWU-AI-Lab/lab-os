@@ -52,7 +52,8 @@ const PAGE_GROUPS = [
   ["The hub", ["hub", "settings", "wake-word", "diagnostics", "project", "spend", "commits", "devices", "system", "chat"]],
 ];
 const NOT_ELSEWHERE = new Set(["xr", "remote", "pages", "command"]);
-const SHORT = { hub: "The Hub", monitor: "Monitors", "monitor-so101": "SO-101", "monitor-xarm": "xArm", webcam: "Webcam", project: "Project", system: "Diagram", chat: "Conversation" };
+// each page tile says the page's own title, as All Pages and the hub do (quick job 153: shorter names here
+// made "Monitors" and "SO-101" of "Monitor" and "SO-101 Monitor")
 // "This device" settings the modal can change (the rest stay in ⚙ → This device on that device)
 const SETTINGS = [
   { key: "quality", label: "Level of detail", choices: [["", "Default"], ["maximal", "Maximal"], ["full", "Full"], ["reduced", "Reduced"], ["minimal", "Minimal"]] },
@@ -214,7 +215,7 @@ function renderLists(devs, scr) {
     for (const s of mine) dl.append(scrRow(s, true));
   }
   if (!dl.children.length) dl.innerHTML = `<div class="empty">${devs.length ? "No device or screen matches the search." : "No device is connected."}</div>`;
-  $("#dev-count").textContent = `${plural(devs.length, "device")} · ${plural(scr.length, "screen")}`;
+  $("#dev-count").textContent = `${plural(devs.length, "device")}, ${plural(scr.length, "screen")}`;
   $("#show-all").hidden = !S.layout.hidden.length;
 }
 
@@ -230,14 +231,14 @@ function renderPages() {
   const box = $("#pages"), want = S.pageSearch.trim().toLowerCase();
   box.innerHTML = "";
   for (const [name, vs] of pages()) {
-    const shown = vs.filter((v) => !want || `${v.title} ${SHORT[v.id] || ""} ${name}`.toLowerCase().includes(want));
+    const shown = vs.filter((v) => !want || `${v.title} ${name}`.toLowerCase().includes(want));
     if (!shown.length) continue;
     box.insertAdjacentHTML("beforeend", `<div class="grp">${esc(name)}</div>`);
     const tiles = document.createElement("div");
     tiles.className = "tiles";
     for (const v of shown) {
       tiles.insertAdjacentHTML("beforeend", `<div class="tile${v.id === S.page ? " on" : ""}" tabindex="0" role="button" data-view="${esc(v.id)}"`
-        + ` title="${esc(v.title)}: drag it onto a screen or a device to open it there">${ico(VIEW_ICON[v.id] || "i-test")}<span>${esc(SHORT[v.id] || v.title)}</span></div>`);
+        + ` title="${esc(v.title)}: drag it onto a screen or a device to open it there">${ico(VIEW_ICON[v.id] || "i-test")}<span>${esc(v.title)}</span></div>`);
     }
     box.append(tiles);
   }
@@ -277,7 +278,7 @@ const carry = {
     const v = pages().flatMap(([, vs]) => vs).find((p) => p.id === view);
     this.ghost = document.createElement("div");
     this.ghost.className = "tile ghost";
-    this.ghost.innerHTML = `${ico(VIEW_ICON[view] || "i-test")}<span>${esc(SHORT[view] || v?.title || view)}</span>`;
+    this.ghost.innerHTML = `${ico(VIEW_ICON[view] || "i-test")}<span>${esc(v?.title || view)}</span>`;
     document.body.append(this.ghost);
     this.move(x, y);
   },
@@ -734,7 +735,7 @@ function renderInspector(force = false) {
       + (d.sub ? `<p class="hint">${esc(d.sub)}</p>` : ""));
     part("Details", factsHTML(deviceFacts(d)) + driveLine(d));
   } else if (s) {
-    box.insertAdjacentHTML("beforeend", `<div class="who">${ico("i-screen")}<b>${esc(devTitle(s.device))}${s.count > 1 ? ` · Screen ${s.n}` : ""}</b>`
+    box.insertAdjacentHTML("beforeend", `<div class="who">${ico("i-screen")}<b>${esc(devTitle(s.device))}${s.count > 1 ? `, screen ${s.n}` : ""}</b>`
       + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button></div>`);
     part("Details", factsHTML([["Shows", shows(s.w)], ["From", s.w.showing && s.w.from ? s.w.from : ""], ["Resolution", resolution(s.w)], ["Device", s.device.name]]));
   } else {

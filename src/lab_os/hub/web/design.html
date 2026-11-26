@@ -515,7 +515,7 @@ body.q-minimal #devgraph .beat { animation: none; }
 #devcard { position: fixed; z-index: 8; width: min(17rem, calc(100vw - 32px)); }
 #devcard[hidden] { display: none; }
 #devcard .cut { background: color-mix(in srgb, var(--c) 55%, transparent); }
-#devcard .in { background: rgba(5, 8, 11, 0.94); padding: 0.75rem 0.9rem; display: grid; gap: 0.35rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+#devcard .in { background: color-mix(in srgb, var(--bg) 94%, transparent); padding: 0.75rem 0.9rem; display: grid; gap: 0.35rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
 #devcard .t { display: flex; align-items: center; gap: 0.5rem; font: 600 1rem/1.2 var(--f-ui); color: var(--text); }
 #devcard .t .ico { color: var(--c); font-size: 1.2rem; }
 #devcard .t button { margin-left: auto; background: none; border: 0; color: var(--text-dim); font: 1.1rem/1 var(--f-ui); cursor: pointer; }
@@ -533,8 +533,8 @@ body.q-minimal #devgraph .beat { animation: none; }
 #devcard .ex { font-size: 0.68rem; opacity: 0.7; }
 
 /* alert toast */
-#toast { position: absolute; top: 1%; left: 50%; transform: translate(-50%, -8px); width: min(92%, 24rem); opacity: 0; transition: opacity 0.4s, transform 0.5s var(--arrive); pointer-events: none; z-index: 3; }
-#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#toast { position: absolute; top: 1%; left: 50%; transform: translate(-50%, -8px); width: min(92%, 24rem); max-width: calc(100vw - 1.6rem); overflow-wrap: anywhere; opacity: 0; transition: opacity 0.4s, transform 0.5s var(--arrive); pointer-events: none; z-index: 3; }
+#toast.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }  /* its tooltip shows the details */
 #toast.on.nudge { animation: nudge 0.6s var(--arrive); }
 @keyframes nudge { 0% { transform: translate(-50%, -10px); filter: brightness(1.8); } 100% { transform: translate(-50%, 0); } }
 #toast .in { display: grid; grid-template-columns: 2.2rem 1fr; gap: 0.8rem; align-items: center; padding: 0.55rem 0.9rem 0.55rem 0.7rem; }
@@ -772,7 +772,8 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .tool[hidden] { display: none; }  /* .tool's display: grid would otherwise beat the hidden attribute */
 .tool.fs-unavailable { opacity: 0.4; }
 /* ⏻ on the brain's own screen (quick job 6): back to the start screen, or shut lab-os down (asks first) */
-#power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
+#power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px);
+  --cut: 0.7rem; clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
 #power-menu[hidden] { display: none; }
 #power-menu p { margin: 0.2rem 0 0.6rem; font: var(--w-lines) 0.85rem/1.45 var(--f-lines); color: var(--text-dim); }
 #power-menu .warn { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.8rem; padding: 0.55rem 0.7rem; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 0.95rem; color: var(--accent); }
@@ -797,6 +798,17 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 .oo-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; margin: 0.3rem 0 0; padding: 0.65rem 0.8rem; text-align: left; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
 .oo-row:hover:not(:disabled), .oo-row:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 .oo-row:disabled { opacity: 0.5; cursor: default; }
+.oo-row { --cut: 0.45rem; clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+/* buttons (the device card's Diagnostics and Remove, the Devices details' Remove): the kit's look
+   (/web/design/kit.css; quick job 153: they were gray browser buttons) */
+.btn { --cut: 0.55rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; min-height: 2.8rem; padding: 0.6rem 1.2rem;
+  font: 600 0.95rem/1.1 var(--f-ui); letter-spacing: 0.06em; color: var(--text); cursor: pointer; border: 0;
+  background: color-mix(in srgb, var(--c) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  transition: background 0.12s, color 0.12s; }
+.btn:hover:not(:disabled), .btn:focus-visible { background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--hot); outline: none; }
+.btn:disabled { color: var(--offline); box-shadow: inset 0 0 0 1px var(--line); background: none; cursor: default; }
+.btn.small { min-height: 2.1rem; padding: 0.35rem 0.8rem; font-size: 0.8rem; }
 .oo-sub { font: var(--w-lines) 0.78rem/1.2 var(--f-lines); color: var(--text-dim); }
 .oo-msg, .oo-none { margin: 0.7rem 0 0; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); }
 .oo-msg:empty { display: none; }
@@ -804,19 +816,27 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 #module .mod-from[hidden] { display: none; }
 /* ---------- small screens: a phone, the Pi's touchscreen (quick job 96) ----------
    Large screens keep the layout above. A screen 1100 px wide or less, or 640 px high or less, gets
-   controls big enough for a finger (about 40 px), and an open page keeps the docked core out of its way. */
+   controls big enough for a finger (44 px, quick job 153), and an open page keeps the docked core out of its way. */
+/* touch screens of any size (the Newline too): the same 44 px touch areas, the layout unchanged */
+@media (pointer: coarse) {
+  .tool { width: max(2rem, 44px); height: max(2rem, 44px); }
+  .range button, .devmore, .mic, #open-chat, #restore-chat, #devcard .t button, #log-chat .copy { min-width: 44px; min-height: 44px; }
+  #devsys { width: 44px; flex: none; }
+  .oo-row, .btn, .btn.small { min-height: 44px; }
+}
 @media (max-width: 1100px), (max-height: 640px) {
-  .tool { width: max(2rem, 40px); height: max(2rem, 40px); font-size: max(1rem, 18px); }
-  .range button { min-width: 36px; min-height: 36px; }
-  .devmore { min-height: 40px; }
-  #devsys { width: 40px; flex: none; }
-  #quick { height: max(2rem, 40px); line-height: max(2rem, 40px); }
-  .mic, #open-chat, #restore-chat { min-width: 44px; min-height: 40px; }
+  .tool { width: max(2rem, 44px); height: max(2rem, 44px); font-size: max(1rem, 18px); }
+  .range button { min-width: 44px; min-height: 44px; }
+  .devmore { min-height: 44px; }
+  #devsys { width: 44px; flex: none; }
+  #quick { height: max(2rem, 44px); line-height: max(2rem, 44px); }
+  .mic, #open-chat, #restore-chat { min-width: 44px; min-height: 44px; }
+  .oo-row, .btn, .btn.small { min-height: 44px; }
   /* the open mark stays small to look at; the area that takes the tap is bigger */
   .side .open { position: relative; }
   .side .open::after { content: ""; position: absolute; inset: -10px -6px; }
-  #devcard .t button { min-width: 40px; min-height: 40px; }
-  #log-chat .copy { min-height: 36px; }
+  #devcard .t button { min-width: 44px; min-height: 44px; }
+  #log-chat .copy { min-height: 44px; }
   /* an open page: a thin frame, the docked core small in the corner, the page beside it (not under it) */
   #module > .cut { inset: 0.6rem; }
   #mod-slot { inset: 3.8rem 1rem 0.8rem; }
@@ -931,9 +951,9 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     </button>
     <div class="fact" id="f-venue" title="Venue"><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
     <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
-    <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>checking</span></div>
+    <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>Checking</span></div>
     <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
-    <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">listening for the wake word</span></div>
+    <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">Listening for the wake word</span></div>
     <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
       <button class="tool" id="fs-btn" type="button" title="Full screen" aria-label="Full screen" hidden><svg class="ico"><use href="#i-full"/></svg></button>
@@ -974,7 +994,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <g id="core-dot"><circle r="34" fill="url(#coreG)"/></g>
       <g id="flare"><rect x="-160" y="-1.2" width="320" height="2.4" fill="url(#flareH)"/><rect x="-1" y="-70" width="2" height="140" fill="url(#flareV)"/></g>
     </svg>
-    <span class="sr" id="state-word" aria-live="polite">idle</span>
+    <span class="sr" id="state-word" aria-live="polite">Idle</span>
     <div id="ask-btn" class="panel"><div class="cut"><div class="in">
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
@@ -984,7 +1004,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <button id="restore-chat" type="button" hidden><svg class="ico"><use href="#i-undo"/></svg></button>
     </div></div></div>
     <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
-    <div id="conv-sign" role="status" hidden><i aria-hidden="true"></i>In a conversation · say "that's all" to end</div>
+    <div id="conv-sign" role="status" hidden><i aria-hidden="true"></i>In a conversation. Say "that's all" to end.</div>
     <div id="toast" class="alertable" role="status"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div class="msg-t" id="toast-msg"></div></div></div></div>
     <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>No answer</b><span></span></div></div></div></div>
   </section>
@@ -1008,7 +1028,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <div class="head"><span class="cap">AI Spend</span><button class="open" type="button" aria-label="AI Spend details"><svg class="ico"><use href="#i-open"/></svg></button></div>
       <div class="row2"><span class="money" id="money"></span><span>this month</span></div>
       <div class="meter" style="--fill:0%"></div>
-      <div class="how">Estimated · this computer's brain only</div>
+      <div class="how">Estimated, this computer's brain only</div>
     </div></div></div>
   </aside>
 
@@ -1746,7 +1766,7 @@ function setState(st) {
   const prev = S.state;
   S.state = st;
   $(".core").dataset.state = st; $("#orb-dock").dataset.state = st;
-  $("#state-word").textContent = st;
+  $("#state-word").textContent = st.charAt(0).toUpperCase() + st.slice(1);
   if (st === "listening" && prev !== "listening") SFX.listen();
   if (st === "idle" && prev === "speaking") SFX.done();
   if (st === "error" && prev !== "error") SFX.error();
@@ -1894,10 +1914,10 @@ function stepArm(now, dt = 0.016) {
 let armWord = "";
 function renderArm() {
   const a = S.arm;
-  $(".arm .name").textContent = a?.name || "arm";
-  const [ico, w] = !a ? ["i-warn", "brain not reachable"] : !a.connected ? ["i-warn", "disconnected"]
-    : a.control === "ai" ? ["i-chip", "AI moving"] : a.control === "teleop" ? (a.held ? ["i-pause", "held"] : [null, "following"])
-    : [null, "free"];
+  $(".arm .name").textContent = a?.name || "Arm";
+  const [ico, w] = !a ? ["i-warn", "Brain not reachable"] : !a.connected ? ["i-warn", "Disconnected"]
+    : a.control === "ai" ? ["i-chip", "AI moving"] : a.control === "teleop" ? (a.held ? ["i-pause", "Held still"] : [null, "Following"])
+    : [null, "Free"];
   const html = (ico ? `<svg class="ico"><use href="#${ico}"/></svg>` : "") + w;
   if (html !== armWord) { armWord = html; $("#arm-word").innerHTML = html; }
 }
@@ -1910,7 +1930,7 @@ function drawSpark(days) {
   const counts = COMMITS.slice(-days), sp = $("#spark"), max = Math.max(1, ...counts), w = 220, h = 54;
   sp.innerHTML = ""; sp.setAttribute("viewBox", `0 0 ${w} ${h}`);
   $("#commit-total").textContent = counts.reduce((a, b) => a + b, 0);
-  $("#ax0").textContent = dayName(days - 1); $("#ax1").textContent = "today";
+  $("#ax0").textContent = dayName(days - 1); $("#ax1").textContent = "Today";
   el("line", { x1: 0, y1: h, x2: w, y2: h, stroke: "var(--line)" }, sp);
   counts.forEach((n, i) => {
     const step = w / counts.length, bw = Math.max(1.5, step - (days > 20 ? 2 : 4)), x = i * step + (step - bw) / 2, bh = Math.max(1, (n / max) * (h - 14));
@@ -1930,7 +1950,7 @@ function renderProject() {
   steps.style.gridTemplateColumns = `repeat(${p.steps.length}, 1fr)`;
   steps.innerHTML = p.steps.map((s) => `<span class="${s.done ? "done" : s.n === p.step ? "now" : ""}"></span>`).join("");
   panel.querySelector(".stepn").textContent = `Step ${p.step} of ${p.of}`;
-  panel.querySelector(".next > span:last-child").textContent = p.next || "all steps done";
+  panel.querySelector(".next > span:last-child").textContent = p.next || "All steps done";
 }
 function renderSpend() {
   const s = S.spend, panel = panelOf("spend");
@@ -2113,7 +2133,7 @@ function setAlert(a, msg = "") {
   const prev = S.alert;
   S.alert = a; body.dataset.alert = a;
   clearInterval(critTimer);
-  const word = { held: ["i-pause", "held"], critical: ["i-warn", "stopped"], warning: ["i-warn", "waiting"], none: [null, "following"] }[a];
+  const word = { held: ["i-pause", "Held still"], critical: ["i-warn", "Stopped"], warning: ["i-warn", "Waiting"], none: [null, "Following"] }[a];
   $("#arm-word").innerHTML = (word[0] ? `<svg class="ico"><use href="#${word[0]}"/></svg>` : "") + word[1];
   const toast = $("#toast");
   if (a === "warning") { $("#toast-msg").textContent = msg; toast.classList.add("on"); SFX.warning(); }
@@ -2751,7 +2771,7 @@ function showDetail(id) {
       <svg class="d-chart" viewBox="0 0 ${w} ${h + 22}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--line)"/>
         ${B ? `<line x1="0" y1="${y(0)}" x2="${w}" y2="${y(B)}" stroke="var(--text-dim)" stroke-dasharray="4 5"/><text x="${w - 4}" y="${y(B) - 6}" text-anchor="end">${usd(B, 0)}</text>` : ""}
         <circle cx="${x(today)}" cy="${y(spent)}" r="4" fill="var(--hot)"/>
-        <text x="0" y="${h + 18}">1st</text><text x="${x(today)}" y="${h + 18}" text-anchor="middle">today</text><text x="${w}" y="${h + 18}" text-anchor="end">${dim}th</text></svg>
+        <text x="0" y="${h + 18}">1st</text><text x="${x(today)}" y="${h + 18}" text-anchor="middle">Today</text><text x="${w}" y="${h + 18}" text-anchor="end">${dim}th</text></svg>
       <div class="d-line" style="margin-top:1.6rem">By AI setup</div>
       <table class="d-table"><thead><tr><th>Setup</th><th>This month</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   } else if (id === "commits") {
@@ -2770,7 +2790,7 @@ function showDetail(id) {
       if (!list.length) return "";
       return `<tbody><tr class="g"><th colspan="${cols.length + 1}">${label}<span style="float:right">${list.filter((d) => d.on).length} of ${list.length} connected</span></th></tr>` + list.map((d) => `<tr data-dev="${esc(d.id)}"><td><svg class="ico" style="color:var(--c)"><use href="#${ico}"/></svg></td>${cols.map(([, c]) => `<td>${c.cell(d)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     }).join("");
-    html = `<div class="detail wide"><div><div class="d-line">${devs.length ? `${devs.filter((d) => d.on).length} of ${devs.length} connected now · every device seen here; Remove takes one off the list until it connects again` : "No devices seen yet. A device shows here when it is plugged in or connects."}</div>
+    html = `<div class="detail wide"><div><div class="d-line">${devs.length ? `${devs.filter((d) => d.on).length} of ${devs.length} connected now. Every device seen here; Remove takes one off the list until it connects again.` : "No devices seen yet. A device shows here when it is plugged in or connects."}</div>
       <table class="d-table"><thead><tr><th></th>${cols.map(([, c]) => `<th title="${c.title}">${c.head}</th>`).join("")}</tr></thead>${rows}</table></div></div>`;
   }
   if (id === "system") html = `<div class="sysbox" aria-live="polite"></div>`;
@@ -3279,7 +3299,7 @@ function applyTheme(t) {
   const root = document.documentElement.style, c = t.colors || {}, f = t.font || {};
   const vars = {
     bg: c.background, surface: c.surface, line: c.line, text: c.text, "text-dim": c.text_dim, primary: c.primary, hot: c.hot,
-    accent: c.accent, danger: c.danger, offline: c.offline, frozen: c.frozen,
+    accent: c.accent, danger: c.danger, offline: c.offline, frozen: c.frozen, "frozen-text": c.frozen_text,
     "f-title": f.display, "f-ui": f.family, "f-lines": f.lines, "w-lines": f.lines_weight, "f-digits": f.digits, "f-mono": f.mono,
     arrive: t.motion?.arrive,
   };
@@ -3374,11 +3394,11 @@ addEventListener("message", (e) => e.origin === location.origin && e.data?.type 
 addEventListener("storage", (e) => (e.key === "lab-os.screen" || e.key?.startsWith("lab-os.device.")) && reapply());
 function setFact(id, text, off) { const f = $(id); f.querySelector("span").textContent = text; f.classList.toggle("off", !!off); }
 let noteShown = null;
-function showNote(msg) {  // a calm sentence at the top of the core (e.g. why the chat is paused)
+function showNote(msg, detail = "") {  // a calm sentence at the top of the core (e.g. why the chat is paused)
   msg = msg || null;
   if (msg === noteShown) return;
   noteShown = msg;
-  if (msg) $("#toast-msg").textContent = msg;
+  if (msg) { $("#toast-msg").textContent = msg; $("#toast").title = detail || ""; }  // the keys and the file: in the tooltip
   $("#toast").classList.toggle("on", !!msg);
 }
 // a question while the chat is paused: the note on top already says why, so it only nudges instead of a
@@ -3397,7 +3417,7 @@ async function pollStatus() {
   if (!st && statusMisses < 2 && S.status) return S.status;
   S.status = st;
   if (!st) {
-    setFact("#f-net", "brain not reachable", true); setFact("#f-ai", "AI not connected", true);
+    setFact("#f-net", "Brain not reachable", true); setFact("#f-ai", "AI not connected", true);
     V?.setStatus(null);
     if (!S.asking) setState("offline");
     return st;
@@ -3406,9 +3426,9 @@ async function pollStatus() {
   setFact("#f-venue", st.venue); setFact("#f-persona", st.persona.display_name);
   renderTry(st.visitors);
   const iv = $("#ign-venue"); if (iv) iv.textContent = st.venue;
-  setFact("#f-net", st.internet === true ? "online" : st.internet === false ? "offline" : "checking", st.internet !== true);
+  setFact("#f-net", st.internet === true ? "Online" : st.internet === false ? "Offline" : "Checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
-  if (performance.now() > S.noteUntil) showNote(st.ai.paused);
+  if (performance.now() > S.noteUntil) showNote(st.ai.paused, st.ai.paused_detail);
   V?.setStatus(st.voice);
   syncWake();
   if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {

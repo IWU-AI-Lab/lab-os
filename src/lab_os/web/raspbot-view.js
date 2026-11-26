@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { loadRaspbotModel } from "/web/raspbot-model.js";
 import { drawRes } from "/web/screen.js";
+import { color } from "/web/theme.js";
 
 const WHEELS = ["l1_Joint", "l2_Joint", "r1_Joint", "r2_Joint"];
 const SIGNS = [1, 1, -1, -1];  // the URDF uses opposite axes on the right side
@@ -13,8 +14,8 @@ export async function createRaspbotView(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(drawRes(), 1.5));
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a84, 2.2));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  scene.add(new THREE.HemisphereLight(color("arm3d.light_sky"), color("arm3d.light_ground"), 2.2));
+  const sun = new THREE.DirectionalLight(color("arm3d.sun"), 1.6);
   sun.position.set(0.6, 1.2, 0.8);
   scene.add(sun);
 

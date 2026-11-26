@@ -7,7 +7,6 @@
 //
 //   systemFacts({devices, hubDevices, status, mcp, here})  the facts, from the brain's answers (see the hub)
 //   systemSVG(facts, {animate, icons})                     the drawing, an SVG string (self-contained styles)
-//   displayName(name)                                      "so101-white" → "SO-101 White" (names stay plain in config)
 //
 // Colours come from the page's CSS variables (the theme), with the theme's numbers as fallbacks so the saved copy
 // (docs/dev/system-diagram.svg) looks the same outside the hub. Only real links pulse (DESIGN.md: never claim
@@ -19,17 +18,8 @@ const W = 1600, H = 900, CX = 800, CY = 440, R = 170; // the core's outer ring: 
 const MAX_ROWS = 6; // per column; more are folded into one "+N more"
 const LOCAL = /^(127\.|::1$|::ffff:127\.)/;
 
-// config names are plain ("quest-a", "so101-white"); the drawing shows them the way people say them
-const WORDS = { so101: "SO-101", xarm: "xArm", ai: "AI", cam: "Camera", pi: "Pi", pc: "PC", lelab: "LeLab" };
-export function displayName(name) {
-  return String(name).split("-").map((w) => {
-    const m = w.match(/^([a-z]+?)(\d+)$/);
-    if (m && WORDS[m[1]] && m[1] !== "so") return `${WORDS[m[1]]} ${m[2]}`;
-    if (WORDS[w]) return WORDS[w];
-    if (w.length === 1) return w.toUpperCase();
-    return w[0].toUpperCase() + w.slice(1);
-  }).join(" ");
-}
+// Device names show as they are stored ("so101-white"), or a screen's display name (quick job 153: the
+// drawing made "Rv Laptop" of "rv-laptop", so one device had two names on the hub).
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -38,7 +28,7 @@ export function systemFacts({ devices = [], hubDevices = [], status = null, mcp 
   const open = new Map(hubDevices.map((d) => [d.name, d]));
   const listed = new Map(devices.map((d) => [d.name, d]));
   const screens = hubDevices.map((d) => ({
-    name: d.name, icon: SCREEN_ICON[listed.get(d.name)?.kind] || "i-screen", live: true,
+    name: d.name, title: d.title || d.display_name || d.name, icon: SCREEN_ICON[listed.get(d.name)?.kind] || "i-screen", live: true,
     local: LOCAL.test(d.address || ""), here: d.name === here,
   }));
   // screens the place lists (headsets, computers, Pis) that don't have the hub open now: dim
@@ -111,7 +101,7 @@ export function systemSVG(f, { animate = true, icons = null } = {}) {
     if (n.borrowed) out.push(`<polygon class="hatchfill" points="${hexPts(x, y, 22)}"/>`);
     out.push(icon(n.icon, x, y));
     const count = n.count ? `<tspan class="count" dx="10">${n.count}</tspan>` : "";
-    out.push(`<text class="name" x="${tx}" y="${y + (sub ? -2 : 6)}" text-anchor="${anchor}">${esc(n.more ? n.name : displayName(n.name))}${count}</text>`);
+    out.push(`<text class="name" x="${tx}" y="${y + (sub ? -2 : 6)}" text-anchor="${anchor}">${esc(n.title || n.name)}${count}</text>`);
     if (sub) out.push(`<text class="sub" x="${tx}" y="${y + 18}" text-anchor="${anchor}">${esc(sub)}</text>`);
     out.push(`</g>`);
   }
@@ -168,7 +158,7 @@ export function systemSVG(f, { animate = true, icons = null } = {}) {
     const y = 760, armY = rightRows[right.length - 1];
     out.push(`<path class="ln turn" d="M${RX} ${y - 30}V${armY + 30}"/>`);
     dot(RX, y - 30, "warm"); dot(RX, armY + 30, "warm");
-    const lent = f.arms.filter((a) => a.borrowed).map((a) => displayName(a.name)).join(", ");
+    const lent = f.arms.filter((a) => a.borrowed).map((a) => a.name).join(", ");
     node(RX, y, { name: "LeLab", icon: "i-leader" }, "right", `Training: takes turns on ${lent}`);
   }
   if (!right.length) out.push(`<text class="sub" x="${RX}" y="${CY}">No arms or cameras in devices.yaml</text>`);

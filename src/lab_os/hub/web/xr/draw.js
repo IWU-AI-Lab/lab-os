@@ -13,6 +13,7 @@ export const C = {
   text: TC.text || "#d4eef5", dim: TC.text_dim || "#6d8c96", primary: TC.primary || "#29d4ff",
   hot: TC.hot || "#eafcff", accent: TC.accent || "#ff9a2e", danger: TC.danger || "#ff2436",
   offline: TC.offline || "#56636a", ok: TC.ok || "#3ee07f", frozen: TC.frozen || "#7a1d00",
+  frozenText: TC.frozen_text || "#b8604a",
 };
 /** A theme color as a three.js Color. */
 // Glow (quick job 10): adds light like additive blending, but leaves the picture's opacity alone. In AR the

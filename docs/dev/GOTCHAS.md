@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — A page's own size for an icon button wins over the kit's touch size
+**What:** `kit.css` gave every `button` a 44 px touch area on touch screens. A page's own rule (`.iconbtn { min-width: 2rem }`, `.order button { height: 1.8rem }`) has a class in it, so it is more specific and won: the Command Center's icons stayed 24 px.
+**Fix:** The touch rule in `kit.css` uses `min-height` and `min-width` with `!important` under `@media (pointer: coarse)`. It changes no other size, so a page keeps its look elsewhere.
+
+### 2026-11-26 — The repo's `.env` is at the top of the repo, not in `config/`
+**What:** The UX review asked for "Add an AI key to config/.env". `config.env_file()` is `<repo>/.env` for the repo's own config (a place folder has its own `.env`).
+**Fix:** The short message names the real file: "Add an AI key to .env, then restart." (a place: `<place>/.env`). The full path and the key names are in the tooltip (`NoSetup.detail`).
+
 ### 2026-11-26 — `git pull` stopped on untracked copies of the UX review files
 **What:** The review sessions wrote their files into the main folder, not committed. Another branch then added the same files to `main`, so `git pull` refused to overwrite the untracked copies.
 **Fix:** Compare each copy with `origin/main` (`git hash-object`). If all are the same, `git add` the folder, then `git pull --ff-only`. Nothing is deleted.

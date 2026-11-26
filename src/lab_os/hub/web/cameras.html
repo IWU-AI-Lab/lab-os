@@ -102,7 +102,7 @@ setInterval(() => { if (!document.hidden) load(); }, LIST_MS);
 
 function render() {
   const shown = cams.filter((c) => !hidden.has(c.id));
-  $("#count").textContent = cams.length ? `${shown.length} of ${cams.length}` : "none";
+  $("#count").textContent = cams.length ? `${shown.length} of ${cams.length}` : "None";
   $("#count").className = `pill ${shown.length ? "on" : "off"}`;
   $("#switches").innerHTML = cams.map((c) => {
     const on = !hidden.has(c.id);
@@ -152,7 +152,7 @@ async function loop(card, run) {
   const img = card.querySelector("img"), why = card.querySelector(".why"), tally = card.querySelector(".tally");
   const stream = cams.find((c) => c.id === card.dataset.id)?.stream;
   if (stream) {  // the Raspbot's camera: one MJPEG stream through the brain, not picture by picture
-    img.onload = () => { img.hidden = false; why.hidden = true; tally.className = "tally live"; tally.textContent = "live"; };
+    img.onload = () => { img.hidden = false; why.hidden = true; tally.className = "tally live"; tally.textContent = "Live"; };
     img.onerror = () => { img.hidden = true; why.hidden = false; why.textContent = "The Raspbot's camera does not answer."; };
     img.src = `${stream}?t=${Date.now()}`;
     const stop = setInterval(() => { if (run !== running) { clearInterval(stop); img.removeAttribute("src"); } }, 500);

@@ -9,6 +9,7 @@
 // to start (the page captures the pointer), ` (backtick) or Esc to leave: leaving freezes the arm
 // and hands control over. Messages are sent at 60 Hz while active, even when nothing is pressed: if they
 // stop (tab hidden, page closed), the arm freezes (dead-man). Format: docs/dev/protocol.md.
+import { jointLabel } from "/web/words.js";
 
 const SHARED_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper"];
 const SLOW = 0.3; // Shift held = fine control (keys and mouse modes)
@@ -16,25 +17,26 @@ const SLOW = 0.3; // Shift held = fine control (keys and mouse modes)
 // Keys mode: [key for +, key for −, what + does] per shared joint name (+ directions: docs/GOTCHAS
 // "joint directions"; the operator stands behind the arm, opposite the controller board).
 const KEY_PAIRS = {
-  shoulder_pan: ["KeyD", "KeyA", "base turns right"],
-  shoulder_lift: ["KeyW", "KeyS", "shoulder tilts forward"],
-  elbow_flex: ["KeyR", "KeyF", "elbow tilts forward"],
-  wrist_flex: ["KeyT", "KeyG", "wrist tilts forward"],
-  wrist_roll: ["KeyQ", "KeyE", "wrist rolls counter-clockwise"],
-  gripper: ["KeyV", "KeyC", "gripper opens"],
+  shoulder_pan: ["KeyD", "KeyA", "the base turns right"],
+  shoulder_lift: ["KeyW", "KeyS", "the shoulder tilts forward"],
+  elbow_flex: ["KeyR", "KeyF", "the elbow tilts forward"],
+  wrist_flex: ["KeyT", "KeyG", "the wrist tilts forward"],
+  wrist_roll: ["KeyQ", "KeyE", "the wrist rolls counter-clockwise"],
+  gripper: ["KeyV", "KeyC", "the gripper opens"],
 };
 
 // Mouse mode: hold the digit, move the mouse along the axis. sign: +1 = right/up is +.
 const MOUSE_JOINTS = {
-  Digit1: ["shoulder_pan", "x", 1, "base: mouse right = turn right"],
-  Digit2: ["shoulder_lift", "y", 1, "shoulder: mouse up = forward"],
-  Digit3: ["elbow_flex", "y", 1, "elbow: mouse up = forward"],
-  Digit4: ["wrist_flex", "y", 1, "wrist tilt: mouse up = forward"],
-  Digit5: ["wrist_roll", "x", -1, "wrist roll: mouse right = clockwise"],
+  Digit1: ["shoulder_pan", "x", 1, "Base: mouse right = turn right"],
+  Digit2: ["shoulder_lift", "y", 1, "Shoulder: mouse up = forward"],
+  Digit3: ["elbow_flex", "y", 1, "Elbow: mouse up = forward"],
+  Digit4: ["wrist_flex", "y", 1, "Wrist tilt: mouse up = forward"],
+  Digit5: ["wrist_roll", "x", -1, "Wrist roll: mouse right = clockwise"],
 };
 const MOUSE_GAIN = 0.02; // rate per pixel per tick, times the sensitivity slider
 
 const keyName = (code) => code.replace(/^Key|^Digit/, "");
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function keysMode() {
   return {
@@ -42,8 +44,8 @@ function keysMode() {
     help(joints) {
       return joints
         .filter((j) => KEY_PAIRS[j])
-        .map((j) => `<tr><td><kbd>${keyName(KEY_PAIRS[j][0])}</kbd> / <kbd>${keyName(KEY_PAIRS[j][1])}</kbd></td><td>${j}: ${KEY_PAIRS[j][2]} / the other way</td></tr>`)
-        .concat([`<tr><td><kbd>Shift</kbd> held</td><td>slow (fine control)</td></tr>`])
+        .map((j) => `<tr><td><kbd>${keyName(KEY_PAIRS[j][0])}</kbd> / <kbd>${keyName(KEY_PAIRS[j][1])}</kbd></td><td title="${esc(j)}">${jointLabel(j)}: ${KEY_PAIRS[j][2]}, or the other way</td></tr>`)
+        .concat([`<tr><td><kbd>Shift</kbd> held</td><td>Slow (fine control)</td></tr>`])
         .join("");
     },
     handles: (code) => Object.values(KEY_PAIRS).some(([p, m]) => code === p || code === m),
@@ -71,8 +73,8 @@ function mouseMode(sens) {
         .filter(([, [j]]) => joints.includes(j))
         .map(([code, [, , , text]]) => `<tr><td><kbd>${keyName(code)}</kbd> held + mouse</td><td>${text}</td></tr>`)
         .concat([
-          `<tr><td>Left / right button held</td><td>gripper opens / closes</td></tr>`,
-          `<tr><td><kbd>Shift</kbd> held</td><td>slow (fine control)</td></tr>`,
+          `<tr><td>Left / right button held</td><td>The gripper opens / closes</td></tr>`,
+          `<tr><td><kbd>Shift</kbd> held</td><td>Slow (fine control)</td></tr>`,
         ])
         .join("");
     },
@@ -124,13 +126,13 @@ function handMode(sens, invert, ui) {
     name: "hand",
     help: () =>
       [
-        ["<kbd>Space</kbd> hold", "clutch (= grip): the arm follows while held"],
-        ["Trackpad / mouse", "hand left/right, up/down"],
-        ["Two-finger scroll", "hand forward/back"],
-        ["<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <kbd>R</kbd><kbd>F</kbd>", "steady move: forward/left/back/right · up/down"],
-        ["<kbd>←</kbd><kbd>→</kbd> · <kbd>↑</kbd><kbd>↓</kbd>", "wrist roll · wrist tilt"],
-        ["<kbd>C</kbd>", "gripper close / open (toggle; applied while the clutch is held)"],
-        ["<kbd>H</kbd>", "re-center your virtual hand (only while the clutch is released)"],
+        ["<kbd>Space</kbd> hold", "Clutch (= grip): the arm follows while held"],
+        ["Trackpad / mouse", "Hand left/right, up/down"],
+        ["Two-finger scroll", "Hand forward/back"],
+        ["<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>, <kbd>R</kbd><kbd>F</kbd>", "Steady move: forward/left/back/right, and up/down"],
+        ["<kbd>←</kbd><kbd>→</kbd>, <kbd>↑</kbd><kbd>↓</kbd>", "Wrist roll, and wrist tilt"],
+        ["<kbd>C</kbd>", "Gripper close / open (toggle; applied while the clutch is held)"],
+        ["<kbd>H</kbd>", "Re-center your virtual hand (only while the clutch is released)"],
       ]
         .map(([k, t]) => `<tr><td>${k}</td><td>${t}</td></tr>`)
         .join(""),
@@ -168,7 +170,7 @@ function handMode(sens, invert, ui) {
         buttons: { a: false, b: false, thumbstick: false },
         thumbstick: [0, 0],
       };
-      ui.showHands({ right: hand }, `virtual hand · gripper ${s.closed ? "closing" : "opening"} (C)`);
+      ui.showHands({ right: hand }, `Virtual hand, gripper ${s.closed ? "closing" : "opening"} (C)`);
       return { type: "xr_input", t: performance.now(), source: "desktop-hand", hands: { right: hand } };
     },
   };
@@ -272,8 +274,8 @@ export function initDesktop(link, ui) {
     const msg = mode().tick(keys, joints, buttons, dt);
     link.send(msg);
     if (msg.type === "joint_input") {
-      const moving = Object.entries(msg.rates).map(([j, r]) => `${j} ${r > 0 ? "+" : ""}${r.toFixed(2)}`);
-      $("readout").textContent = `desktop control · ${mode().name}\n${moving.join("\n") || "nothing pressed (holding)"}`;
+      const moving = Object.entries(msg.rates).map(([j, r]) => `${jointLabel(j)} ${r > 0 ? "+" : ""}${r.toFixed(2)}`);
+      $("readout").textContent = `Desktop control, ${mode().name}\n${moving.join("\n") || "Nothing pressed (holding)"}`;
     }
   }
 

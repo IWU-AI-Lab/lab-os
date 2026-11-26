@@ -22,10 +22,9 @@ import { getLink } from "../link.js";
 import { getArmFeed } from "./arm-feed.js";
 import { jointFlags } from "./joint-flags.js";
 import { KINDS, kindOf, pageKind } from "./kinds.js";
-import { color } from "/web/theme.js";
+import { jointLabel } from "/web/words.js";
 
 const $ = (id) => document.getElementById(id);
-const FROZEN_TINT = color("colors.frozen");
 
 // Pages include <section id="arm-panel" class="panel arm3d" data-role="monitor|input"></section>;
 // the markup lives here only. data-role picks which shared connection to listen on.
@@ -35,7 +34,7 @@ $("arm-panel").innerHTML = `
     <select id="arm-model" aria-label="3D model"></select>
   </div>
   <div class="arm3d-body">
-    <div id="arm-view"></div>
+    <div id="arm-view"><span id="arm-held" class="arm-held" hidden title="Held still for safety. It moves again when an input takes it."><svg class="ico"><use href="/web/design/icons.svg#i-pause"/></svg>Held still</span></div>
     <div class="arm-readout" aria-label="Joints"><div id="arm-joints" class="arm-joints"></div><div id="arm-cams" class="arm-cams" hidden></div></div>
   </div>
   <p id="arm-source" class="hint">Connecting…</p>
@@ -84,8 +83,8 @@ async function useModel(arm, choice) {
 
 function sourceText({ feed: { lastCommand, frozen } }) {
   return lastCommand
-    ? `Showing driver command #${lastCommand.seq} → ${lastCommand.device} (speed ${Math.round(lastCommand.speed_scale * 100)}%)${frozen ? " · FROZEN (stop sent)" : ""}`
-    : `No commands yet: showing the driver's reported joints${frozen ? " · FROZEN" : ""}`;
+    ? `Showing driver command #${lastCommand.seq} → ${lastCommand.device} (speed ${Math.round(lastCommand.speed_scale * 100)}%)${frozen ? ", held still (stop sent)" : ""}`
+    : `No commands yet: showing the driver's reported joints${frozen ? ", held still" : ""}`;
 }
 
 /** One arm's model and readout rows (HTML). */
@@ -93,7 +92,7 @@ function renderArm(arm) {
   const { feed, model, shown } = arm;
   const { joints, lastCommand, frozen } = feed;
   if (!model) return "";
-  model.setTint(frozen ? FROZEN_TINT : null);
+  model.setHeld(frozen);
   const { unknown, outOfRange } = model.setJoints(joints);
   // Clamping is judged from the driver state reported with the same command (never a later one).
   const after = lastCommand?.driver_joints || {};
@@ -112,7 +111,7 @@ function renderArm(arm) {
   return [...shown].map(([name, { cmd, flags }]) => {
     const value = cmd == null ? "—" : `${cmd >= 0 ? "+" : ""}${cmd.toFixed(1)}°`;
     const note = flags.join("; ");
-    return `<div class="jrow${note ? " flag" : ""}"><span class="jn">${esc(name)}</span><span class="jv">${value}</span>` +
+    return `<div class="jrow${note ? " flag" : ""}"><span class="jn" title="${esc(name)}">${esc(jointLabel(name))}</span><span class="jv">${value}</span>` +
       `<span class="jf" title="${esc(note)}">${esc(note)}</span></div>`;
   }).join("");
 }
@@ -130,6 +129,7 @@ function render() {
   const leftRows = two ? renderArm(left) : "";
   const head = (word, arm) => `<div class="jhead">${word} <small>${esc(arm.feed.status?.arm?.name || "")}</small></div>`;
   $("arm-joints").innerHTML = two ? head("Right arm", right) + rows + head("Left arm", left) + leftRows : rows;
+  $("arm-held").hidden = !arms.some((a) => a.model && a.feed.frozen);
   view.requestRender();
 }
 

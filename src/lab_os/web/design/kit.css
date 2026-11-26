@@ -8,7 +8,7 @@
   color-scheme: dark;
   --bg: #05080b; --surface: #0b161c; --line: #1f3d48; --text: #d4eef5; --text-dim: #6d8c96;
   --primary: #29d4ff; --hot: #eafcff; --accent: #ff9a2e; --danger: #ff2436; --offline: #56636a;
-  --ok: #3ee07f; --frozen: #7a1d00;
+  --ok: #3ee07f; --frozen: #7a1d00; --frozen-text: #b8604a;
   --c: var(--primary);
   --f-title: "Orbitron", system-ui, sans-serif;
   --f-ui: "Chakra Petch", system-ui, sans-serif;
@@ -19,7 +19,9 @@
   --arrive: cubic-bezier(0.16, 1, 0.3, 1);
   --cut: 0.7rem;
 }
-html { font-size: clamp(12px, min(1.05vw, 1.9vh), 22px); }
+/* the text follows the smaller screen side, up to 40 px on a 4K screen (quick job 153: 22 px before,
+   so the pages looked tiny on the 4K and the 32") */
+html { font-size: clamp(12px, min(1.05vw, 1.9vh), 40px); }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
@@ -46,6 +48,9 @@ body.embedded .bar .title { display: none; }  /* the hub shows the title */
 .bar .place { font: 700 0.8rem/1 var(--f-title); letter-spacing: 0.16em; color: var(--text-dim); text-transform: uppercase; }
 body.embedded .bar .place, body.embedded .bar .clock { display: none; }
 .bar .grow { flex: 1; }
+/* ← Hub: on a page opened by itself, the way back to the hub (kit.js adds it; hidden in a hub module) */
+.bar .to-hub { flex: none; }
+body.embedded .bar .to-hub { display: none; }
 .clock { font: 1rem/1 var(--f-digits); color: var(--c); }
 
 /* status chips: a dot and a word; .pill is what the teleop scripts set (on | off | warn) */
@@ -60,6 +65,11 @@ body.embedded .bar .place, body.embedded .bar .clock { display: none; }
 .pill.bad { color: var(--danger); }
 .pill.bad::before { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
 .pill.off { color: var(--text-dim); }
+/* held still (the safety system working, not a fault): muted rust, the pause mark, no glow
+   (docs/design/DESIGN.md → "Held"); the reason is in the tooltip */
+.pill.held { color: var(--frozen-text); }
+.pill.held::before { width: 0.5rem; height: 0.6rem; border-radius: 0; background: none; box-shadow: none;
+  border-left: 0.17rem solid var(--frozen-text); border-right: 0.17rem solid var(--frozen-text); }
 
 /* cards: a thin line with cut corners around a see-through fill */
 .card { --cut: 0.7rem; padding: 1px; min-width: 0; min-height: 0; background: color-mix(in srgb, var(--c) 32%, transparent);
@@ -111,15 +121,33 @@ td, th { padding: 0.3rem 0.5rem 0.3rem 0; text-align: left; vertical-align: top;
 #fs-ask { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); cursor: pointer;
   font: 600 1.4rem/1.3 var(--f-ui); letter-spacing: 0.08em; color: var(--hot); text-align: center; }
 #fs-ask small { display: block; margin-top: 0.6rem; font: var(--w-lines) 0.9rem/1.4 var(--f-lines); color: var(--text-dim); letter-spacing: 0; }
-/* small screens (a phone, the Pi's touchscreen; quick job 96): every control big enough for a finger,
+/* small screens (a phone, the Pi's touchscreen; quick job 96): every control big enough for a finger (44 px),
    and less frame around the page. Large screens keep the sizes above. */
 @media (max-width: 1100px), (max-height: 640px) {
-  .btn, .btn.small { min-height: max(2.8rem, 40px); }
-  .btn.small { min-height: 40px; }
-  input[type="range"] { min-height: 36px; }
-  select, input[type="number"], input[type="text"] { min-height: 40px; }
-  input[type="checkbox"] { width: 22px; height: 22px; }
+  .btn, .btn.small { min-height: max(2.8rem, 44px); }
+  .btn.small { min-height: 44px; }
+  .stop { min-height: 48px; }
+  input[type="range"] { min-height: 44px; }
+  select, input[type="number"], input[type="text"] { min-height: 44px; }
+  input[type="checkbox"] { width: 24px; height: 24px; }
   body:not(.embedded) .page { padding: 1.2rem 1.2rem 1.4rem; }
   body.embedded .page { padding: 0.6rem 0.4rem 0.8rem; }
 }
+/* touch screens (quick job 153): every control has a 44 px touch area. A small mark keeps its look
+   and gets the bigger area around it. */
+@media (pointer: coarse) {  /* !important: a page's own smaller size for an icon button must not win */
+  button, .btn, .btn.small, select, summary, input[type="number"], input[type="text"], input[type="search"],
+  input[type="password"], [role="button"], [role="switch"], [role="tab"] { min-height: 44px !important; }
+  button, .btn, [role="button"], [role="switch"], [role="tab"] { min-width: 44px !important; }
+  input[type="range"] { min-height: 44px !important; }
+  input[type="checkbox"]:not(.switch), input[type="radio"] { width: 24px; height: 24px; margin: 10px; }
+  .stop { min-height: 48px !important; }
+}
+/* the device's look (⚙ → Level of Detail; kit.js sets the class on <html>). minimal: flat, no glow,
+   no motion (docs/design/DESIGN.md → "Quality"). reduced: no blur. */
+.q-minimal *, .q-minimal *::before, .q-minimal *::after { transition: none !important; animation: none !important; text-shadow: none !important; }
+.q-minimal .pill::before { box-shadow: none !important; }
+.q-minimal .stop { box-shadow: inset 0 0 0 1px var(--danger); }
+.q-minimal .glow, .q-minimal .ico { filter: none !important; }
+.q-minimal *, .q-reduced * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

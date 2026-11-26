@@ -13,7 +13,9 @@
 //     distance. The brain detects (lab_os/object_labels.py) and sends the boxes; `/web/object-labels.js` draws.
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, icon, rgba, spaced } from "./draw.js";
-import { drawLabels, frontIndex } from "/web/object-labels.js";
+import { drawLabels, frontIndex, seeThrough } from "/web/object-labels.js";
+import { theme } from "/web/theme.js";
+const LABELS = theme.labels || {}; // config/theme.yaml → labels
 
 const PX = 900;
 const DEAD = 0.15; // stick dead zone
@@ -287,7 +289,7 @@ export class RaspbotModule {
         g.drawImage(this.img, 0, 0, w, h);
         if (this.labels.on && performance.now() - this.labels.t < LABELS_OLD_MS) {
           const found = this.labels.found, s = this.status;
-          drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: rgba(C.bg, 0.85), font: FONT.ui });
+          drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: seeThrough(LABELS.background || C.bg, LABELS.background_opacity ?? 0.85), border: seeThrough(LABELS.border || "#ffffff", LABELS.border_opacity ?? 0.45), font: FONT.ui });
         }
         this.video.tex.needsUpdate = true; this.video.key = null; return;
       } catch { /* not decoded yet */ }

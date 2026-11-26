@@ -74,7 +74,12 @@ class VoiceSetup:
 
 
 class NoVoice(LookupError):
-    """No usable voice setup. The message is a full sentence for the screen."""
+    """No usable voice setup. The message is a short sentence for the screen (and for visitors);
+    `detail` names the keys and the file (quick job 153, as models.NoSetup)."""
+
+    def __init__(self, message: str, detail: str = ""):
+        super().__init__(message)
+        self.detail = detail or message
 
 
 def load_voices(path: Path | None = None) -> dict[str, VoiceSetup]:
@@ -126,4 +131,9 @@ def pick_voice(name: str, voices: dict[str, VoiceSetup] | None = None) -> VoiceS
         tried.append(setup)
         current = setup.fallback
     keys = " or ".join(t.key_env for t in tried if t.key_env)
-    raise NoVoice(f"Voice isn't set up here yet: add {keys} to {config.env_file()}, then restart.")
+    env = config.env_file()
+    short = env.name if config.is_default() else f"{env.parent.name}/{env.name}"
+    raise NoVoice(
+        f"Add a voice key to {short}, then restart.",
+        f"Voice isn't set up here yet: add {keys} to {env}, then restart.",
+    )

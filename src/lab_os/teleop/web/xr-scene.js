@@ -17,8 +17,7 @@ import { offMessage } from "/web/off.js";
 
 const TABLE_TOP = 0.75;
 const ARM_BASE = new THREE.Vector3(0, TABLE_TOP, -0.45);
-// Arm/marker colors from config/theme.yaml. (The VR room below is not themed yet: design phase.)
-const FROZEN_TINT = color("colors.frozen");
+// Arm/marker and VR room colors from config/theme.yaml (arm3d, vr_room).
 const CLUTCH_COLOR = color("colors.ok");
 const IDLE_COLOR = color("arm3d.idle_marker");
 
@@ -36,8 +35,8 @@ export class XRScene {
     this.scene = new THREE.Scene();
     this.root = new THREE.Group(); // shifted down if the headset has no floor-level space
     this.scene.add(this.root);
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x666660, 2.0));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    this.scene.add(new THREE.HemisphereLight(color("arm3d.light_sky"), color("vr_room.light_ground"), 2.0));
+    const sun = new THREE.DirectionalLight(color("arm3d.sun"), 1.4);
     sun.position.set(0.5, 2.5, 1.0);
     this.scene.add(sun);
 
@@ -129,7 +128,7 @@ export class XRScene {
     if (f.modelKind && f.modelKind !== this.leftKind) this._loadLeft(f.modelKind);
     if (this.armLeft) {
       this.armLeft.setJoints(f.joints);
-      this.armLeft.setTint(f.frozen ? FROZEN_TINT : null);
+      this.armLeft.setHeld(f.frozen); // held still: a rust ring at the base, the body stays steel
     }
   }
 
@@ -138,7 +137,7 @@ export class XRScene {
     if (f.modelKind && f.modelKind !== this.armKind) this._loadArm(f.modelKind);
     if (this.arm) {
       this.arm.setJoints(f.joints);
-      this.arm.setTint(f.frozen ? FROZEN_TINT : null);
+      this.arm.setHeld(f.frozen);
     }
     this.panel.update(f);
   }
@@ -220,16 +219,16 @@ export class XRScene {
 
   // ---- building blocks -------------------------------------------------------------------
   _addRoom() {
-    this.scene.background = new THREE.Color(0x17191c);
-    this.scene.fog = new THREE.Fog(0x17191c, 3, 14); // hides the floor edge
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 64), new THREE.MeshStandardMaterial({ color: 0x24272b, roughness: 1 }));
+    this.scene.background = new THREE.Color(color("vr_room.background"));
+    this.scene.fog = new THREE.Fog(color("vr_room.background"), 3, 14); // hides the floor edge
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(40, 64), new THREE.MeshStandardMaterial({ color: color("vr_room.floor"), roughness: 1 }));
     floor.rotation.x = -Math.PI / 2;
     this.root.add(floor);
-    const grid = new THREE.GridHelper(8, 32, 0x4a4f57, 0x33373d);
+    const grid = new THREE.GridHelper(8, 32, color("vr_room.grid_center"), color("vr_room.grid"));
     grid.position.y = 0.001;
     this.root.add(grid);
     // table: top + four legs
-    const wood = new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 0.8 });
+    const wood = new THREE.MeshStandardMaterial({ color: color("vr_room.table"), roughness: 0.8 });
     const top = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.55), wood);
     top.position.set(ARM_BASE.x, TABLE_TOP - 0.015, ARM_BASE.z - 0.05);
     this.root.add(top);
@@ -264,7 +263,7 @@ export class XRScene {
       // a faint footprint, so the floating ghost arm reads as "standing" somewhere
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(0.06, 0.07, 48),
-        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ color: color("vr_room.marker"), transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
       );
       ring.rotation.x = -Math.PI / 2;
       this.armHolder.add(ring);

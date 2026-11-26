@@ -22,6 +22,7 @@ import { loadArmModel } from "/static/arm/arm-model.js";
 import { KINDS } from "/static/arm/kinds.js";
 import { getLink } from "/static/link.js";
 import { deviceName } from "/web/device.js";
+import { jointLabel } from "/web/words.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
 import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
@@ -263,14 +264,14 @@ export class ArmHologram {
     this.stop.paint();
     // the state under the arm: who has control (each arm's own state is under that arm with two)
     const s = this.units[0].feed.status;
-    const who = { free: "free", ai: "the AI tools" }[s?.control] || (s ? "an input page" : "");
+    const who = { free: "Free", ai: "The AI tools" }[s?.control] || (s ? "An input page" : "");
     const none = this.kind && !s && this.units[0].feed.heard; // no arm of this kind
     const line = none ? `No ${KINDS[this.kind].robot} is connected to the brain`
-      : two ? (s ? `control: ${who}` : "connecting to the brain") : `${s?.arm?.name || "arm"} · ${armWord(s)}${who ? ` · control: ${who}` : ""}`;
+      : two ? (s ? `Control: ${who}` : "Connecting to the brain") : `${s?.arm?.name || "Arm"}: ${armWord(s)}${who ? `   Control: ${who}` : ""}`;
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
-      g.fillStyle = !two && s?.frozen ? C.accent : C.dim;
-      g.fillText(line.replace(/ · /g, "   "), w / 2, h / 2);
+      g.fillStyle = !two && s?.frozen ? C.frozenText : C.dim;
+      g.fillText(line, w / 2, h / 2);
     }, line);
     if (this.log) this._paintLog();
   }
@@ -303,9 +304,9 @@ export class ArmHologram {
 }
 
 
-/** "holding", "following", "frozen", ... for an arm's status (null: not connected yet). */
+/** "Holding", "Following", "Held still", ... for an arm's status (null: not connected yet). */
 function armWord(s) {
-  return !s ? "connecting to the brain" : s.arm?.connected === false ? "disconnected" : s.frozen ? (s.needs_release ? "frozen: release grip" : "frozen") : s.clutch ? "following" : "holding";
+  return !s ? "Connecting to the brain" : s.arm?.connected === false ? "Disconnected" : s.frozen ? "Held still" : s.clutch ? "Following" : "Holding";
 }
 
 /** One arm as a hologram: the line-drawn model turning slowly on its floor grid, a callout per joint
@@ -369,6 +370,7 @@ class HoloArm {
     if (s?.arm?.model && s.arm.model !== this.kind) this.load(); // the left arm came, or another arm
     if (this.arm && s?.joints) this.arm.setJoints(s.joints);
     if (this.arm) this.arm.setTint(null);
+    if (this.arm) this.arm.setHeld(!!s?.frozen); // held still: a rust ring at the base (quick job 153)
     this.turn.rotation.y += dt * 0.12;
     this.grid.userData.step(now);
     // the callouts: from the joint, out to a side (two arms: the outer side, so they never meet)
@@ -392,14 +394,14 @@ class HoloArm {
         g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.42}px ${FONT.lines}`; g.fillStyle = C.text;
         g.textAlign = side < 0 ? "right" : "left";
         const x = side < 0 ? w - 4 : 4;
-        g.fillText(c.name, x + (side < 0 ? -h * 2.3 : h * 2.3), h / 2);
+        g.fillText(jointLabel(c.name), x + (side < 0 ? -h * 2.3 : h * 2.3), h / 2);
         g.font = `${h * 0.48}px ${FONT.digits}`; g.fillStyle = out ? C.accent : C.primary;
         // numbers never shift: a sign slot and fixed digit places ("!" is DSEG7's digit-wide blank)
         g.fillText(v == null ? "--" : `${v >= 0 ? "!" : "-"}${Math.abs(v).toFixed(1).padStart(5, "!")}`, x, h / 2);
       }, `${v?.toFixed(1)}|${out}|${side}`);
       c.label.opacity = k;
     });
-    // two arms: "RIGHT ARM so101-white · holding" under each arm, in the same style for both
+    // two arms: "RIGHT ARM so101-white   Holding" under each arm, in the same style for both
     this.name.mesh.visible = two;
     if (!two) return;
     const word = armWord(s), title = `${this.side === "left" ? "LEFT" : "RIGHT"} ARM`, name = s?.arm?.name || "";
@@ -412,7 +414,7 @@ class HoloArm {
       const x0 = (w - aw - bw) / 2;
       g.textAlign = "left";
       g.font = `600 ${h * 0.36}px ${FONT.ui}`; spaced(g, 0.18); g.fillStyle = C.primary; g.fillText(a, x0, h / 2);
-      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.accent : C.dim; g.fillText(b, x0 + aw, h / 2);
+      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.frozenText : C.dim; g.fillText(b, x0 + aw, h / 2);
     }, `${name}|${word}`);
   }
 }

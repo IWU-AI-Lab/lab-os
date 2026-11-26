@@ -18,6 +18,7 @@ colors:
   offline: "#56636a"     # gray: offline, disabled, not connected. Dim, never glows, never red. Used by: the designed hub, the headset's teleop status panel
   ok: "#3ee07f"          # "following" / clutch engaged. Used by: right controller marker, clutch line, the headset's teleop status panel
   frozen: "#7a1d00"      # muted rust: arm held still (dead-man stop). Calm, not an alert. Used by: 3D views, the headset's teleop status panel
+  frozen_text: "#b8604a" # held still as words and marks on the dark background (the pill's pause mark, the 3D arm's ring). Used by: the designed hub, the module pages, the 3D views
 
 font:                    # one font per role; every font in `bundled` ships with the code, so swap freely
   bundled: [Orbitron, Oxanium, Chakra Petch, Rajdhani, Inter, JetBrains Mono, DSEG7, DSEG14, Doto, Share Tech Mono]
@@ -132,6 +133,9 @@ arm3d:                   # the 3D arm (desktop panel + headset), on a dark backg
   stick: "#4f7380"       # stick-figure links, base disc
   grid: "#1f3d48"        # floor grid (desktop view)
   grid_center: "#2f6070" # floor grid center lines
+  light_sky: "#ffffff"   # the light from above (the desktop 3D views: arm, Raspbot)
+  light_ground: "#8a8a84" # the light from below
+  sun: "#ffffff"         # the one direct light
   idle_marker: "#6d8c96" # controller marker when not clutched
   xarm:                  # xArm 1S model parts
     metal: "#9aa8b0"
@@ -139,6 +143,21 @@ arm3d:                   # the 3D arm (desktop panel + headset), on a dark backg
     plate: "#24323a"
     cup: "#7d8b92"
     board: "#1f5a35"
+
+vr_room:                 # the room around the arm in VR Teleop (teleop/web/xr-scene.js; quick job 153)
+  background: "#17191c"  # the sky and the fog
+  floor: "#24272b"
+  grid: "#33373d"
+  grid_center: "#4a4f57"
+  table: "#8a7458"       # the wood table under the arm
+  light_ground: "#666660"
+  marker: "#ffffff"      # the faint footprint under the ghost arm (AR)
+
+labels:                  # the object labels on a camera picture (/web/object-labels.js)
+  background: "#05080b"  # behind the words, drawn see-through (background_opacity)
+  background_opacity: 0.85
+  border: "#ffffff"      # the outline of the object in front, see-through (border_opacity)
+  border_opacity: 0.45
 
 raspbot3d:
   body: "#343c42"        # chassis and camera mount

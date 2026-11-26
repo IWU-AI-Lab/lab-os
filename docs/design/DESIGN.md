@@ -29,7 +29,7 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 | Level | Looks like | Examples |
 |---|---|---|
 | Normal | cyan, glowing | running, connected, idle |
-| Held | muted rust, pause icon, no glow, no pulse: calm | arm frozen because the clutch is released (the safety system working, not a problem) |
+| Held | muted rust, pause icon, no glow, no pulse: calm. The words say "Held still"; what to do is in the tooltip. A 3D arm keeps its steel and gets a rust ring at its base (quick job 153: a rust tint made it pink) | arm frozen because the clutch is released (the safety system working, not a problem) |
 | Offline | gray, dim, **no glow** | AI offline (no internet), robot not plugged in |
 | Warning | amber warning triangle, slow pulse | busy, waiting for the clutch, battery low |
 | Critical | red warning triangle, harsh: fast pulse (1.5 per second), a short shake when it starts, a red glow around the screen edge, an urgent sound | error, emergency stop, lost connection while moving |
@@ -126,6 +126,9 @@ Also bundled: Oxanium, Rajdhani, DSEG14, Doto (dot matrix), Share Tech Mono.
 - **Numbers never shift:** every value has a sign slot and a fixed number of digit places (blank places use a digit-wide blank), so `-87.0` and ` 23.5` line up.
 - **Clock:** 24-hour or 12-hour with AM/PM (`clock` in the theme); AM/PM is set small in the interface font.
 - Labels are small CAPS in `text_dim`; content is normal case in `text`.
+- **Capital letters** (quick job 53, 2026-11-26): a sentence and a status word start with a capital letter ("Connected", "Held still", "Not safe"), on every page. Names of commands, files, poses and settings stay as they are (`lab-os`, `so101-white`, `home`). `tests/test_content_case.py` checks the words in the pages and the words the scripts show.
+- **One name for one thing** (quick job 153): a page's title is its name in All Pages (`PAGES` in `hub/server.py`), on every page, tile and button. A device shows its name as stored, or its display name; never a name made from it ("Rv Laptop"). A device with no name is an "Unnamed screen"; its address is only in its own card.
+- **Joint names** show as words ("Shoulder Pan", from `/web/words.js`); the code name (`shoulder_pan`) is in the tooltip.
 
 ## Motion: cinematic
 Things **never just pop in**. Lines trace, rings sweep open, panels unfold from their corner, text types out with a block cursor. **Arrivals start fast and settle slowly**; exits are quick. **One after another**, spreading **outward from the center**. A button reacts in about 0.1 s, a panel opens in about 0.6 s, big startup moments last 1–1.5 s.
@@ -176,7 +179,7 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 ## Screens and places
 **Everything scales with the screen,** the core included: sizes are set relative to the screen (the smaller of width and height decides), so the core keeps its share instead of shrinking first. **Portrait screens get their own layout:** the core on top with the ask line under it, the buttons in a row under that, the fact panels in two columns below (one column on a phone narrower than 560 px), and the page scrolls if it has to. On a phone the latest answer lies on a fill, because it can cover the buttons for a moment.
 
-**Small screens** (a phone, the Pi's touchscreen; 1100 px wide or less, or 640 px high or less; quick job 96, 2026-11-23): every control is at least about 40 px, big enough for a finger. A small mark (the open mark ⤢) keeps its look and gets a bigger area for the tap. An open page has a thin frame, and the docked core is small in the corner with its own room, so it covers nothing. On a phone, "Open on…" shows only its icon. A small screen on its side (800 × 480) gets less frame and air and a smaller core, so the fact panels keep room for their words. Large screens keep their layout.
+**Small screens** (a phone, the Pi's touchscreen; 1100 px wide or less, or 640 px high or less; quick job 96, 2026-11-23): every control is at least 44 px, big enough for a finger. **Touch screens** of any size (the Newline too) give every control a 44 px touch area, and keep their layout (quick job 153). A small mark (the open mark ⤢) keeps its look and gets a bigger area for the tap. An open page has a thin frame, and the docked core is small in the corner with its own room, so it covers nothing. On a phone, "Open on…" shows only its icon. A small screen on its side (800 × 480) gets less frame and air and a smaller core, so the fact panels keep room for their words. Large screens keep their layout.
 
 - **32" lab monitor (main):** seen from 1–3 m, often by visitors standing. Big text, strong contrast, the assistant readable from across the room. Left on, waiting at the ignition screen.
 - **Quest headset:** panels float at arm's length; bigger text; no large bright areas. HUD arcs can wrap around tracked hands and the arm, FRIDAY-style; the network can become a 3D cloud; the hyperspace jump fits here.
@@ -197,7 +200,7 @@ Generated in the browser for now (WebAudio). Soft, airy, synthetic; mid-pitch so
 - **Animate with one curve per effect.** Speed, brightness, shake and sound follow the same curve, so the motion reads as one intention.
 
 ## Don't
-- **Generic "AI-made" interface habits:** labels that say nothing, section eyebrows, dots `•` used as separators.
+- **Generic "AI-made" interface habits:** labels that say nothing, section eyebrows, dots (`•`, `·`) used as separators: use a comma or two lines.
 - Rounded "app" cards, drop shadows, rainbow gradients, blue fog over everything.
 - Glow on everything, or everything moving at once.
 - Fake checks or fake numbers that look real.
@@ -227,4 +230,4 @@ For the designed hub (`/design`, built since 2026-11-10) and every new page (no 
 - **Read every number from the theme** (`/theme.json`), not from constants in the page. The concept hard-codes them; where a token exists, the token wins.
 - **Real facts only:** the checks, the greeting's news line, the panels and the device statuses all read real state. Where something isn't real yet, leave it out instead of faking it.
 - **Changing the design:** update this page, the theme and the concept together (a design session), so the three never disagree.
-- **Where it's built (2026-11-10):** `src/lab_os/hub/web/design.html`, served at `/` (since quick job 131, 2026-11-25; `/design` goes there, and the plain hub is in `docs/archive/plain-hub-2026-11-25/`). It's the concept file reworked in place: the controls and made-up data removed, the brain's endpoints in their place, fonts from `src/lab_os/web/vendor/fonts/`. A change to the design goes into the concept first (the reference), then into `design.html`. The module pages (teleop, monitor, AI Control, settings) share a small kit in the same style, `src/lab_os/web/design/` (`kit.css`: cut-corner cards, chips, buttons, STOP; `kit.js`: the theme's colors and fonts, inside-the-hub vs on its own screen; `icons.svg`).
+- **Where it's built (2026-11-10):** `src/lab_os/hub/web/design.html`, served at `/` (since quick job 131, 2026-11-25; `/design` goes there, and the plain hub is in `docs/archive/plain-hub-2026-11-25/`). It's the concept file reworked in place: the controls and made-up data removed, the brain's endpoints in their place, fonts from `src/lab_os/web/vendor/fonts/`. A change to the design goes into the concept first (the reference), then into `design.html`. The module pages (teleop, monitor, AI Control, settings) share a small kit in the same style, `src/lab_os/web/design/` (`kit.css`: cut-corner cards, chips, buttons, STOP; `kit.js`: the theme's colors and fonts, inside-the-hub vs on its own screen, the device's look as a `q-…` class on the page (minimal: no glow, no motion), and ← Hub at the left of the bar on a page opened by itself; `icons.svg`). The text of a page grows with the smaller side of the screen, up to 40 px on a 4K screen. Colours live in `config/theme.yaml`, also the 3D views' lights, the VR room and the object labels; a page writes no colour of its own.

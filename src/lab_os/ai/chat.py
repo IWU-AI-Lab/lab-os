@@ -320,12 +320,13 @@ class Conversation:
             log.info("chat: think_hard by %s/%s = $%.5f", strong.name, strong.model, cost)
         return f"The stronger model's answer: {text.strip()}\nSay it in your own words, briefly."
 
-    def paused(self) -> str | None:
-        """Why the chat can't answer right now (a full sentence), or None."""
+    def paused(self, detail: bool = False) -> str | None:
+        """Why the chat can't answer right now (a short sentence; `detail`: with the key names and
+        the file), or None."""
         try:
             self.setup()
         except NoSetup as e:
-            return str(e)
+            return e.detail if detail else str(e)
         if self.spend.over_budget():
             budget = self.spend.budget_usd
             return (
@@ -343,6 +344,7 @@ class Conversation:
         return setup | {
             "connected": self.connected,
             "paused": self.paused(),
+            "paused_detail": self.paused(detail=True),  # the keys and the file: for the tooltip
             "problem": self.problem,
             "busy": self.busy,
         }
@@ -492,7 +494,7 @@ class Conversation:
             return
         why = self.paused()
         if why:
-            yield {"type": "error", "message": why}
+            yield {"type": "error", "message": why, "detail": self.paused(detail=True)}
             return
         setup = self.setup()
         self.busy = True

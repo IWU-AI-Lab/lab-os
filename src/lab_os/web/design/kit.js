@@ -5,11 +5,16 @@
 //     Window (so that several pages fit on one monitor), kept for each page in this browser. A page
 //     sent to another screen from the hub (`?screen=…`) goes full screen by itself unless Window was
 //     chosen: on the brain's computer the brain does it, elsewhere it asks for one press (quick job 74).
-//     Where full screen isn't possible, the button says why (/web/fullscreen.js).
+//     Where full screen isn't possible, the button says why (/web/fullscreen.js);
+//   - on its own screen: ← Hub at the left of the bar, the way back to the hub (quick job 153);
+//   - the device's look (⚙ → Level of Detail) as a class on <html>: q-maximal | q-full | q-reduced |
+//     q-minimal. kit.css drops glow and motion in minimal (quick job 153: before, a page read only this
+//     browser's storage, so it showed the theme's default).
 //   <script type="module" src="/web/design/kit.js"></script>
 import { brainWindow, fullscreenButton, goFullscreen, isFull } from "/web/fullscreen.js";
 import { theme } from "/web/theme.js";
 import "/web/no-menu.js";
+import { deviceName, prefs } from "/web/device.js";
 
 const root = document.documentElement.style;
 const colors = theme.colors || {};
@@ -17,7 +22,7 @@ const font = theme.font || {};
 const VARS = {
   bg: colors.background, surface: colors.surface, line: colors.line, text: colors.text, "text-dim": colors.text_dim,
   primary: colors.primary, hot: colors.hot, accent: colors.accent, danger: colors.danger, offline: colors.offline,
-  ok: colors.ok, frozen: colors.frozen,
+  ok: colors.ok, frozen: colors.frozen, "frozen-text": colors.frozen_text,
   "f-title": font.display, "f-ui": font.family, "f-lines": font.lines, "w-lines": font.lines_weight,
   "f-digits": font.digits, "f-mono": font.mono, arrive: theme.motion?.arrive,
 };
@@ -26,6 +31,43 @@ for (const [k, v] of Object.entries(VARS)) if (v != null && v !== "") root.setPr
 export const embedded = window.self !== window.top;
 document.body.classList.toggle("embedded", embedded);
 
+// the device's look: the hub around this page, else ?quality=, else this device's own (from the brain),
+// else the computer's reduced motion, else the theme's default
+const LOOKS = ["maximal", "full", "reduced", "minimal"];
+function setLook(q) {
+  if (!LOOKS.includes(q)) return;
+  const c = document.documentElement.classList;
+  for (const l of LOOKS) c.toggle(`q-${l}`, l === q);
+}
+function hubLook() {
+  try {
+    const q = [...window.parent.document.body.classList].find((c) => /^q-(maximal|full|reduced|minimal)$/.test(c));
+    return q ? q.slice(2) : "";
+  } catch { return ""; } // another origin above
+}
+const fallbackLook = () => new URLSearchParams(location.search).get("quality") || prefs().quality
+  || (matchMedia("(prefers-reduced-motion: reduce)").matches ? "minimal" : theme.quality?.default || "full");
+setLook((embedded && hubLook()) || fallbackLook());
+if (embedded && hubLook()) {
+  // the hub's look changes while this page is open (⚙ → Level of Detail): follow it
+  new MutationObserver(() => setLook(hubLook())).observe(window.parent.document.body, { attributes: true, attributeFilter: ["class"] });
+} else if (!new URLSearchParams(location.search).has("quality") && deviceName()) {
+  fetch(`/api/hub-devices/${encodeURIComponent(deviceName())}/settings`, { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((r) => r?.settings?.quality && setLook(r.settings.quality))
+    .catch(() => {});
+}
+
+// ← Hub: on a page opened by itself, the way back to the hub under this device's name (shown once
+// /api/hub answers: under lab-os-teleop alone there is no hub)
+const toHub = document.createElement("a");
+toHub.className = "btn small to-hub";
+toHub.hidden = true;
+toHub.href = deviceName() ? `/?device=${encodeURIComponent(deviceName())}` : "/";
+toHub.title = "Back to the hub";
+toHub.innerHTML = `<span aria-hidden="true">←</span>Hub`;
+if (!embedded) document.querySelector(".bar")?.prepend(toHub);
+
 // the bar: the place's name and the brain's clock (pages under lab-os-teleop have neither endpoint)
 const place = document.querySelector(".bar .place");
 const clock = document.querySelector(".bar .clock");
@@ -33,7 +75,11 @@ let offset = 0;
 if (!embedded) {
   fetch("/api/hub", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))
-    .then((h) => h?.title && place && (place.textContent = h.title))
+    .then((h) => {
+      if (!h) return;
+      toHub.hidden = false;
+      if (h.title && place) place.textContent = h.title;
+    })
     .catch(() => {});
   fetch("/api/status", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))

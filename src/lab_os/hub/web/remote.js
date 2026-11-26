@@ -20,8 +20,9 @@ function say(state, q, a) {
   if (q !== undefined) $("#q").textContent = q;
   if (a !== undefined) $("#a").textContent = a;
 }
-function showError(m) {
+function showError(m, detail = "") {
   $("#msg").textContent = m || "";
+  $("#msg").title = detail || ""; // the keys and the file of "Add an AI key…" (quick job 153)
 }
 const TOOL_WORDS = { show_on_screens: "showing it on a screen", set_up_room: "setting up the room" };
 
@@ -31,7 +32,7 @@ function onAnswer(ev) {
   else if (ev.type === "tool") say(TOOL_WORDS[ev.name] || "Looking it up");
   else if (ev.type === "text") $("#a").textContent += ev.text;
   else if (ev.type === "error") {
-    showError(ev.message);
+    showError(ev.message, ev.detail);
     say("");
   } else if (ev.type === "done") say("");
 }
@@ -118,7 +119,7 @@ function onVoiceEvent(ev) {
     S.watch?.cancel();
     S.watch = null;
     endTurn();
-    return showError(ev.message);
+    return showError(ev.message, ev.detail);
   }
   if (ev.type === "played" || ev.type === "stopped") endTurn();
 }
@@ -210,7 +211,7 @@ async function secureLinks() {
     link.textContent = url;
   } else {
     link.removeAttribute("href");
-    link.textContent = "the secure address (the brain has none now: start it with --host 0.0.0.0)";
+    link.textContent = "the secure address (the brain has none now: start it with --host 0.0.0.0)"; // in a sentence: "Open the secure address."
   }
 }
 poll();
