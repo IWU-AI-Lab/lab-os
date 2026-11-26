@@ -5,6 +5,10 @@ GET /monitor/raspbot         read-only view of the camera, model and status, wit
 WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.RaspbotDesk; status at 5 Hz
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
+Labels (quick job 128): a page sends {"type": "labels", "on": true}; the brain's detector
+(`lab_os.object_labels.LabelFeed`) then sends it {"type": "labels", "found": [...]} for each
+picture.
+
 The hub's VR Raspbot (quick job 107) uses the same socket: a stick drives ("drive" with "stick"),
 the head and the other stick turn the camera ("look"). Both pages use "picture" and "record" to
 save the camera's picture on this computer (`RaspbotCamera`, in recordings/raspbot/, not in git).
@@ -29,6 +33,7 @@ from aiohttp import WSMsgType, web
 
 from lab_os.activity import note
 from lab_os.config import recordings_dir
+from lab_os.object_labels import LabelFeed
 from lab_os.robots.raspbot import RaspbotDesk
 from lab_os.teleop.server import DRIVE_FROM, is_local
 
@@ -123,6 +128,11 @@ class RaspbotCamera:
         stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         return folder / f"{self.desk.bot.name}_{stamp}.{ext}"
 
+    async def stream(self) -> AsyncIterator[bytes]:
+        """The camera's JPEGs, as they come. LookupError when there is no camera picture."""
+        async for jpeg in self.frames(self._url()):
+            yield jpeg
+
     async def snapshot(self) -> bytes:
         """Read one JPEG from the same camera stream as the page."""
         url = self._url()
@@ -200,6 +210,7 @@ class RaspbotCamera:
 
 
 CAMERA = web.AppKey("raspbot_camera", RaspbotCamera)
+LABELS = web.AppKey("raspbot_labels", LabelFeed)
 
 
 async def raspbot_page(_request: web.Request) -> web.FileResponse:
@@ -216,7 +227,7 @@ def may_drive(request: web.Request) -> bool:
 
 
 async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
-    desk, cam = request.app[RASPBOT], request.app[CAMERA]
+    desk, cam, labels = request.app[RASPBOT], request.app[CAMERA], request.app[LABELS]
     ws = web.WebSocketResponse(heartbeat=5.0)
     await ws.prepare(request)
     monitor = request.query.get("role") == "monitor"
@@ -277,6 +288,8 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                     )
                     if why:
                         await ws.send_json({"type": "error", "message": why})
+                elif kind == "labels":  # a page that only watches may see them too
+                    await labels.want(ws, raw.get("on") is True, ws.send_json)
                 elif kind in ("picture", "record") and drives:  # a save never holds up a STOP
                     task = asyncio.create_task(reply_saved(kind, raw))
                     saves.add(task)
@@ -285,6 +298,7 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                 log.warning("raspbot page: ignored a bad message: %s", e)
     finally:
         status.cancel()
+        await labels.want(ws, False, ws.send_json)
         await desk.release(ws)  # the driver's page closed: the car stops
         with contextlib.suppress(LookupError):
             await cam.stop(ws)  # and its recording ends and is saved
@@ -339,6 +353,8 @@ async def _desk_tasks(app: web.Application):
         await desk.stop()
     with contextlib.suppress(Exception):
         await app[CAMERA].stop()
+    with contextlib.suppress(Exception):
+        await app[LABELS].stop()
     for t in tasks:
         t.cancel()
 
@@ -346,6 +362,7 @@ async def _desk_tasks(app: web.Application):
 def add_raspbot(app: web.Application, desk: RaspbotDesk) -> None:
     app[RASPBOT] = desk
     app[CAMERA] = RaspbotCamera(desk)
+    app[LABELS] = LabelFeed(app[CAMERA].stream)
     app.router.add_get("/raspbot", raspbot_page)
     app.router.add_get("/monitor/raspbot", monitor_page)
     app.router.add_get("/ws/raspbot", raspbot_ws)
