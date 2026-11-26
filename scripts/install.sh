@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
-# One-command setup for lab-os on a fresh Linux machine. No sudo, no conda.
-# --so101: also install LeRobot (+ PyTorch, ~5 GB) for the SO-101 arms.
+# Make a new Linux computer ready as the lab-os brain (quick job 150). No sudo, no conda.
+# It installs uv, makes the project's environment (.venv, with LeRobot for the SO-101 arms), then
+# runs `lab-os setup`: that checks every other part, installs what needs no sudo, and prints the
+# sudo commands to paste. Running it again is safe.
+# --no-so101: a computer that drives no SO-101 arm (no LeRobot and PyTorch, ~5 GB less).
+# (--so101 is the default now; the old option still works.)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+extra=(--extra so101)
+setup=()
+case "${1:-}" in
+  --no-so101) extra=(); setup=(--no-so101) ;;
+  --so101 | "") ;;
+  *) echo "Unknown option: $1 (use --no-so101 or nothing)"; exit 2 ;;
+esac
 
 if ! command -v uv >/dev/null; then
   echo "==> Installing uv (to ~/.local/bin)"
@@ -10,22 +22,8 @@ if ! command -v uv >/dev/null; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-echo "==> Creating the lab-os environment (.venv)"
-if [ "${1:-}" = "--so101" ]; then
-  uv sync --extra so101
-else
-  uv sync
-fi
+echo "==> Making the lab-os environment (.venv)"
+uv sync "${extra[@]}"
 
-if ! id -nG | grep -qw dialout; then
-  echo "!!  You're not in the 'dialout' group, so serial ports (arms) won't open."
-  echo "    Run: sudo usermod -aG dialout \"$USER\"   then log out and back in."
-fi
-
-[ -f .env ] || echo "==> Next: cp .env.example .env  and fill in real keys"
-
-echo "==> Serial devices (by-id):"
-ls -l /dev/serial/by-id/ 2>/dev/null || echo "    (none plugged in)"
-
-echo "==> Running checks"
-uv run pytest -q
+echo "==> Checking the other parts"
+uv run lab-os setup "${setup[@]}"

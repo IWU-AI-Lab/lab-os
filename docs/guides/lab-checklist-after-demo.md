@@ -233,6 +233,11 @@ There are no other people in the lab before the demo.
 Skipped on 2026-11-24. Open the hub on each computer first (`/?device=<its name>`).
 - **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
 
+## M7. After the demo: a second lab desktop as the brain (30 min)
+Quick job 150. Use a lab desktop that does not have lab-os.
+- **M.13** On that desktop, open a terminal. Type `git clone https://github.com/IWU-AI-Lab/lab-os.git && cd lab-os && ./scripts/install.sh`. Paste the commands that it prints at the end, and do its other steps. Then type `uv run lab-os setup`. → how many minutes did it take? Which lines said TO DO at the end? (none / the lines) Did a step surprise you? (no / yes: what)
+- **M.14** On that desktop, type `uv run lab-os serve --open desk`. → did the hub open? (yes / no) Did it show the SO-101 that you plugged in? (yes / no / no arm plugged in)
+
 ## M6. After the demo: the hub in Chrome on a laptop (10 min)
 Moved from the demo run on 2026-11-25 (the builder). Before the demo, use Firefox on the laptop.
 - **M.6** Quick job 130. On the builder's laptop, open Chrome. Type `http://192.168.8.130:8080/?device=laptop`. If Chrome shows "This site can't be reached", do the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". → which error code was under Chrome's message? (the code, or "none") Did the hub open? (yes / no: after which step)

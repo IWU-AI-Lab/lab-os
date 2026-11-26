@@ -690,7 +690,7 @@ gh api -X PUT repos/IWU-AI-Lab/lab-os/pulls/<n>/merge -f merge_method=merge
 
 ### 2026-10-29 — LeRobot is ~5 GB, and a plain `uv sync` uninstalls it
 **What:** `lerobot[feetech]` 0.6.1 pulls in 61 packages, mostly PyTorch 2.11 with CUDA 13: `.venv` went from 51 MB to 4.9 GB (NVIDIA libraries 2.7 GB, torch 1.1 GB, triton 0.6 GB; LeRobot itself 7 MB). Importing LeRobot's SO-101 classes takes ~3 s and loads torch. It's the optional extra `so101`, so CI and other machines skip it. But `uv sync` makes the environment match *exactly* what was asked, so a plain `uv sync` on the lab desktop **removes** LeRobot and torch again (`uv run` doesn't remove anything).
-**Fix:** on machines that drive an SO-101: `uv sync --extra so101` (or `./scripts/install.sh --so101`). Commands that need it say so: `uv run --extra so101 …`.
+**Fix:** on machines that drive an SO-101: `uv sync --extra so101` (or `./scripts/install.sh --so101`). Commands that need it say so: `uv run --extra so101 …`. (2026-11-26, quick job 150: `./scripts/install.sh` installs the extra by default; `--no-so101` leaves it out. `uv run` does not remove it: it only adds.)
 
 ### 2026-10-29 — The snap `uv` can't run inside Claude Code's shell
 **What:** `/snap/bin/uv` (first on PATH) fails in Claude's sandbox with "snap-confine is packaged without necessary permissions". `~/.local/bin/uv` (the installer's copy) works. Same family as the sudo gotcha below (the "no new privileges" flag).
