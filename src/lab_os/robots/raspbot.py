@@ -200,6 +200,7 @@ DIRECTIONS = {
     "back-right": (-1.0, 1.0, 0.0),
 }
 TURN = 0.6  # keep the existing slower turn speed
+STOPPED_WHEELS = (0.0, 0.0, 0.0, 0.0)
 
 
 def wheel_speeds(forward: float, sideways: float, turn: float) -> tuple[float, ...]:
@@ -241,6 +242,7 @@ class RaspbotDesk:
         self._last_input = 0.0
         self._blocked: set = set()  # pages that held a button at STOP: they must let go first
         self._look = (0.0, 0.0)
+        self._wheels = STOPPED_WHEELS
         self.stopped_by = ""  # the last STOP's page, for the status line
 
     def status(self, page=None) -> dict:
@@ -254,6 +256,11 @@ class RaspbotDesk:
             "control": control,
             "camera": bool(self.bot.camera_port),
             "speed": self.speed,
+            "pan_deg": round(self._look[0], 1),
+            "tilt_deg": round(self._look[1], 1),
+            "wheel_speeds": (
+                self._wheels if self.bot.connected and not self.bot.drive_stop else STOPPED_WHEELS
+            ),
             "distance_mm": (
                 self.bot.distance_mm
                 if self.bot.connected and not self.bot.obstacle_stop_mm
@@ -319,7 +326,8 @@ class RaspbotDesk:
             log.info("raspbot: control taken by %s", "an AI tool" if ai else "a page")
         self._last_input = time.monotonic()
         self.moving = direction
-        await self.bot.drive(tuple(wheel * speed for wheel in wheels), require_clear=ai)
+        self._wheels = tuple(wheel * speed for wheel in wheels)
+        await self.bot.drive(self._wheels, require_clear=ai)
         return ""
 
     async def look(self, page, pan: float, tilt: float, *, relative: bool = False) -> str:
@@ -335,6 +343,8 @@ class RaspbotDesk:
         if relative:
             pan += self._look[0]
             tilt += self._look[1]
+        else:
+            pan, tilt = (max(-LOOK_MAX, min(float(value), LOOK_MAX)) for value in (pan, tilt))
         limited = tuple(
             max(low, min(float(value), high))
             for value, (low, high) in zip((pan, tilt), self.bot.look_limits, strict=True)
@@ -342,11 +352,7 @@ class RaspbotDesk:
         if relative and limited == self._look:
             return ""
         self._look = limited
-        if relative:
-            await self.bot.look(*limited)
-        else:
-            # Keep the absolute commands that the VR page already sends.
-            await self.bot.look(*(max(-LOOK_MAX, min(float(v), LOOK_MAX)) for v in (pan, tilt)))
+        await self.bot.look(*limited)
         return ""
 
     def set_speed(self, speed: float) -> float:
@@ -374,6 +380,7 @@ class RaspbotDesk:
     async def _halt(self, always: bool = False) -> None:
         if self.moving or always:
             self.moving = ""
+            self._wheels = STOPPED_WHEELS
             await self.bot.stop()
 
     async def tick(self) -> None:

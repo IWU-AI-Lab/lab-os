@@ -61,6 +61,7 @@ async def test_the_car_stops_when_input_stops():
     desk._last_input -= desk.INPUT_TIMEOUT_S + 0.1
     await desk.tick()
     assert bot.last == ("stop",) and desk.moving == ""
+    assert desk.status()["wheel_speeds"] == (0, 0, 0, 0)
     assert await desk.press(page, "forward") == ""  # it kept control: a new press drives
 
 
@@ -182,15 +183,20 @@ async def test_the_page_drives_the_fake_raspbot(aiohttp_client):
     async with client.ws_connect("/ws/raspbot") as ws:
         status = await ws.receive_json()
         assert status["type"] == "raspbot_status" and status["may_drive"] and status["fake"]
+        assert status["pan_deg"] == status["tilt_deg"] == 0
+        assert status["wheel_speeds"] == [0, 0, 0, 0]
+        await ws.send_json({"type": "look", "pan": 20, "tilt": -90})
         for command, label, wheels in (
             ({"dir": "forward-left"}, "forward-left", (0, 0.5, 0.5, 0)),
             ({"dir": "stick", "stick": [0, 1, 0]}, "stick", (0.5, -0.5, -0.5, 0.5)),
         ):
             await ws.send_json({"type": "drive", **command})
             async with asyncio.timeout(2):
-                while (await ws.receive_json()).get("moving") != label:
+                while (status := await ws.receive_json()).get("moving") != label:
                     pass
             assert bot.last == ("drive", *wheels)
+            assert status["wheel_speeds"] == list(wheels)
+            assert (status["pan_deg"], status["tilt_deg"]) == (20, -25)
         await ws.send_str(json.dumps({"type": "stop"}))
         for _ in range(50):
             if bot.last == ("stop",):
@@ -198,7 +204,12 @@ async def test_the_page_drives_the_fake_raspbot(aiohttp_client):
             await asyncio.sleep(0.01)
         assert bot.last == ("stop",)
         await ws.send_str(json.dumps({"type": "drive", "dir": "up"}))  # ignored, no crash
-        assert (await ws.receive_json())["type"] == "raspbot_status"
+        async with asyncio.timeout(2):
+            while (status := await ws.receive_json()).get("moving") != "":
+                pass
+        assert status["type"] == "raspbot_status"
+        assert status["wheel_speeds"] == [0, 0, 0, 0]
+        assert (status["pan_deg"], status["tilt_deg"]) == (20, -25)
     assert (await client.get("/api/raspbot/camera.mjpg")).status == 404
 
 
@@ -405,10 +416,10 @@ async def test_touch_camera_controls_hold_at_the_limit_and_reverse_at_once(aioht
             await ws.send_json({"type": "look", "pan": 0, "tilt": 4, "relative": True})
         await ws.send_json({"type": "look", "pan": -4, "tilt": -4, "relative": True})
         bot = app[RASPBOT].bot
-        for _ in range(10):
-            await ws.receive_json()
-            if bot.looked == (16, 81):
-                break
+        async with asyncio.timeout(2):
+            while (status := await ws.receive_json())["pan_deg"] != 16:
+                pass
+        assert status["tilt_deg"] == 81
         assert bot.looked == (16, 81)
         assert not bot.sent and app[RASPBOT].driver is None
 
