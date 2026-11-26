@@ -1599,7 +1599,8 @@ async def api_persona_preview(request: web.Request) -> web.Response:
         persona = await asyncio.to_thread(load_persona, pid)
         text, wav = await request.app[BRAIN].voice.preview(persona)
     except (NoVoice, VoiceError, config.ConfigError) as e:
-        return web.json_response({"ok": False, "message": str(e)}, status=503)
+        detail = getattr(e, "detail", str(e))  # the key names and the file (quick job 153)
+        return web.json_response({"ok": False, "message": str(e), "detail": detail}, status=503)
     return web.Response(body=wav, content_type="audio/wav", headers={"Cache-Control": "no-store"})
 
 

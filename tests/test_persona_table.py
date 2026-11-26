@@ -65,7 +65,9 @@ async def test_the_brain_lists_the_personas_and_explains_a_missing_voice(aiohttp
     assert by_id["jarvis"]["picture"]["style"] == "calm-ring"
     resp = await client.get("/api/personas/jarvis/preview")
     assert resp.status == 503  # tests have no API key: a sentence, not a crash
-    assert "OPENAI_API_KEY" in (await resp.json())["message"]
+    got = await resp.json()
+    assert got["message"] == "Add a voice key to .env, then restart."  # quick job 153: short
+    assert "OPENAI_API_KEY" in got["detail"]
     assert (await client.get("/api/personas/nobody/preview")).status == 404
 
 

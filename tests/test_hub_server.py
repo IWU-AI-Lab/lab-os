@@ -46,7 +46,8 @@ async def test_status(aiohttp_client):
     assert st["venue"] == "test-venue"
     assert st["internet"] is None  # not checked in tests
     assert st["ai"]["connected"] is None  # not checked in tests
-    assert "OPENAI_API_KEY" in st["ai"]["paused"]  # tests never read a .env
+    assert st["ai"]["paused"] == "Add an AI key to .env, then restart."  # tests never read a .env
+    assert "OPENAI_API_KEY" in st["ai"]["paused_detail"]  # the key names: in the tooltip
     assert st["assistant"]["state"] == "offline"
     assert st["arm"] == {"name": "fake-arm", "connected": True, "control": "free"}
     assert st["in_use"] == []

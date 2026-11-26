@@ -164,8 +164,9 @@ def test_models_yaml_voices():
 
 def test_voice_fallback_and_sentences(monkeypatch):
     voices = load_voices()
-    with pytest.raises(NoVoice, match="OPENAI_API_KEY or GEMINI_API_KEY"):
+    with pytest.raises(NoVoice, match=r"^Add a voice key to \.env, then restart\.$") as got:
         pick_voice("main", voices)
+    assert "OPENAI_API_KEY or GEMINI_API_KEY" in got.value.detail  # for the tooltip
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     assert pick_voice("main", voices).name == "backup"
     with pytest.raises(NoVoice, match="no voice"):
@@ -419,6 +420,7 @@ async def test_push_to_talk_turn(aiohttp_client, aiohttp_server, key, tmp_path):
         "wake": None,
         "available": True,
         "why": None,
+        "why_detail": None,
         "setup": "test",
         "where": "Test voice",
         "service": "gemini",
@@ -554,11 +556,13 @@ async def test_no_voice_says_why(aiohttp_client, aiohttp_server, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)  # no key in the environment
     client = await aiohttp_client(app)
     st = await (await client.get("/api/status")).json()
-    assert st["voice"]["available"] is False and "LAB_TEST_KEY" in st["voice"]["why"]
+    assert st["voice"]["available"] is False and "LAB_TEST_KEY" in st["voice"]["why_detail"]
     ws = await client.ws_connect("/ws/voice")
     await ws.send_json({"type": "listen", "mode": "ask"})
     ev = await until(ws, "error", [])
-    assert "LAB_TEST_KEY" in ev["message"]
+    assert (
+        ev["message"] == "Add a voice key to .env, then restart." and "LAB_TEST_KEY" in ev["detail"]
+    )
     await ws.close()
 
 
