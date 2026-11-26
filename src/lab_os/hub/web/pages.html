@@ -21,6 +21,8 @@
 <!--
   All Pages (quick job 67; its own page since quick job 82, before it was a group in ⚙): every page the
   brain serves (/api/hub → pages, PAGES in hub/server.py), each with Open. The hub opens it from its strip.
+  Quick job 133: in the hub, Open asks the hub to show the page as a module (its view, /api/hub → views);
+  "Open on…" there moves it to a window of its own. Opened on its own, each page opens in a new window.
 -->
 <body class="settings">
 <div class="page">
@@ -31,7 +33,7 @@
     <span class="clock"></span>
   </header>
   <main id="list">
-    <p class="lead">Each page opens in a window of its own.</p>
+    <p class="lead" id="lead">Each page opens in a window of its own.</p>
     <div class="rows" id="rows"></div>
   </main>
 </div>
@@ -41,11 +43,18 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const rows = document.querySelector("#rows");
 const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
 if (!hub?.pages?.length) rows.innerHTML = `<div class="row"><span class="help">The brain didn't answer. Its terminal has the details.</span></div>`;
+// in the hub's module frame (same brain): the hub opens each page as a module (quick job 133)
+let inHub = false;
+try { inHub = parent !== window && parent.location.origin === location.origin && parent.location.pathname === "/"; } catch {}
+const viewOf = Object.fromEntries((hub?.views || []).filter((v) => v.page).map((v) => [v.page, v.id]));
+viewOf["/"] = "hub";
+if (inHub) document.querySelector("#lead").textContent = "Each page opens here, in the hub. Open on… moves it to a window of its own.";
 for (const p of hub?.pages || []) {
   const r = document.createElement("div");
   r.className = "row";
   r.innerHTML = `<div><b>${esc(p.title)}</b><div class="help">${esc(p.path)} · ${esc(p.line)}</div></div><button type="button" class="btn small">Open</button>`;
   r.querySelector("button").addEventListener("click", () => {
+    if (inHub && viewOf[p.path] && p.path !== "/pages") return parent.postMessage({ type: "lab-os-open-view", id: viewOf[p.path] }, location.origin);
     if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
   });
   rows.append(r);

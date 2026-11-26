@@ -409,3 +409,16 @@ def test_settings_has_a_search_bar():
     assert ".group.searching.folded .rows { display: block; }" in html
     assert "function applySearch()" in js and "want.every((w) => rowText(r).includes(w))" in js
     assert 'type="search"' not in (SRC / "hub" / "web" / "xr-hub.js").read_text()
+
+
+async def test_every_page_opens_as_a_module(aiohttp_client):
+    """Quick job 133: each page in All Pages opens as a module of the hub (a view the hub can
+    show); "Open on…" moves it to a window of its own. Only the hub itself has no view."""
+    client = await aiohttp_client(make_app())
+    got = await (await client.get("/api/hub")).json()
+    pages = {v["page"] for v in got["views"] if v["page"]}
+    assert {p["path"] for p in got["pages"]} - pages == {"/"}
+    html = await (await client.get("/pages")).text()
+    assert '"lab-os-open-view"' in html and 'viewOf["/"] = "hub"' in html
+    design = (SRC / "hub" / "web" / "design.html").read_text()
+    assert '"lab-os-open-view"' in design and "openHere(e.data.id, null)" in design
