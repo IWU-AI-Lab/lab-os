@@ -30,6 +30,7 @@ How bad: **H** = text is lost, a control is too small to use, or a page misleads
 - [ ] M · O C G · The module's ← Back at the top right becomes × (choice 2).
 - [ ] M · C · Esc closes the whole module while Open on… or the Command Center's focus window is open, and Esc does not close the device card. Close the innermost thing first.
 - [ ] M · O C G · (B) The All Pages icon is a chain link. Use a grid of four squares (the usual "all apps" icon).
+- [ ] M · B · (2026-11-26) The Command Center's button on the hub is not centered. Center it.
 - [ ] M · O · ⏻, All Pages and ⚙ are small dim icons. Make them larger, in the text colour, with a 44 px area.
 - [ ] L · O C G · (B) The start screen: only "Safe to start." with the shield (change DESIGN.md → Startup too).
 - [ ] M · O C G · (B) The start screen's lone "lab" and the top strip's "lab" with a pin: show the place's name ("AI Comp Lab") with the pin icon, or hide it while the place is the default one.
@@ -51,6 +52,7 @@ How bad: **H** = text is lost, a control is too small to use, or a page misleads
 - [ ] L · G · Minimal: the bottom trace runs through the ask box. End it at the box.
 
 ## 3. The robot pages (quick job 155)
+- [ ] M · B · (2026-11-26) "Held still" uses a new light rust (`frozen_text`, #b8604a) that is not like the other colours. Use the dim text colour with the pause icon for every held mark (the pill, the bar, the 3D arm's ring, VR), and fix DESIGN.md and `theme.yaml`. The pause icon in Teleop's status bar has its two bars far apart: draw them close, as a normal pause icon.
 - [ ] H · C · Teleop on the Pi: Desktop control scrolls STOP out of view. Keep STOP in view (also in minimal).
 - [ ] M · O C G · Teleop, Webcam, AI Control and the SO-101 Monitor on the Pi: the drive controls, the joints or "What the AI did" are below the first screen. Put them beside a shorter 3D view on 800×480.
 - [ ] M · O C · Teleop and Webcam on a laptop: long help paragraphs. Fold them ("How to drive"); hide Enter AR and Enter VR where there is no XR, and say it once in dim text (not amber).
@@ -83,9 +85,10 @@ How bad: **H** = text is lost, a control is too small to use, or a page misleads
 - [ ] M · O C G · All Pages: one long list of "/path · text" rows. Use the Command Center's grouped tiles with the search; the page's one line under it.
 - [ ] M · C · All Pages: Teleop promises "joint sliders" that Teleop does not have. Fix the one-line texts. Each button says only "Open": put the page name in its accessible label.
 - [ ] H · O C G · The Command Center on the Pi: the device list is gone, and Pages and Activity fold to bars. Use tabs on small screens (Workspace, Devices, Pages, Inspector).
-- [ ] H · O · The Command Center: Zoom to Fit puts all items in one row, so live screens are 110 px wide. Fit the live devices first; the off devices in a small row at the bottom.
+- [ ] H · O · The Command Center: Zoom to Fit puts all items in one row. (B, 2026-11-26) The screen previews look good small and wrong when large: go back to the smaller sizes (before quick job 149's zoom), and do not make them larger to fill the space. Put the off devices in a small row at the bottom.
 - [ ] M · C · The Command Center: selecting needs a pointer, and multiselect names only desktop keys. Add a touch multiselect and keyboard selection. Tab leaves the focus window: keep focus in it.
 - [ ] M · C G · The Command Center's opening: "Press any key to skip" has no touch way; add a Skip button. On minimal, skip the opening (O C G) and fade in.
+- [ ] H · B · (2026-11-26) The Command Center's opening: nothing in it is centered or aligned. Make it simpler: a radar animation (a sweep that finds the devices, one by one, as blips that become their cards), different from the hub's startup. Center and align every part of it, in the module and on its own page.
 - [ ] L · O C G · The Command Center: the focus window leaves the width empty (put the screen beside Facts); the Pages tiles' last row is cut off (a fade); the inspector's page list repeats the tiles; the opening's dark area does not fill the module (O).
 - [ ] M · O · Diagnostics: `?device=` means "only this device" here and "this screen's name" everywhere else. Use `?show=`. The bar says "Connected 1, Off 7" but shows one card: say "Showing 1 of 8".
 - [ ] M · C G · Diagnostics: the filter button is an unlabeled ⤢; "Connected" and "OK" in green (DESIGN.md: green only for teleop following); "No problem found" over fake readouts.

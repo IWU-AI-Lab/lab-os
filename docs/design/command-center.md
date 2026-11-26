@@ -32,7 +32,8 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Highlighting never opens the focus modal. Focus has its own action, for example a small icon.
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
 - A search, and a way to show or hide items in the workspace.
-- The workspace zooms to fit its items, so a few devices get large previews (the builder, 2026-11-26).
+- The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
+- The opening is a radar sweep that finds the devices one by one, different from the hub's startup, with every part centered and aligned (the builder, 2026-11-26).
 - Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
 - Use the same names as Open on…. When display names exist (quick job 132), show both.
