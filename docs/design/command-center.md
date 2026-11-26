@@ -25,7 +25,9 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Select a preview to highlight it. Focus on it to open the modal.
 
 ## Layout of the page
-- Left: a list of devices. Center: the virtual workspace. Right: a list of screens or windows.
+- Left: a list of devices, each with its screens under it. Center: the virtual workspace. Right: the Pages list on top and the inspector below it (the builder, 2026-11-26).
+- **The Pages list:** every page in the system (the hub, Teleop, Monitor, AI Control and the others, as in All Pages). Drag a page onto a screen in the workspace, or onto a device or screen in the left list, to open it there (as Open on… does). Later, hand gestures with the webcam do the same: hover over a page, close the hand, move to a screen, open the hand (`docs/plan/ideas.md` → "Far future"). Build the drag so that a second kind of pointer can use it later.
+- **The inspector:** the selected item's details, settings and actions; with several items selected, only what applies to all of them. The settings at the bottom of the page move here. With nothing selected, it says how to select.
 - An item selected in a list is highlighted in the workspace, and an item selected in the workspace is highlighted in its list.
 - Highlighting never opens the focus modal. Focus has its own action, for example a small icon.
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
