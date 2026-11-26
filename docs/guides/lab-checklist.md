@@ -65,6 +65,7 @@ How it works: `docs/archive/guides-2026-11-25/hub.md` → "The assistant moves t
 - **H.1** Quick job 118. Select ⚙ → Robots → **The Assistant May Move the Arm**. Say "(wake word), move the arm to ready". → did the arm go to `ready`? (yes / no) Did it start slowly and slow down at the end? (yes / no: what was wrong)
 - **H.2** Quick job 117. Put the blue cube about 20 cm straight in front of the arm. Say "(wake word), hand me the cube". → did the arm pick it up and hold it out to you? (yes / no / it missed) Say "let go". → did the gripper open? (yes / no) Do it again with the cube to the side of the arm. → did it pick it up? (yes / no: what it said)
 - **H.3** Ask for the cube again. While the arm moves, press STOP on the phone. → did the arm stop at once? (yes / no) Say "(wake word), move the arm to home". → did it go home? (yes / no)
+- **H.4** Quick job 116. Open the Cameras page on the desktop, and keep it open. In Claude Code, ask: "Take a camera_snapshot of so101-white-cam-stand, then of so101-white-cam-wrist." → did both pictures come, with no "couldn't open the camera"? (yes / no: copy the message) Did the Cameras page keep its pictures during the snapshots? (yes / no)
 
 ## W. Teleop with a webcam (10 min)
 Put the Logitech C615 on top of the desktop's monitor, in a free USB socket. Plug in `so101-white`. Run `uv run --extra so101 lab-os serve --speed 0.3`. **X** is STOP on the webcam page.
