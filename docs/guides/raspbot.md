@@ -15,7 +15,7 @@ The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the
 - **One driver at a time:** a page or an AI tool keeps control until it releases control. Another page shows "Another page" under Control.
 - **Front obstacle:** The program stops every move with a forward component when the ultrasonic sensor reads 20 cm or less. The sensor measures only objects in front. Check the clearance before you move sideways or back, or turn.
 - **Speed:** the program never drives faster than 120 of the board's 255. That is 100 % on the slider. All pages share one speed. A page that only watches cannot change it. A change applies at once, also while you hold a button.
-- **Who may drive:** the same rule as the arm. A page on the brain's computer may drive. A page on another device only watches and can press STOP, unless its address is in `drive_from` in `config/place.yaml` (or `--drive-from`). The page says which address to add.
+- **Who may drive:** the same rule as the arm. A page on the brain's computer may drive. A page on another device only watches and can press STOP, unless its address is in `drive_from` in `config/place.yaml` (or `--drive-from`). The page says which address to add. On the brain's computer, the Command Center (`/command-center`) can also allow a device to drive.
 
 ## Set up the Raspbot (once)
 The Raspbot's own app program (Yahboom's "big program", started at login) also drives the motors and holds the camera. Stop it before you use the page.

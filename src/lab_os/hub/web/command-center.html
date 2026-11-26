@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Command Center</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    /* the Command Center (quick job 134, docs/design/command-center.md): devices left, the workspace in
+       the centre, screens right. Highlight (a press) selects; focus (⤢) opens the modal. */
+    .cc { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr) minmax(13rem, 17rem); gap: 1rem; min-height: 0; }
+    .side { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+    .side > .in { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
+    .list { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; margin: 0 -0.3rem 0 0; padding-right: 0.3rem; }
+    .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 0.1rem 0.55rem; align-items: center; padding: 0.45rem 0.4rem; cursor: pointer;
+      border-left: 2px solid transparent; }
+    .row:hover { background: color-mix(in srgb, var(--c) 7%, transparent); }
+    .row.sel { border-left-color: var(--hot); background: color-mix(in srgb, var(--c) 16%, transparent); }
+    .row.off { opacity: 0.45; }
+    .row .k { color: var(--c); font-size: 1.15rem; }
+    .row b { font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row small { grid-column: 2; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .k { grid-column: 1; grid-row: 1; }
+    .row b { grid-column: 2; grid-row: 1; }
+    .row .eye { grid-column: 3; grid-row: 1 / span 2; }
+    .row .foc { grid-column: 4; grid-row: 1 / span 2; }
+    .row small { grid-row: 2; }
+    .iconbtn { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
+    .iconbtn:hover, .iconbtn:focus-visible { color: var(--hot); outline: none; }
+    .iconbtn.on { color: var(--c); }
+    .empty { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); padding: 0.4rem; }
+
+    /* the centre: tools on top, the workspace, the actions for the selection under it */
+    .mid { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.6rem; min-height: 0; min-width: 0; }
+    .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
+    .tools input[type="search"] { flex: 1 1 12rem; min-width: 10rem; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
+      border: 1px solid var(--line); padding: 0.45rem 0.6rem; min-height: 2.3rem; }
+    .tools input[type="search"]:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
+    .legend { display: inline-flex; gap: 1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
+    .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend .v { display: inline-block; width: 1.1rem; height: 0.8rem; border: 1px dashed var(--text-dim); }
+    #ws { position: relative; overflow: hidden; touch-action: none; cursor: grab; border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 60%, transparent);
+      background-image: linear-gradient(color-mix(in srgb, var(--line) 40%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--line) 40%, transparent) 1px, transparent 1px); }
+    #ws.panning { cursor: grabbing; }
+    #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .node { position: absolute; min-width: 240px; padding: 0 0 0.6rem; cursor: grab; user-select: none;
+      border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); background: color-mix(in srgb, var(--surface) 82%, transparent);
+      clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem); }
+    .node.sel { border-color: var(--hot); box-shadow: inset 0 0 0 1px var(--hot), 0 0 14px color-mix(in srgb, var(--c) 45%, transparent); }
+    .node.drop { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+    .node.dim, .shot.dim { opacity: 0.25; }
+    .node.lone { padding: 0.6rem 0.6rem 0.4rem; min-width: 0; }
+    .node .head { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.3rem 0.35rem 0.8rem; border-bottom: 1px solid color-mix(in srgb, var(--c) 25%, transparent); }
+    .node .head .k { color: var(--c); font-size: 1.1rem; }
+    .node .head b { font: 500 0.95rem/1.2 var(--f-ui); color: var(--text); white-space: nowrap; }
+    .node .head small { font: var(--w-lines) 0.75rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+    .node .head .grow { flex: 1; }
+    .node .what { padding: 0.5rem 0.8rem 0; max-width: 300px; font: var(--w-lines) 0.78rem/1.35 var(--f-lines); color: var(--text-dim); }
+    .node .what.bad { color: var(--accent); }
+    .shots { display: flex; gap: 14px; padding: 12px 14px 0; align-items: flex-start; }
+    .shot { width: min-content; cursor: grab; }
+    .shot.sel .pv { border-color: var(--hot); box-shadow: 0 0 0 1px var(--hot), 0 0 12px color-mix(in srgb, var(--c) 50%, transparent); }
+    .shot.ghost { position: fixed; z-index: 50; pointer-events: none; opacity: 0.85; }
+    .pv { position: relative; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+    .pv .ring { width: 32%; aspect-ratio: 1; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); }
+    .pv .core { width: 30%; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--c);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent), inset 0 0 0 0.35rem var(--bg), inset 0 0 0 0.5rem color-mix(in srgb, var(--c) 45%, transparent); }
+    .pv .mod { display: grid; justify-items: center; gap: 0.3rem; color: var(--c); }
+    .pv .mod .ico { font-size: 1.9rem; }
+    .pv .say { position: absolute; left: 0.4rem; right: 0.4rem; bottom: 0.3rem; font: 500 0.72rem/1.2 var(--f-ui); color: var(--text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pv .from { position: absolute; top: 0.3rem; right: 0.4rem; font: var(--w-lines) 0.65rem/1 var(--f-lines); color: var(--text-dim); }
+    .pv .tick { position: absolute; top: 0.3rem; left: 0.4rem; color: var(--ok); font-size: 0.8rem; }
+    .under { display: block; margin: 0.35rem 0 0; }
+    .under b { display: block; font: 500 0.88rem/1.2 var(--f-ui); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .under b small { margin-left: 0.4rem; font: var(--w-lines) 0.72rem/1 var(--f-lines); color: var(--text-dim); }
+    .under span { display: block; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); }
+    .under .res { font-size: 0.68rem; opacity: 0.8; }
+
+    /* the actions: a press changes the real device (the cast mark) or only this workspace (dashed) */
+    #acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; min-height: 2.6rem; }
+    #acts .count { font: 500 0.85rem/1 var(--f-ui); color: var(--hot); margin-right: 0.3rem; }
+    .btn.virtual { background: none; box-shadow: none; outline: 1px dashed color-mix(in srgb, var(--c) 55%, transparent); outline-offset: -1px; clip-path: none; }
+    .btn.virtual:hover:not(:disabled) { background: color-mix(in srgb, var(--c) 12%, transparent); }
+    .msg.ok { color: var(--text-dim); }
+
+    /* the menu (⋯) and the focus modal */
+    .menu { position: fixed; z-index: 40; display: grid; gap: 0.35rem; min-width: 14rem; padding: 0.6rem; border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: var(--surface); }
+    .menu .btn { justify-content: flex-start; }
+    .menu select { width: 100%; }
+    .veil { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 78%, transparent); }
+    .modal { width: min(70rem, 94vw); max-height: 90vh; }
+    .modal > .in { display: grid; gap: 1rem; max-height: 90vh; }
+    .modal .top { display: flex; align-items: center; gap: 0.8rem; }
+    .modal .top h2 { flex: 1; margin: 0; font-size: 1.15rem; }
+    .modal .shots { padding: 0; flex-wrap: wrap; }
+    .modal .shot { cursor: default; }
+    .modal .shot .do { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem 1.6rem; }
+    .modal h3 { margin: 0 0 0.5rem; font: 500 0.85rem/1.2 var(--f-ui); color: var(--c); }
+    .field { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; font: var(--w-lines) 0.85rem/1.3 var(--f-lines); color: var(--text-dim); }
+    .field input[type="text"], .field select { width: 100%; }
+    .mods { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    #module { position: fixed; inset: 0; z-index: 45; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0.6rem; padding: 1rem 1.4rem 1.2rem; background: var(--bg); }
+    #module .top { display: flex; align-items: center; gap: 0.8rem; }
+    #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
+    #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
+    @media (max-width: 1100px) { .cc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(22rem, 1fr) auto; } .side .list { max-height: 12rem; } }
+  </style>
+</head>
+<!--
+  The Command Center (quick job 134; the spec: docs/design/command-center.md). It reads the brain's lists
+  (/api/hub-devices: the screens; /api/live-devices: every connected device) and changes real devices
+  through the endpoints that exist (Open on…, back to the hub, each device's settings) and the teleop
+  permission (/api/command-center/drive). The layout of the workspace is only a picture: it is kept by the
+  brain (/api/command-center/layout) and never changes a device. Script: /hub/command-center.js.
+-->
+<body class="settings">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-target"/></svg><span>Command Center</span></div>
+    <span class="place"></span>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="cc">
+    <section class="card side" aria-label="Devices"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><small id="dev-count" class="num"></small></h2>
+      <div class="list" id="devices"></div>
+    </div></section>
+    <section class="mid">
+      <div class="tools">
+        <input id="search" type="search" placeholder="Search devices and screens" aria-label="Search">
+        <button class="btn small virtual" id="fit" type="button" title="Show every item in the workspace">Fit</button>
+        <button class="btn small virtual" id="show-all" type="button" hidden>Show all</button>
+        <span class="legend">
+          <span><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Changes the device</span>
+          <span><i class="v"></i>Only this workspace</span>
+        </span>
+      </div>
+      <div id="ws" aria-label="Workspace"><div id="stage"></div></div>
+      <div id="acts"><span class="hint">Press an item to highlight it. Ctrl or Shift adds more. ⤢ opens one device.</span></div>
+    </section>
+    <section class="card side" aria-label="Screens"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg>Screens <span class="grow"></span><small id="scr-count" class="num"></small></h2>
+      <div class="list" id="screens"></div>
+    </div></section>
+  </main>
+</div>
+<div id="module" hidden>
+  <div class="top"><b id="module-title"></b>
+    <button class="btn small virtual" id="module-own" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-window"/></svg>Own window</button>
+    <button class="btn small" id="module-back" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-back"/></svg>Back</button>
+  </div>
+  <iframe id="module-frame" title="Module"></iframe>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/command-center.js"></script>
+</body>
+</html>

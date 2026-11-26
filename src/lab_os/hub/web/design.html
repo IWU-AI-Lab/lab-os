@@ -3272,7 +3272,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { "monitor-so101": "i-screen", "monitor-xarm": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
+const VIEW_ICONS = { command: "i-target", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;

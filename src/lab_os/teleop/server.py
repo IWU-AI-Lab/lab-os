@@ -71,7 +71,8 @@ LINKS = web.AppKey("links", dict)
 # a page on another computer that may only watch → its address, for the line that says how to let
 # it drive (quick job 95)
 WATCHERS = web.AppKey("watchers", dict)
-DRIVE_FROM = web.AppKey("drive_from", frozenset)  # other computers' addresses that may drive
+DRIVE_FROM = web.AppKey("drive_from", set)  # other computers' addresses that may drive
+# (a set: the Command Center changes it while the brain runs, quick job 134)
 LOOPBACK = ("127.0.0.1", "::1")
 
 
@@ -342,7 +343,7 @@ def create_app(
     app[SHUTDOWN] = asyncio.Event()
     app[OFF_TOLD] = {"told": False}
     app[LOCAL_CONTROL_ONLY] = local_control_only
-    app[DRIVE_FROM] = frozenset(drive_from)
+    app[DRIVE_FROM] = set(drive_from)
     if root_page:
         app.router.add_get("/", index)
     app.router.add_get("/teleop", index)
