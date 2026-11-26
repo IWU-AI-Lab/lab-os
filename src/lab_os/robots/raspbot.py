@@ -10,7 +10,8 @@ The Raspbot runs one small program, `robots/raspbot/lab_os_raspbot.py` (deployed
                                (pan + = left, tilt + = up); the Raspbot keeps their limits
 
 The Raspbot sends hello on connect. New versions advertise their servo limits and answer
-{"diagnostics": true} with the ultrasonic distance in mm (or null). The Raspbot stops
+{"diagnostics": true} with the ultrasonic distance in mm (or null), and (quick job 135) the Pi's
+power, temperature and Wi-Fi. The Raspbot stops
 the motors by itself when no command came for WATCHDOG_S, or when the connection drops, so a brain
 or network that hangs never leaves the car driving.
 
@@ -38,6 +39,8 @@ OBSTACLE_STOP_MM = 200
 AI_SPEED_LIMIT = 0.25  # a fraction of the onboard speed cap, independent of the page slider
 LOOK_MAX = 90.0  # a look command may ask for at most 90 degrees from the centre
 LOOK_LIMITS = ((-90.0, 90.0), (-25.0, 85.0))  # factory mount, for older programs
+# the Pi's health in a diagnostics answer (quick job 135; newer programs): power ok / low / was_low
+PI_KEYS = ("power", "input_v", "temp_c", "wifi_quality", "wifi_dbm")
 
 
 @dataclass
@@ -54,6 +57,10 @@ class FakeRaspbot:
     obstacle_stop_mm = OBSTACLE_STOP_MM
     drive_stop = ""
     mecanum = True
+    host = ""
+    round_trip_ms = 0
+    # the diagnostics panel shows the same readings as a real car's (quick job 135)
+    pi = {"power": "ok", "input_v": 5.1, "temp_c": 45.0, "wifi_quality": 70, "wifi_dbm": -40}
 
     @property
     def is_fake(self) -> bool:
@@ -96,6 +103,10 @@ class TcpRaspbot:
         self._distance_at = 0.0
         self._writer: asyncio.StreamWriter | None = None
         self.said = ""  # why it isn't connected, for the page
+        self.round_trip_ms: int | None = (
+            None  # a diagnostics question and its answer (quick job 135)
+        )
+        self.pi: dict = {}  # the Pi's power, temperature and Wi-Fi, from newer programs
 
     @property
     def is_fake(self) -> bool:
@@ -139,15 +150,20 @@ class TcpRaspbot:
                 self.drive_stop = ""
                 self.mecanum = False
                 self._distance_at = 0.0
+                self.round_trip_ms, self.pi = None, {}
             await asyncio.sleep(RECONNECT_S)
 
     async def _read_diagnostics(self, reader: asyncio.StreamReader) -> None:
         while self.connected:
+            asked = time.monotonic()
             await self._send({"diagnostics": True})
             line = await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S)
             if not line:
                 return
             report = json.loads(line)
+            self.round_trip_ms = round((time.monotonic() - asked) * 1000)
+            pi = report.get("pi")
+            self.pi = {k: v for k, v in pi.items() if k in PI_KEYS} if isinstance(pi, dict) else {}
             distance = report.get("distance_mm")
             self.distance_mm = distance if type(distance) is int and 0 < distance < 0xFFFF else None
             reason = report.get("drive_stop")

@@ -14,6 +14,7 @@ Other programs still get "in use" (`devices.InUse`).
 import logging
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 
 from lab_os import devices
@@ -76,6 +77,8 @@ class _Feed:
         self.jpeg: bytes | None = None
         self.error = ""
         self.asked = time.monotonic()
+        self.reads: deque[float] = deque(maxlen=90)  # when each frame came (the picture rate)
+        self.size = (0, 0)  # the camera's frame: width, height
         self.got = threading.Event()
         self.done = False
         self.thread = threading.Thread(target=self._run, name=f"camera {path}", daemon=True)
@@ -99,6 +102,9 @@ class _Feed:
                     time.sleep(0.05)
                     continue
                 self.frame = frame
+                self.reads.append(time.monotonic())
+                if not self.size[0] and hasattr(frame, "shape"):
+                    self.size = (int(frame.shape[1]), int(frame.shape[0]))
                 if not self.settled.is_set():
                     self._settle(frame)
                 now = time.monotonic()
@@ -113,6 +119,18 @@ class _Feed:
             self.done = True
             self.cap.release()
             log.info("camera %s closed (nobody looks at it)", self.path)
+
+    def rate(self, window_s: float = 2.0) -> float:
+        """Frames a second the camera gave over the last `window_s` (0 when none came)."""
+        now = time.monotonic()
+        recent = [t for t in self.reads if now - t <= window_s]
+        if len(recent) < 2:
+            return 0.0
+        return (
+            round((len(recent) - 1) / (recent[-1] - recent[0]), 1)
+            if recent[-1] > recent[0]
+            else 0.0
+        )
 
 
 class CameraFeeds:
@@ -199,6 +217,22 @@ class CameraFeeds:
         if feed.frame is None:
             raise CameraError(f"{name} gave no picture")
         return feed.frame
+
+    def stats(self, name: str) -> dict | None:
+        """A camera that is open now: its picture rate, size and last error (quick job 135's
+        diagnostics); None when it is closed."""
+        with self.lock:
+            path = self.paths.get(name)
+            feed = self.feeds.get(path) if path else None
+        if feed is None or feed.done:
+            return None
+        return {
+            "fps": feed.rate(),
+            "sent_fps": FPS,
+            "width": feed.size[0],
+            "height": feed.size[1],
+            "error": feed.error,
+        }
 
     def open_names(self) -> list[str]:
         """The cameras open now, by name (LeRobot's teleop must not open them: quick job 91)."""

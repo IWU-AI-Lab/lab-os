@@ -35,18 +35,20 @@ const SHOT_W = 200, GAP = 48, ROW_W = 1500;  // workspace units (px at zoom 1)
 const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-cam", robot: "i-pi", headset: "i-headset", usb: "i-chip" };
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
 const VIEW_ICON = {
-  teleop: "i-hand", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
+  teleop: "i-hand", diagnostics: "i-test", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
   hub: "i-hex", settings: "i-gear", pages: "i-link", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
   system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
 };
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
-const KIND_MODULES = { arm: ["teleop", "ai"], leader: ["teleop"], robot: ["raspbot"], camera: ["cameras"], headset: ["teleop"] };
+// (quick job 135: every device has Diagnostics, made to fit it: /diagnostics?device=<id>)
+const KIND_MODULES = { hub: ["diagnostics"], arm: ["teleop", "ai", "diagnostics"], leader: ["teleop", "diagnostics"], robot: ["raspbot", "diagnostics"],
+  camera: ["cameras", "diagnostics"], headset: ["teleop", "diagnostics"], usb: ["diagnostics"] };
 // the Pages list: its groups, in order (a page in none goes in "Other"), the pages that cannot open on
 // another screen, and the short names of the tiles (the full name is the tile's title)
 const PAGE_GROUPS = [
   ["Robots", ["teleop", "monitor", "monitor-so101", "monitor-xarm", "ai", "training", "webcam", "raspbot"]],
   ["Cameras", ["cameras"]],
-  ["The hub", ["hub", "settings", "wake-word", "project", "spend", "commits", "devices", "system", "chat"]],
+  ["The hub", ["hub", "settings", "wake-word", "diagnostics", "project", "spend", "commits", "devices", "system", "chat"]],
 ];
 const NOT_ELSEWHERE = new Set(["xr", "remote", "pages", "command"]);
 const SHORT = { hub: "The Hub", monitor: "Monitors", "monitor-so101": "SO-101", "monitor-xarm": "xArm", webcam: "Webcam", project: "Project", system: "Diagram", chat: "Conversation" };
@@ -700,7 +702,8 @@ function driveLine(d) {
 // the modules that match a device: an arm's Monitor page is its kind's (quick job 147)
 function modulesOf(d) {
   const monitor = d.kind === "arm" ? [String(d.live?.model || "").startsWith("xarm") ? "monitor-xarm" : "monitor-so101"] : [];
-  return [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page);
+  return [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page)
+    .map((v) => (v.id === "diagnostics" ? { ...v, page: `${v.page}?device=${encodeURIComponent(d.id)}` } : v));
 }
 function moduleButtons(box, mods) {
   for (const v of mods) {
