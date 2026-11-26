@@ -2,9 +2,17 @@
 // (status.left_arm): the left arm's bars in their own card, and its state next to the right arm's.
 // An arm whose USB is unplugged (quick job 109): its joints card goes, and its chip says "unplugged",
 // within a second (the brain checks the USB every half second); it comes back when it is plugged in.
-"use strict";
+// One page for each kind of robot (quick job 147): /monitor/so101 and /monitor/xarm show only the arms
+// of that kind (armView), and say so while none is connected. /monitor is the list (monitor-list.js).
+import { armView } from "/static/arm/arm-feed.js";
+import { KINDS, pageKind } from "/static/arm/kinds.js";
 
 const $ = (id) => document.getElementById(id);
+const KIND = pageKind(location.pathname);
+if (KIND) {
+  document.title = KINDS[KIND].title;
+  $("page-title").textContent = KINDS[KIND].title;
+}
 const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?role=monitor`;
 const rows = {};
 
@@ -42,16 +50,29 @@ function bars(joints, limits, box) {
   }
 }
 
-function show(s) {
-  setPill($("input"), s.connected ? "live" : "none", s.connected ? "on" : "off");
-  const who = { free: "free", ai: "the AI tools" }[s.control] || "an input page";
-  setPill($("control"), who, s.control === "free" ? "off" : "on");
+/** An arm's status with its name and USB state at the top, as armState reads them. */
+const plain = (s) => ({ ...s, connected: s.arm?.connected, name: s.arm?.name });
+
+function show(raw) {
+  setPill($("input"), raw.connected ? "live" : "none", raw.connected ? "on" : "off");
+  const who = { free: "free", ai: "the AI tools" }[raw.control] || "an input page";
+  setPill($("control"), who, raw.control === "free" ? "off" : "on");
+  const s = armView(raw, "right", KIND);
+  document.body.classList.toggle("no-arm", !s);
+  if (!s) { // no arm of this page's kind is connected
+    setPill($("state"), "not connected", "off");
+    $("joints-title").textContent = `No ${KINDS[KIND].robot} is connected`;
+    $("right-name").textContent = "";
+    $("left-chip").hidden = $("left-card").hidden = true;
+    document.body.classList.remove("two-arms");
+    return;
+  }
   const gone = s.arm?.connected === false;
-  armState($("state"), { ...s, connected: s.arm?.connected, name: s.arm?.name });
+  armState($("state"), plain(s));
   bars(s.joints, s.limits, "joints");
   $("joints").closest(".card").classList.toggle("unplugged", gone);
-  const l = s.left_arm;
-  if (!$("left-card")) return; // a page without the left-arm chip or card
+  const left = armView(raw, "left", KIND);
+  const l = left && plain(left);
   $("left-chip").hidden = !l;
   $("left-card").hidden = !l || l.connected === false;
   $("arm-label").textContent = l ? "Right arm" : "Arm";

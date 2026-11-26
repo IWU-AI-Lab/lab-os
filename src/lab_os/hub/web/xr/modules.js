@@ -19,6 +19,7 @@
 import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
+import { KINDS } from "/static/arm/kinds.js";
 import { getLink } from "/static/link.js";
 import { deviceName } from "/web/device.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
@@ -26,7 +27,8 @@ import { wrap } from "./panels.js";
 import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
 import { handChoiceAfter, optionMessage } from "./teleop-options.js";
 
-export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], ai: ["AI Control", "i-chip"], raspbot: ["Raspbot", "i-cam"] };
+// Monitor: every arm; monitor-so101 / monitor-xarm: one kind's arms, as their pages (quick job 147)
+export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], "monitor-so101": ["SO-101 Monitor", "i-screen"], "monitor-xarm": ["xArm Monitor", "i-screen"], ai: ["AI Control", "i-chip"], raspbot: ["Raspbot", "i-cam"] };
 const PX = 900; // canvas pixels per metre
 
 /* ---------- the module button ---------- */
@@ -200,15 +202,18 @@ const TOOL = { arm_status: "Read the arm", list_poses: "Listed the poses", move_
 const SCALE = 1.9; // the hologram is bigger than the real arm, so it reads from where you stand
 
 export class ArmHologram {
-  /** @param {"monitor"|"ai"} id */
+  /** @param {"monitor"|"monitor-so101"|"monitor-xarm"|"ai"} id */
   constructor(id) {
     this.id = id;
     this.group = new THREE.Group();
     this.link = getLink("monitor"); // a watcher: it can only stop
     // one unit per arm (quick job 119): Monitor shows the left arm too while the brain drives two;
-    // AI Control shows the arm the AI tools drive (the first arm), as its desktop page does
-    this.units = [new HoloArm(getArmFeed(this.link), "right")];
-    if (id === "monitor") this.units.push(new HoloArm(getArmFeed(this.link, "left"), "left"));
+    // AI Control shows the arm the AI tools drive (the first arm), as its desktop page does.
+    // monitor-<kind> (quick job 147): only the arms of that kind, as /monitor/<kind> does.
+    const watch = id === "monitor" || id.startsWith("monitor-");
+    this.kind = id.startsWith("monitor-") ? id.slice("monitor-".length) : null;
+    this.units = [new HoloArm(getArmFeed(this.link, "right", this.kind), "right")];
+    if (watch) this.units.push(new HoloArm(getArmFeed(this.link, "left", this.kind), "left"));
     for (const u of this.units) this.group.add(u.group);
     this.stop = new StopButton();
     this.stop.mesh.position.set(0, -0.14, 0.05);
@@ -259,7 +264,9 @@ export class ArmHologram {
     // the state under the arm: who has control (each arm's own state is under that arm with two)
     const s = this.units[0].feed.status;
     const who = { free: "free", ai: "the AI tools" }[s?.control] || (s ? "an input page" : "");
-    const line = two ? (s ? `control: ${who}` : "connecting to the brain") : `${s?.arm?.name || "arm"} · ${armWord(s)}${who ? ` · control: ${who}` : ""}`;
+    const none = this.kind && !s && this.units[0].feed.heard; // no arm of this kind
+    const line = none ? `No ${KINDS[this.kind].robot} is connected to the brain`
+      : two ? (s ? `control: ${who}` : "connecting to the brain") : `${s?.arm?.name || "arm"} · ${armWord(s)}${who ? ` · control: ${who}` : ""}`;
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
       g.fillStyle = !two && s?.frozen ? C.accent : C.dim;

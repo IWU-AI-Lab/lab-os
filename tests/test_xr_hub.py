@@ -412,7 +412,7 @@ def test_two_arms_on_every_screen():
     page the left arm's joints card is built and styled like the right arm's."""
     mods = (SRC / "hub/web/xr/modules.js").read_text()
     holo = mods.split("export class ArmHologram", 1)[1].split("\n}\n", 1)[0]
-    assert 'getArmFeed(this.link, "left")' in holo and 'id === "monitor"' in holo
+    assert 'getArmFeed(this.link, "left", this.kind)' in holo and 'id === "monitor"' in holo
     view = (SRC / "teleop/web/arm/arm-view.js").read_text()
     assert "setGrid(!!models.left)" in view
     page = (SRC / "teleop/web/monitor.html").read_text()

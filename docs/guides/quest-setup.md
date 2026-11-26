@@ -7,9 +7,9 @@ uv run lab-os-teleop serve                         # the headset page and the fa
 uv run lab-os-teleop serve --record recordings/try1.jsonl
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser needed
 ```
-Then open **http://localhost:8080/monitor** to watch the fake arm.
+Then open **http://localhost:8080/monitor/so101** to watch the fake arm.
 
-**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the teleop page is at **http://localhost:8080/teleop**. `/ws` and `/monitor` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
+**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the teleop page is at **http://localhost:8080/teleop**. `/ws` and `/monitor/so101` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
 
 In VS Code, the Run and Debug panel has a button for each of these commands (`.vscode/launch.json`).
 
@@ -96,7 +96,7 @@ Do this in each session:
 uv run lab-os serve                    # the brain, with the fake arm
 ```
 The brain runs `adb reverse tcp:8080 tcp:8080` by itself each time the Quest connects by USB (it looks every 3 seconds). `lab-os-teleop serve` does not: with it, run that command yourself, again after each new connection of the cable.
-In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor` must follow.
+In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor/so101` must follow.
 
 Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
 
@@ -125,7 +125,7 @@ Why 1:1: in the relative mode (then 10 cm of hand = 5 cm of gripper), the hand m
 Record a session. Then replay it without the Quest and without the real arm:
 ```bash
 uv run lab-os serve --arm so101-white --speed 0.2 --record recordings/quest-$(date +%F).jsonl
-uv run lab-os-teleop replay recordings/quest-2026-11-10.jsonl      # the fake arm; watch /monitor
+uv run lab-os-teleop replay recordings/quest-2026-11-10.jsonl      # the fake arm; watch /monitor/so101
 ```
 Give the recording to Claude to find where the problem is ("at 0:40 the elbow straightens"). The settings are in `MappingConfig` (`src/lab_os/teleop/mapping.py`):
 - `tip_m_per_hand_m` (1.0 since 2026-11-16, 0.5 before): the relative mode, 10 cm of hand → 10 cm of gripper. Lower is finer but follows less. Higher is less smooth. (1:1 is always 1.)

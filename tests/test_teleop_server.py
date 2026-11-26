@@ -32,6 +32,10 @@ async def test_pages_served(aiohttp_client):
     for path in (
         "/",
         "/monitor",
+        "/monitor/so101",
+        "/monitor/xarm",
+        "/static/monitor-list.js",
+        "/static/arm/kinds.js",
         "/static/teleop-page.js",
         "/static/link.js",
         "/static/xr.js",

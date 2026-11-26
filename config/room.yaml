@@ -5,8 +5,9 @@
 # Each line: a device's name (the ?device= in its hub's address) and a page (since 2026-11-21 every
 # view opens on a device):
 #   core                              the hub itself (whatever it shows closes)
-#   teleop, monitor, ai, training,    the module pages
+#   teleop, monitor, ai, training,    the module pages (monitor: the list of the Monitor pages)
 #   cameras
+#   monitor-so101, monitor-xarm       the Monitor page of one kind of robot (quick job 147)
 #   webcam                            webcam teleop
 #   project, spend, commits, devices  a panel's details page (Current Project, AI Spend, …)
 #   system                            the system diagram
@@ -21,7 +22,7 @@ layout:
   win-1: core       # voice stations on the other side of the room
   win-2: core
   pi-1: teleop      # with STOP
-  pi-2: monitor
+  pi-2: monitor-so101  # the SO-101 arms
   pi-3: ai
   projector: system # the classroom projector (name its computer's hub "projector")
   ubuntu-2: spend   # another useful page: commits, webcam, …
