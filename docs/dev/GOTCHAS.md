@@ -4,6 +4,11 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — All Pages could open before the hub knew its address
+
+**What:** With `#skip`, a press on **All Pages** during startup could open `/undefined`.
+**Fix:** Wait for the hub to load its page addresses before opening **All Pages**.
+
 ### 2026-11-26 — Simplifying the whole Raspbot base dropped small parts
 
 **What:** The first mesh reduction removed the front sensor from the base mesh.

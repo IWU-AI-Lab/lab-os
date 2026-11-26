@@ -213,6 +213,31 @@ async def test_the_page_drives_the_fake_raspbot(aiohttp_client):
     assert (await client.get("/api/raspbot/camera.mjpg")).status == 404
 
 
+async def test_raspbot_monitor_can_stop_and_cannot_drive(aiohttp_client):
+    app = make_app()
+    client = await aiohttp_client(app)
+    desk = app[RASPBOT]
+    async with client.ws_connect("/ws/raspbot?role=monitor") as monitor:
+        status = await monitor.receive_json()
+        assert status["fake"] and not status["may_drive"]
+        await monitor.send_json({"type": "set_speed", "speed": 1})
+        await monitor.send_json({"type": "look", "pan": 20, "tilt": 10})
+        await monitor.send_json({"type": "drive", "dir": "forward"})
+        async with asyncio.timeout(2):
+            while (reply := await monitor.receive_json())["type"] != "error":
+                pass
+        assert reply["message"] == "View only."
+        assert desk.speed == 0.5 and desk.bot.looked == (0, 0) and desk.driver is None
+        driver = object()
+        assert await desk.press(driver, "forward-right") == ""
+        assert desk.bot.last == ("drive", 0.5, 0, 0, 0.5)
+        await monitor.send_json({"type": "stop", "device": "observer"})
+        async with asyncio.timeout(2):
+            while desk.stopped_by != "observer":
+                await asyncio.sleep(0.01)
+        assert desk.bot.last == ("stop",) and desk.driver is None
+
+
 async def test_a_real_raspbot_is_view_only_from_another_computer(aiohttp_client):
     from lab_os.hub import raspbot_page
 
