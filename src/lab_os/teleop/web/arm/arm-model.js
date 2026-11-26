@@ -8,7 +8,7 @@
 // wrist_roll, gripper), angles in degrees, exactly as the Python `Arm` driver receives them.
 // Models never clamp: a command outside the model's limits is drawn as-is and reported.
 import * as THREE from "three";
-import URDFLoader from "/web/vendor/urdf-loader/URDFLoader.js";
+import { loadRobotUrdf, queueModelLoad, zUp } from "/web/robot-urdf.js";
 import { color } from "/web/theme.js";
 
 const DEG = Math.PI / 180;
@@ -90,26 +90,9 @@ function ball(radius, color) {
   return new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 12), material(color));
 }
 
-/** Robot descriptions are Z-up (URDF convention); three.js is Y-up. */
-function zUp(object) {
-  const g = new THREE.Group();
-  object.rotation.x = -Math.PI / 2;
-  g.add(object);
-  return g;
-}
-
 // ---- SO-101 from its URDF -----------------------------------------------------------------
 async function loadSo101(style) {
-  // Wait for the URDF *and* every mesh it references (the manager fires onLoad when all are in).
-  const robot = await new Promise((resolve, reject) => {
-    const manager = new THREE.LoadingManager();
-    const loader = new URDFLoader(manager);
-    loader.parseVisual = style === "mesh";
-    let result = null;
-    manager.onLoad = () => (result ? resolve(result) : reject(new Error("URDF did not load")));
-    manager.onError = (url) => reject(new Error(`could not load ${url}`));
-    loader.load(SO101_URDF, (r) => (result = r));
-  });
+  const robot = await loadRobotUrdf(SO101_URDF, { parseVisual: style === "mesh" });
 
   if (style === "stick") addSkeleton(robot);
   robot.traverse((o) => {
@@ -298,16 +281,10 @@ export const MODEL_CHOICES = [
   { kind: "xarm1s", style: "stick", label: "xArm 1S (stick figure)" },
 ];
 
-// One load at a time: two at once (two arms) share three.js's file requests, and the second
-// loader's manager then said "done" before its meshes were in (docs/dev/GOTCHAS.md, 2026-11-19).
-let queue = Promise.resolve();
-
 export function loadArmModel(kind, { style } = {}) {
-  const next = queue.then(() => {
+  return queueModelLoad(() => {
     if (kind === "so101") return loadSo101(style || "mesh");
     if (kind === "xarm1s") return buildXarm(style || "boxes");
     throw new Error(`no 3D model for arm kind "${kind}"`);
   });
-  queue = next.catch(() => {}); // a failed load doesn't hold up the next one
-  return next;
 }
