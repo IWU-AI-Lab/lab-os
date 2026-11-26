@@ -20,21 +20,48 @@
     .tally { position: absolute; top: 0.4rem; left: 0.4rem; background: var(--bg); padding: 0.25rem; font: 0.9rem var(--f-digits); }
     .tally::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--danger); margin-right: 0.35rem; }
     #media-msg { overflow-wrap: anywhere; }
-    .pad { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(2px, 0.45vw, 0.5rem); max-width: 11rem; margin: 0.5rem auto; touch-action: none; user-select: none; -webkit-user-select: none; }
-    .pad .btn { justify-self: center; width: min(100%, 4.6rem); min-height: 0; padding: 0; aspect-ratio: 1; touch-action: none; }
-    .pad .btn .ico { width: 55%; height: 55%; }
-    .pad [data-dir="forward"], .pad [data-dir="back"] { width: min(calc((100% - 2px) / 2), 4.6rem); }
-    .pad [data-dir="forward"] { grid-area: 1 / 1 / 2 / 3; } .pad [data-dir="forward"] .ico { transform: rotate(-90deg); }
-    .pad [data-dir="left"] { grid-area: 2 / 1; } .pad [data-dir="left"] .ico { transform: rotate(180deg); }
-    .pad [data-dir="right"] { grid-area: 2 / 2; }
-    .pad [data-dir="back"] { grid-area: 3 / 1 / 4 / 3; } .pad [data-dir="back"] .ico { transform: rotate(90deg); }
-    .pad .btn.lit { background: var(--primary); color: var(--bg); }
+    .pad {
+      --key: clamp(40px, 6.5vw, 4.3rem);
+      position: relative; container-type: inline-size;
+      width: min(100%, calc(3 * var(--key) + 0.5rem)); aspect-ratio: 1;
+      margin: 0.5rem auto; touch-action: none; user-select: none; -webkit-user-select: none;
+    }
+    .pad .btn {
+      /* Cut the two inner corners farther in when the buttons move closer together. */
+      --inner-cut: clamp(0.35rem, calc((3 * var(--key) - 100cqw) / 2 + 2px), calc(var(--key) / 2));
+      position: absolute; top: 0; left: 50%; translate: -50% 0;
+      rotate: var(--turn, 0deg); transform-origin: 50% 50cqw;
+      width: var(--key); height: var(--key); min-height: 0; padding: 0; touch-action: none;
+      clip-path: polygon(0.35rem 0, calc(100% - 0.35rem) 0, 100% 0.35rem,
+        100% calc(100% - var(--inner-cut)), calc(100% - var(--inner-cut)) 100%,
+        var(--inner-cut) 100%, 0 calc(100% - var(--inner-cut)), 0 0.35rem);
+      background: color-mix(in srgb, var(--c) 55%, transparent); box-shadow: none;
+    }
+    .pad .btn::before {
+      content: ""; position: absolute; inset: 1px; clip-path: inherit;
+      background: color-mix(in srgb, var(--c) 10%, var(--surface)); transition: background 0.12s;
+    }
+    .pad .btn:not(:disabled, .lit):is(:hover, :focus-visible)::before {
+      background: color-mix(in srgb, var(--c) 28%, var(--surface));
+    }
+    .pad .btn:disabled { background: var(--line); }
+    .pad .btn:disabled::before { background: var(--surface); }
+    .pad .btn.lit { color: var(--bg); }
+    .pad .btn.lit::before { background: var(--c); }
+    .pad .btn .ico { position: relative; width: 55%; height: 55%; rotate: -90deg; }
+    .pad [data-dir="left"] { --turn: -90deg; }
+    .pad [data-dir="right"] { --turn: 90deg; }
+    .pad [data-dir="back"] { --turn: 180deg; }
     .speed { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
     .speed input { width: 100%; min-height: 2.6rem; margin: 0; }
     .speed output { font-variant-numeric: tabular-nums; color: var(--c); }
-    .diagnostics { margin-top: 0.65rem; }
-    .diagnostics .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: 0.5rem 1rem; }
-    .diagnostics dt { text-transform: uppercase; letter-spacing: 0.08em; }
+    .diagnostics { margin-top: 0.5rem; }
+    .diagnostics .in { padding: 0.55rem clamp(0.55rem, 1.6vw, 1.1rem); }
+    .diagnostics .facts { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.6rem 0.75rem; margin: 0; }
+    .diagnostics .ico { position: absolute; left: 0; top: 50%; translate: 0 -50%; width: 1.35rem; height: 1.35rem; color: var(--c); }
+    .diagnostics .facts > div { position: relative; display: block; padding-left: 1.85rem; }
+    .diagnostics dt { font: 600 0.72rem/1.2 var(--f-ui); text-transform: uppercase; letter-spacing: 0.06em; }
+    .diagnostics .unavailable { color: var(--text-dim); }
     .raspbot .bar #stop { order: 1; }
   </style>
 </head>
@@ -90,14 +117,23 @@
         </div>
       </div></section>
     </div>
-    <section class="card diagnostics"><div class="in">
-      <h2>Diagnostics</h2>
+    <section class="card diagnostics" aria-label="Diagnostics"><div class="in">
       <dl class="facts">
-        <div><dt>Connection</dt><dd><span id="state" class="pill off">Connecting</span></dd></div>
-        <div><dt>Control</dt><dd><span id="control" class="pill off">Unavailable</span></dd></div>
-        <div><dt>Motion</dt><dd id="moving">Unavailable</dd></div>
-        <div><dt>Ultrasonic distance</dt><dd id="distance">Unavailable</dd></div>
-        <div><dt>Battery</dt><dd>Unavailable</dd></div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-link"/></svg>Connection</dt><dd><span id="state" class="pill off">Connecting</span></dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-pad"/></svg>Control</dt><dd><span id="control" class="pill off">Unavailable</span></dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg>Motion</dt><dd id="moving">Unavailable</dd>
+        </div>
+        <div>
+          <dt title="Ultrasonic distance"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h.1M8 8a5.7 5.7 0 0 1 0 8m3-11a10 10 0 0 1 0 14m3-17a14 14 0 0 1 0 20"/></svg>Distance</dt><dd id="distance">Unavailable</dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 7h17v10H2zM19 10h3v4h-3"/></svg>Battery</dt><dd class="unavailable">Unavailable</dd>
+        </div>
       </dl>
       <p id="msg" class="msg" aria-live="polite"></p>
     </div></section>
