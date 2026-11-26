@@ -212,3 +212,26 @@ def test_the_pages_open_what_the_assistant_says():
     assert "pages: pages()" in js
     # the wake word keeps listening with a page open (the builder, 2026-11-14)
     assert "!S.moduleOpen && document.visibilityState" not in design
+
+
+async def test_diagnostics_for_one_device(aiohttp_server, tmp_path, key):  # noqa: F811
+    """Quick job 135: "run the diagnostics for the Raspbot" opens Diagnostics for that device."""
+    pages = PAGES | {"diagnostics": "Diagnostics"}
+    script = [("tool", [("open_page", {"page": "diagnostics", "device": "  the  Raspbot "})])]
+    conv, seen = await make_conv(aiohttp_server, tmp_path, script)
+    events = [e async for e in conv.ask("Run the diagnostics for the Raspbot", pages)]
+    opened = next(e for e in events if e["type"] == "open")
+    assert opened == {
+        "type": "open",
+        "page": "diagnostics",
+        "title": "Diagnostics",
+        "device": "the Raspbot",
+    }
+    tool = next(t for t in seen[0]["tools"] if t["function"]["name"] == "open_page")
+    assert "device" in tool["function"]["parameters"]["properties"]
+    await conv.close()
+    script = [("tool", [("open_page", {"page": "teleop", "device": "raspbot1"})])]
+    conv, _ = await make_conv(aiohttp_server, tmp_path, script)
+    events = [e async for e in conv.ask("Pull up teleop", pages)]
+    assert {"type": "open", "page": "teleop", "title": "Teleop"} in events  # only diagnostics
+    await conv.close()

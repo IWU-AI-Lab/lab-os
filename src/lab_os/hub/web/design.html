@@ -2056,7 +2056,7 @@ function showDevice(d, from) {
   const problem = d.problem ? `<div>${esc(d.problem)}</div>` : "";
   card.querySelector(".in").innerHTML = `<div class="t"><svg class="ico"><use href="#${ico}"/></svg>${esc(d.name)}<button type="button" aria-label="Close">×</button></div>
     <div>${esc(d.use)}</div>${conn}${power}${problem}
-    <div class="row"><button type="button" class="btn small" data-remove="${esc(d.id)}" title="It comes back when it connects again.">Remove from the list</button></div>`;
+    <div class="row">${S.page.diagnostics ? `<button type="button" class="btn small" data-dx title="This device's motors, picture rate, power or connection">Diagnostics</button>` : ""}<button type="button" class="btn small" data-remove="${esc(d.id)}" title="It comes back when it connects again.">Remove from the list</button></div>`;
   card.hidden = false;
   // beside what was tapped, kept on screen
   const b = from.getBoundingClientRect(), pb = (from.closest(".panel") || from).getBoundingClientRect(), cw = card.offsetWidth, ch = card.offsetHeight;
@@ -2064,6 +2064,12 @@ function showDevice(d, from) {
   card.style.left = `${x}px`; card.style.top = `${clamp(b.top + b.height / 2 - ch / 2, 16, innerHeight - ch - 16)}px`;
   card.querySelector("button").addEventListener("click", hideDevice);
   card.querySelector("[data-remove]").addEventListener("click", (e) => { e.stopPropagation(); removeDevice(d.id); });
+  // this device's diagnostics (quick job 135), as a module that unfolds from the device's row
+  card.querySelector("[data-dx]")?.addEventListener("click", (e) => {
+    e.stopPropagation(); hideDevice();
+    if (!S.booted || S.moduleOpen) return;
+    SFX.blip(); S.pageArg = d.id.replace(/^screen:/, ""); openModule(viewEl("diagnostics"));
+  });
   SFX.blip();
 }
 function hideDevice() { $("#devcard").hidden = true; }
@@ -2215,7 +2221,7 @@ function beginTurn(q, fromCore, voiced = false) {
   const pacer = voiced ? VM.revealPacer(() => answer.content.length, (n, typing) => show(answer.content.slice(0, n), typing)) : null;
   const onEvent = (ev) => {
     if (ev.type === "state") { if (!voiced && !(ev.state === "idle" && answer.content)) setState(ev.state); }  // idle once typed out; spoken: the voice decides
-    else if (ev.type === "open") showPage(ev.page);  // the assistant opened a page on this screen
+    else if (ev.type === "open") showPage(ev.page, ev.device || "");  // the assistant opened a page on this screen
     else if (ev.type === "venue") {  // visitor mode on or off (quick job 35): cards, spend, settings
       pollStatus(); refreshFacts();
       sayAfter = !voiced && ev.visitors && S.sound;  // typed: the welcome is spoken too, once it's all there
@@ -2658,6 +2664,8 @@ function pagesHere() {
   const out = { hub: "the hub", chat: "the conversation" };
   for (const id of S.modules) if (MODULES[id]?.[2] === "page") out[id] = MODULES[id][0];
   if (S.page.settings) out.settings = "Settings";
+  if (!$("#cc-launch").hidden) out.command = "the Command Center";
+  if (S.page.diagnostics) out.diagnostics = "Diagnostics (all devices, or one: give its name as device)";
   if (!$("#xr-btn").hidden) out.xr = "the VR hub";  // a headset's browser: "open the VR hub"
   for (const [id, [title]] of Object.entries(DETAILS)) {
     const p = document.querySelector(`.side .panel[data-detail="${id}"]`);
@@ -2665,11 +2673,11 @@ function pagesHere() {
   }
   return out;
 }
-function showPage(id) {
+function showPage(id, device = "") {
   if (id === "xr" && !$("#xr-btn").hidden) { location.href = "/xr"; return; }
-  if (!S.booted || S.showing === id || (id === "hub" && !S.moduleOpen)) return;
+  if (!S.booted || (S.showing === id && !device) || (id === "hub" && !S.moduleOpen)) return;
   const target = id === "hub" ? null : id === "chat" ? $(".core") : id === "settings" ? $("#settings-btn") : id === "pages" ? $("#pages-btn")
-    : id === "command" && !$("#cc-launch").hidden ? $("#cc-launch")
+    : id === "command" && !$("#cc-launch").hidden ? $("#cc-launch") : id === "diagnostics" && S.page.diagnostics ? viewEl(id)
     : document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`);
   if (id !== "hub" && !target) return;
   if (S.sleeping) wake();
@@ -2678,7 +2686,7 @@ function showPage(id) {
   if (id === "hub") return;
   const go = () => {
     if (S.moduleOpen) return setTimeout(go, 120);
-    if (id === "chat") openChat(); else openModule(target);
+    if (id === "chat") openChat(); else { S.pageArg = device; openModule(target); }
     S.lastInput = performance.now();
   };
   setTimeout(go, Math.max(0, (S.closingUntil || 0) - performance.now()));
@@ -3499,7 +3507,8 @@ for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, (e) => {
 // module pages (teleop, monitor) open inside the hub: no page load, so full screen stays
 function openPage(id) {
   const frame = document.createElement("iframe");
-  frame.src = S.page[id]; frame.title = MODULES[id][0]; frame.allow = "xr-spatial-tracking; fullscreen";
+  const arg = S.pageArg; S.pageArg = "";  // Diagnostics for one device (quick job 135): ?device=
+  frame.src = S.page[id] + (arg ? `?device=${encodeURIComponent(arg)}` : ""); frame.title = MODULES[id][0]; frame.allow = "xr-spatial-tracking; fullscreen";
   frame.addEventListener("load", () => watchFrame(frame));
   $("#mod-slot").appendChild(frame);
 }

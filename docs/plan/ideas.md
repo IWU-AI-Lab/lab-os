@@ -320,6 +320,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Why:** low batteries and hot servos are the usual silent failures.
 - **Source list:** "Hidden sensor data the hardware already has" (below) says what each device offers.
 - **Plugs into:** each device plug-in declares its readings; the device card shows them; the troubleshooting suite logs them.
+- **Since quick job 135:** the Diagnostics page shows these readings for each device (the arms' motors, the cameras' picture rate, the Raspbot's power, temperature and Wi-Fi). The device cards do not show them yet.
 
 ### Projects module
 - **What:** an expandable list of the lab's active and past projects: name, people, devices it uses, status (active / paused / done), maybe a link to its repo or docs.

@@ -167,8 +167,10 @@ def test_onboard_program_uses_only_the_standard_library_and_yahboom():
     }
     allowed = (
         "argparse contextlib json logging math signal socket socketserver sys threading time http"
+        " pathlib"
     )
-    assert imports <= {*allowed.split(), "cv2", "Raspbot_Lib"}, imports
+    # lab_os_health: deployed next to it (the Pi's health for the diagnostics, quick job 135)
+    assert imports <= {*allowed.split(), "cv2", "Raspbot_Lib", "lab_os_health"}, imports
 
 
 # ---- the page ----
@@ -746,3 +748,36 @@ def test_onboard_mecanum_checks_front_clearance_during_a_diagonal():
     car.handle({"drive": [0, -1, -1, 0]})
     assert tuple(board.speeds.values()) == (0, -120, -120, 0)
     assert not car.check_watchdog()
+
+
+def test_the_pis_health_for_the_diagnostics():
+    """Quick job 135: the program reads the Pi's power, temperature and Wi-Fi with the health
+    log's parsers, and sends them with its diagnostics answer."""
+    import sys
+
+    sys.path.insert(0, str(ONBOARD.parent))
+    try:
+        spec = importlib.util.spec_from_file_location("lab_os_raspbot_dx", ONBOARD)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        out = {
+            ("vcgencmd", "get_throttled"): "throttled=0x50000\n",
+            ("vcgencmd", "pmic_read_adc"): "     EXT5V_V volt(24)=5.09812000V\n",
+            ("vcgencmd", "measure_temp"): "temp=48.3'C\n",
+        }
+        wireless = "Inter-| sta-|\n face | tus |\n wlan0: 0000   58.  -52.  -256\n"
+        got = mod.pi_health(run=lambda *cmd: out[cmd], read=lambda p: wireless)
+        assert got == {
+            "power": "was_low",
+            "input_v": 5.1,
+            "temp_c": 48.3,
+            "wifi_quality": 58,
+            "wifi_dbm": -52,
+        }
+        car = mod.Car(mod.FakeBoard())
+        assert "pi" not in car.diagnostics()  # nothing read yet: no pi
+        mod.PI_HEALTH.update(got)
+        assert car.diagnostics()["pi"]["power"] == "was_low"
+        mod.PI_HEALTH.clear()
+    finally:
+        sys.path.remove(str(ONBOARD.parent))

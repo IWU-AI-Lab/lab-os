@@ -270,18 +270,24 @@ class SO101Arm:
         return dict(self._commanded or self._last)
 
     def read_health(self) -> dict[str, dict[str, float]]:
-        """Per servo: temperature (°C), load (% of max, signed), supply voltage. Three short bus
-        reads (a few ms); the teleop loop asks every few seconds, to see what 1:1 does to them."""
+        """Per servo: temperature (°C), load (% of max, signed), supply voltage, and its error
+        flags (`status`, the Feetech status register; quick job 135's diagnostics). Four short
+        bus reads (a few ms); the teleop loop asks every few seconds, to see what 1:1 does."""
         bus = self._require_connected().bus
         temp = bus.sync_read("Present_Temperature", normalize=False, num_retry=1)
         load = bus.sync_read("Present_Load", normalize=False, num_retry=1)
         volts = bus.sync_read("Present_Voltage", normalize=False, num_retry=1)
+        try:
+            status = bus.sync_read("Status", normalize=False, num_retry=1)
+        except Exception:  # an older table, a dropped packet: the rest still counts
+            status = {}
         return {
             j: {
                 "temp_c": float(temp[j]),
                 "load_pct": float(load.get(j, 0)) / 10,  # 0.1 % units
                 "volts": float(volts.get(j, 0)) / 10,  # 0.1 V units
             }
+            | ({"status": int(status[j])} if j in status else {})
             for j in temp
         }
 

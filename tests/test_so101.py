@@ -43,6 +43,7 @@ class FakeBus:
             "Present_Temperature": dict.fromkeys(names, 34),
             "Present_Load": dict.fromkeys(names, 125),  # 12.5 %
             "Present_Voltage": dict.fromkeys(names, 121),  # 12.1 V
+            "Status": dict.fromkeys(names, 0),  # no error flags (quick job 135)
         }
 
     def connect(self):
@@ -163,8 +164,12 @@ def test_servo_health(no_port_check):
     arm = arm_with(robot, allow_motion=True)
     arm.connect()
     h = arm.read_health()
-    assert h["elbow_flex"] == {"temp_c": 34.0, "load_pct": 12.5, "volts": 12.1}
+    assert h["elbow_flex"] == {"temp_c": 34.0, "load_pct": 12.5, "volts": 12.1, "status": 0}
     assert set(h) == set(START)
+    robot.bus.health["Status"]["gripper"] = 0b100  # the servo's overheat flag
+    assert arm.read_health()["gripper"]["status"] == 4
+    del robot.bus.health["Status"]  # a table without it: the rest still counts
+    assert "status" not in arm.read_health()["gripper"]
 
 
 def test_joint_outside_its_limits_never_jumps(no_port_check, clock):

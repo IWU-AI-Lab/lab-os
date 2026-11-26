@@ -34,6 +34,7 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 PORT = 8765
 CAMERA_PORT = 8766
@@ -103,6 +104,51 @@ class FakeBoard:
 
     def distance_mm(self) -> int | None:
         return self.distance
+
+
+# The Pi's health for the brain's diagnostics (quick job 135): the power (the board has no battery
+# reading; a low battery shows as under-voltage at the Pi), the 5 V input, the temperature and the
+# Wi-Fi link. A thread reads it every PI_HEALTH_S, so a diagnostics answer never waits for vcgencmd.
+PI_HEALTH_S = 5.0
+PI_HEALTH: dict = {}
+
+
+def pi_health(run=None, read=None) -> dict:
+    """One reading, with lab_os_health's parsers (deployed next to this file)."""
+    import lab_os_health as h
+
+    run = run or h._run
+    read = read or (lambda p: Path(p).read_text())
+    flags = h.throttled(run("vcgencmd", "get_throttled"))
+    try:
+        bits = int(flags, 16)
+        power = "low" if bits & 0x1 else "was_low" if bits & 0x10000 else "ok"
+    except ValueError:
+        power = "?"
+    out = {"power": power}
+    volts = h.pmic(run("vcgencmd", "pmic_read_adc"), "EXT5V_V")
+    temp = h.temperature(run("vcgencmd", "measure_temp"))
+    try:
+        link = h.wifi(read("/proc/net/wireless"))
+    except OSError:
+        link = "?"
+    for key, text, unit in (("input_v", volts, "V"), ("temp_c", temp, "C")):
+        with contextlib.suppress(ValueError):
+            out[key] = round(float(text.rstrip(unit)), 2)
+    if link.startswith("q"):
+        quality, dbm = link.split()
+        out["wifi_quality"], out["wifi_dbm"] = int(quality[1:]), int(dbm.removesuffix("dBm"))
+    return out
+
+
+def keep_pi_health(done: threading.Event) -> None:
+    while not done.is_set():
+        try:
+            PI_HEALTH.clear()
+            PI_HEALTH.update(pi_health())
+        except Exception as e:  # never stop the car's program for a reading
+            log.info("pi health: %s", e)
+        done.wait(PI_HEALTH_S)
 
 
 class Car:
@@ -192,10 +238,13 @@ class Car:
 
     def diagnostics(self) -> dict:
         with self._lock:
-            return {
+            report = {
                 "distance_mm": self.board.distance_mm(),
                 "drive_stop": self._drive_stop,
             }
+        if PI_HEALTH:
+            report["pi"] = dict(PI_HEALTH)
+        return report
 
     def handle(self, msg: dict) -> None:
         if "look" in msg:  # the camera only: the wheels keep what they do
@@ -381,6 +430,8 @@ def main(argv=None) -> None:
     log.info("ready on port %d (camera: %s)", args.port, camera_port or "none")
 
     done = threading.Event()
+    if not args.fake:
+        threading.Thread(target=keep_pi_health, args=(done,), daemon=True).start()
     signal.signal(signal.SIGTERM, lambda *_: done.set())
     signal.signal(signal.SIGINT, lambda *_: done.set())
     try:

@@ -93,7 +93,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import Registry, load_registry, users_of
-from lab_os.hub import card_reader, command_center, launch, tls, wake_clips
+from lab_os.hub import card_reader, command_center, diagnostics, launch, tls, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
@@ -218,6 +218,11 @@ PAGES = (
         "Command Center",
         "Every device and screen in one workspace: see, arrange and control them (the brain only).",
     ),
+    (
+        "/diagnostics",
+        "Diagnostics",
+        "Every device's health: the arms' motors, the cameras' picture rate, the Raspbot's power.",
+    ),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
 )
@@ -242,6 +247,7 @@ DEVICE_VIEWS = {
     "remote": ("Phone Remote", "/remote"),
     "xr": ("VR Hub", "/xr"),  # only on a headset's browser
     "command": ("Command Center", "/command-center"),  # quick job 134: the brain's own computer
+    "diagnostics": ("Diagnostics", "/diagnostics"),  # quick job 135: every device, or ?device=
 }
 
 DEFAULT_RESET_AFTER_S = 1800.0
@@ -410,6 +416,22 @@ async def settings_page(request: web.Request) -> web.FileResponse:
 
 async def pages_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "pages.html")
+
+
+async def diagnostics_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "diagnostics.html")
+
+
+async def api_diagnostics(request: web.Request) -> web.Response:
+    """Every device with its diagnostics panel (quick job 135). Only reads."""
+    keys = {
+        "loop": LOOP,
+        "raspbot": RASPBOT,
+        "hub_devices": HUB_DEVICES,
+        "feeds": FEEDS,
+        "live": LIVE,
+    }
+    return web.json_response({"devices": diagnostics.collect(request.app, keys)})
 
 
 async def command_center_page(request: web.Request) -> web.StreamResponse:
@@ -1997,6 +2019,8 @@ def create_brain_app(
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/pages", pages_page)
     app.router.add_get("/command-center", command_center_page)
+    app.router.add_get("/diagnostics", diagnostics_page)
+    app.router.add_get("/api/diagnostics", api_diagnostics)
     command_center.add_routes(app)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)

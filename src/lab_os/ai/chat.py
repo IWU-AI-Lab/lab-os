@@ -141,7 +141,8 @@ OPEN_PAGE = "open_page"
 PAGE_RULES = """\
 You can open pages on this screen, the one the person is talking to (open_page): {pages}.
 When someone wants to see, open, pull up, show or go to one ("show me the AI spend", "go back to
-the hub"), open it instead of describing it. "hub" closes whatever is open."""
+the hub"), open it instead of describing it. "hub" closes whatever is open. For one device's
+diagnostics ("run the diagnostics for the Raspbot"), open diagnostics with that device's name."""
 PAGE_ID = re.compile(r"^[a-z][a-z0-9_-]{0,23}$")
 MAX_PAGES = 24
 
@@ -166,7 +167,15 @@ def page_tool(pages: dict[str, str]) -> dict:
             "description": f"Open a page on this screen (the one being talked to): {listed}.",
             "parameters": {
                 "type": "object",
-                "properties": {"page": {"type": "string", "enum": list(pages)}},
+                "properties": {
+                    "page": {"type": "string", "enum": list(pages)},
+                    # quick job 135: one device's diagnostics; the page finds it from the words
+                    "device": {
+                        "type": "string",
+                        "description": "Only for diagnostics: the device the person named "
+                        "(for example raspbot1, so101-white, the Quest). Leave out for all.",
+                    },
+                },
                 "required": ["page"],
             },
         },
@@ -194,6 +203,15 @@ def _page_arg(arguments: str, pages: dict[str, str]) -> str | None:
     except (ValueError, AttributeError):
         return None
     return page if isinstance(page, str) and page in pages else None
+
+
+def _device_arg(arguments: str) -> str:
+    """open_page's device (quick job 135: one device's diagnostics), short and plain."""
+    try:
+        device = json.loads(arguments or "{}").get("device")
+    except (ValueError, AttributeError):
+        return ""
+    return " ".join(device.split())[:60] if isinstance(device, str) else ""
 
 
 def calc_answer(arguments: str) -> str:
@@ -563,7 +581,10 @@ class Conversation:
                     elif call.name == OPEN_PAGE and pages:
                         page = _page_arg(call.arguments, pages)
                         if page:
-                            yield {"type": "open", "page": page, "title": pages[page]}
+                            device = _device_arg(call.arguments) if page == "diagnostics" else ""
+                            yield {"type": "open", "page": page, "title": pages[page]} | (
+                                {"device": device} if device else {}
+                            )
                             opened = page
                             result = f"Opened {pages[page]} on this screen."
                         else:
