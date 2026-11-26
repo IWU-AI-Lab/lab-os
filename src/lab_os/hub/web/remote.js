@@ -88,6 +88,8 @@ $("#ask-form").addEventListener("submit", async (e) => {
   line.blur(); // the phone's keyboard goes away, so the answer is in view
 });
 
+$("#ask-form").inert = false;
+
 /* ---------- voice: hold Talk, or the wake word ---------- */
 const voice = createVoice({
   pages: () => null,
