@@ -56,7 +56,8 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
     @server.tool(annotations=ACT)
     async def open_on_device(view: str, device: str, window: str | None = None) -> dict:
         """Open a page on a device's screen, like "Open on…" (`view`: an id from hub_screens'
-        views, e.g. monitor, teleop, spend, system; `device`: a device name, e.g. newline).
+        views, e.g. monitor, teleop, spend, system; `device`: a device name, e.g. newline, or
+        its display name, e.g. "The Newline").
         When the device has several free monitors it asks which: then call again with
         `window`."""
         try:
@@ -106,7 +107,8 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
     async def change_device_setting(device: str, key: str, value: bool | int | str) -> dict:
         """Change one of a device's own settings, like ⚙ → This Device on that device (e.g.
         `voice`: push-to-talk, dictation or wake word; `wake_sensitivity` 1-9; `sound`;
-        `quality`). Every window of that device gets it at once."""
+        `quality`; `display_name`: the name people read, e.g. "Windows desktop 3"). Every window
+        of that device gets it at once."""
         return _out(await hub.device_settings(app, device, {key: value}))
 
     # ---------- the brain ----------

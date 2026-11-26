@@ -6,7 +6,7 @@
 // /api/settings (src/lab_os/settings.py) and save at once (POST /api/settings, this computer only). "This
 // Device" is kept by the brain under the device's name (the ?device= in the hub's address; /web/device.js).
 // After a save, the hub around this page (if any) re-reads the theme.
-import { deviceName, prefs, setPref } from "/web/device.js";
+import { deviceName, displayName, prefs, renameDevice, setPref } from "/web/device.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -224,6 +224,32 @@ function btn(label, cls = "") {
   return b;
 }
 
+/* ---------- this device's names (quick job 132): the one people read, and the device name (its ID) ---------- */
+function displayNameRow() {
+  const f = { key: "display_name", label: "Display Name", kind: "text",
+    help: NAME ? "The name that Open on…, the Devices panel and the assistant show, for example \"Windows desktop 3\"." : "Give this device a device name first (below)." };
+  return fieldRow(f, screenGet().display_name || "", (v) => screenSet("display_name", v.trim()), !NAME);
+}
+function deviceNameRow() {
+  const pair = document.createElement("div");
+  pair.className = "pair";
+  const box = document.createElement("input");
+  box.type = "text"; box.maxLength = 32; box.value = NAME; box.placeholder = "desk-3";
+  box.setAttribute("aria-label", "Device Name");
+  const b = btn(NAME ? "Change" : "Add");
+  pair.append(box, b);
+  const r = row("Device Name", "The ID in the address (?device=). Lowercase letters, digits and dashes. The settings move to the new name. The hub opens again.", pair);
+  const go = async () => {
+    b.disabled = true;
+    const res = await renameDevice(box.value);
+    said(r, res.ok, res.message);
+    if (!res.ok) b.disabled = false;
+  };
+  b.addEventListener("click", go);
+  box.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+  return r;
+}
+
 /* ---------- this screen's other monitors (Window Management API, Chrome on this computer) ---------- */
 function screensRow() {
   const b = btn("Find Them");
@@ -276,7 +302,7 @@ const LANG_NAMES = { "": "Any", en: "English" };  // the brain's codes (lab_os/a
 function languageRow() {
   const pair = document.createElement("div");
   pair.className = "pair stack";  // Expects above Answers (quick job 82: side by side they touched the text)
-  const r = row("Assistant Language", `This device only${NAME ? ` (${NAME})` : ""}. Expects: a hint to speech-to-text (OpenAI's voice only). It still hears other languages. Answers: the language of every answer, typed or spoken.`, pair);
+  const r = row("Assistant Language", `This device only${NAME ? ` (${displayName()})` : ""}. Expects: a hint to speech-to-text (OpenAI's voice only). It still hears other languages. Answers: the language of every answer, typed or spoken.`, pair);
   // "Expects" was "Listens", which sounded like a filter (quick job 46)
   for (const [key, label] of [["hear_in", "Expects"], ["answer_in", "Answers"]]) {
     const f = { key, label, kind: "choice", choices: Object.values(LANG_NAMES) };
@@ -459,7 +485,8 @@ async function start() {
     return;
   }
   // This Device: most used first, then what's for slow screens and other monitors
-  const dev = group("device", "This Device", NAME ? `${NAME}: every window of ${NAME} uses these` : "This browser only: open the hub with ?device=<name> to keep them under a name", { icon: "i-screen" });
+  const dev = group("device", "This Device", NAME ? `${displayName()}: every window of this device uses these` : "This browser only: add a device name to keep them under a name", { icon: "i-screen" });
+  dev.append(displayNameRow(), deviceNameRow());
   for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
   const voiceSlot = dev.appendChild(document.createElement("div"));
   voiceRows().then((rows) => voiceSlot.replaceWith(...rows), (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });

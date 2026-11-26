@@ -15,6 +15,13 @@ after it closes: when the brain restarts, the pages reconnect and the list fills
   It keeps no settings: those need a name.
 - **Monitors**: a device with the hub open on two monitors has two windows. "Open on desk" picks
   the free one (no module open); when two are free, or none, the sender is asked which.
+- **Display names** (quick job 132): a name that is easy to read ("Windows desktop 3"), set in
+  ⚙ → This device. Open on…, the Devices panel and the assistant show it; the device name stays
+  the ID. The assistant may use either.
+- **Its name by itself** (quick job 132): the brain remembers the name each address last used (the
+  router reserves the addresses), and gives it to a page opened there without `?device=`. The
+  browser remembers it too (/web/device.js). Not for the brain's own computer: pages there often
+  use several names.
 - **Each device's settings** ("This device": level of detail, drawing resolution, sound, full
   screen, the way in to voice) are kept by the brain under the name, in the place's
   `local/hub-devices.yaml`, so every window of the device (and the next browser under that
@@ -62,7 +69,9 @@ SETTINGS = {
     "hear_in": ("", "en"),  # the assistant's languages (lab_os.ai.languages); "" = any
     "answer_in": ("", "en"),
     "cameras_hidden": list,  # the Cameras page: the cameras this device doesn't show (quick job 93)
+    "display_name": str,  # the name that is easy to read (quick job 132); "" = the device name
 }
+MAX_DISPLAY = 40
 MAX_LIST = 32  # a list setting: at most this many names
 
 
@@ -93,17 +102,59 @@ class DeviceSettings:
     def __init__(self, path: Callable[[], Path] | None = None):
         self._path = path or (lambda: settings_file())  # looked up each time (tests swap it)
 
-    def _read(self) -> dict:
+    def _raw(self) -> dict:
         p = self._path()
         try:
             raw = yaml.safe_load(p.read_text()) if p.is_file() else None
         except (OSError, yaml.YAMLError) as e:
             log.warning("%s: %s; starting from empty settings", p, e)
             raw = None
-        devices = raw.get("devices") if isinstance(raw, dict) else None
+        return raw if isinstance(raw, dict) else {}
+
+    def _read(self) -> dict:
+        devices = self._raw().get("devices")
         if not isinstance(devices, dict):
             return {}
         return {str(k): dict(v) for k, v in devices.items() if isinstance(v, dict)}
+
+    def _addresses(self) -> dict[str, str]:
+        known = self._raw().get("addresses")
+        if not isinstance(known, dict):
+            return {}
+        return {str(a): str(n) for a, n in known.items() if isinstance(n, str) and NAME.match(n)}
+
+    def display_names(self) -> dict[str, str]:
+        """Each device's display name, by device name (only the ones that have one)."""
+        return {n: str(v["display_name"]) for n, v in self._read().items() if v.get("display_name")}
+
+    def name_for(self, address: str) -> str:
+        """The device name this address last used ("" = none known)."""
+        return self._addresses().get(address, "") if address else ""
+
+    def remember(self, address: str, name: str) -> None:
+        """Keep the name this address uses (written only when it changed)."""
+        name = clean_name(name)
+        known = self._addresses()
+        if not address or known.get(address) == name:
+            return
+        known[address] = name
+        self._write(self._read(), known)
+
+    def rename(self, old: str, new: str) -> dict:
+        """Give a device another device name: its settings and its addresses move along (where the
+        new name has settings already, those stay). Returns the settings under the new name."""
+        old, new = clean_name(old), clean_name(new)
+        devices, known = self._read(), self._addresses()
+        if old != new:
+            moved = devices.pop(old, {})
+            if new in devices:
+                moved.pop("display_name", None)  # the new name's own stays
+            mine = moved | devices.get(new, {})
+            if mine:
+                devices[new] = mine
+            known = {a: (new if n == old else n) for a, n in known.items()}
+            self._write(devices, known)
+        return devices.get(new, {})
 
     def get(self, name: str) -> dict:
         return self._read().get(clean_name(name), {})
@@ -122,6 +173,20 @@ class DeviceSettings:
             allowed = SETTINGS[key]
             if allowed is None:
                 ok = isinstance(value, bool)
+            elif allowed is str:
+                value = clean_display(value) if isinstance(value, str) else value
+                ok = isinstance(value, str) and 0 < len(value) <= MAX_DISPLAY
+                if ok:
+                    taken = next(
+                        (
+                            n
+                            for n, v in devices.items()
+                            if n != name and str(v.get(key, "")).lower() == value.lower()
+                        ),
+                        None,
+                    )
+                    if taken:
+                        raise DeviceError(f"{taken} already has the display name {value!r}")
             elif allowed is list:  # camera names, as devices.yaml has them
                 ok = isinstance(value, list) and len(value) <= MAX_LIST
                 ok = ok and all(isinstance(v, str) and NAME_IN_LIST.match(v) for v in value)
@@ -140,6 +205,8 @@ class DeviceSettings:
                 want = (
                     "true or false"
                     if allowed is None
+                    else f"a name of up to {MAX_DISPLAY} characters"
+                    if allowed is str
                     else f"a list of up to {MAX_LIST} device names"
                     if allowed is list
                     else ", ".join(choices)
@@ -149,17 +216,19 @@ class DeviceSettings:
             devices[name] = mine
         else:
             devices.pop(name, None)
-        self._write(devices)
+        self._write(devices, self._addresses())
         return mine
 
-    def _write(self, devices: dict) -> None:
+    def _write(self, devices: dict, addresses: dict) -> None:
         p = self._path()
         head = (
             "# Each device's own settings (Settings → This device), kept by the brain under the\n"
-            "# device's name (the ?device= in its address). Written by the hub; edit if you like.\n"
+            "# device's name (the ?device= in its address), and the name each address last used\n"
+            "# (addresses). Written by the hub; edit if you like.\n"
             '# docs/archive/guides-2026-11-25/hub.md → "Devices".\n'
         )
-        body = yaml.safe_dump({"devices": devices}, sort_keys=True, allow_unicode=True)
+        data = {"devices": devices} | ({"addresses": addresses} if addresses else {})
+        body = yaml.safe_dump(data, sort_keys=True, allow_unicode=True)
         tmp = p.with_suffix(".tmp")
         p.parent.mkdir(parents=True, exist_ok=True)  # a fresh copy has no local/ folder yet
         tmp.write_text(head + body)
@@ -222,19 +291,45 @@ class HubDevices:
             out[w.id] = label if seen[label] == 1 else f"{label} {seen[label]}"
         return out
 
+    def _display_names(self) -> dict[str, str]:
+        try:
+            return self.settings.display_names()
+        except OSError:
+            return {}
+
+    def shown(self, device: str) -> str:
+        """A device as people read it: its display name, else its device name."""
+        return self._display_names().get(device, device)
+
+    def resolve(self, device: str) -> str:
+        """The device name for what someone gave: a device name, or a display name ("Windows
+        desktop 3", any case)."""
+        given = (device or "").strip()
+        if any(w.key == given for w in self.windows.values()):
+            return given
+        for name, display in self._display_names().items():
+            if display.lower() == clean_display(given).lower():
+                return name
+        return clean_name(given)
+
     def listing(self) -> list[dict]:
         """The devices with the hub open, each with its windows (what they show). A page with no
         device name is listed by its address (`title` says so)."""
         titles = self.modules()
+        shown = self._display_names()
         out = []
         for name in sorted({w.key for w in self.windows.values()}):
             labels = self.labels(name)
             wins = self.of(name)
             named = bool(wins[0].device)
+            display = shown.get(name, "") if named else ""
             out.append(
                 {
                     "name": name,
-                    "title": name if named else f"{wins[0].address or 'unknown'} (no device name)",
+                    "title": (display or name)
+                    if named
+                    else f"{wins[0].address or 'unknown'} (no device name)",
+                    "display_name": display,
                     "named": named,
                     "address": wins[0].address,
                     "windows": [
@@ -293,6 +388,15 @@ class HubDevices:
         """One message to every hub page on the brain's own computer (a swipe, quick job 113)."""
         await asyncio.gather(*(self._send(w, msg) for w in list(self.windows.values()) if w.here))
 
+    async def rename(self, old: str, new: str) -> dict:
+        """Give a device another device name (⚙ → This device): its settings move along, and
+        every window of it opens again under the new name."""
+        values = self.settings.rename(old, new)
+        new = clean_name(new)
+        msg = {"type": "renamed", "device": new}
+        await asyncio.gather(*(self._send(w, msg) for w in self.of(clean_name(old))))
+        return values
+
     async def push_settings(self, device: str, values: dict) -> None:
         msg = {"type": "settings", "settings": values}
         await asyncio.gather(*(self._send(w, msg) for w in self.of(device)))
@@ -311,12 +415,12 @@ class HubDevices:
             raise DeviceError(
                 f"{module!r} isn't a page that opens on a device ({', '.join(titles)})"
             )
-        device = clean_name(device)
+        device = self.resolve(device)
         wins = [w for w in self.of(device) if w.id != sender_window]
         if not wins:
             raise DeviceError(
-                f"{device} doesn't have the hub open (only devices with the hub open can show a "
-                "page: open it there first)"
+                f"{self.shown(device)} doesn't have the hub open (only devices with the hub "
+                "open can show a page: open it there first)"
             )
         if window:
             target = next((w for w in wins if w.id == window), None)
@@ -346,7 +450,7 @@ class HubDevices:
         target.stage = "hub"
         await self.broadcast()
         label = self.labels(device).get(target.id, "")
-        shown = device if target.device else f"{target.address} (no device name)"
+        shown = self.shown(device) if target.device else f"{target.address} (no device name)"
         where = f"{shown} ({label})" if label else shown
         return {
             "ok": True,
@@ -358,7 +462,7 @@ class HubDevices:
 
     async def close_on(self, device: str, window: str) -> dict:
         """Close the module on a device's window."""
-        device = clean_name(device)
+        device = self.resolve(device)
         target = next((w for w in self.of(device) if w.id == window), None)
         if target is None:
             raise DeviceError(f"that window of {device} isn't open any more")
@@ -391,12 +495,22 @@ class HubDevices:
             name = clean_name(raw_name) if raw_name else ""
         except DeviceError:
             name = ""
+        here = on_this_computer(request)
+        address = request.remote or ""
+        found = ""  # the name the brain remembered for this address (quick job 132)
+        try:
+            if not here and not raw_name:
+                name = found = self.settings.name_for(address)
+            elif not here and name:
+                self.settings.remember(address, name)
+        except (OSError, DeviceError) as e:
+            log.warning("device names by address: %s", e)
         wid = request.query.get("window", "")
         if not WINDOW_ID.match(wid) or wid in self.windows:  # a copied tab keeps the same id
             wid = "w-" + secrets.token_urlsafe(6)
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
-        w = Window(wid, name, ws, request.remote or "", here=on_this_computer(request))
+        w = Window(wid, name, ws, address, here=here)
         self.windows[wid] = w
         log.info("device %s connected (%s, window %s)", name or "(no name)", w.address, wid)
         try:
@@ -408,6 +522,8 @@ class HubDevices:
             {
                 "type": "welcome",
                 "device": name,
+                "found": bool(found),  # the name came from the brain, not the address
+                "display_name": self.shown(name) if name else "",
                 "window": wid,
                 "settings": settings,
                 "devices": self.listing(),
@@ -450,6 +566,11 @@ def address_key(address: str) -> str:
     if len(key) > 32:
         key = "addr-" + hashlib.sha256(address.encode()).hexdigest()[:12]
     return key
+
+
+def clean_display(text: str) -> str:
+    """A display name as typed: one line, single spaces, no control characters."""
+    return " ".join("".join(c if c.isprintable() else " " for c in str(text)).split())
 
 
 def clean_name_error(raw: str) -> str:
