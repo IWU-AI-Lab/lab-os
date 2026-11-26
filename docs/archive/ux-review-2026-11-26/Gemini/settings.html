@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <script type="importmap">
+    {"imports":{"three":"/web/vendor/three/three.module.js"}}
+  </script>
+  <style>
+    /* quick job 38: a sidebar of groups beside one scrolling list (Apple's HIG and NN/g for settings screens) */
+    .wrap { display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); gap: 1.6rem; min-height: 0; }
+    nav.groups { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+    nav.groups .nav-main { display: flex; flex-direction: column; gap: 0.5rem; }
+    nav.groups .nav-risky { margin-top: auto; display: flex; flex-direction: column; }
+    .navb { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--line); cursor: pointer;
+      background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text-dim); font: 500 0.98rem/1.2 var(--f-ui); text-align: left;
+      clip-path: polygon(0.5rem 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%, 0 0.5rem); }
+    .navb .ico { width: 1.1rem; height: 1.1rem; color: var(--c); flex: none; }
+    .navb:hover, .navb:focus-visible { color: var(--hot); border-color: color-mix(in srgb, var(--c) 60%, transparent); outline: none; }
+    .navb.on { color: var(--text); border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+    .navb.risky { color: color-mix(in srgb, var(--danger) 70%, var(--text)); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+    .navb.risky .ico { color: var(--danger); }
+    .navb.risky.on { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+    /* the search bar (quick job 104): a thin line box like the inputs, its icon in the main color */
+    .search { display: flex; align-items: center; gap: 0.55rem; padding: 0 0.7rem; min-height: 2.6rem; margin-bottom: 0.3rem; border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 60%, transparent); clip-path: polygon(0.5rem 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%, 0 0.5rem); }
+    .search:focus-within { border-color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
+    .search .ico { width: 1.1rem; height: 1.1rem; color: var(--c); }
+    .search input { flex: 1; min-width: 0; border: 0; padding: 0.5rem 0; background: none; color: var(--text); font: 500 0.98rem/1.2 var(--f-ui); outline: none; }
+    .search input::placeholder { color: var(--text-dim); }
+    .search input::-webkit-search-cancel-button { filter: grayscale(1) brightness(1.6); cursor: pointer; }
+    /* while searching: the rows, notes and groups with no match hide; a folded group with a match opens */
+    .no-match { display: none !important; }
+    .group.searching.folded .rows { display: block; }
+    .group.searching.folded .chev { transform: none; }
+    .navb.no-hits { opacity: 0.35; }
+    #no-hits { margin: 0 0 1rem; font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
+    nav.groups .foot { margin: 0.8rem 0 0; font: var(--w-lines) 0.8rem/1.45 var(--f-lines); color: var(--text-dim); }
+    #list { overflow-y: auto; padding-right: 1rem; max-width: 64rem; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; }
+    .group { margin-bottom: 1.8rem; scroll-margin-top: 0.4rem; }
+    .ghead { display: flex; align-items: baseline; gap: 0.7rem; width: 100%; padding: 0 0 0.5rem; margin: 0 0 0.6rem; border: 0; border-bottom: 1px solid var(--line);
+      background: none; cursor: pointer; text-align: left; color: var(--c); }
+    .ghead .gtitle { font: 600 1.15rem/1.2 var(--f-ui); letter-spacing: 0.04em; }
+    .ghead small { font: var(--w-lines) 0.82rem/1.3 var(--f-lines); color: var(--text-dim); }
+    .ghead .chev { align-self: center; width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 1.8; transition: transform 0.2s; flex: none; }
+    .group.folded .chev { transform: rotate(-90deg); }
+    .group.folded .rows { display: none; }
+    .ghead:hover .gtitle, .ghead:focus-visible .gtitle { color: var(--hot); }
+    .ghead:focus-visible { outline: none; }
+    .rows { border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent);
+      clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem); }
+    .risky .ghead { color: color-mix(in srgb, var(--danger) 80%, var(--text)); border-bottom-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+    .risky .rows { border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+    /* a row: label and help | the value (every value ends at one edge) | unit | "Saved" for a moment */
+    .row { display: grid; grid-template-columns: minmax(0, 1fr) auto 2.6rem 5.2rem; gap: 0.15rem 0.8rem; align-items: center; padding: 0.7rem 0.6rem 0.7rem 1rem;
+      border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); min-height: 3.2rem; }
+    .rows > .row:first-child, .rows > .sub + .row { border-top: 0; }
+    .row .lbl label { font: 500 0.98rem/1.25 var(--f-ui); color: var(--text); }
+    .row .help { margin-top: 0.15rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+    .row .ctl { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
+    .row .ctl .ctl { display: contents; }
+    .row > .unit { font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text-dim); }
+    .row .st { font: 500 0.8rem/1 var(--f-ui); color: var(--c); opacity: 0; transition: opacity 0.6s; white-space: nowrap; }
+    .row .st.on { opacity: 1; transition: opacity 0.15s; }
+    .row .err { grid-column: 1 / -1; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); }
+    .row .err:empty { display: none; }
+    .row .screens { grid-column: 1 / -1; margin: 0.2rem 0 0; padding-left: 1.1rem; font: var(--w-lines) 0.82rem/1.5 var(--f-lines); color: var(--text-dim); }
+    .row .screens:empty { display: none; }
+    .pair { display: flex; align-items: center; gap: 0.5rem; }
+    .sub { padding: 0.65rem 1rem 0.35rem; font: 600 0.74rem/1 var(--f-ui); letter-spacing: 0.08em; color: var(--text-dim); border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    .note { padding: 0.65rem 1rem; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--text-dim); border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    /* fixed at the bottom of the window while a change waits for a restart, so it's where you look (quick job 82:
+       at the top of the list it was out of sight after scrolling down) */
+    #restart-bar { position: fixed; z-index: 5; left: 50%; bottom: 1rem; transform: translateX(-50%); width: min(60rem, calc(100% - 2rem));
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.3rem 0.8rem; align-items: center; padding: 0.7rem 0.8rem 0.7rem 1rem;
+      border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent); color: var(--accent); font: 500 0.9rem/1.3 var(--f-ui);
+      background: color-mix(in srgb, var(--surface) 94%, var(--bg)); box-shadow: 0 0.4rem 1.6rem rgb(0 0 0 / 0.45); }
+    #restart-bar[hidden] { display: none; }
+    body:has(#restart-bar:not([hidden])) #list { padding-bottom: 6rem; }  /* the last rows stay reachable above it */
+    #restart-bar .act { display: flex; gap: 0.5rem; }
+    #restart-bar .err { grid-column: 1 / -1; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--text); }
+    #restart-bar .err:empty, #restart-bar .st { display: none; }
+    .btn.go { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+    .btn.go:hover:not(:disabled) { border-color: var(--danger); }
+    @media (max-width: 52rem) {
+      .wrap { grid-template-columns: minmax(0, 1fr); }
+      nav.groups { flex-direction: row; flex-wrap: wrap; } nav.groups .nav-main, nav.groups .nav-risky { flex-direction: row; flex-wrap: wrap; margin: 0; } nav.groups .foot { display: none; }
+      .navb { width: auto; }
+      .search { flex-basis: 100%; }
+      .row { grid-template-columns: minmax(0, 1fr) auto; } .row .lbl { grid-column: 1 / -1; } .row > .unit:empty { display: none; }
+    }
+    /* the controls */
+    .seg { display: inline-flex; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+    .seg button { font: 500 0.82rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 0; padding: 0.55rem 0.75rem; cursor: pointer; white-space: nowrap; }
+    .seg button[aria-pressed="true"] { color: var(--bg); background: var(--c); }
+    .seg button:hover:not([aria-pressed="true"]):not(:disabled) { color: var(--hot); }
+    input.switch { appearance: none; width: 2.6rem; height: 1.4rem; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); position: relative; cursor: pointer; background: none; margin: 0; }
+    input.switch::after { content: ""; position: absolute; top: 0.2rem; left: 0.2rem; width: 0.9rem; height: 0.9rem; background: var(--offline); transition: left 0.15s, background 0.15s; }
+    input.switch:checked::after { left: 1.45rem; background: var(--c); box-shadow: 0 0 6px var(--c); }
+    input[type="number"], input[type="text"], select { font: 500 0.95rem/1 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 60%, transparent);
+      border: 1px solid var(--line); padding: 0.45rem 0.6rem; }
+    input[type="number"] { width: 6.5rem; text-align: right; }
+    input[type="text"] { width: 14rem; }
+    input[type="number"]:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--c); }
+    input[type="color"] { width: 2.6rem; height: 2.2rem; padding: 0; border: 1px solid var(--line); background: none; }
+    .ctl .unit { font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+    /* sliders in the design's language: a thin line that fills cyan up to the value, a tick per step, a diamond handle that glows */
+    input[type="range"] { appearance: none; -webkit-appearance: none; width: 11rem; height: 1.6rem; margin: 0; background: transparent; cursor: pointer; --fill: 50%; --steps: 8; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 0.55rem;
+      background: linear-gradient(var(--c), var(--c)) 0 50% / var(--fill) 2px no-repeat,
+        linear-gradient(var(--line), var(--line)) 0 50% / 100% 2px no-repeat,
+        repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px calc((100% - 1px) / var(--steps))) 0 100% / 100% 0.3rem no-repeat; }
+    input[type="range"]::-moz-range-track { height: 2px; background: var(--line); }
+    input[type="range"]::-moz-range-progress { height: 2px; background: var(--c); }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 0.85rem; height: 0.85rem; margin-top: -0.15rem; transform: rotate(45deg);
+      background: var(--hot); border: 1px solid var(--c); box-shadow: 0 0 6px var(--c), 0 0 14px color-mix(in srgb, var(--c) 45%, transparent); }
+    input[type="range"]::-moz-range-thumb { width: 0.75rem; height: 0.75rem; border-radius: 0; transform: rotate(45deg); background: var(--hot); border: 1px solid var(--c); box-shadow: 0 0 6px var(--c); }
+    input[type="range"]:hover::-webkit-slider-thumb, input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 8px var(--c), 0 0 20px var(--c); }
+    input[type="range"]:focus-visible { outline: none; }
+    input[type="range"]:disabled { cursor: default; }
+    /* the order arrows in one column, whatever the names' length (quick job 45) */
+    .order { display: grid; grid-template-columns: auto minmax(7rem, max-content) 2rem 2rem; gap: 0.3rem 0.5rem; align-items: center; }
+    .order div { display: contents; font: 500 0.88rem/1 var(--f-ui); }
+    .order span { font: 500 0.88rem/1 var(--f-ui); }
+    .order button { display: grid; place-items: center; padding: 0; color: var(--text-dim); background: none; border: 1px solid var(--line); width: 2rem; height: 1.8rem; cursor: pointer; }
+    .order button svg { width: 1rem; height: 1rem; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .order button:hover:not(:disabled) { color: var(--hot); border-color: var(--c); }
+    .order button:disabled { visibility: hidden; }
+    /* a setting that waits for a restart: said at the row too, not only in the bar */
+    .row .rs { margin-top: 0.25rem; font: 500 0.78rem/1.3 var(--f-ui); color: var(--accent); }
+    .row .rs:not(.on) { display: none; }
+    /* its place kept: nothing moves when it shows. A class, not `hidden`: kit.css's [hidden] rule is
+       !important, so the place was never kept and the value box moved (quick job 101) */
+    .row.may-restart .rs:not(.on) { display: block; visibility: hidden; }
+    .pair.stack { flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+    #problems { margin: 0 0 1.2rem; padding: 0.7rem 1rem; border: 1px solid var(--danger); color: var(--text); font: var(--w-lines) 0.9rem/1.45 var(--f-lines); }
+    #problems[hidden] { display: none; }
+    #problems b { color: var(--danger); font: 600 0.92rem/1.3 var(--f-ui); display: block; margin-bottom: 0.3rem; }
+    #problems p { margin: 0.2rem 0; }
+    :disabled { cursor: default !important; opacity: 0.55; }
+    /* a safety limit that's off: an accent bar and "OFF" after its name, and a chip in the bar */
+    .row.limit-off { box-shadow: inset 3px 0 0 var(--accent); }
+    .row.limit-off label::after { content: " (Off)"; color: var(--accent); font-weight: 600; }
+    /* small screens (quick job 96): the buttons and switches big enough for a finger */
+    @media (max-width: 1100px), (max-height: 640px) {
+      .navb { min-height: 44px; }
+      .seg button { min-height: 40px; min-width: 40px; }
+      .ghead { min-height: 40px; }
+      input[type="range"] { height: 36px; }
+      input.switch { width: 52px; height: 30px; }
+      input.switch::after { top: 5px; left: 5px; width: 18px; height: 18px; }
+      input.switch:checked::after { left: 27px; }
+      input[type="color"] { width: 48px; height: 40px; }
+    }
+    /* the persona chooser as a round table (quick job 151; full and maximal looks): the 3D table left, the
+       selected persona's greeting and "Choose" right; the row's own buttons stay for saving, hidden */
+    .row.has-table > .ctl { display: none; }
+    .ptable { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem); gap: 1rem; align-items: center; margin-top: 0.5rem; }
+    .ptable .stage { position: relative; height: clamp(15rem, 34vh, 22rem); border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 70%, transparent);
+      clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem); overflow: hidden; }
+    .ptable canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+    .ptable .names { position: absolute; inset: 0; pointer-events: none; }
+    .ptable .pname { position: absolute; left: 0; top: 0; pointer-events: auto; padding: 0.3rem 0.7rem; min-height: 2.2rem; border: 1px solid var(--line); cursor: pointer;
+      background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text-dim); font: 500 0.92rem/1.2 var(--f-ui); white-space: nowrap; transition: opacity 0.3s, color 0.2s, border-color 0.2s;
+      clip-path: polygon(0.4rem 0, 100% 0, 100% calc(100% - 0.4rem), calc(100% - 0.4rem) 100%, 0 100%, 0 0.4rem); }
+    .ptable .pname:hover, .ptable .pname:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+    .ptable .pname[aria-pressed="true"] { color: var(--text); border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+    .ptable .pname.active span::after { content: " ●"; color: var(--c); }
+    .ptable .pside { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+    .ptable .who { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+    .ptable .pn { font: 600 1.2rem/1.2 var(--f-ui); color: var(--text); letter-spacing: 0.03em; }
+    .ptable .greet { margin: 0; min-height: 3em; font: var(--w-lines) 1rem/1.5 var(--f-lines); color: var(--text); }
+    .ptable .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .ptable .why { margin: 0; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--accent); }
+    .ptable .why:empty { display: none; }
+    @media (max-width: 52rem) { .ptable { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<!--
+  Settings: whatever src/lab_os/settings.py lists (GET /api/settings), written back into the config
+  files with their comments kept (POST /api/settings, this computer only). "This device" is kept by the
+  brain under the device's name (?device= in the hub's address), so each device has its own level of detail.
+-->
+<body class="settings">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-gear"/></svg><span>Settings</span></div>
+    <span class="place"></span>
+    <div class="chips"><span class="chip"><b>Changes</b><span id="mode" class="pill off">—</span></span><span class="chip" id="limits-off" hidden><b>Limits off</b><span class="pill bad"></span></span></div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <div class="wrap">
+    <nav class="groups" aria-label="Settings groups">
+      <label class="search"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><input id="search" type="search" placeholder="Search settings" aria-label="Search settings" autocomplete="off" spellcheck="false"></label>
+      <div class="nav-main" id="nav-main"></div>
+      <div class="nav-risky" id="nav-risky"></div>
+      <p class="foot">Changes save at once. Only the brain's computer can change the lab, robot and safety settings.</p>
+    </nav>
+    <main id="list">
+      <p id="no-hits" aria-live="polite" hidden></p>
+      <div id="problems" role="alert" hidden><b>A settings file can't be read</b></div>
+      <div id="restart-bar" role="status" hidden><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-warn"/></svg><span class="what"></span><span class="act"></span><span class="st"></span><span class="err" aria-live="polite"></span></div>
+    </main>
+  </div>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/settings.js"></script>
+</body>
+</html>

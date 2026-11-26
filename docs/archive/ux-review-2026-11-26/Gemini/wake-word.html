@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wake Word</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    main.wake { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; align-content: start; overflow: auto; min-height: 0; scrollbar-width: thin; }
+    .card p { margin: 0 0 0.7rem; font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
+    .card p b { color: var(--text); font-weight: 500; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0.6rem 0; }
+    select { font: 500 1rem var(--f-ui); color: var(--text); background: var(--bg); border: 1px solid var(--line); padding: 0.45rem 0.6rem; min-height: 2.6rem; }
+    /* the tone to try next: big, so it reads from the chair */
+    .tone { font: 500 1.35rem/1.3 var(--f-ui); color: var(--c); margin: 0.4rem 0 0.2rem; }
+    /* the creative touch: the microphone's level as a thin light-line that fills while it records */
+    .meter { position: relative; height: 0.35rem; background: color-mix(in srgb, var(--line) 60%, transparent); overflow: hidden; margin: 0.6rem 0; }
+    .meter i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--c); box-shadow: 0 0 10px var(--c); transition: width 60ms linear; }
+    .meter b { position: absolute; inset: 0 auto 0 0; width: 0; border-right: 2px solid var(--hot); }
+    .tries { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0 0; padding: 0; list-style: none; }
+    .tries li { font: 0.8rem/1 var(--f-mono); padding: 0.3rem 0.45rem; border: 1px solid var(--line); color: var(--text-dim); }
+    .tries li.low { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+    .tries li.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+    .result { font: var(--w-lines) 1rem/1.55 var(--f-lines); color: var(--text); }
+    .btn.big { min-height: 3.2rem; padding-inline: 1.4rem; font-size: 1.05rem; }
+  </style>
+</head>
+<!--
+  Wake Word (quick job 99): teach the wake word one speaker's voice. Record tries of the word in many
+  tones and some talk without it; Train fits the word's verifier (lab_os/hub/wake_clips.py,
+  lab_os/ai/wake.py). The clips are recorded with the same microphone settings as the hub's wake word
+  (echo cancellation, noise suppression, auto gain), 16 kHz, through the hub's own recorder
+  (/web/voice-worklet.js). Only on the brain's computer.
+-->
+<body class="wake-word">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-chat"/></svg><span>Wake Word</span></div>
+    <span class="place"></span>
+    <div class="chips"><span class="chip"><b>Verifier</b><span id="state" class="pill off">—</span></span></div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="wake">
+    <section class="card"><div class="in">
+      <h2>1. The Word</h2>
+      <p>The wake word answers more often when it knows your voice. Sit where you sit to talk to it. Use the microphone that the hub uses.</p>
+      <div class="row">
+        <select id="word" aria-label="The wake word"></select>
+        <span id="counts" class="hint"></span>
+      </div>
+      <p id="here" hidden>Open this page on the brain's computer. The clips are for its microphone.</p>
+    </div></section>
+
+    <section class="card"><div class="in">
+      <h2>2. Say the Word</h2>
+      <p>Press <b>Record</b>, then say the word once. Change the tone each time. Say only the word.</p>
+      <div class="tone" id="tone">—</div>
+      <div class="meter" id="meter-word"><i></i><b></b></div>
+      <div class="row">
+        <button type="button" class="btn primary big" id="rec-word">Record</button>
+        <span id="need-word" class="hint"></span>
+      </div>
+      <ul class="tries" id="tries" aria-label="The score of each try"></ul>
+    </div></section>
+
+    <section class="card"><div class="in">
+      <h2>3. Talk Without It</h2>
+      <p>Press <b>Record 10 s</b>, then talk as you talk to people: questions, numbers, names. Do not say the word. Room noise also helps.</p>
+      <div class="meter" id="meter-other"><i></i><b></b></div>
+      <div class="row">
+        <button type="button" class="btn big" id="rec-other">Record 10 s</button>
+        <span id="need-other" class="hint"></span>
+      </div>
+    </div></section>
+
+    <section class="card"><div class="in">
+      <h2>4. Train</h2>
+      <p>Train teaches the word your tries. Then the hub uses it at once, on every screen. A clear "<span class="phrase">the word</span>" from another person still wakes it.</p>
+      <div class="row">
+        <button type="button" class="btn primary big" id="train" disabled>Train</button>
+        <button type="button" class="btn small" id="clear">Start Over</button>
+      </div>
+      <p id="result" class="result" aria-live="polite"></p>
+      <p id="msg" class="msg" aria-live="polite"></p>
+    </div></section>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module">
+import { prefs } from "/web/device.js";
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const TONES = ["normally", "like a question", "fast", "slowly", "quietly", "a little louder", "with your head turned away", "like a call across the room", "tired", "with a smile"];
+const WORD_S = 2.5, OTHER_S = 10, RATE = 16000;
+let info = null, word = "", busy = false, mic = null, onPiece = null;
+const sensitivity = () => { const v = Number(prefs().wake_sensitivity); return Number.isInteger(v) && v >= 1 && v <= 9 ? v : 5; };
+
+async function load() {
+  const r = await fetch("/api/wake-word", { cache: "no-store" }).catch(() => null);
+  if (!r?.ok) { $("#msg").textContent = "The brain didn't answer. Its terminal has the details."; return; }
+  info = await r.json();
+  $("#here").hidden = info.here;
+  word ||= info.words.some((w) => w.id === info.active) ? info.active : info.words[0].id;
+  $("#word").innerHTML = info.words.map((w) => `<option value="${esc(w.id)}"${w.id === word ? " selected" : ""}>${esc(w.phrase)}${w.id === info.active ? " (active)" : ""}</option>`).join("");
+  render();
+}
+const current = () => info.words.find((w) => w.id === word);
+
+function render() {
+  const w = current();
+  if (!w) return;
+  document.querySelectorAll(".phrase").forEach((e) => (e.textContent = w.phrase));
+  $("#counts").textContent = `${w.word_clips} tries, ${w.other_s} s of other talk`;
+  $("#tone").textContent = `Try ${w.word_clips + 1}: say "${w.phrase}" ${TONES[w.word_clips % TONES.length]}.`;
+  $("#need-word").textContent = w.word_clips >= info.need_word ? "Enough. More tones help." : `${info.need_word - w.word_clips} more for Train`;
+  $("#need-other").textContent = w.other_s >= info.need_other_s ? "Enough." : `${Math.ceil(info.need_other_s - w.other_s)} s more for Train`;
+  const ready = w.word_clips >= info.need_word && w.other_s >= info.need_other_s;
+  $("#train").disabled = busy || !ready || !info.here;
+  for (const b of ["#rec-word", "#rec-other", "#clear"]) $(b).disabled = busy || !info.here;
+  const t = w.trained;
+  $("#state").textContent = t ? "trained" : "none";
+  $("#state").className = `pill ${t ? "on" : "off"}`;
+  $("#result").innerHTML = t ? explain(t) : "";
+}
+
+function explain(t) {
+  const other = t.checked_other
+    ? ` Your other talk woke it in <b>${t.other_now} s</b> of ${t.other_s} s (before: ${t.other_before} s).`
+    : "";
+  return `Trained ${esc(t.at)} on ${t.tries} tries. At sensitivity ${t.sensitivity}, it now hears <b>${t.word_now} of ${t.tries}</b> tries that it did not learn from (before: ${t.word_before}).${other}`;
+}
+
+// ---------- the microphone: the hub's recorder, 16 kHz pieces of 50 ms ----------
+async function openMic() {
+  if (mic) return mic;
+  const ctx = new AudioContext();
+  await ctx.audioWorklet.addModule("/web/voice-worklet.js");
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+  });
+  const node = new AudioWorkletNode(ctx, "lab-os-mic");
+  node.port.onmessage = (e) => onPiece?.(new Int16Array(e.data.pcm), e.data.level);
+  ctx.createMediaStreamSource(stream).connect(node);
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
+  node.connect(mute).connect(ctx.destination);
+  mic = { ctx };
+  return mic;
+}
+
+function record(seconds, meter) {
+  return new Promise((resolve) => {
+    const parts = [], need = seconds * RATE;
+    let got = 0;
+    onPiece = (pcm, level) => {
+      parts.push(pcm);
+      got += pcm.length;
+      meter.querySelector("i").style.width = `${Math.min(100, level * 400)}%`;
+      meter.querySelector("b").style.width = `${Math.min(100, (100 * got) / need)}%`;
+      if (got >= need) {
+        onPiece = null;
+        meter.querySelector("i").style.width = meter.querySelector("b").style.width = "0";
+        const all = new Int16Array(got);
+        let at = 0;
+        for (const p of parts) { all.set(p, at); at += p.length; }
+        resolve(all);
+      }
+    };
+  });
+}
+
+async function take(kind) {
+  if (busy) return;
+  busy = true; render();
+  $("#msg").textContent = "";
+  try {
+    await openMic();
+    await mic.ctx.resume();
+    $("#msg").textContent = kind === "word" ? "Listening: say the word now." : "Listening: talk now, without the word.";
+    const pcm = await record(kind === "word" ? WORD_S : OTHER_S, $(kind === "word" ? "#meter-word" : "#meter-other"));
+    const r = await fetch(`/api/wake-word/${word}/clip?kind=${kind}`, { method: "POST", body: pcm.buffer });
+    if (!r.ok) throw new Error(await r.text());
+    const out = await r.json();
+    Object.assign(current(), out);
+    if (kind === "word") {
+      const li = document.createElement("li");
+      li.textContent = out.score.toFixed(2);
+      li.className = out.score < 0.1 ? "low" : out.score >= 0.5 ? "ok" : "";
+      li.title = out.score < 0.1 ? "The word model hardly heard this try. Say it a little clearer." : "The word model's score for this try";
+      $("#tries").append(li);
+      $("#msg").textContent = out.score < 0.1 ? `Kept. The score was ${out.score.toFixed(2)}: the word model hardly heard it. Try again a little clearer.` : `Kept (score ${out.score.toFixed(2)}).`;
+    } else $("#msg").textContent = "Kept.";
+  } catch (e) {
+    $("#msg").textContent = e?.name === "NotAllowedError" ? "The browser blocks the microphone for this page." : `Not kept: ${e.message || e}`;
+  } finally {
+    busy = false; render();
+  }
+}
+
+$("#word").addEventListener("change", (e) => { word = e.target.value; $("#tries").innerHTML = ""; render(); });
+$("#rec-word").addEventListener("click", () => take("word"));
+$("#rec-other").addEventListener("click", () => take("other"));
+$("#train").addEventListener("click", async () => {
+  busy = true; render();
+  $("#msg").textContent = "Training (a few seconds)…";
+  const r = await fetch(`/api/wake-word/${word}/train?sensitivity=${sensitivity()}`, { method: "POST" }).catch(() => null);
+  const out = r ? await r.json().catch(() => ({})) : {};
+  busy = false;
+  if (r?.ok) { Object.assign(current(), out.summary); $("#msg").textContent = "Trained. Try the wake word on the hub."; }
+  else $("#msg").textContent = out.message || "The brain didn't answer. Its terminal has the details.";
+  render();
+});
+$("#clear").addEventListener("click", async () => {
+  if (!confirm(`Delete every clip of "${current().phrase}" and its verifier?`)) return;
+  const r = await fetch(`/api/wake-word/${word}/clear`, { method: "POST" }).catch(() => null);
+  if (r?.ok) { Object.assign(current(), await r.json()); $("#tries").innerHTML = ""; $("#msg").textContent = "Deleted."; }
+  render();
+});
+load();
+</script>
+</body>
+</html>

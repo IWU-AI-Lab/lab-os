@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — `git pull` stopped on untracked copies of the UX review files
+**What:** The review sessions wrote their files into the main folder, not committed. Another branch then added the same files to `main`, so `git pull` refused to overwrite the untracked copies.
+**Fix:** Compare each copy with `origin/main` (`git hash-object`). If all are the same, `git add` the folder, then `git pull --ff-only`. Nothing is deleted.
+
 ### 2026-11-26 — `test_one_screen_answers_at_once_warm_and_timed` fails now and then on GitHub
 **What:** On the CI run for pull request #357, it failed with `assert 10 == 9`: the turn's `connected` and `listening` times were 1 ms apart. That change touched only the System Map's JavaScript. A rerun passed.
 **Fix:** None yet. Rerun the failed job (`gh run rerun <id> --failed`). The test compares two millisecond times that can fall on each side of a millisecond.
