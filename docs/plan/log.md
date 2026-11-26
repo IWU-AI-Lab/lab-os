@@ -172,6 +172,7 @@ The hub's built-in chat stays in the read tier (anyone in the room can type into
 ## Decisions
 | Date | Decision | Why |
 |---|---|---|
+| 2026-11-26 | **The Command Center's right side: the Pages list on top, the inspector below** (quick job 148); the screens go under their devices in the left list. | The builder wants to drag pages onto screens (later with hand gestures), and an inspector beats the settings at the bottom. Both fit on the right side. |
 | 2026-11-26 | **The Raspbot's sideways driving in the Quest** (quick job 142): the left stick drives forward and sideways, the right stick's left and right turn the car, and the head turns the camera. A switch changes back to the earlier controls. | The builder chose this way, with a switch for the old way. |
 | 2026-11-26 | **One Monitor page for each kind of robot, at `/monitor/<kind>`** (quick jobs 146 and 147): `/monitor/so101`, `/monitor/xarm`, `/monitor/raspbot`; `/monitor` lists the Monitor pages, each with a live preview. | The builder asked for the best of three address forms. A path gives each kind its own page and module, stays clean beside `?device=`, and a new kind is one more path. |
 | 2026-11-26 | **The Raspbot gets mecanum driving, a live 3D model and its own Monitor before the demo** (quick jobs 142 to 146). The other board extras (the buzzer and light strip, the line tracker, the OLED, KEY1, AprilTags) wait until after the demo (`docs/plan/ideas.md`). | The builder: sideways driving has the higher priority; the extras add less. |
