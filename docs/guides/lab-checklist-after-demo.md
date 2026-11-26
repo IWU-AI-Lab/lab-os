@@ -251,3 +251,4 @@ Quick job 151, a first version. Use the desktop with sound on.
 ## M8. After the demo: System Map (5 min)
 
 - **M8.1** Open **System Map** from the hub on the slowest lab screen. Drag the map to rotate it. Select an SO-101 and the Raspbot. Open the hub on a second screen. Close that hub. → Do both robots show their models? Does the second screen change to **Connected** and then **Disconnected**? Does the map rotate smoothly? (yes / no for each)
+- **M8.2** Drag the map until you can see below the bases. Open **Cameras** on a second screen. → Do the names stay upright? Do the connected devices float above their bases? Does the preview show **Cameras**? (yes / no for each)

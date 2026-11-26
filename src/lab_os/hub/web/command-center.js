@@ -25,6 +25,7 @@
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
 import { playIntro } from "/hub/command-center-intro.js";
+import { screenPreview, screenTitle as shows } from "/hub/screen-preview.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -136,7 +137,6 @@ function screens(devs) {
 }
 const isHidden = (key) => S.layout.hidden.includes(key);
 const viewTitle = (id) => S.views.find((v) => v.id === id)?.title || id;
-const shows = (w) => (w.showing ? w.showing.title : w.stage === "start" ? "Start screen" : "The Hub");
 const devTitle = (d) => (d.named ? (d.display_name || d.name) : d.title);
 function resolution(w) {
   const s = w.screen || {}, r = s.ratio || 1;
@@ -166,17 +166,6 @@ function hubOf(key, devs, scr) {
 const mayDrive = (d) => d.here || (d.address && S.drive.has(d.address));
 
 // ---------- drawing: the preview of a screen ----------
-function preview(s, width) {
-  const sc = s.w.screen || {};
-  const aspect = sc.width && sc.height ? Math.min(1.0, Math.max(0.42, sc.height / sc.width)) : 9 / 16;
-  const w = s.w;
-  let inner;
-  if (w.showing) inner = `<div class="mod">${ico(VIEW_ICON[w.showing.id] || "i-test")}</div>`;
-  else if (w.stage === "start") inner = `<div class="ring"></div>`;
-  else inner = `<div class="core"></div>`;
-  const from = w.showing && w.from ? `<span class="from">From ${esc(w.from)}</span>` : "";
-  return `<div class="pv" style="width:${width}px;height:${Math.round(width * aspect)}px">${inner}${from}<span class="say">${esc(shows(w))}</span></div>`;
-}
 function under(s) {
   const d = s.device, title = devTitle(d), sub = d.named && d.display_name && d.display_name !== d.name ? d.name : "";
   const name = s.count > 1 ? `<span>Screen ${s.n}</span>` : "";
@@ -412,7 +401,7 @@ function shotEl(s) {
   const el = document.createElement("div");
   el.className = `shot${S.sel.has(s.key) ? " sel" : ""}${matches(scrText(s)) ? "" : " dim"}`;
   el.dataset.key = s.key;
-  el.innerHTML = preview(s, SHOT_W) + under(s);
+  el.innerHTML = screenPreview(s.w, SHOT_W) + under(s);
   return el;
 }
 function applyView() {
@@ -818,7 +807,7 @@ async function focus(key) {
   for (const s of mine) {
     const el = document.createElement("div");
     el.className = "shot";
-    el.innerHTML = preview(s, 288) + under(s) + `<div class="do"></div>`;
+    el.innerHTML = screenPreview(s.w, 288) + under(s) + `<div class="do"></div>`;
     const acts = actionsFor([s.key], devs, scr).filter((a) => a.real && a.kind === "page" || a.icon === "i-back");
     actButtons(el.querySelector(".do"), acts, devs);
     shots.append(el);
