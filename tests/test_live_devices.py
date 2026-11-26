@@ -141,7 +141,13 @@ def test_seen_devices_are_kept_and_removed(tmp_path):
     t = [1_700_000_000.0]
     live = LiveDevices(store, clock=lambda: t[0])
     assert live.listing() == []  # it starts empty
-    arm = {"id": "so101-white", "name": "so101-white", "kind": "arm", "known": True}
+    arm = {
+        "id": "so101-white",
+        "name": "so101-white",
+        "kind": "arm",
+        "known": True,
+        "model": "so101",
+    }
     reader = {"id": "usb:0c45:7403:x", "name": "Reader", "kind": "usb", "known": False}
     assert live.update([arm, reader])
     assert not live.update([arm, reader])  # nothing changed: no message to the pages
@@ -152,7 +158,9 @@ def test_seen_devices_are_kept_and_removed(tmp_path):
     kept = yaml.safe_load((tmp_path / "local" / "seen-devices.yaml").read_text())["devices"]
     assert set(kept) == {"so101-white", "usb:0c45:7403:x"}
     # a new brain reads the list back
-    assert {d["id"] for d in LiveDevices(store).listing()} == {"so101-white", "usb:0c45:7403:x"}
+    restored = {d["id"]: d for d in LiveDevices(store).listing()}
+    assert set(restored) == {"so101-white", "usb:0c45:7403:x"}
+    assert restored["so101-white"]["model"] == "so101"
     # removed while connected: off the list until it connects again
     assert live.remove("usb:0c45:7403:x") and not live.remove("nothing")
     live.update([reader])

@@ -247,3 +247,7 @@ Quick job 151, a first version. Use the desktop with sound on.
 - **PT.1** Open ⚙ → **This Device**. Set **Level of Detail** to **Full**. Open ⚙ → **Assistant**. Click the name of the persona that does not show **Active**. → did the table turn that persona to face you? (yes / no) Did you hear its greeting in its own voice? (yes / no: copy the line under the buttons)
 - **PT.2** Click **Choose** (the button under the greeting). Open the hub. → does the hub show the persona that you chose? (yes / no) Set **Level of Detail** to **Minimal**. → does ⚙ → **Assistant** → **Persona** show the plain buttons and no table? (yes / no)
 - **PT.3** Look at the table on the slowest screen (the Pi or a laptop) with **Full**. → does the turn look smooth? (yes / no) What do you want to change on the table? (a sentence)
+
+## M8. After the demo: System Map (5 min)
+
+- **M8.1** Open **System Map** from the hub on the slowest lab screen. Drag the map to rotate it. Select an SO-101 and the Raspbot. Open the hub on a second screen. Close that hub. → Do both robots show their models? Does the second screen change to **Connected** and then **Disconnected**? Does the map rotate smoothly? (yes / no for each)
