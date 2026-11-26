@@ -4,6 +4,12 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — "Another monitor of this computer" opened on the same monitor (quick job 138)
+
+**What:** Lab check M.7 (2026-11-24): Open on… → "Another monitor of this computer" opened a new window on the same monitor. The page asked for a place on the other monitor (`window.open` with `left` and `top` from the Window Management API), but a window manager may put a new window where it likes. Also, the API is only on a secure page: at `http://192.168.8.130:8080` on the lab desktop it is not there, so the window opens where the browser likes (localhost is secure).
+
+**Fix:** after the window opens, the page moves it to the other monitor (`moveTo`, `resizeTo`). In lab-os's own browser (the "Start lab-os" icon), the brain also moves it through the browser's DevTools (`Browser.setWindowBounds`), and keeps full screen if it was on. On a page that is not secure, the message says to open the hub at `http://localhost:8080`. Not yet checked on the lab desktop's two monitors.
+
 ### 2026-11-25 — The Raspbot's recording saved, but no app played it (quick job 122)
 
 **What:** Lab check R.3 gave two file names, but the builder found no video. The recording was there (`recordings/raspbot/raspbot1_2026-11-24_18-14-38.mjpeg`, 65 pictures in 6 s). It was a raw `.mjpeg`: JPEGs one after another, with no times. The lab desktop has no app for it (only Firefox opens video files, and Firefox does not play `.mjpeg`). VLC would play it at 25 pictures per second, so 6 s became 2.6 s.

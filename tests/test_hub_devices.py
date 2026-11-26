@@ -425,7 +425,7 @@ async def test_the_brain_puts_its_own_windows_full_screen(aiohttp_client, monkey
     assert "Unknown" in await launch.set_window_state(url, "maximized", tmp_path)
     asked = []
 
-    async def fake_state(u, state, profile=None):
+    async def fake_state(u, state, profile=None, bounds=None):
         asked.append((u, state))
         return ""
 
@@ -435,6 +435,52 @@ async def test_the_brain_puts_its_own_windows_full_screen(aiohttp_client, monkey
     monkeypatch.setattr(hub_server, "is_local", lambda request: False)  # another computer
     got = await (await client.post("/api/window-state", json={"url": url})).json()
     assert not got["ok"] and len(asked) == 1
+
+
+async def test_the_brain_moves_a_sent_page_to_the_other_monitor(
+    aiohttp_server, monkeypatch, tmp_path
+):
+    """Quick job 138: "Another monitor of this computer" opened the window on the same monitor. With
+    bounds, the brain moves lab-os's own window there first (from "normal"), then full screen again
+    only if it was; a page whose address grew a hash still matches."""
+    from aiohttp import web
+
+    calls, state = [], {"now": "fullscreen"}
+
+    async def devtools(request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        async for msg in ws:
+            m = json.loads(msg.data)
+            calls.append((m["method"], m["params"].get("bounds")))
+            result = {}
+            if m["method"] == "Browser.getWindowForTarget":
+                result = {"windowId": 7, "bounds": {"windowState": state["now"]}}
+            await ws.send_json({"id": m["id"], "result": result})
+        return ws
+
+    app = web.Application()
+    app.router.add_get("/devtools/browser/x", devtools)
+    server = await aiohttp_server(app)
+    (tmp_path / "DevToolsActivePort").write_text(f"{server.port}\n/devtools/browser/x\n")
+    url = "http://localhost:8080/monitor?screen=1"
+    monkeypatch.setattr(
+        launch, "hub_windows", lambda d, p, profile=None: [{"id": "sent", "url": url + "#x"}]
+    )
+    to = {"left": 1920, "top": 0, "width": 1600, "height": 900}
+    assert await launch.set_window_state(url, "keep", tmp_path, bounds=to) == ""
+    assert [b for _, b in calls[1:]] == [
+        {"windowState": "normal"},
+        to,
+        {"windowState": "fullscreen"},
+    ]
+    calls.clear()
+    state["now"] = "normal"  # the person chose Window: it moves and stays a window
+    assert await launch.set_window_state(url, "keep", tmp_path, bounds=to) == ""
+    assert [b for _, b in calls[1:]] == [to]
+    assert "Bounds" in await launch.set_window_state(url, "keep", tmp_path, bounds={"left": 1})
+    page = (SRC / "web" / "device.js").read_text()
+    assert 'state: "keep", bounds' in page and "w.moveTo(" in page
 
 
 def test_pages_choose_full_screen_or_a_window():

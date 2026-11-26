@@ -244,25 +244,56 @@ export function fillOpenOn(box, dev, module, opts = {}) {
 
 /**
  * "Another monitor of this computer" (HDMI/DP): open `url` full size on another monitor. Chrome's Window
- * Management API places the window there (it asks once; localhost or https only). Elsewhere: a new window to
- * drag over. say(text) tells the person. Returns "placed", "window", or "" (nothing opened).
+ * Management API finds the monitor (it asks once; localhost or https only). The new window opens there and
+ * moves there (a window manager may put a new window where it likes), and in lab-os's own browser the brain
+ * moves it too (quick job 138). Elsewhere: a new window to drag over. say(text) tells the person. Returns
+ * "placed", "window", or "" (nothing opened).
  */
 let screenDetails = null;
 export async function openOnMonitor(url, name, say) {
-  let place = "";
+  let to = null;
   if ("getScreenDetails" in window) {
     try {
       screenDetails ||= await window.getScreenDetails();
       const others = screenDetails.screens.filter((s) => s !== screenDetails.currentScreen);
       const s = others.find((o) => !o.isPrimary) || others[0];
       if (!s) { say("Only one monitor is connected to this computer."); return ""; }
-      place = `popup,left=${s.availLeft},top=${s.availTop},width=${s.availWidth},height=${s.availHeight}`;
+      to = { left: s.availLeft, top: s.availTop, width: s.availWidth, height: s.availHeight };
     } catch (e) {
       say(`The browser didn't allow placing windows (${e.message}); dragging the new window works too.`);
     }
   }
+  const place = to ? `popup,left=${to.left},top=${to.top},width=${to.width},height=${to.height}` : "";
   const w = window.open(url, name, place || "popup,width=1280,height=800");
   if (!w) { say("The browser blocked the new window: press the button again."); return ""; }
-  say(place ? "Opened on the other monitor." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
-  return place ? "placed" : "window";
+  if (!to) {
+    say(window.isSecureContext
+      ? "Opened in a new window: drag it to the other monitor, then click it for full screen."
+      : "Opened in a new window: drag it to the other monitor. To place it by itself, open the hub at http://localhost:8080 on this computer (the \"Start lab-os\" icon does).");
+    return "window";
+  }
+  try { w.moveTo(to.left, to.top); w.resizeTo(to.width, to.height); } catch { /* the brain moves it */ }
+  brainPlaces(new URL(url, location.href).href, to);
+  say("Opened on the other monitor.");
+  return "placed";
+}
+
+// The brain moves lab-os's own browser window to the monitor (its DevTools; GNOME placed the new window
+// on the same monitor, lab check M.7). It tries while the new page loads; full screen stays as the page
+// chose. Elsewhere (another browser) it can't, and the window stays where the browser put it.
+async function brainPlaces(url, bounds, tries = 10) {
+  for (let i = 0; i < tries; i++) {
+    await new Promise((r) => setTimeout(r, 400));
+    try {
+      const r = await fetch("/api/window-state", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, state: "keep", bounds }),
+      });
+      const got = r.ok ? await r.json() : { ok: false, why: `${r.status}` };
+      if (got.ok) return;
+      if (i === tries - 1 || /brain's computer/.test(got.why || "")) return console.info(`other monitor: ${got.why}`);
+    } catch (e) {
+      return console.info(`other monitor: ${e.message}`);
+    }
+  }
 }
