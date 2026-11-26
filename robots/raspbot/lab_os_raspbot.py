@@ -14,6 +14,7 @@ never edit it on the Raspbot.
 
 Safety on the car itself: the motors stop when no command came for WATCHDOG_S, when the brain's
 connection drops, and when this program ends. SPEED_CAP is the fastest any command can drive.
+Forward motion stops at the ultrasonic threshold. An AI forward command also requires a reading.
 Yahboom's own app program ("raspbot.pyc", started at login) also drives the motors and holds the
 camera: stop it first (docs/guides/raspbot.md).
 
@@ -35,6 +36,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PORT = 8765
 CAMERA_PORT = 8766
 WATCHDOG_S = 0.5  # no command for this long: the motors stop
+OBSTACLE_STOP_MM = 200  # stop forward motion at 20 cm from the sensor
 SPEED_CAP = 120  # of the board's 255: the fastest a command at 1.0 drives
 CAMERA_FPS = 10
 CAMERA_IDLE_S = 5.0  # the camera closes this long after the last viewer left
@@ -109,33 +111,62 @@ class Car:
         self.watchdog_s = watchdog_s
         self._lock = threading.Lock()
         self._moving = False
+        self._forward = False
+        self._require_clear = False
+        self._drive_stop = ""
         self._last = 0.0
 
-    def drive(self, left: float, right: float) -> None:
+    def _clearance_stop(self) -> str:
+        distance = self.board.distance_mm()
+        if distance is None:
+            return "sensor_unavailable" if self._require_clear else ""
+        return "obstacle" if distance <= OBSTACLE_STOP_MM else ""
+
+    def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
         def speed(v: float) -> int:
             return int(round(max(-1.0, min(float(v), 1.0)) * SPEED_CAP))
 
         with self._lock:
+            if require_clear and self._drive_stop:
+                return  # a stopped AI drive cannot restart before it releases control
+            left_speed, right_speed = speed(left), speed(right)
+            self._forward = left_speed + right_speed > 0
+            self._require_clear = require_clear
+            reason = self._clearance_stop() if self._forward else ""
+            if reason:
+                self._stop_locked(reason)
+                return
             for m in LEFT:
-                self.board.set_motor(m, speed(left))
+                self.board.set_motor(m, left_speed)
             for m in RIGHT:
-                self.board.set_motor(m, speed(right))
-            self._moving = bool(speed(left) or speed(right))
+                self.board.set_motor(m, right_speed)
+            self._moving = bool(left_speed or right_speed)
             self._last = time.monotonic()
+
+    def _stop_locked(self, reason: str = "") -> None:
+        self._drive_stop = reason if self._require_clear else ""
+        for m in LEFT + RIGHT:
+            self.board.set_motor(m, 0)
+        self._moving = False
 
     def stop(self) -> None:
         with self._lock:
-            for m in LEFT + RIGHT:
-                self.board.set_motor(m, 0)
-            self._moving = False
+            self._stop_locked()
 
     def check_watchdog(self) -> bool:
-        """Stop when the commands stopped coming. True if it stopped the car now."""
-        if self._moving and time.monotonic() - self._last > self.watchdog_s:
-            log.info("no command for %.1f s: stop", self.watchdog_s)
-            self.stop()
+        """Check the input timeout and front clearance. Return true if the car stops."""
+        with self._lock:
+            if not self._moving:
+                return False
+            if time.monotonic() - self._last > self.watchdog_s:
+                reason = "input_timeout"
+            else:
+                reason = self._clearance_stop() if self._forward else ""
+            if not reason:
+                return False
+            log.info("drive stopped: %s", reason)
+            self._stop_locked(reason)
             return True
-        return False
 
     def look(self, pan: float, tilt: float) -> tuple[int, int]:
         """The camera's servos, in degrees from their centre. Returns the servo angles sent."""
@@ -152,7 +183,10 @@ class Car:
 
     def diagnostics(self) -> dict:
         with self._lock:
-            return {"distance_mm": self.board.distance_mm()}
+            return {
+                "distance_mm": self.board.distance_mm(),
+                "drive_stop": self._drive_stop,
+            }
 
     def handle(self, msg: dict) -> None:
         if "look" in msg:  # the camera only: the wheels keep what they do
@@ -160,7 +194,7 @@ class Car:
             self.look(pan, tilt)
         elif "drive" in msg:
             left, right = msg["drive"]
-            self.drive(left, right)
+            self.drive(left, right, require_clear=msg.get("require_clear") is True)
         else:  # {"stop": true}, and anything not understood
             self.stop()
 
@@ -193,6 +227,7 @@ class CommandHandler(socketserver.StreamRequestHandler):
             "hello": socket.gethostname(),
             "camera_port": srv.camera_port,
             "diagnostics": True,
+            "obstacle_stop_mm": OBSTACLE_STOP_MM,
             "look_limits": [
                 sorted((angle - centre) * sign for angle in limits)
                 for centre, sign, limits in (
@@ -209,9 +244,14 @@ class CommandHandler(socketserver.StreamRequestHandler):
                     if msg == {"diagnostics": True}:
                         self.wfile.write((json.dumps(srv.car.diagnostics()) + "\n").encode())
                     else:
-                        srv.car.handle(msg)
+                        with srv.lock:
+                            if srv.current is not self.connection:
+                                return
+                            srv.car.handle(msg)
                 except (ValueError, TypeError, KeyError):
-                    srv.car.stop()  # a command not understood never keeps the car moving
+                    with srv.lock:
+                        if srv.current is self.connection:
+                            srv.car.stop()  # a bad command never keeps the car moving
         except OSError:
             pass
         finally:

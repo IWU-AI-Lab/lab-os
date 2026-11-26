@@ -12,7 +12,8 @@ The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the
 - **STOP** (or Space on the keyboard) stops the car at once. It works on every page that shows the Raspbot, also on a page that only watches. After STOP, let go of the button and press it again to drive.
 - **The freeze:** when the page's input stops for 0.3 s (a page that hangs, lost Wi-Fi), the brain stops the car.
 - **On the car:** the program stops the motors when no command comes for 0.5 s, when the brain's connection drops, and when the program ends. The Raspbot's board has no stop of its own.
-- **One page at a time:** the first page that drives has control until it lets go. Another page shows "Another page" under Control.
+- **One driver at a time:** a page or an AI tool keeps control until it releases control. Another page shows "Another page" under Control.
+- **Front obstacle:** the current program stops forward motion when the ultrasonic sensor reads 20 cm or less. The sensor measures only objects in front.
 - **Speed:** the program never drives faster than 120 of the board's 255. That is 100 % on the slider. All pages share one speed. A page that only watches cannot change it. A change applies at once, also while you hold a button.
 - **Who may drive:** the same rule as the arm. A page on the brain's computer may drive. A page on another device only watches and can press STOP, unless its address is in `drive_from` in `config/place.yaml` (or `--drive-from`). The page says which address to add.
 
@@ -64,6 +65,18 @@ In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera
 - **STOP** (or A / X) stops the car. Press **B**, **Y**, **Back** or **Exit** to close the module. The car stops when the module closes.
 
 The camera's mount has two servos: servo 1 turns left and right (0° to 180°, centre 90°), servo 2 up and down (0° to 110°, centre 25°). These are the numbers in Yahboom's own code. The program on the Raspbot keeps each servo inside these limits. If a servo turns the wrong way, change `PAN_SIGN` or `TILT_SIGN` in `robots/raspbot/lab_os_raspbot.py`, then run `uv run lab-os raspbot deploy`.
+
+## Drive with an AI tool
+
+1. Deploy the current Raspbot program. Use the steps in [Set up the Raspbot](#set-up-the-raspbot-once).
+2. Connect the AI tool on the brain’s computer. See [AI Control](ai-control.md).
+3. Open **Raspbot**. Keep **STOP** in reach.
+4. Put an object straight ahead in the camera view and in the ultrasonic sensor's path.
+5. Ask the AI to look through the Raspbot camera and approach the object. The task stops at the 20 cm sensor threshold or after 10 seconds.
+
+For individual moves, tell the AI to go forward, go back, or turn. Each move lasts at most one second. Check the space behind and beside the Raspbot before it goes back or turns. A missing distance reading prevents the AI from driving forward.
+
+The hub assistant can drive from the brain’s computer when **Full Access** is on. The AI uses the page’s **Speed** setting, up to 25 % of the Raspbot's top speed.
 
 ## When something is wrong
 - raspbot1 stops (black screen, keyboard and mouse off): switch it off and on. Then run `ssh raspbot1 tail -n 20 lab-os/health.log`. The health log writes a line every 10 seconds: the power flags, the 5 V input, the core's current, the temperature, the Wi-Fi link, the load, free memory and free disk. The lines before the "--- start" line show the last minute before the stop. `throttled=0x0` means no power or temperature problem.

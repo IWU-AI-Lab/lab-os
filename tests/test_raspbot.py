@@ -1,7 +1,9 @@
 """Quick job 72: the Raspbot page, the brain's controller and the program on the Raspbot."""
 
 import asyncio
+import base64
 import importlib.util
+import io
 import json
 import shutil
 import socket
@@ -11,10 +13,12 @@ import time
 from pathlib import Path
 
 import pytest
+from PIL import Image
 from test_hub_server import SRC, make_app
 
 from lab_os.devices import Device, Registry
-from lab_os.hub.raspbot_page import RASPBOT
+from lab_os.hub.raspbot_page import CAMERA, RASPBOT
+from lab_os.hub.server import BRAIN
 from lab_os.robots import raspbot
 from lab_os.robots.raspbot import FakeRaspbot, RaspbotDesk, TcpRaspbot
 
@@ -546,3 +550,118 @@ async def test_the_fake_raspbot_has_no_camera_to_save(aiohttp_client):
         while (m := await ws.receive_json())["type"] == "raspbot_status":
             pass
         assert m == {"type": "error", "message": "The Raspbot's camera is not there now."}
+
+
+async def _raspbot_tool(server, name: str, **args) -> dict:
+    result = await server.call_tool(name, args)
+    assert not result.is_error
+    return result.structured_content or json.loads(result.content[0].text)
+
+
+async def test_ai_approaches_object_and_reads_the_same_camera():
+    class Bot(FakeRaspbot):
+        host = "fake-camera"
+
+    bot = Bot(distance_mm=500, camera_port=8766)
+    desk = RaspbotDesk(bot, speed=1)
+    app = make_app(raspbot=desk)
+    server = app[BRAIN].chat.tools.server
+    rgb = Image.new("RGB", (8, 8))
+    image = io.BytesIO()
+    rgb.save(image, format="JPEG")
+    jpeg = image.getvalue()
+
+    async def frames(url):
+        assert url == "http://fake-camera:8766/camera.mjpg"
+        yield jpeg
+
+    app[CAMERA].frames = frames
+    picture = await server.call_tool("raspbot_camera", {})
+    assert base64.b64decode(picture.content[0].data) == jpeg
+    status = await _raspbot_tool(server, "raspbot_status")
+    assert status["distance_mm"] == 500 and status["camera"]
+
+    task = asyncio.create_task(_raspbot_tool(server, "raspbot_approach"))
+    try:
+        async with asyncio.timeout(2):
+            while not desk.moving:
+                await asyncio.sleep(0.01)
+        assert bot.last == ("drive", 0.25, 0.25)
+        assert await desk.press(object(), "forward") == "Another page has control."
+        bot.distance_mm = 200
+        out = await asyncio.wait_for(task, 2)
+        assert out["result"] == "obstacle" and out["distance_mm"] == 200
+        assert bot.last == ("stop",) and desk.driver is None
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+
+async def test_ai_drive_stops_from_the_page_and_when_cancelled(aiohttp_client):
+    bot = FakeRaspbot(distance_mm=1000)
+    desk = RaspbotDesk(bot)
+    app = make_app(raspbot=desk)
+    server = app[BRAIN].chat.tools.server
+    client = await aiohttp_client(app)
+    async with await client.ws_connect("/ws/raspbot") as ws:
+        for stop_from_page in (True, False):
+            task = asyncio.create_task(_raspbot_tool(server, "raspbot_approach"))
+            try:
+                async with asyncio.timeout(2):
+                    while bot.last[0] != "drive":
+                        await asyncio.sleep(0.01)
+                if stop_from_page:
+                    await ws.send_json({"type": "stop"})
+                    assert (await asyncio.wait_for(task, 2))["result"] == "stopped"
+                else:
+                    task.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await task
+                assert bot.last == ("stop",) and desk.driver is None
+            finally:
+                if not task.done():
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
+
+
+async def test_ai_drive_refuses_forward_without_distance_or_control():
+    bot = FakeRaspbot()
+    desk = RaspbotDesk(bot)
+    server = make_app(raspbot=desk)[BRAIN].chat.tools.server
+    out = await _raspbot_tool(server, "raspbot_drive", direction="forward")
+    assert out["result"] == "refused" and "distance" in out["message"]
+    assert not bot.sent
+    page = object()
+    await desk.press(page, "back")
+    out = await _raspbot_tool(server, "raspbot_drive", direction="right", seconds=0.01)
+    assert out["result"] == "refused" and "control" in out["message"]
+    await desk.release(page)
+    out = await _raspbot_tool(server, "raspbot_drive", direction="right", seconds=0.01)
+    assert out["result"] == "done"
+    assert bot.sent[-2:] == [("drive", 0.15, -0.15), ("stop",)]
+
+
+def test_onboard_front_sensor_stops_both_drivers():
+    mod = onboard()
+    board = mod.FakeBoard()
+    car = mod.Car(board)
+    for ai in (False, True):
+        board.distance = 500
+        car.handle({"drive": [0.25, 0.25], "require_clear": ai})
+        assert set(board.speeds.values()) == {30}
+        board.distance = 200
+        assert car.check_watchdog()
+        assert set(board.speeds.values()) == {0}
+        car.handle({"drive": [0.25, 0.25], "require_clear": ai})
+        assert set(board.speeds.values()) == {0}
+        board.distance = 500
+        if ai:
+            assert car.diagnostics()["drive_stop"] == "obstacle"
+            car.handle({"drive": [0.25, 0.25], "require_clear": True})
+            assert set(board.speeds.values()) == {0}
+        car.stop()
+    board.distance = None
+    car.handle({"drive": [0.25, 0.25], "require_clear": True})
+    assert car.diagnostics()["drive_stop"] == "sensor_unavailable"
+    assert set(board.speeds.values()) == {0}
