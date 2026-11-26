@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — `Object.assign` can't set a three.js object's `position` or `rotation` (quick job 151)
+**What:** `Object.assign(line, { position: new THREE.Vector3(…) })` threw "Cannot assign to read only property 'position'", and the persona table did not draw. three.js makes `position`, `rotation`, `quaternion` and `scale` read-only properties.
+**Fix:** Set their parts instead: `line.position.y = -0.45`, `line.rotation.x = tilt` (or `.set(…)`, `.copy(…)`).
+
 ### 2026-11-26 — Each Raspbot page had its own camera stream over Wi-Fi
 **What:** The brain relayed `/api/raspbot/camera.mjpg` by opening a new connection to the Raspbot for each page. The detector and a recording opened more. The Raspbot's camera server sends each connection the whole picture stream (10 pictures a second), so the Raspbot's Wi-Fi carried it once per reader.
 **Fix:** `CameraShare` in `src/lab_os/hub/raspbot_page.py`: one connection per camera, opened with the first reader and closed with the last. The relay now sends its own MJPEG parts, one for each whole JPEG. Each reader gets the newest picture, so two pictures in one network read give one picture to the reader. A test camera must send whole JPEGs (`FF D8` … `FF D9`).

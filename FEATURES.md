@@ -62,6 +62,7 @@ This page lists the features that work today, and some lab robot projects that a
 | **The spoken greeting** after the start tap: the time of day and how to talk (the news stays on the screen) | ✅ | Recorded once for each voice (`recordings/greetings/`), then played with no voice request. Silent where the screen's sound is off. |
 | Voice setups in `config/models.yaml` (`voices:`); the persona's `voice:` selects one; OpenAI falls back to Gemini's free key | ✅ | OpenAI's key is in `.env` on the laptop and the lab desktop since 2026-11-18. |
 | Personas: `lab-assistant` (default) and `jarvis`, selected for each place, each venue, or with `--persona` | ✅ | |
+| **The persona chooser as a round table** (quick job 151, a first version): on the full and maximal looks, ⚙ → Assistant → Persona shows the personas around a 3D round table. Select one: the table turns it to face you, types its greeting and says it in its own voice (kept once spoken). **Choose** makes it the persona. Reduced and minimal keep the plain buttons. It draws only while something moves. | 🟡 | Not tried in the lab yet (lab check PT.1). |
 | A greeting with real news (a step finished, the calendar, a busy day of commits) | ✅ | |
 | The brain keeps the conversation for 30 minutes; "Bring back the last conversation" after a reset or a restart | ✅ | |
 

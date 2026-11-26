@@ -302,6 +302,8 @@ A connected arm also has `model`: its kind in `devices.yaml` (`so101`, `so101-le
 
 ### Greeting
 - `GET /api/greeting` → `{"hello": "Good evening.", "news": "Step 5, Typed chat, was finished today." | null, "source": "step" | "calendar" | "commits" | "persona", "text": "<hello + news, or hello + the persona's line>"}`.
+- `GET /api/personas` (quick job 151, the persona chooser) → `{"active": "lab-assistant", "personas": [{"id", "display_name", "picture", "voice", "sounds", "greeting": "Good morning. <the persona's greeting line>"}]}`: every persona (`persona_ids()`); `active` is the one the brain uses now (the venue's may win over the place's).
+- `GET /api/personas/{id}/preview` → that persona's `greeting` spoken in its own voice (`audio/wav`), from its recording when it said it before (in the place's `recordings/greetings/`), else spoken now and kept. `404` for no such persona; `503` + `{"ok": false, "message": "<a sentence>"}` when there's no voice for it now (no key, no internet, the budget used up).
 - `POST /api/chat/start` → the same plus `"previous"` (as in `GET /api/chat`), and the conversation starts fresh with `text` as the assistant's first message (the hub calls it on the start press). A conversation with a question in it is put aside first.
 
 ### Chat

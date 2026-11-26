@@ -6,6 +6,9 @@
   <title>Settings</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
+  <script type="importmap">
+    {"imports":{"three":"/web/vendor/three/three.module.js"}}
+  </script>
   <style>
     /* quick job 38: a sidebar of groups beside one scrolling list (Apple's HIG and NN/g for settings screens) */
     .wrap { display: grid; grid-template-columns: 17.5rem minmax(0, 1fr); gap: 1.6rem; min-height: 0; }
@@ -152,6 +155,28 @@
       input.switch:checked::after { left: 27px; }
       input[type="color"] { width: 48px; height: 40px; }
     }
+    /* the persona chooser as a round table (quick job 151; full and maximal looks): the 3D table left, the
+       selected persona's greeting and "Choose" right; the row's own buttons stay for saving, hidden */
+    .row.has-table > .ctl { display: none; }
+    .ptable { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 20rem); gap: 1rem; align-items: center; margin-top: 0.5rem; }
+    .ptable .stage { position: relative; height: clamp(15rem, 34vh, 22rem); border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 70%, transparent);
+      clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem); overflow: hidden; }
+    .ptable canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+    .ptable .names { position: absolute; inset: 0; pointer-events: none; }
+    .ptable .pname { position: absolute; left: 0; top: 0; pointer-events: auto; padding: 0.3rem 0.7rem; min-height: 2.2rem; border: 1px solid var(--line); cursor: pointer;
+      background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text-dim); font: 500 0.92rem/1.2 var(--f-ui); white-space: nowrap; transition: opacity 0.3s, color 0.2s, border-color 0.2s;
+      clip-path: polygon(0.4rem 0, 100% 0, 100% calc(100% - 0.4rem), calc(100% - 0.4rem) 100%, 0 100%, 0 0.4rem); }
+    .ptable .pname:hover, .ptable .pname:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+    .ptable .pname[aria-pressed="true"] { color: var(--text); border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+    .ptable .pname.active span::after { content: " ●"; color: var(--c); }
+    .ptable .pside { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+    .ptable .who { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+    .ptable .pn { font: 600 1.2rem/1.2 var(--f-ui); color: var(--text); letter-spacing: 0.03em; }
+    .ptable .greet { margin: 0; min-height: 3em; font: var(--w-lines) 1rem/1.5 var(--f-lines); color: var(--text); }
+    .ptable .acts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .ptable .why { margin: 0; font: var(--w-lines) 0.82rem/1.4 var(--f-lines); color: var(--accent); }
+    .ptable .why:empty { display: none; }
+    @media (max-width: 52rem) { .ptable { grid-template-columns: 1fr; } }
   </style>
 </head>
 <!--
