@@ -234,7 +234,8 @@ function place(devices) {
   const clusters = order.map((kind) => {
     const members = groups.get(kind).slice().sort((a, b) => a.id.localeCompare(b.id));
     const n = members.length;
-    const radius = n === 1 ? 0 : Math.max(GAP * 0.62, GAP * Math.sqrt(n / (4 * Math.PI)) * 1.2);
+    const spacing = kind === "screen" ? GAP * 1.8 : GAP;
+    const radius = n === 1 ? 0 : Math.max(spacing * 0.62, spacing * Math.sqrt(n / (4 * Math.PI)) * 1.2);
     return { kind, members, radius, center: new THREE.Vector3() };
   });
   const big = clusters.filter((c) => c.members.length > 1)
@@ -480,6 +481,7 @@ export function createMap(canvas, labels, onSelect) {
     if (most) {
       satelliteSpin.rotation.y -= dt * 2 * Math.PI / ringTurns[0];
     }
+    glow.visible = centre.visible = !still;
     if (!still) {
       const s = time / 1000;
       for (const [object, period, direction] of turning) object.rotation.y = direction * s * 2 * Math.PI / period;
@@ -688,7 +690,7 @@ export function createMap(canvas, labels, onSelect) {
       ctx.clearRect(0, 0, image.width, image.height);
       ctx.save();
       ctx.shadowColor = `${hex(primary)}88`;
-      ctx.shadowBlur = 38;
+      ctx.shadowBlur = moving() ? 38 : 0;
       ctx.fillStyle = hex(background);
       ctx.fillRect(P, P, W, H);
       ctx.restore();
@@ -714,7 +716,7 @@ export function createMap(canvas, labels, onSelect) {
         const r = W * 0.13 * Math.min(1, aspect / 0.5625);
         ctx.save();
         ctx.shadowColor = hex(primary);
-        ctx.shadowBlur = 32;
+        ctx.shadowBlur = moving() ? 32 : 0;
         ctx.strokeStyle = hex(primary);
         ctx.lineWidth = 9;
         ctx.beginPath();
@@ -784,7 +786,7 @@ export function createMap(canvas, labels, onSelect) {
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
           map: picture.texture, transparent: true, depthWrite: false,
         }));
-        const width = 2.2, tall = width * picture.aspect;
+        const width = 1.65, tall = width * picture.aspect;
         sprite.scale.set(width, tall, 1);
         sprite.position.y = 0.62 + tall / 2;
         group.add(sprite);
