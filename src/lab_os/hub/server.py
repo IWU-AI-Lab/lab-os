@@ -53,7 +53,7 @@ GET /ws/hub-device       one hub page of a device (?device=desk): the brain's li
                          "open on…" and the device's settings (hub/hub_devices.py)
 GET /api/hub-devices     the devices with the hub open now, their windows, what each shows
 POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on another device
-POST /api/hub-devices/close  {"device", "window"}: close it there ("bring it back")
+POST /api/hub-devices/close  {"device", "window"}: close the module on that screen
 POST /api/room/setup     open each page of the room's layout on its device (room.yaml, quick job 71)
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)

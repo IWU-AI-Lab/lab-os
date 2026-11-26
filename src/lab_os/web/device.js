@@ -8,7 +8,7 @@
 //                      name this browser last used ("" = no name)
 //   prefs()            this device's settings (a copy kept in this browser, filled from the brain)
 //   setPref(k, v)      change one: kept by the brain under the name (in this browser only without one)
-//   connectDevice({…}) the hub page's connection: the device list, "open on…", "bring it back"
+//   connectDevice({…}) the hub page's connection: the device list and "open on…"
 //
 // The designed hub (design.html) reads the settings with the same rule inline (prefsKey there).
 
@@ -86,7 +86,7 @@ async function screenInfo() {
  * The hub page's connection to the brain, for as long as the page is open (reconnects by itself).
  * h.state(): {stage: "start"|"hub", showing: module id | null, from, from_window};
  * h.onOpen(module, from, fromWindow): open that module here (sent from another device);
- * h.onClose(): close the module here ("bring it back" there); h.onDevices(list): the brain's list changed;
+ * h.onClose(): close the module here when the brain requests it; h.onDevices(list): the brain's list changed;
  * h.onLive(list): the live device list changed (quick job 109: every device seen, connected or not);
  * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not;
  * h.onCard(): the brain read a card swipe on its own computer's card reader (quick job 113);
@@ -172,20 +172,12 @@ export function connectDevice(h) {
     openOn: (module, device, window = "") =>
       postJSON("/api/hub-devices/open", { module, device, window, from: name, from_window: wid })
         .catch((e) => ({ ok: false, message: `The brain didn't answer (${e.message}).` })),
-    /** Close what another device's window shows (it was opened from here). */
-    bringBack: (device, window) =>
-      postJSON("/api/hub-devices/close", { device, window })
-        .catch((e) => ({ ok: false, message: `The brain didn't answer (${e.message}).` })),
-    /** The windows showing something opened from this device (or this window), for "bring it back". */
-    sentFromHere: () => list.flatMap((d) => d.windows
-      .filter((w) => w.showing && ((name && w.from === name) || (wid && w.from_window === wid)))
-      .map((w) => ({ device: d.name, title: d.title || d.name, window: w.id, label: w.label, showing: w.showing }))),
     /** Where a module can be opened: every window of the other devices, and this device's other windows. */
     targets: () => list.map((d) => ({ ...d, windows: d.windows.filter((w) => w.id !== wid) })).filter((d) => d.windows.length),
   };
 }
 
-/* ---------- the two lists both hubs show (each hub styles them: .oo-*) ---------- */
+/* ---------- the Open on… menu ---------- */
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -273,27 +265,4 @@ export async function openOnMonitor(url, name, say) {
   if (!w) { say("The browser blocked the new window: press the button again."); return ""; }
   say(place ? "Opened on the other monitor." : "Opened in a new window: drag it to the other monitor, then click it for full screen.");
   return place ? "placed" : "window";
-}
-
-/** "Bring it back": a row per page this device opened elsewhere; opts.onBack(item) after it closed there. */
-export function fillSent(box, dev, opts = {}) {
-  const items = dev.sentFromHere();
-  box.replaceChildren();
-  box.hidden = !items.length;
-  for (const it of items) {
-    const line = el("div", "oo-sent");
-    const at = it.label ? `${it.title || it.device} (${it.label})` : it.title || it.device;
-    line.append(el("span", "oo-what", `${it.showing.title} is on ${at}`));
-    const b = el("button", "oo-back", "Bring it back");
-    b.type = "button";
-    b.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      b.disabled = true;
-      const r = await dev.bringBack(it.device, it.window);
-      if (r.ok) opts.onBack?.(it);
-      else { b.disabled = false; b.title = r.message; }
-    });
-    line.append(b);
-    box.append(line);
-  }
 }

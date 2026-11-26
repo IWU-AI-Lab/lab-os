@@ -781,13 +781,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 .oo-msg:empty { display: none; }
 #module .mod-from { position: absolute; left: 1.7rem; top: 3.1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
 #module .mod-from[hidden] { display: none; }
-/* pages this device opened elsewhere: one quiet line each, "Bring it back" */
-#sent { position: fixed; top: 4.6rem; left: 50%; transform: translateX(-50%); z-index: 8; display: grid; gap: 0.35rem; }
-#sent[hidden], body.waiting #sent, body.folded #sent { display: none; }
-.oo-sent { display: flex; align-items: center; gap: 0.9rem; padding: 0.35rem 0.4rem 0.35rem 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 85%, transparent); font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--text-dim); }
-.oo-back { padding: 0.45rem 0.7rem; font: 500 0.75rem/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); cursor: pointer; }
-.oo-back:hover, .oo-back:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
-
 /* ---------- small screens: a phone, the Pi's touchscreen (quick job 96) ----------
    Large screens keep the layout above. A screen 1100 px wide or less, or 640 px high or less, gets
    controls big enough for a finger (about 40 px), and an open page keeps the docked core out of its way. */
@@ -802,7 +795,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   .side .open { position: relative; }
   .side .open::after { content: ""; position: absolute; inset: -10px -6px; }
   #devcard .t button { min-width: 40px; min-height: 40px; }
-  .oo-back { min-height: 40px; }
   #log-chat .copy { min-height: 36px; }
   /* an open page: a thin frame, the docked core small in the corner, the page beside it (not under it) */
   #module > .cut { inset: 0.6rem; }
@@ -1040,9 +1032,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 </div>
 <div id="orb-dock" aria-hidden="true"></div>
 <div id="dock-say"></div>
-<!-- pages this device opened on another one ("open on…", step 8): Bring it back closes them there -->
-<div id="sent" hidden></div>
-
 <div id="flash" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 <video id="startup-video" muted playsinline preload="none" aria-hidden="true"></video>
@@ -3625,7 +3614,7 @@ async function sendToScreen(id, say) {
   }, 700);
   if (place) setTimeout(closeModule, 900);  // it lives there now; the hub's copy would hold a second connection
 }
-/* ---------- devices (step 8): this one's name, "open on…", pages sent here, "bring it back" ---------- */
+/* ---------- devices (step 8): this one's name, "open on…", pages sent here ---------- */
 function closeOpenOn() { $("#open-on").hidden = true; $("#mod-send").setAttribute("aria-expanded", "false"); }
 function fillMenu() {
   const id = S.showing;  // any view: a page, a details page, the conversation (2026-11-21)
@@ -3671,15 +3660,6 @@ function openHere(id, sentFrom) {
   if (S.moduleOpen) closeModule();
   setTimeout(go, Math.max(0, (S.closingUntil || 0) - performance.now()));
 }
-function renderSent() {
-  DM.fillSent($("#sent"), D, {
-    onBack: (it) => {
-      if (!S.booted || S.moduleOpen) return;
-      const btn = document.querySelector(`#mods [data-module="${it.showing.id}"]`);
-      if (btn) { SFX.blip(); openModule(btn); }
-    },
-  });
-}
 import("/web/device.js").then((m) => {
   DM = m;
   D = m.connectDevice({
@@ -3692,7 +3672,7 @@ import("/web/device.js").then((m) => {
     onClose: () => { if (S.moduleOpen) closeModule(); },
     onLive: (list) => setLive(list),
     onCard: () => { if ($("#ignite")) ignite("card"); },  // the brain read the swipe (quick job 113)
-    onDevices: () => { renderSent(); if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
+    onDevices: () => { if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),
   });

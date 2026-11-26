@@ -8,7 +8,7 @@ which devices are there right now and what each window shows. Nothing is remembe
 after it closes: when the brain restarts, the pages reconnect and the list fills again.
 
 - **"Open on…"**: a module page opened from one device on another one's hub (inside its hub, like a
-  module opened there); Back there, or "bring it back" here, closes it. Only windows with the hub
+  module opened there); Back on that screen closes it. Only windows with the hub
   open are offered, so a device used for something else is never taken over.
 - **No name** (quick job 101): a hub page opened without `?device=` is listed too, by its address
   (`addr-192-168-8-167`, shown as "192.168.8.167 (no device name)"), so "Open on…" can reach it.
@@ -257,7 +257,7 @@ class HubDevices:
         return out
 
     def sent(self) -> list[dict]:
-        """Modules opened on another device from somewhere, for "bring it back"."""
+        """Modules that another device opened on these screens."""
         return [
             {
                 "device": d["name"],
@@ -297,7 +297,7 @@ class HubDevices:
         msg = {"type": "settings", "settings": values}
         await asyncio.gather(*(self._send(w, msg) for w in self.of(device)))
 
-    # ---------- open on… / bring it back ----------
+    # ---------- open or close a module ----------
     def _choices(self, device: str) -> list[dict]:
         return next((d["windows"] for d in self.listing() if d["name"] == device), [])
 
@@ -357,7 +357,7 @@ class HubDevices:
         }
 
     async def close_on(self, device: str, window: str) -> dict:
-        """Close what a device's window shows (\"bring it back\"): its Back, from here."""
+        """Close the module on a device's window."""
         device = clean_name(device)
         target = next((w for w in self.of(device) if w.id == window), None)
         if target is None:

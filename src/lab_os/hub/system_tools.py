@@ -43,7 +43,7 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
     from lab_os.hub.room import set_up
     from lab_os.teleop.server import handle_message
 
-    # ---------- the screens: "Open on…", "Bring it back", the room ----------
+    # ---------- the screens: open or close a module, set up the room ----------
 
     @server.tool(annotations=READ)
     def hub_screens() -> dict:
@@ -68,7 +68,7 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
 
     @server.tool(annotations=ACT)
     async def bring_back(device: str, window: str) -> dict:
-        """Close what a device's window shows, like "Bring it back" (window: from hub_screens)."""
+        """Close the module on a device's window (window: from hub_screens)."""
         try:
             return await app[hub.HUB_DEVICES].close_on(device, window)
         except DeviceError as e:
