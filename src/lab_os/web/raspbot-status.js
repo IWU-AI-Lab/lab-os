@@ -9,14 +9,18 @@ export function raspbotMotion(status) {
   return status?.connected ? MOTION[status.moving] || "Stopped" : "Unavailable";
 }
 
-export function watchRaspbot(onStatus) {
+/** The Monitor's socket (role=monitor): onStatus(status | null); onMessage(m) gets the other messages
+ * (labels), onOpen() each time it connects. */
+export function watchRaspbot(onStatus, { onMessage, onOpen } = {}) {
   let socket;
   function connect() {
     const scheme = location.protocol === "https:" ? "wss:" : "ws:";
     socket = new WebSocket(`${scheme}//${location.host}/ws/raspbot?role=monitor`);
+    socket.onopen = () => onOpen?.();
     socket.onmessage = (event) => {
-      const status = JSON.parse(event.data);
-      if (status.type === "raspbot_status") onStatus(status);
+      const m = JSON.parse(event.data);
+      if (m.type === "raspbot_status") onStatus(m);
+      else onMessage?.(m);
     };
     socket.onclose = () => {
       onStatus(null);
@@ -24,11 +28,8 @@ export function watchRaspbot(onStatus) {
     };
   }
   connect();
-  return {
-    stop(device) {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: "stop", device }));
-      }
-    },
-  };
+  function send(msg) {
+    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(msg));
+  }
+  return { send, stop: (device) => send({ type: "stop", device }) };
 }

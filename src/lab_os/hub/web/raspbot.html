@@ -213,7 +213,7 @@
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module">
   import { raspbotMotion } from "/web/raspbot-status.js";
-  import { drawLabels, frontIndex } from "/web/object-labels.js";
+  import { labelsSwitch } from "/web/object-labels.js";
 
   const $ = (s) => document.querySelector(s);
   const device = new URLSearchParams(location.search).get("device") || "";
@@ -326,49 +326,10 @@
   $("#cam").onerror = () => { camOn = false; $("#cam").hidden = true; $("#cam-why").hidden = false; $("#cam-why").textContent = "The camera does not answer."; };
 
   // Labels (quick job 128): the brain finds the objects in the camera's picture; this page draws the boxes.
-  const LABELS_OLD_MS = 1000;
-  const labels = { on: false, found: [], t: 0, state: "", why: "" };
-  const overlay = $("#labels");
-  function setLabels(on) {
-    Object.assign(labels, { on, found: [], t: 0, state: "", why: "" });
-    send({ type: "labels", on });
-    $("#labels-btn").setAttribute("aria-pressed", String(on));
-    $("#labels-btn").textContent = on ? "Labels on" : "Labels off";
-    if (!on) $("#media-msg").textContent = "Labels off.";
-    paintLabels();
-  }
-  $("#labels-btn").onclick = () => setLabels(!labels.on);
-  function onLabels(m) {
-    if (!labels.on) return;
-    Object.assign(labels, { found: m.found || [], t: performance.now() });
-    if (m.state !== labels.state || m.why !== labels.why) {
-      Object.assign(labels, { state: m.state, why: m.why });
-      $("#media-msg").textContent = m.state === "loading" ? "Loading the object detector…"
-        : m.state === "failed" ? `No labels: ${m.why}` : m.why || "Labels on.";
-    }
-    paintLabels();
-  }
-  function paintLabels() {
-    const img = $("#cam"), r = overlay.getBoundingClientRect(), k = devicePixelRatio || 1;
-    const w = Math.round(r.width * k), h = Math.round(r.height * k);
-    if (overlay.width !== w || overlay.height !== h) Object.assign(overlay, { width: w, height: h });
-    const g = overlay.getContext("2d");
-    g.clearRect(0, 0, w, h);
-    const fresh = performance.now() - labels.t < LABELS_OLD_MS;
-    if (!labels.on || !fresh || !camOn || !img.naturalWidth || !labels.found.length) return;
-    const fit = Math.min(w / img.naturalWidth, h / img.naturalHeight);  // the picture's place (object-fit: contain)
-    const pw = img.naturalWidth * fit, ph = img.naturalHeight * fit;
-    const css = getComputedStyle(document.documentElement), found = labels.found;
-    g.save();
-    g.translate((w - pw) / 2, (h - ph) / 2);
-    drawLabels(g, pw, ph, found, {
-      front: frontIndex(found, lastStatus?.pan_deg), distanceMm: lastStatus?.distance_mm ?? null,
-      color: css.getPropertyValue("--primary").trim(), bg: "rgba(5, 8, 11, 0.85)", font: css.getPropertyValue("--f-lines").trim() || "sans-serif",
-    });
-    g.restore();
-  }
-  setInterval(paintLabels, 250);  // old boxes go away when no new ones come
-  addEventListener("resize", paintLabels);
+  const labels = labelsSwitch({
+    button: $("#labels-btn"), canvas: $("#labels"), img: $("#cam"), send, status: () => lastStatus,
+    say: (text) => { $("#media-msg").textContent = text; },
+  });
 
   function showMedia(s) {
     recording = !!s?.recording;
@@ -412,7 +373,7 @@
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
       if (m.type === "raspbot_status") show(m);
-      else if (m.type === "labels") onLabels(m);
+      else if (m.type === "labels") labels.message(m);
       else if (m.type === "saved") {
         $("#media-msg").textContent = m.what === "picture" ? `Picture saved: ${m.path}`
           : m.on ? `Recording to ${m.path}`
@@ -421,7 +382,7 @@
         error = m.message; errorAt = Date.now();
       }
     };
-    ws.onopen = () => { if (labels.on) send({ type: "labels", on: true }); };  // after a reconnect
+    ws.onopen = () => labels.reconnect();  // labels on again after a reconnect
     ws.onclose = () => {
       lastStatus = null;
       modelView?.update(null);

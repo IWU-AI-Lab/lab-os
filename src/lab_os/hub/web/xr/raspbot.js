@@ -287,7 +287,7 @@ export class RaspbotModule {
         g.drawImage(this.img, 0, 0, w, h);
         if (this.labels.on && performance.now() - this.labels.t < LABELS_OLD_MS) {
           const found = this.labels.found, s = this.status;
-          drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: rgba(C.bg, 0.85), font: FONT.lines });
+          drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: rgba(C.bg, 0.85), font: FONT.ui });
         }
         this.video.tex.needsUpdate = true; this.video.key = null; return;
       } catch { /* not decoded yet */ }
