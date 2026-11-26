@@ -258,7 +258,8 @@ def test_the_label_says_the_name_how_sure_and_the_distance():
 @needs_node
 def test_the_labels_look_like_a_hud():
     g = (
-        "{save(){}, restore(){}, strokeRect(){}, fillRect(){}, letterSpacing: '0px',"
+        "{save(){}, restore(){}, fillRect(){}, letterSpacing: '0px', lines: 0, strokes: 0,"
+        " beginPath(){}, moveTo(){}, lineTo() { this.lines++; }, stroke() { this.strokes++; },"
         " measureText: (t) => ({width: t.length * 10}),"
         " fillText(t) { (this.said ||= []).push(t); }}"
     )
@@ -266,11 +267,13 @@ def test_the_labels_look_like_a_hud():
     out = run_js(
         f"(() => {{ const g = {g};"
         f" m.drawLabels(g, 640, 480, {found}, {{front: 0, distanceMm: 342}});"
-        " return [g.said, g.font, g.letterSpacing]; })()"
+        " return [g.said, g.font, g.letterSpacing, g.lines, g.strokes]; })()"
     )
-    said, font, spacing = out
+    said, font, spacing, lines, strokes = out
     assert said == ["CELL PHONE   82%   34 cm", "LEGO BRICK   80%"]  # the name in capitals
     assert "Chakra Petch" in font and spacing != "0px"  # the design's UI font, spaced out
+    # four corner brackets (two lines each) for each object, no full box (no strokeRect)
+    assert (lines, strokes) == (16, 2)
 
 
 def test_the_raspbot_page_and_the_monitor_have_the_switch_off_by_default():
