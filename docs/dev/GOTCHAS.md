@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — A class named `page` on a module page fills the screen (quick job 149)
+**What:** The Command Center's activity rows had the class `page` (the event's kind). The kit's `.page` rule (`docs/design`, `kit.css`) gave each row the height of the screen, so only one row showed.
+**Fix:** The rows' kind classes start with `ev-`. On a module page, do not use the kit's class names (`page`, `bar`, `card`, `btn`, `row`) for other things.
+
+### 2026-11-26 — A hub page reports "nothing open" for a moment when another device opens a page on it (quick job 149)
+**What:** After Open on…, the brain sets what the page shows at once. The page then wakes (from the start screen) and reports "nothing open" for a moment, then the page. The activity list said "went back to the hub" between the two.
+**Fix:** The activity list reads only what the page reports, and "went back to the hub" waits 1.5 s (`BACK_QUIET_S`). A new page in that time cancels it.
+
 ### 2026-11-26 — Simplifying the whole Raspbot base dropped small parts
 
 **What:** The first mesh reduction removed the front sensor from the base mesh.

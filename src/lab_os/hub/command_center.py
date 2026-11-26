@@ -27,6 +27,7 @@ import yaml
 from aiohttp import web
 
 from lab_os import config, settings
+from lab_os.activity import ACTIVITY
 from lab_os.hub.hub_devices import on_this_computer
 from lab_os.teleop.server import DRIVE_FROM
 
@@ -189,8 +190,17 @@ async def api_drive(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "drive_from": now})
 
 
+async def api_activity(request: web.Request) -> web.Response:
+    """The activity list (quick job 149): the newest events first."""
+    if (no := _brain_only(request)) is not None:
+        return no
+    events = request.app[ACTIVITY].recent() if ACTIVITY in request.app else []
+    return web.json_response({"events": events})
+
+
 def add_routes(app: web.Application, store: LayoutStore | None = None) -> None:
     app[STORE] = store or LayoutStore()
     app.router.add_get("/api/command-center", api_state)
+    app.router.add_get("/api/command-center/activity", api_activity)
     app.router.add_post("/api/command-center/layout", api_layout)
     app.router.add_post("/api/command-center/drive", api_drive)

@@ -26,6 +26,7 @@ from pathlib import Path
 import aiohttp
 from aiohttp import WSMsgType, web
 
+from lab_os.activity import note
 from lab_os.config import recordings_dir
 from lab_os.robots.raspbot import RaspbotDesk
 from lab_os.teleop.server import DRIVE_FROM, is_local
@@ -238,7 +239,13 @@ async def raspbot_ws(request: web.Request) -> web.WebSocketResponse:
                 raw = json.loads(msg.data)
                 kind = raw.get("type")
                 if kind == "stop":  # any page, watchers too
-                    await desk.stop(str(raw.get("device") or "")[:32])
+                    who = str(raw.get("device") or "")[:32]
+                    await desk.stop(who)
+                    note(
+                        request.app,
+                        f"STOP pressed for {desk.bot.name} on {who or request.remote}",
+                        "stop",
+                    )
                 elif kind == "set_speed" and drives:  # the Speed slider
                     desk.set_speed(float(raw["speed"]))
                 elif kind == "release" and drives:

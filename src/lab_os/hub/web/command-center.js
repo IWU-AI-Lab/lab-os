@@ -17,6 +17,10 @@
 // The drag is one "carrier" with four steps (start, move, drop, cancel) at screen coordinates: the mouse and
 // touch use it through pointer events, and a webcam hand can use it later (docs/plan/ideas.md → "Far future").
 //
+// Quick job 149: the workspace zooms to fit its items (until a person pans or zooms; Fit goes back to it), a
+// device seen before but off now is a dim card that lights up when it connects, and the activity list under
+// the devices shows what happened, newest first (the brain keeps it: /api/command-center/activity).
+//
 // The positions are plain 2D numbers in the workspace's own units, kept apart from the drawing, so a 3D
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
@@ -52,10 +56,10 @@ const SETTINGS = [
 ];
 
 const S = {
-  hub: [], live: [], views: [], drive: new Set(),
+  hub: [], live: [], views: [], drive: new Set(), events: [], seenEvent: 0, wasOff: new Set(),
   layout: { places: {}, hidden: [], groups: {} },
   sel: new Set(), search: "", pageSearch: "", page: "", group: "",
-  view: { x: 40, y: 40, z: 1 }, fitted: false, drag: null, msg: "", msgBad: false, last: "",
+  view: { x: 40, y: 40, z: 1 }, autoFit: true, fitKey: "", drag: null, msg: "", msgBad: false, last: "",
 };
 
 // ---------- the brain ----------
@@ -100,6 +104,16 @@ function devices() {
     if (!d.connected || d.kind === "screen") continue;  // the screens are the hub's devices above
     const kind = d.leader ? "leader" : KIND_ICON[d.kind] ? d.kind : "usb";
     out.push({ key: `l:${d.id}`, kind, id: d.id, title: d.name || d.id, sub: "", what: d.problem || d.what || "", bad: !!d.problem, live: d });
+  }
+  // seen before, off now (quick job 149): a dim card under the same key, so it lights up in its place
+  const have = new Set(out.map((d) => d.key));
+  for (const d of S.live) {
+    if (d.connected) continue;
+    const screen = d.kind === "screen";
+    const key = screen ? `d:${String(d.id).slice("screen:".length)}` : `l:${d.id}`;
+    if (have.has(key)) continue;
+    const kind = screen ? "hub" : d.leader ? "leader" : KIND_ICON[d.kind] ? d.kind : "usb";
+    out.push({ key, kind, id: screen ? key.slice(2) : d.id, title: d.name || d.id, sub: "", what: "", gone: true, lastSeen: d.last_seen || "", live: d });
   }
   return out;
 }
@@ -173,11 +187,11 @@ function eye(key) {
 }
 function devRow(d) {
   const r = document.createElement("div");
-  r.className = `row${S.sel.has(d.key) ? " sel" : ""}${isHidden(d.key) ? " off" : ""}`;
+  r.className = `row${S.sel.has(d.key) ? " sel" : ""}${isHidden(d.key) ? " off" : ""}${d.gone ? " gone" : ""}${lit(d) ? " lit" : ""}`;
   r.dataset.key = d.key;
-  const drive = d.kind === "hub" && mayDrive(d) ? ` ${ico("i-hand")}` : "";
+  const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? ` ${ico("i-hand")}` : "";
   r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${drive}</b>${eye(d.key)}`
-    + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`
+    + (d.gone ? "" : `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`)
     + `<small>${esc(d.sub || KIND_WORD[d.kind])}</small>`;
   return r;
 }
@@ -199,8 +213,7 @@ function renderLists(devs, scr) {
   dl.innerHTML = "";
   const lone = scr.filter((s) => s.group === s.key);
   // the same order as the workspace: screens' devices, screens on their own, the other devices
-  const order = [...devs.filter((d) => d.kind === "hub"), ...lone, ...devs.filter((d) => d.kind !== "hub")];
-  for (const item of order) {
+  for (const item of itemOrder(devs, lone)) {
     if (item.device) { if (matches(scrText(item))) dl.append(scrRow(item, false)); continue; }
     const mine = scr.filter((s) => s.group === item.key && s.key !== s.group && matches(scrText(s)));
     if (!mine.length && !matches(devText(item))) continue;
@@ -342,6 +355,14 @@ function placeNew(els) {
   }
   if (els.length) saveLayout();
 }
+// screens' devices first, then screens on their own, then the other devices, then the ones off now (the
+// order new ones get places in, and the list's order)
+function itemOrder(devs, lone) {
+  const on = devs.filter((d) => !d.gone);
+  return [...on.filter((d) => d.kind === "hub"), ...lone, ...on.filter((d) => d.kind !== "hub"), ...devs.filter((d) => d.gone)];
+}
+// an item that was off a moment ago and is connected now lights up once
+const lit = (d) => !d.gone && S.wasOff.has(d.key);
 function renderWorkspace(devs, scr) {
   const stage = $("#stage");
   const lone = scr.filter((s) => s.group === s.key);
@@ -352,9 +373,7 @@ function renderWorkspace(devs, scr) {
     if (at) { el.style.left = `${at[0]}px`; el.style.top = `${at[1]}px`; } else fresh.push(el);
     stage.append(el);
   };
-  // screens' devices first, then screens on their own, then the other devices (the order new ones get)
-  const order = [...devs.filter((d) => d.kind === "hub"), ...lone, ...devs.filter((d) => d.kind !== "hub")];
-  for (const item of order) {
+  for (const item of itemOrder(devs, lone)) {
     if (isHidden(item.key)) continue;
     if (item.device) {  // a screen on its own
       const el = document.createElement("div");
@@ -366,14 +385,14 @@ function renderWorkspace(devs, scr) {
     }
     const d = item;
     const el = document.createElement("div");
-    el.className = `node${S.sel.has(d.key) ? " sel" : ""}${matches(devText(d)) ? "" : " dim"}`;
+    el.className = `node${S.sel.has(d.key) ? " sel" : ""}${matches(devText(d)) ? "" : " dim"}${d.gone ? " gone" : ""}${lit(d) ? " lit" : ""}`;
     el.dataset.key = d.key;
     const mine = scr.filter((s) => s.group === d.key && !isHidden(s.key));
-    const drive = d.kind === "hub" && mayDrive(d) ? `<span class="k" title="May drive a real arm">${ico("i-hand")}</span>` : "";
+    const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? `<span class="k" title="May drive a real arm">${ico("i-hand")}</span>` : "";
     el.innerHTML = `<div class="head"><span class="k">${ico(KIND_ICON[d.kind])}</span><b>${esc(d.title)}</b>${d.sub ? `<small>${esc(d.sub)}</small>` : ""}${drive}<span class="grow"></span>`
-      + `<button class="iconbtn more" type="button" title="Settings and actions">⋯</button>`
-      + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button></div>`
-      + (mine.length ? "" : `<div class="what${d.bad ? " bad" : ""}">${esc(d.what || KIND_WORD[d.kind])}</div>`);
+      + (d.gone ? "" : `<button class="iconbtn more" type="button" title="Settings and actions">⋯</button>`
+        + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`) + `</div>`
+      + (mine.length || d.gone ? "" : `<div class="what${d.bad ? " bad" : ""}">${esc(d.what || KIND_WORD[d.kind])}</div>`);
     if (mine.length) {
       const row = document.createElement("div");
       row.className = "shots";
@@ -405,10 +424,20 @@ function fit() {
     x1 = Math.max(x1, x + n.offsetWidth); y1 = Math.max(y1, y + n.offsetHeight);
   }
   const ws = $("#ws").getBoundingClientRect(), pad = 30;
-  const z = Math.max(0.25, Math.min(1.4, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0)));
-  S.view = { z, x: pad - x0 * z + Math.max(0, (ws.width - 2 * pad - (x1 - x0) * z) / 2), y: pad - y0 * z };
+  // a few devices get large previews, many get small ones (quick job 149); centred both ways
+  const z = Math.max(0.2, Math.min(2.6, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0)));
+  S.view = { z, x: pad - x0 * z + Math.max(0, (ws.width - 2 * pad - (x1 - x0) * z) / 2), y: pad - y0 * z + Math.max(0, (ws.height - 2 * pad - (y1 - y0) * z) / 2) };
   applyView();
 }
+// fit again when items come or go, or the workspace changes size, until a person pans or zooms
+function autoFit(force = false) {
+  const r = $("#ws").getBoundingClientRect();
+  const key = `${[...$("#stage").children].map((n) => n.dataset.key).join(" ")}|${Math.round(r.width)}x${Math.round(r.height)}`;
+  if (!force && (!S.autoFit || key === S.fitKey)) return;
+  S.fitKey = key;
+  fit();
+}
+new ResizeObserver(() => autoFit()).observe($("#ws"));
 
 // ---------- highlight, drag, pan, zoom ----------
 function pick(key, add) {
@@ -450,6 +479,7 @@ $("#ws").addEventListener("pointermove", (e) => {
   if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 5) return;
   d.moved = true;
   if (d.kind === "pan") {
+    S.autoFit = false;
     S.view.x = d.vx + e.clientX - d.sx; S.view.y = d.vy + e.clientY - d.sy;
     applyView();
   } else if (d.kind === "node") {
@@ -505,7 +535,8 @@ $("#ws").addEventListener("pointerup", (e) => {
 $("#ws").addEventListener("wheel", (e) => {
   e.preventDefault();
   const r = $("#ws").getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
-  const z = Math.max(0.2, Math.min(2.5, S.view.z * Math.exp(-e.deltaY * 0.0015)));
+  S.autoFit = false;
+  const z = Math.max(0.2, Math.min(2.6, S.view.z * Math.exp(-e.deltaY * 0.0015)));
   S.view.x = mx - ((mx - S.view.x) * z) / S.view.z;
   S.view.y = my - ((my - S.view.y) * z) / S.view.z;
   S.view.z = z;
@@ -528,7 +559,7 @@ $("#devices").addEventListener("click", (e) => {
   pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
 });
 $("#search").addEventListener("input", (e) => { S.search = e.target.value; render(true); });
-$("#fit").addEventListener("click", fit);
+$("#fit").addEventListener("click", () => { S.autoFit = true; autoFit(true); });
 $("#show-all").addEventListener("click", () => { S.layout.hidden = []; saveLayout(); render(true); });
 
 // ---------- workspace-only changes ----------
@@ -647,6 +678,7 @@ function actButtons(box, acts, devs, after = () => {}) {
 // ---------- the inspector: the highlighted items' details, settings, actions and modules ----------
 const factsHTML = (rows) => `<dl class="facts">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
 function deviceFacts(d) {
+  if (d.gone) return [["Kind", KIND_WORD[d.kind]], ["Connected", "Not now"], ["Last seen", d.lastSeen]];
   return [["Kind", KIND_WORD[d.kind]], ["What", d.what], ["Connected", d.live?.via || (d.kind === "hub" ? "The hub is open" : "")], ["Address", d.address || ""]];
 }
 function driveLine(d) {
@@ -695,7 +727,7 @@ function renderInspector(force = false) {
   const s = one && scr.find((x) => x.key === one);
   if (d) {
     box.insertAdjacentHTML("beforeend", `<div class="who">${ico(KIND_ICON[d.kind])}<b title="${esc(d.title)}">${esc(d.title)}</b>`
-      + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button></div>`
+      + (d.gone ? "" : `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`) + `</div>`
       + (d.sub ? `<p class="hint">${esc(d.sub)}</p>` : ""));
     part("Details", factsHTML(deviceFacts(d)) + driveLine(d));
   } else if (s) {
@@ -828,20 +860,37 @@ addEventListener("keydown", (e) => {
 // ---------- the loop ----------
 function render(force = false) {
   const devs = devices(), scr = screens(devs);
-  const now = JSON.stringify([S.hub, S.live.filter((d) => d.connected), [...S.drive]]);
+  const now = JSON.stringify([S.hub, S.live.map((d) => [d.id, d.connected, d.name, d.what, d.problem]), [...S.drive]]);
   if (!force && now === S.last) return;
   S.last = now;
   for (const k of [...S.sel]) if (!devs.some((d) => d.key === k) && !scr.some((s) => s.key === k)) S.sel.delete(k);
   renderLists(devs, scr);
   if (!S.drag) renderWorkspace(devs, scr);
   if (!document.querySelector(".menu")) renderInspector(force);
-  if (!S.fitted && $("#stage").children.length) { S.fitted = true; requestAnimationFrame(fit); }
+  if ($("#stage").children.length) requestAnimationFrame(() => autoFit());
+  S.wasOff = new Set(devs.filter((d) => d.gone).map((d) => d.key));
+}
+// ---------- the activity list: what happened, newest first ----------
+function renderActivity() {
+  const box = $("#activity");
+  if (!S.events.length) { box.innerHTML = `<div class="empty">Nothing yet. Devices that connect and pages that open show here.</div>`; return; }
+  const icon = { device: "i-net", page: "i-screen", stop: "i-stop" };
+  const newest = S.events[0].t;
+  box.innerHTML = S.events.map((e) => {
+    const t = new Date(e.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    return `<div class="ev ev-${esc(e.kind)}${e.t > S.seenEvent && S.seenEvent ? " new" : ""}"><time>${t}</time>${ico(icon[e.kind] || "i-test")}<span>${esc(e.text)}</span></div>`;
+  }).join("");
+  S.seenEvent = newest;
 }
 async function refresh() {
   try {
-    const [hub, live] = await Promise.all([getJSON("/api/hub-devices"), getJSON("/api/live-devices")]);
+    const [hub, live, act] = await Promise.all([getJSON("/api/hub-devices"), getJSON("/api/live-devices"), getJSON("/api/command-center/activity")]);
     S.hub = hub.devices || []; S.live = live.devices || [];
     render();
+    if (JSON.stringify(act.events?.[0] || null) !== JSON.stringify(S.events[0] || null) || !$("#activity").children.length) {
+      S.events = act.events || [];
+      renderActivity();
+    }
   } catch (e) {
     say(`The brain didn't answer (${e.message}). Trying again.`, true);
   }

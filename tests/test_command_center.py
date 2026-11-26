@@ -1,13 +1,17 @@
 """The Command Center (quick job 134, docs/design/command-center.md): its page, the workspace's
 layout (only the picture) and the teleop permission (which devices may drive a real arm)."""
 
+import asyncio
+
 import yaml
-from test_hub_devices import page  # same folder (pytest puts it on the path)
+from test_hub_devices import page, settle  # same folder (pytest puts it on the path)
 from test_hub_server import SRC, make_app
 
 from lab_os import config
-from lab_os.hub import command_center
+from lab_os.activity import ACTIVITY, Activity
+from lab_os.hub import command_center, hub_devices
 from lab_os.hub.command_center import LayoutStore, clean_layout
+from lab_os.hub.live_devices import LiveDevices, SeenStore
 from lab_os.teleop.server import DRIVE_FROM
 
 
@@ -69,6 +73,7 @@ async def test_only_on_the_brains_computer(aiohttp_client, monkeypatch):
     drive = {"addresses": ["192.168.8.50"], "allowed": True}
     assert (await client.post("/api/command-center/drive", json=drive)).status == 403
     assert (await client.post("/api/command-center/layout", json={})).status == 403
+    assert (await client.get("/api/command-center/activity")).status == 403
 
 
 async def test_teleop_permission(aiohttp_client):
@@ -120,3 +125,73 @@ def test_the_page_keeps_its_rules():
     # quick job 148: one drag carrier for every kind of pointer; a drop opens the page there
     assert "const carry = {" in js and "start(view, x, y)" in js and "drop(x, y)" in js
     assert "function openPageOn(view, key)" in js and "function renderInspector(" in js
+
+
+# ---------- quick job 149: the activity list, the devices that are off ----------
+def test_activity_keeps_the_newest_first():
+    t = [100.0]
+    act = Activity(clock=lambda: t[0], size=3)
+    for word in ("a", "b", "c", "d"):
+        t[0] += 1
+        act.add(f"pi7  {word}\n", "page")
+    assert [e["text"] for e in act.recent()] == [
+        "pi7 d",
+        "pi7 c",
+        "pi7 b",
+    ]  # names stay as they are
+    assert act.recent()[0] == {"t": 104.0, "text": "pi7 d", "kind": "page"}
+    act.add("   ")
+    assert len(act.recent()) == 3  # an empty line is not an event
+
+
+def test_devices_that_come_and_go_are_noted(tmp_path):
+    act = Activity()
+    live = LiveDevices(SeenStore(lambda: tmp_path / "seen.yaml"), activity=act)
+    arm = {"id": "so101-white", "name": "so101-white", "kind": "arm"}
+    screen = {"id": "screen:desk", "name": "desk", "kind": "screen"}
+    live.update([arm, screen])
+    live.update([screen])
+    assert [e["text"] for e in act.recent()] == [
+        "so101-white disconnected",
+        "so101-white connected",
+    ]
+    off = next(d for d in live.listing() if d["id"] == "so101-white")
+    assert off["connected"] is False and off["last_seen"]  # the Command Center's dim card
+
+
+async def test_screens_opening_pages_are_noted(aiohttp_client, monkeypatch):
+    """A page that wakes reports nothing for a moment: no "went back to the hub" for that."""
+    monkeypatch.setattr(hub_devices, "BACK_QUIET_S", 0.05)
+    app = make_app()
+    client = await aiohttp_client(app)
+    texts = lambda: [e["text"] for e in app[ACTIVITY].recent()]  # noqa: E731
+    ws, _ = await page(client, "pi7")
+    assert texts() == ["pi7 opened the hub"]
+    await ws.send_json({"type": "state", "showing": None})  # waking: nothing yet
+    await ws.send_json({"type": "state", "showing": "teleop", "from": "desk"})
+    await settle(client)
+    await asyncio.sleep(0.1)
+    assert texts()[0] == "pi7 opened Teleop (from desk)" and len(texts()) == 2
+    await ws.send_json({"type": "state", "showing": None})
+    await settle(client)
+    await asyncio.sleep(0.1)
+    assert texts()[0] == "pi7 went back to the hub"
+    await ws.close()
+    await settle(client)
+    assert texts()[0] == "pi7 closed the hub"
+    got = await (await client.get("/api/command-center/activity")).json()
+    assert got["events"][0]["text"] == "pi7 closed the hub"
+
+
+async def test_stop_is_noted(aiohttp_client):
+    app = make_app()
+    client = await aiohttp_client(app)
+    ws = await client.ws_connect("/ws?role=monitor")
+    await ws.send_json({"type": "stop"})
+    for _ in range(50):
+        if app[ACTIVITY].recent():
+            break
+        await asyncio.sleep(0.01)
+    assert app[ACTIVITY].recent()[0]["text"].startswith("STOP pressed")
+    assert app[ACTIVITY].recent()[0]["kind"] == "stop"
+    await ws.close()
