@@ -39,7 +39,7 @@ async def main(url: str, out: Path) -> None:
     async with async_playwright() as p:
         browser = await p.chromium.launch(channel="chrome")
         page = await browser.new_page()
-        await page.goto(f"{url}/design")
+        await page.goto(f"{url}/")
         svg = await page.evaluate(DRAW)
         await browser.close()
     out.write_text(svg + "\n")

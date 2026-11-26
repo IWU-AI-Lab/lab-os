@@ -119,6 +119,5 @@ async def test_the_endpoints(aiohttp_client, tmp_path):
 
 
 def test_the_page_can_bring_it_back():
-    js = (REPO / "src" / "lab_os" / "hub" / "web" / "hub.js").read_text()
-    html = (REPO / "src" / "lab_os" / "hub" / "web" / "index.html").read_text()
-    assert "/api/chat/restore" in js and 'id="restore-chat"' in html
+    html = (REPO / "src" / "lab_os" / "hub" / "web" / "design.html").read_text()
+    assert "/api/chat/restore" in html and 'id="restore-chat"' in html

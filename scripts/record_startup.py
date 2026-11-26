@@ -157,7 +157,7 @@ async def record(url: str, size: tuple[int, int], quality: str) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         print(f"recording {handoff + 500} ms of the startup at {size[0]}×{size[1]} …")
         await capture(
-            f"{url}/design?sound=0&quality={quality}&startup=hyperspace",
+            f"{url}/?sound=0&quality={quality}&startup=hyperspace",
             size,
             handoff + 500,
             False,
@@ -191,7 +191,7 @@ async def compare(url: str, size: tuple[int, int], out: Path, quality: str, ms=1
             set_device(url, f"rec-{name}", video)
             d = Path(tmp) / name
             d.mkdir()
-            page = f"{url}/design?sound=0&quality={quality}&device=rec-{name}"
+            page = f"{url}/?sound=0&quality={quality}&device=rec-{name}"
             await capture(page, size, ms, True, d)
         half = f"scale={size[0] // 2}:-2"
         ffmpeg(

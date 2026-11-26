@@ -201,13 +201,11 @@ async def brain(aiohttp_server, tmp_path, script):
 
 def test_the_pages_open_what_the_assistant_says():
     design = (SRC / "hub/web/design.html").read_text()
-    plain = (SRC / "hub/web/hub.js").read_text()
     vr = (SRC / "hub/web/xr/hub.js").read_text()
-    for page in (design, plain):
-        assert "function pagesHere" in page and "function showPage" in page
-        assert "pages: pagesHere()" in page  # sent with a typed question
-        assert '"text", "open", "error", "done"' in page  # a spoken turn's open event
-        assert 'id="dock-say"' in design or "#dock-say" in page  # the docked core's reply
+    assert "function pagesHere" in design and "function showPage" in design
+    assert "pages: pagesHere()" in design  # sent with a typed question
+    assert '"text", "open", "error", "done"' in design  # a spoken turn's open event
+    assert 'id="dock-say"' in design  # the docked core's reply
     assert "pagesHere()" in vr and "showPage(id, now)" in vr
     assert 'ev.type === "open"' in (SRC / "hub/web/xr/ask.js").read_text()
     js = (SRC / "web/voice.js").read_text()

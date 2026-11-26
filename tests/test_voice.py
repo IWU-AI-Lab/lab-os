@@ -527,7 +527,7 @@ def test_a_quiet_microphone_still_sends_the_question():
     dropped every question after the wake word. Now the transcriber decides."""
     from test_hub_server import SRC
 
-    for page in ("hub/web/design.html", "hub/web/hub.js", "hub/web/xr/ask.js"):
+    for page in ("hub/web/design.html", "hub/web/xr/ask.js"):
         text = (SRC / page).read_text()
         watch = text[text.index("silenceWatch(") :][:700]
         assert "finish()" in watch and "spoke ||" in watch or "(spoke)" not in watch, page
@@ -661,8 +661,7 @@ def test_the_pages_have_the_voice_parts():
     js = (SRC / "web" / "voice.js").read_text()
     assert "/ws/voice" in js and "isSecureContext" in js and "enumerateDevices" in js
     assert (SRC / "web" / "voice-worklet.js").is_file()
-    for page in ("hub/web/design.html", "hub/web/index.html"):
-        assert 'id="mic"' in (SRC / page).read_text(), page
+    assert 'id="mic"' in (SRC / "hub/web/design.html").read_text()
 
 
 async def test_the_greeting_without_a_microphone_has_no_hint(
@@ -684,7 +683,6 @@ def test_the_hubs_speak_the_greeting():
     design = (SRC / "hub/web/design.html").read_text()
     assert "spokenGreeting" in design and "V.playHeld()" in design
     assert "S.sound" in design.split("function spokenGreeting")[1][:200]  # this screen's sound
-    assert "voice.playHeld()" in (SRC / "hub/web/hub.js").read_text()
 
 
 async def test_the_greeting_hint_follows_the_way_in(aiohttp_client, aiohttp_server, key, tmp_path):
@@ -706,9 +704,8 @@ def test_the_way_in_is_a_screen_setting():
     assert "export function wayIn" in js and "export async function screenCanHear" in js
     settings = (SRC / "hub/web/settings.js").read_text()
     assert 'choices: ["push-to-talk", "dictation"]' in settings and "screenCanHear" in settings
-    for page in ("hub/web/design.html", "hub/web/hub.js"):
-        text = (SRC / page).read_text()
-        assert "dictateStart" in text and 'press("dictate")' in text, page
+    text = (SRC / "hub/web/design.html").read_text()
+    assert "dictateStart" in text and 'press("dictate")' in text
 
 
 # ---------- the assistant's languages per device (quick job 33) ----------
@@ -812,8 +809,6 @@ def test_the_pages_show_only_their_own_turn():
 
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert "function shownState(a)" in design and "device: myName()" in design
-    hub = (SRC / "hub" / "web" / "hub.js").read_text()
-    assert "st.assistant.device" in hub and "device: deviceName()" in hub
     assert "a.device" in (SRC / "hub" / "web" / "xr-hub.js").read_text()
 
 
@@ -1064,11 +1059,6 @@ def test_the_hubs_have_the_conversation_button():
 
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert 'id="conv-btn"' in design and 'id="conv-sign"' in design and "V.converse(" in design
-    hub = (SRC / "hub" / "web" / "hub.js").read_text()
-    assert (
-        "voice.converse(" in hub
-        and 'id="conv-btn"' in (SRC / "hub" / "web" / "index.html").read_text()
-    )
     assert "async function converse(on)" in (SRC / "web" / "voice.js").read_text()
 
 
@@ -1141,7 +1131,7 @@ def test_the_wake_word_listens_while_an_answer_plays():
     js = (Path(__file__).resolve().parents[1] / "src/lab_os/web/voice.js").read_text()
     assert "const forWake = st.wakeOn && st.ws?.readyState === WebSocket.OPEN;" in js
     src = Path(__file__).resolve().parents[1] / "src/lab_os/hub/web"
-    for page in ("hub.js", "design.html", "xr/ask.js"):
+    for page in ("design.html", "xr/ask.js"):
         assert "ev.command" in (src / page).read_text(), page
 
 

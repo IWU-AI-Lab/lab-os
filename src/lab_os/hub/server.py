@@ -1,8 +1,8 @@
 """The brain's web server (`lab-os serve`): the hub page, with the teleop pages inside it.
 
-GET /                    the hub: start screen, status strip, module buttons, assistant, panels
-                         (plain, or the designed one when the theme says hub.look: design)
-GET /design              the designed hub, whatever `hub.look` says (docs/design/DESIGN.md)
+GET /                    the hub (docs/design/DESIGN.md): start screen, status strip, modules,
+                         assistant, panels. The plain hub is in docs/archive/plain-hub-2026-11-25/
+GET /design              goes to / (the address of the designed hub before quick job 131)
 GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
 GET /xr                  the hub in VR/AR for the Quest (watch-only)
 GET /training            the training launcher's page (so101-green + LeLab,
@@ -33,7 +33,7 @@ GET /api/pose-view.png   the AI's pose_view picture of the arm now (side + top, 
 GET /api/devices         the place's devices (devices.yaml): kind, off limits, linked to the brain
 GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
 GET /api/settings        the settings (src/lab_os/settings.py) and their values
-POST /api/settings       {"key": "theme:hub.look", "value": "design"}: change one (here only)
+POST /api/settings       {"key": "theme:clock", "value": "12h"}: change one (here only)
 POST /api/venue          {"to": "visitors" | "normal"}: visitor mode on or off (Settings; here only)
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
@@ -144,7 +144,7 @@ from lab_os.tools.table_map import TableMap
 from lab_os.venues import Venue, load_venue, visitors_venue_name
 
 HUB_WEB_DIR = Path(__file__).parent / "web"
-LOOKS = {"plain": "index.html", "design": "design.html"}  # theme hub.look picks the one at /
+HUB_PAGE = "design.html"  # the hub at / (the plain hub is archived: quick job 131)
 
 # Every module the hub knows: id → (button title, page). The theme's hub.modules picks which ones
 # get a button and in what order; ids without a page here get no button (only claim what's real).
@@ -160,8 +160,7 @@ MODULES = {
 # strip next to ⚙; quick jobs 67 and 82) lists them, so each opens from the hub in two taps; a test
 # checks that no page is missing here.
 PAGES = (
-    ("/", "The Hub", "The main address: the plain or the designed hub (⚙ → The Lab)."),
-    ("/design", "Designed Hub", "The designed hub, whatever the main address shows."),
+    ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
     ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
     ("/monitor", "Monitor", "The arm's joints and 3D view, with STOP; drives nothing."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
@@ -315,11 +314,7 @@ def _headset_start(request: web.Request) -> bool:
 async def hub_page(request: web.Request) -> web.FileResponse:
     if _headset_start(request):
         return await _file(request, "xr.html")
-    look = str((load_theme().get("hub") or {}).get("look") or "plain")
-    if look not in LOOKS:
-        log.warning("theme hub.look: %r isn't one of %s; showing plain", look, ", ".join(LOOKS))
-        look = "plain"
-    return await _file(request, LOOKS[look])
+    return await _file(request, HUB_PAGE)
 
 
 async def web_manifest(request: web.Request) -> web.Response:
@@ -345,10 +340,9 @@ async def web_manifest(request: web.Request) -> web.Response:
     return web.json_response(body, content_type="application/manifest+json")
 
 
-async def design_page(request: web.Request) -> web.FileResponse:
-    if _headset_start(request):
-        return await _file(request, "xr.html")
-    return await _file(request, LOOKS["design"])
+async def design_page(request: web.Request) -> web.Response:
+    """The old address of the designed hub: go to / with the same query (?device=…)."""
+    raise web.HTTPFound(request.rel_url.with_path("/").with_query(request.query))
 
 
 async def ai_page(request: web.Request) -> web.FileResponse:

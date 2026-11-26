@@ -20,7 +20,7 @@ async def page(client, device: str, window: str = "", screen: dict | None = None
     ws = await client.ws_connect(f"/ws/hub-device?device={device}&window={window}")
     welcome = await ws.receive_json(timeout=2)
     assert welcome["type"] == "welcome"
-    hello = {"type": "hello", "look": "design", "stage": "hub", "showing": None, **state}
+    hello = {"type": "hello", "stage": "hub", "showing": None, **state}
     if screen:
         hello["screen"] = screen
     await ws.send_json(hello)
@@ -279,10 +279,8 @@ async def test_pages_reconnect_after_the_brain_restarts(aiohttp_client):
 def test_the_hub_pages_join_as_devices():
 
     web = SRC / "hub" / "web"
-    for name, look in (("hub.js", '"plain"'), ("design.html", '"design"')):
-        text = (web / name).read_text()
-        assert "connectDevice(" in text and f"look: {look}" in text, name
-        assert "fillOpenOn(" in text and "fillSent(" in text, name
+    text = (web / "design.html").read_text()
+    assert "connectDevice(" in text and "fillOpenOn(" in text and "fillSent(" in text
     device = (SRC / "web" / "device.js").read_text()
     assert "/ws/hub-device" in device and "setTimeout(open, retry)" in device  # reconnects
     settings = (web / "settings.js").read_text()
@@ -532,7 +530,6 @@ async def test_every_view_opens_on_a_device(aiohttp_client):
     await newline.close()
     design = (SRC / "hub" / "web" / "design.html").read_text()
     assert "function viewEl(id)" in design and "setViews(hub?.views" in design
-    assert "S.views" in (SRC / "hub" / "web" / "hub.js").read_text()
 
 
 def test_the_cameras_page_keeps_its_hidden_cameras_for_each_device(tmp_path):

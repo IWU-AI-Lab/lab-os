@@ -199,7 +199,7 @@ Quick job 91. The green leader drives the green follower through LeRobot's own c
 - **E.3** Hold the follower. Press **Stop**, then OK. → did the follower go limp? (yes / no) Does the card say "LeRobot's teleop stopped"? (yes / no)
 
 ## C. The Cameras page (15 min)
-Quick job 93. Plug in the white arm's two cameras. Run `uv run lab-os serve`. Open the hub on the lab desktop as `/design?device=desk`, and on the Newline as `/design?device=newline`.
+Quick job 93. Plug in the white arm's two cameras. Run `uv run lab-os serve`. Open the hub on the lab desktop as `/?device=desk`, and on the Newline as `/?device=newline`.
 - **C.1** On the desktop's hub, open **All Pages** → **Cameras** → **Open**. → does each camera show a live picture? (yes / no) Do the digits next to each camera's name stay under 1.0? (yes / no)
 - **C.2** Press the name of the wrist camera above the pictures. → did the wrist picture go away? (yes / no) Did the stand picture stay? (yes / no)
 - **C.3** On the desktop's hub, open Cameras inside the hub, press **Open on…**, then select the Newline. On the Newline, hide the stand camera. On the desktop, show the stand camera and hide the wrist camera. → does the Newline show only the wrist camera? (yes / no) Does the desktop show only the stand camera? (yes / no)
@@ -229,7 +229,7 @@ There are no other people in the lab before the demo.
 - **V.14** Say "(wake word), start a conversation". → did the sign show? (yes / no) Let two people talk near the microphone for 20 seconds. → what did it do? (answered them / nothing / other)
 
 ## M4. After the demo: "set up the room" (10 min)
-Skipped on 2026-11-24. Open the hub on each computer first (`/design?device=<its name>`).
+Skipped on 2026-11-24. Open the hub on each computer first (`/?device=<its name>`).
 - **M.4** Quick job 71. Name the devices as in `config/room.yaml` (newline, win-1, pi-1 …), or edit that file to match. On the desktop, say "(wake word), set up the room". → did each device show its page? (yes / no) Did the answer name the devices that were not on? (yes / no)
 
 ## M6. After the demo: the hub in Chrome on a laptop (10 min)

@@ -8,7 +8,7 @@ lab-os: one portable "brain" that connects the lab's robots. Its assistant has p
 1. `docs/plan/current-focus.md` — what to work on now (and "Up next").
 2. `docs/plan/log.md` — plan, decisions, device names.
 3. `docs/dev/GOTCHAS.md` — surprises already found.
-4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). New and changed pages follow the design (the designed hub is at `/design`; the numbers come from `config/theme.yaml`). It's no longer a surprise (2026-11-12), but `/` still shows the plain hub by default (`hub.look: plain`), just in case.
+4. For any hub or page UI: `docs/design/DESIGN.md` and the approved concept `docs/design/hub-concept.html` (open it in a browser; add `#skip` to the address to jump to the hub). New and changed pages follow the design (the hub at `/` is the designed hub since quick job 131; the numbers come from `config/theme.yaml`).
 
 Docs are in folders by who reads them: `docs/plan/` (focus, quick jobs, ideas, log, use cases), `docs/guides/` (using it), `docs/dev/` (working on it), `docs/design/`, `docs/archive/` (history, dated; nothing current goes there, except the paused guides in `guides-2026-11-25/`). Setup and conventions: `docs/dev/dev-setup.md`. Safety: `SAFETY.md`.
 
