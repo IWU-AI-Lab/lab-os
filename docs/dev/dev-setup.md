@@ -79,6 +79,7 @@ In the project's `.claude/settings.json` (permission rules):
 - **Simulation (optional):** physics simulators (e.g. MuJoCo) can run a virtual arm for testing inverse kinematics before touching the real one.
 - **Quest without a Quest:** a browser WebXR emulator extension, or recorded hand-tracking data replayed into the system.
 - **The webcam page without hands in front of it** (`/webcam`): your laptop's camera works. For a repeatable test, Chrome can use a video file as its camera: `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream --use-file-for-fake-video-capture=hands.y4m` (make the `.y4m` with ffmpeg from any video or photo of hands; it loops).
+- **The Raspbot's recordings** become `.mp4` with `ffmpeg` on the brain's computer (`sudo apt install ffmpeg`; the lab desktop has it). Without it, they stay `.mjpeg`.
 - **Claude Code:** local sessions on your laptop; cloud sessions are also fine here because no lab devices are involved.
 
 ### What needs the lab
