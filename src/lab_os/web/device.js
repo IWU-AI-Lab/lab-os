@@ -5,7 +5,10 @@
 // down from the hub ("brain_off"), the page says lab-os is off (/web/off.js) and reloads once it's back.
 //
 //   deviceName()       the name: `?device=` in this page's address, else the hub's around it, else the
-//                      name this browser last used ("" = no name)
+//                      name this browser last used, else the name the brain remembers for this
+//                      device's address (quick job 132: the page reloads under it; "" = no name)
+//   displayName()      the name that is easy to read ("Windows desktop 3"), else the device name
+//   renameDevice(to)   add or change this device's name: its settings move along; the hub reloads
 //   prefs()            this device's settings (a copy kept in this browser, filled from the brain)
 //   setPref(k, v)      change one: kept by the brain under the name (in this browser only without one)
 //   connectDevice({…}) the hub page's connection: the device list and "open on…"
@@ -37,6 +40,38 @@ export function deviceName() {
     // another origin above us: only our own address counts
   }
   return cleanName(store.get(NAME_KEY));
+}
+
+/** The name people read: the display name (⚙ → This device, quick job 132), else the device name. */
+export const displayName = (name = deviceName()) => prefs(name).display_name || name;
+
+// open the hub (the top window: a module page is inside it) again under another device name
+function reopenAs(name) {
+  store.set(NAME_KEY, name);
+  let top = window;
+  try { void window.top.location.href; top = window.top; } catch { /* another origin above: this page */ }
+  const u = new URL(top.location.href);
+  u.searchParams.set("device", name);
+  top.location.replace(u.href);
+}
+
+/** Add or change this device's name (the `?device=` name). Resolves to {ok, message}; on ok, the hub reloads. */
+export async function renameDevice(to) {
+  const want = cleanName(to), now = deviceName();
+  if (!want) {
+    return { ok: false, message: "Use lowercase letters, digits and dashes (desk, newline, quest), up to 32." };
+  }
+  if (want === now) return { ok: true, message: "That is already this device's name." };
+  if (now) {
+    try {
+      const r = await postJSON(`/api/hub-devices/${now}/rename`, { to: want });
+      if (!r.ok) return { ok: false, message: r.message };
+    } catch (e) {
+      return { ok: false, message: `The brain didn't answer (${e.message}).` };
+    }
+  }
+  reopenAs(want);
+  return { ok: true, message: `Opening the hub as ${want}…` };
 }
 
 export const prefsKey = (name = deviceName()) => (name ? `lab-os.device.${name}` : LEGACY_KEY);
@@ -132,6 +167,11 @@ export function connectDevice(h) {
         wid = m.window;
         try { sessionStorage.setItem("lab-os.window", wid); } catch { /* none */ }
         if (m.why_no_name) console.warn(`device: ${m.why_no_name}`);
+        if (!name && m.found && m.device) { // the brain knows this device by its address (quick job 132)
+          console.info(`device: the brain knows this device as ${m.device}`);
+          reopenAs(m.device);
+          return;
+        }
         retry = 1000; up = true;
         send({ type: "hello", ...h.state(), screen: await screenInfo() });
         list = m.devices || [];
@@ -146,6 +186,7 @@ export function connectDevice(h) {
       else if (m.type === "open") h.onOpen?.(m.module, m.from || "", m.from_window || "");
       else if (m.type === "close") h.onClose?.();
       else if (m.type === "card") h.onCard?.();
+      else if (m.type === "renamed" && m.device) reopenAs(m.device); // its other monitors too
       else if (m.type === "brain_off") {
         showOff(m);
         h.onOff?.();

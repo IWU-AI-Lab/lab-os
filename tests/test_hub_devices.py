@@ -593,3 +593,87 @@ def test_the_cameras_page_keeps_its_hidden_cameras_for_each_device(tmp_path):
     for junk in ("so101-white-cam-wrist", [1], ["../x"], [True], ["c"] * 33):
         with pytest.raises(DeviceError, match="cameras_hidden can be a list"):
             s.update("quest", {"cameras_hidden": junk})
+
+
+async def test_display_names_show_in_the_lists_and_open_on_takes_them(aiohttp_client, tmp_path):
+    """Quick job 132: a name that is easy to read; the device name stays the ID."""
+    store = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    client = await aiohttp_client(make_app(device_settings=store))
+    desk, dw = await page(client, "desk")
+    newline, _ = await page(client, "newline")
+    r = await client.post(
+        "/api/hub-devices/newline/settings", json={"display_name": "  The  Newline "}
+    )
+    assert (await r.json())["settings"] == {"display_name": "The Newline"}
+    got = await (await client.get("/api/hub-devices")).json()
+    nl = next(d for d in got["devices"] if d["name"] == "newline")
+    assert nl["title"] == nl["display_name"] == "The Newline"
+    # another device can't take the same display name (the assistant could not tell them apart)
+    r = await client.post("/api/hub-devices/desk/settings", json={"display_name": "the newline"})
+    assert r.status == 400 and "newline already has" in (await r.json())["message"]
+    # Open on… and the assistant may give the display name
+    r = await client.post(
+        "/api/hub-devices/open",
+        json={"module": "monitor", "device": "the newline", "from_window": dw["window"]},
+    )
+    out = await r.json()
+    assert out["ok"] and out["device"] == "newline"
+    assert out["message"] == "Monitor is open on The Newline."
+    # the Devices panel lists the hub page by its display name
+    from lab_os.hub import server
+
+    live = server.live_entries(client.app, [], [], [], set())
+    assert next(d for d in live if d["id"] == "screen:newline")["name"] == "The Newline"
+    await desk.close()
+    await newline.close()
+
+
+async def test_a_device_gets_its_name_from_its_address(aiohttp_client, tmp_path, monkeypatch):
+    """Quick job 132: the brain remembers the name an address used; a page opened there without
+    ?device= gets it. Never on the brain's own computer (tests connect from it: pretend not)."""
+    store = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    client = await aiohttp_client(make_app(device_settings=store))
+    _, welcome = await page(client, "")
+    assert welcome["device"] == "" and not welcome["found"]  # on the brain's computer: no guess
+    monkeypatch.setattr(hub_devices, "on_this_computer", lambda request: False)
+    first, _ = await page(client, "desk-3")
+    assert store.name_for("127.0.0.1") == "desk-3"
+    await first.close()
+    again, welcome = await page(client, "")
+    assert welcome["device"] == "desk-3" and welcome["found"]
+    await again.close()
+
+
+async def test_a_device_changes_its_device_name(aiohttp_client, tmp_path, monkeypatch):
+    store = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    client = await aiohttp_client(make_app(device_settings=store))
+    monkeypatch.setattr(hub_devices, "on_this_computer", lambda request: False)
+    one, _ = await page(client, "desk")
+    two, _ = await page(client, "desk", screen={"left": 1920})
+    store.update("desk", {"sound": False, "display_name": "Windows desktop 3"})
+    r = await client.post("/api/hub-devices/desk/rename", json={"to": "desk-3"})
+    assert (await r.json())["settings"] == {"sound": False, "display_name": "Windows desktop 3"}
+    for ws in (one, two):  # every window opens again under the new name
+        assert (await next_of(ws, "renamed"))["device"] == "desk-3"
+    assert store.get("desk") == {} and store.name_for("127.0.0.1") == "desk-3"
+    # a name that already has settings keeps its own
+    store.update("desk-4", {"quality": "minimal", "display_name": "Desk 4"})
+    r = await client.post("/api/hub-devices/desk-3/rename", json={"to": "desk-4"})
+    assert (await r.json())["settings"] == {
+        "quality": "minimal",
+        "display_name": "Desk 4",
+        "sound": False,
+    }
+    r = await client.post("/api/hub-devices/desk-4/rename", json={"to": "Not a name!"})
+    assert r.status == 400
+    await one.close()
+    await two.close()
+
+
+def test_display_names_are_checked(tmp_path):
+    s = DeviceSettings(lambda: tmp_path / "hub-devices.yaml")
+    for junk in (3, True, "x" * 41, ["a"]):
+        with pytest.raises(DeviceError, match="display_name can be a name of up to 40"):
+            s.update("desk", {"display_name": junk})
+    assert s.update("desk", {"display_name": "Desk\n\t3"}) == {"display_name": "Desk 3"}
+    assert s.update("desk", {"display_name": "   "}) == {}  # back to the device name

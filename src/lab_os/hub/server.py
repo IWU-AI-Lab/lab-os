@@ -56,6 +56,7 @@ POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on a
 POST /api/hub-devices/close  {"device", "window"}: close the module on that screen
 POST /api/room/setup     open each page of the room's layout on its device (room.yaml, quick job 71)
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
+POST /api/hub-devices/{name}/rename         another device name for a device (quick job 132)
 GET /api/spend           this month's AI spend and budget (hidden on a public venue)
 GET /api/arm-cameras     the arm's cameras (stand, wrist) for the teleop page's pictures
 GET /api/cameras         every camera plugged in now (the live device list), one per USB socket,
@@ -1005,7 +1006,7 @@ def lab_status(app: web.Application) -> dict:
     out = {
         "venue": brain.venue.name,
         "arm": arm,
-        "hub_open_on": [d["name"] for d in app[HUB_DEVICES].listing()],
+        "hub_open_on": [d["display_name"] or d["name"] for d in app[HUB_DEVICES].listing()],
         # the live device list (quick job 109): plugged in or on the network now
         "devices_connected": [d["name"] for d in app[LIVE].connected() if d["kind"] != "screen"],
         "voice": {
@@ -1323,7 +1324,7 @@ def live_entries(
         out.append(
             {
                 "id": f"screen:{screen['name']}",
-                "name": screen["name"] if screen["named"] else screen["title"],
+                "name": screen["title"],  # its display name, else its name or address
                 "kind": "screen",
                 "known": screen["named"],
                 "what": f"The hub is open in {n} window{'s' if n != 1 else ''}.",
@@ -1622,13 +1623,31 @@ async def device_settings(app: web.Application, name: str, changes: dict) -> tup
     """Change a device's own settings ("This device", and the MCP tool, quick job 80)."""
     devices = app[HUB_DEVICES]
     try:
+        name = devices.resolve(name)  # the assistant may give a display name (quick job 132)
         values = await asyncio.to_thread(devices.settings.update, name, changes)
     except DeviceError as e:
         return 400, {"ok": False, "message": str(e)}
     except OSError as e:
         return 500, {"ok": False, "message": f"Couldn't save: {e}"}
     await devices.push_settings(name, values)
+    if isinstance(changes, dict) and "display_name" in changes:
+        await devices.broadcast()  # Open on… shows the new name at once
     return 200, {"ok": True, "settings": values}
+
+
+async def api_hub_device_rename(request: web.Request) -> web.Response:
+    """Another device name for a device (⚙ → This device): its settings move along, and its
+    windows open again under the new name. Any page may (each device changes its own)."""
+    b = await _body(request)
+    try:
+        values = await request.app[HUB_DEVICES].rename(
+            request.match_info["name"], str(b.get("to", ""))
+        )
+    except DeviceError as e:
+        return _refused(e)
+    except OSError as e:
+        return web.json_response({"ok": False, "message": f"Couldn't save: {e}"}, status=500)
+    return web.json_response({"ok": True, "settings": values})
 
 
 async def api_spend(request: web.Request) -> web.Response:
@@ -1935,6 +1954,7 @@ def create_brain_app(
     app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
+    app.router.add_post("/api/hub-devices/{name}/rename", api_hub_device_rename)
     add_raspbot(app, raspbot or RaspbotDesk(FakeRaspbot()))
     add_raspbot_tools(
         server, app[RASPBOT], app[CAMERA].snapshot, calls, lambda: app[BRAIN].venue.motion_allowed
