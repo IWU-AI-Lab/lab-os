@@ -157,12 +157,14 @@
     #intro h2 { margin: 0; }
     .cc-tabs, .side .multi { display: none; }
     #pages { padding-bottom: .7rem; }
+    #pages.more { mask-image: linear-gradient(to bottom, black calc(100% - .7rem), transparent); }
     #pages-card > .in { max-height: 52vh; }
     .node.gone { min-width: 0; }
     .node.gone small { display: none; }
     @media (max-width: 1100px) {
       .page { grid-template-rows: auto auto minmax(0, 1fr); }
       .side .multi { display: inline-flex; }
+      #pages .tile { touch-action: pan-y; cursor: pointer; }
       .cc-tabs { display: flex; overflow-x: auto; }
       .cc-tabs button[aria-pressed="true"], #multi[aria-pressed="true"] { color: var(--hot); border-color: var(--c); }
       .cc { grid-template: minmax(0, 1fr) / minmax(0, 1fr); }

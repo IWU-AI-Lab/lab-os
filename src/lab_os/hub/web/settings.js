@@ -600,7 +600,7 @@ async function start() {
 function preview(e) {
   const r = e.target.closest(".row");
   if (!r || !$("#preview").offsetWidth) return;
-  const title = r.querySelector("label").textContent;
+  const title = r.querySelector(".lbl label").textContent;
   $("#preview h2").textContent = title;
   $("#preview-help").textContent = r.querySelector(".help")?.textContent || "";
   const sample = $("#sample");

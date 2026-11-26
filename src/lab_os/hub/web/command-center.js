@@ -225,6 +225,12 @@ function pages() {
   groups.push(["Other", views.filter((v) => !known.has(v.id))]);
   return groups.filter(([, vs]) => vs.length);
 }
+function pageFade() {
+  const list = $("#pages");
+  list.classList.toggle("more", list.scrollHeight > list.clientHeight + list.scrollTop + 2);
+}
+$("#pages").addEventListener("scroll", pageFade);
+new ResizeObserver(pageFade).observe($("#pages"));
 function renderPages() {
   const box = $("#pages"), want = S.pageSearch.trim().toLowerCase();
   box.innerHTML = "";
@@ -241,6 +247,7 @@ function renderPages() {
     box.append(tiles);
   }
   if (!box.children.length) box.innerHTML = `<div class="empty">No page matches the search.</div>`;
+  pageFade();
 }
 function choosePage(id) {
   S.page = S.page === id ? "" : id;
@@ -307,6 +314,7 @@ $("#pages").addEventListener("pointerdown", (e) => {
 });
 $("#pages").addEventListener("pointermove", (e) => {
   if (!press || e.pointerId !== press.id) return;
+  if (matchMedia("(max-width: 1100px)").matches) return; // the other panels are behind their tabs
   if (!press.moved && Math.hypot(e.clientX - press.sx, e.clientY - press.sy) < 6) return;
   if (!press.moved) { press.moved = true; carry.start(press.view, e.clientX, e.clientY); } else carry.move(e.clientX, e.clientY);
 });
@@ -802,8 +810,13 @@ function openMenu(key, btn) {
 document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".menu, .more")) closeMenu(); });
 
 // ---------- focus: one device in a modal ----------
-let focused = "";
-function closeFocus() { document.querySelector(".veil")?.remove(); focused = ""; }
+let focused = "", focusOrigin = null;
+function closeFocus() {
+  document.querySelector(".veil")?.remove();
+  focused = "";
+  if (focusOrigin?.isConnected) focusOrigin.focus();
+  focusOrigin = null;
+}
 async function focus(key) {
   closeMenu();
   const devs = devices(), scr = screens(devs);
@@ -812,6 +825,7 @@ async function focus(key) {
     const s = scr.find((x) => x.key === key);  // a screen on its own: its own device
     return s ? focus(`d:${s.device.name}`) : undefined;
   }
+  if (!focused) focusOrigin = document.activeElement;
   focused = key;
   document.querySelector(".veil")?.remove();
   const veil = document.createElement("div");
