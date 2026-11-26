@@ -79,12 +79,12 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 149, 2026-11-26)
 - **Zoom to fit:** the workspace zooms to fit its items again when an item comes or goes, or the page changes size. A pan or a zoom by hand stops that; **Fit** starts it again.
-- **Devices that are off:** each device of the seen list (quick job 109) that is off now is a dim card with a dashed frame and no text, in the workspace and in the list. It keeps its place, and it lights up once when it connects. The inspector shows when it was last seen.
+- **Devices that are off:** each device of the seen list (quick job 109) that is off now is a dim card with a dashed frame and no text, in the workspace and in the list. Since quick job 156, it sits below the connected devices, and it lights up once when it connects. The inspector shows when it was last seen.
 - **The activity list:** under the device list, the newest event first, with its time. The brain keeps the last 100 events in memory: a device connected or disconnected, a screen opened the hub, a page, or went back to the hub, and STOP (the arms' pages and the Raspbot page).
 
 ## Built (quick job 140, 2026-11-26)
 - **The way in:** on the brain's own hub, a **Command Center** panel in the top strip, between the lab's name and the facts: a turning reticle and the name, with a light that passes now and then. Other screens do not show it. It opens the Command Center as a module that unfolds from it. "Open the Command Center" by voice unfolds from it too.
-- **The opening** (about 3.5 s, in the style of the startup): a bright line opens the screen like an old TV; corner brackets close in and the tick ring sweeps around; two rings arrive from their own sides and lock with a flash and a thin ring of light; the core ignites with a lens flare and a shockwave that shows the grid; the title decodes and the real numbers type out (devices connected, screens, devices off now, events); a radar sweep goes around once; the screen opens from the middle, the reticle flies to the title, and the panels unfold outward, then the cards arrive one by one. Any press or key skips it. A screen set to reduce motion does not play it. Its sounds are the hub's own: in the hub, the hub plays them.
+- The radar opening in “Screen previews” replaces this opening in quick job 156. Minimal shows a short fade. Skip or any key ends the radar sweep.
 
 ## Built (quick job 135, 2026-11-26)
 - **Diagnostics in the modules:** every device's modules (the focus window and the inspector) have **Diagnostics**: the Diagnostics page for that device only. The Pages list has Diagnostics too (all devices).

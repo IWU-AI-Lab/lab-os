@@ -3524,8 +3524,8 @@ for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, (e) => {
 // module pages (teleop, monitor) open inside the hub: no page load, so full screen stays
 function openPage(id) {
   const frame = document.createElement("iframe");
-  const arg = S.pageArg; S.pageArg = "";  // Diagnostics for one device (quick job 135): ?device=
-  frame.src = S.page[id] + (arg ? `?device=${encodeURIComponent(arg)}` : ""); frame.title = MODULES[id][0]; frame.allow = "xr-spatial-tracking; fullscreen";
+  const arg = S.pageArg; S.pageArg = "";  // Diagnostics for one device: ?show=
+  frame.src = S.page[id] + (arg ? `?show=${encodeURIComponent(arg)}` : ""); frame.title = MODULES[id][0]; frame.allow = "xr-spatial-tracking; fullscreen";
   frame.addEventListener("load", () => watchFrame(frame));
   $("#mod-slot").appendChild(frame);
 }

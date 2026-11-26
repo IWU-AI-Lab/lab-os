@@ -66,7 +66,7 @@ export function personaTable({ personas, active, look, choose, readOnly }) {
   const primary = col("primary", "#29d4ff"), hot = col("hot", "#eafcff"), lineC = col("line", "#1f3d48"), surface = col("surface", "#0b161c");  // the theme's colours; the numbers only when it is missing
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 2, 0.1, 50);
-  camera.position.set(0, 3.2, 6.9);
+  camera.position.set(3, 3.2, 6.9);
   camera.lookAt(0, -0.05, 0.2);
   const lines = (geo, color, opacity = 1) => new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity }));
   const table = new THREE.Group();
@@ -199,7 +199,6 @@ export function personaTable({ personas, active, look, choose, readOnly }) {
       const th = tag.offsetHeight, y = ((1 - tmp.y) / 2) * h;
       const top = Math.max(4, Math.min(h - th - 4, near ? y : y - th));
       tag.style.transform = `translate(-50%, 0) translate(${((tmp.x + 1) / 2) * w}px, ${top}px)`;
-      tag.style.opacity = String(s.p.id === chosen ? 1 : 0.7);
       tag.setAttribute("aria-pressed", String(s.p.id === chosen));
       tag.classList.toggle("active", s.p.id === activeId);
     });

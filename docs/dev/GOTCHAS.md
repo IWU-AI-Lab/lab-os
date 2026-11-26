@@ -12,6 +12,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 **What:** A new `git worktree` with a plain `uv sync` has no `cv2` (it comes with the `so101` extra). The Cameras page then showed "500 Internal Server Error" in each picture. No camera was opened.
 **Fix:** None needed for a test of the page layout. Run `uv sync --extra so101` in the worktree to see the pictures.
 
+### 2026-11-26 — Phone Remote could submit before its script loaded
+Chrome could show the question field before the page installed its submit handler. An early submit reloaded the page and cleared the question.
+The form now accepts input after the handler is ready. A failed answer keeps the question for another try.
+
 ### 2026-11-26 — PR #365 merged with a failed check
 **What:** `gh pr checks --watch` ends with exit code 0 also when a check fails, and `main` has no branch protection. So `gh pr merge` merged pull request #365 with 4 failed tests. The local run had looked green because its exit code was that of `tail`, not of `pytest`.
 **Fix:** PR #366 fixed the tests. Before you merge, read the result of `gh pr checks` (every line "pass"). Run `uv run pytest` without a pipe, or read its own exit code.
