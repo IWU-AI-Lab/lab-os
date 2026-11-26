@@ -102,6 +102,7 @@ http://127.0.0.1:8081/mcp · `docs/guides/ai-control.md`
 | `camera_snapshot`: one real picture from a camera (the white set's on the white arm's hub; the green set's in sockets 7 = wrist, 8 = stand) | ✅ | Used in the cube pick. Without the table map, the stand camera's picture gives a direction, not a place. |
 | **Tic-tac-toe** (preview, 2026-11-20, `docs/archive/guides-2026-11-25/tic-tac-toe.md`): an AI tool plays against a person with LEGO pieces on a printed grid. `camera_snapshot` with `board: true` draws the cells and the robot's start spots on the stand camera's picture and gives the positions and the steps; the arm keeps to a route off the board. Played with Claude Code. | 🧪 | A robot turn to each of the 9 cells on the fake arm, through the tools' checks; the board drawn on a test picture. Without a camera (the fake arm), the person says the moves. Lab: check part G (2026-11-24). |
 | The AI Control page (`/ai`): the arm from the side, every AI tool call live, STOP | ✅ | |
+| **AI driving for raspbot1** (quick job 127): the AI reads the camera and ultrasonic distance, makes short moves, or approaches an object in front until the sensor reads 20 cm. | 🧪 | Fake Raspbot. The page and AI share STOP and the drive controller. Lab check R.13. |
 | Project tools for developers' AI tools: `project_status`, `read_doc`, `search_docs`, `git_log`, `list_devices`, `lab_status`, … | ✅ | |
 
 ## Robots and drivers

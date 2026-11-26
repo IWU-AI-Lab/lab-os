@@ -80,6 +80,16 @@ For example: "Use the lab-os tools: what's next, and what's on hold? Then make a
 
 Each move gives back where the arm **really** stopped (joints, gripper %, position, tool angle), and a `clipped` list of what the brain limited.
 
+## Raspbot tools
+
+- `raspbot_status` reads the connection, control and front distance in millimetres.
+- `raspbot_camera` reads one picture from the Raspbot camera.
+- `raspbot_drive` moves forward, back, left or right for up to one second.
+- `raspbot_approach` drives straight ahead to the 20 cm sensor threshold.
+- `raspbot_stop` presses the Raspbot page's **STOP**.
+
+See [Drive with an AI tool](raspbot.md#drive-with-an-ai-tool) for the setup and the first drive.
+
 ## The hub's buttons as tools (quick job 80)
 Each action that a button on a hub page does is also a tool, for Claude Code, Codex and the hub's assistant (with Full Access, `docs/archive/guides-2026-11-25/hub.md` → "Full Access"). Each tool calls the same code as its button, so it has the same checks. A tool that moves an arm goes through the same safety layer as the other move tools.
 

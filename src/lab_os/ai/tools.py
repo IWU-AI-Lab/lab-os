@@ -25,6 +25,7 @@ NEVER = {
 NOT_FOR_CHAT = {
     "pose_view",
     "camera_snapshot",
+    "raspbot_camera",
     "table_point",
 }  # read tools about a picture: the chat takes text
 MAX_RESULT_CHARS = 14_000

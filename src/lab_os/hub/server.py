@@ -106,7 +106,7 @@ from lab_os.hub.live_devices import (
     video_cameras,
 )
 from lab_os.hub.project import FOCUS_FILE, project_summary
-from lab_os.hub.raspbot_page import RASPBOT, add_raspbot
+from lab_os.hub.raspbot_page import CAMERA, RASPBOT, add_raspbot
 from lab_os.hub.room import RoomDesk
 from lab_os.hub.room import set_up as set_up_room
 from lab_os.hub.screens import ScreensDesk
@@ -144,6 +144,7 @@ from lab_os.tools import table_map, tic_tac_toe
 from lab_os.tools.calllog import CallLog
 from lab_os.tools.mcp_server import McpHttp, add_lab_status, create_mcp_server
 from lab_os.tools.project import ProjectTools
+from lab_os.tools.raspbot import add_raspbot_tools
 from lab_os.tools.robot import Refused, RobotTools
 from lab_os.tools.table_map import TableMap
 from lab_os.venues import Venue, load_venue, visitors_venue_name
@@ -1932,7 +1933,10 @@ def create_brain_app(
     app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
-    add_raspbot(app, raspbot or RaspbotDesk(FakeRaspbot()))  # quick job 72
+    add_raspbot(app, raspbot or RaspbotDesk(FakeRaspbot()))
+    add_raspbot_tools(
+        server, app[RASPBOT], app[CAMERA].snapshot, calls, lambda: app[BRAIN].venue.motion_allowed
+    )
     app.router.add_static("/hub", HUB_WEB_DIR)
     app.cleanup_ctx.append(_internet_task)
     app.cleanup_ctx.append(_mcp_task)

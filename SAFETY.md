@@ -26,6 +26,10 @@ The arm **freezes** whenever any of these happens: clutch released · hand/contr
 ## AI tools
 An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools on the brain's own computer: the same limits as teleop, small steps per call. Claude Code doesn't ask before each move (decided 2026-11-13, the move tools are on the repo's allow list), because STOP on every screen is enough when it does something it shouldn't; a coding session still asks before it runs anything that moves a real arm (AGENTS.md). Someone stays near the arm with STOP in reach. The hub's built-in chat can't move anything. `docs/guides/ai-control.md`.
 
+## Raspbot
+
+Keep the Raspbot page's **STOP** in reach during manual and AI drives. The page and AI tools share one drive controller. The current program stops forward motion at the 20 cm ultrasonic threshold. AI forward motion also stops if the distance reading is unavailable. Check rear and side clearance before a reverse move or a turn. See [the Raspbot guide](docs/guides/raspbot.md#safety).
+
 ## Remote mode
 Remote sessions (from home, Remote Control, any off-site connection) = **no motion by default**. Read-only checks only, unless someone is physically next to the robot.
 

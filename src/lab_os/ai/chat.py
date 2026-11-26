@@ -496,7 +496,10 @@ class Conversation:
         action_names = {t["function"]["name"] for t in actions}
         full = bool(self.tools and self.tools.full_access())
         max_rounds = FULL_ACCESS_ROUNDS if full else MAX_TOOL_ROUNDS
-        tools = await self.tools.openai_tools(skip=action_names) if self.tools else []
+        hidden_tools = (
+            action_names if local else action_names | {"raspbot_drive", "raspbot_approach"}
+        )
+        tools = await self.tools.openai_tools(skip=hidden_tools) if self.tools else []
         strong = self.strong_setup()
         tools = [*tools, CALC_TOOL]
         if strong:
