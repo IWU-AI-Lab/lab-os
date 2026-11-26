@@ -3284,7 +3284,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { command: "i-target", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
+const VIEW_ICONS = { command: "i-target", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", "monitor-raspbot": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;
@@ -3598,7 +3598,13 @@ PM.addEventListener("click", (e) => e.stopPropagation());
 addEventListener("pointerdown", (e) => { if (!PM.hidden && !PM.contains(e.target) && e.target.closest("#sleep-btn") === null) closePower(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !PM.hidden) { e.stopImmediatePropagation(); closePower(); } }, { capture: true });
 $("#settings-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#settings-btn")); });
-$("#pages-btn").addEventListener("click", (e) => { e.stopPropagation(); if (!S.booted || S.moduleOpen) return; SFX.blip(); hideDevice(); openModule($("#pages-btn")); });
+$("#pages-btn").addEventListener("click", async (e) => {
+  e.stopPropagation();
+  if (!S.booted || S.moduleOpen) return;
+  if (!S.page.pages) await S.readyP;  // #skip can show the hub before its page map is ready
+  if (!S.booted || S.moduleOpen || !S.page.pages) return;
+  SFX.blip(); hideDevice(); openModule($("#pages-btn"));
+});
 // A view full screen on another monitor of this computer (HDMI/DP; device.js → openOnMonitor). The page then
 // asks for one click to go full screen (browsers' rule). A view with its own page opens that page; the hub's
 // own views (a details page, the system diagram, the conversation) open as a hub window that shows only that

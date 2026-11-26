@@ -86,6 +86,9 @@ def test_every_kind_is_a_page_a_module_and_a_view():
         assert pages[f"/monitor/{kind}"] == title
         assert MODULES[f"monitor-{kind}"] == (title, f"/monitor/{kind}")
         assert DEVICE_VIEWS[f"monitor-{kind}"] == (title, f"/monitor/{kind}")
+    assert pages["/monitor/raspbot"] == "Raspbot Monitor"
+    raspbot = ("Raspbot Monitor", "/monitor/raspbot")
+    assert MODULES["monitor-raspbot"] == DEVICE_VIEWS["monitor-raspbot"] == raspbot
     vr = (REPO_ROOT / "src/lab_os/hub/web/xr/modules.js").read_text()
     for kind in MONITOR_KINDS:
         assert re.search(rf'"monitor-{kind}": \["[^"]+ Monitor", "i-screen"\]', vr), kind

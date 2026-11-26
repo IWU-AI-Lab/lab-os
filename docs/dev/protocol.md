@@ -398,7 +398,7 @@ The page `/command-center` (`src/lab_os/hub/command_center.py`, `src/lab_os/hub/
 - `POST /api/command-center/drive` `{"addresses": ["192.168.8.50"], "allowed": true}` → `{"ok": true, "drive_from": [...]}`: those devices may (or may not) drive a real arm, at once and after a restart (`drive_from` in the place's `local/place.yaml`; a name there that stands for the address goes too). A Teleop or Raspbot page checks it when it connects.
 
 ## The Raspbot page (quick job 72)
-`WS /ws/raspbot`, the page `/raspbot` (`src/lab_os/hub/raspbot_page.py`). Page → brain:
+`WS /ws/raspbot` serves **Raspbot** at `/raspbot`. **Raspbot Monitor** at `/monitor/raspbot` uses `WS /ws/raspbot?role=monitor`. It receives the same status with `may_drive: false`. Only STOP can affect the Raspbot on this connection. Page → brain:
 - `{"type": "drive", "dir": "<direction>"}`: sent every 100 ms while a button is held. The first page that drives has control. `forward`, `back`, `strafe-left`, `strafe-right`, `forward-left`, `forward-right`, `back-left` and `back-right` move the car. `left` and `right` turn it in place.
 - `{"type": "set_speed", "speed": 0.3}`: the Speed slider, 0 (none) … 1 (the program's cap); one speed for every page. Only a page that may drive.
 - `{"type": "release"}`: every button let go; the car stops and control is free.

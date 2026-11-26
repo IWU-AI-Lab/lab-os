@@ -208,14 +208,10 @@
 </div>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module">
+  import { raspbotMotion } from "/web/raspbot-status.js";
+
   const $ = (s) => document.querySelector(s);
   const device = new URLSearchParams(location.search).get("device") || "";
-  const WORDS = {
-    forward: "Forward", back: "Back", left: "Turning left", right: "Turning right", stick: "Driving",
-    "forward-left": "Forward left", "forward-right": "Forward right",
-    "strafe-left": "Sideways left", "strafe-right": "Sideways right",
-    "back-left": "Back left", "back-right": "Back right",
-  };
   const KEYS = { ArrowUp: "forward", w: "forward", ArrowDown: "back", s: "back", ArrowLeft: "left", a: "left", ArrowRight: "right", d: "right" };
   const LOOK = { forward: [0, 4], back: [0, -4], left: [4, 0], right: [-4, 0] };
   const drivePad = $("#drive-pad");
@@ -343,7 +339,7 @@
     const c = $("#control");
     c.textContent = !s.may_drive ? "View only" : { you: "You", other: "Another page", free: "Free" }[s.control];
     c.className = `pill ${s.control === "you" ? "on" : s.control === "other" || !s.may_drive ? "warn" : "off"}`;
-    $("#moving").textContent = !s.connected ? "Unavailable" : WORDS[s.moving] || "Stopped";
+    $("#moving").textContent = raspbotMotion(s);
     $("#distance").textContent = s.connected && s.distance_mm != null ? `${s.distance_mm / 10} cm` : "Unavailable";
     const disabled = !s.connected || !s.may_drive;
     if (disabled) releasePads();
