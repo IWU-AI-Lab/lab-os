@@ -50,6 +50,7 @@ function show(rows) {
   }));
   scene?.setDevices(devices);
   choose(selected);
+  fade();
   if (focus !== undefined) {
     ([...list.querySelectorAll("button")].find((button) => button.dataset.id === focus)
       || list.querySelector("button")).focus({ preventScroll: true });
@@ -60,6 +61,17 @@ list.addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (button) choose(button.dataset.id);
 });
+list.addEventListener("dblclick", (event) => {
+  const button = event.target.closest("button");
+  if (button) scene?.focus(button.dataset.id);
+});
+
+// The list scrolls when it holds more than fits: a fade at the bottom until you reach the end.
+const scroller = list.closest(".in");
+const fade = () => scroller.classList.toggle("more",
+  scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 4);
+scroller.addEventListener("scroll", fade, { passive: true });
+new ResizeObserver(fade).observe(scroller);
 
 async function read(path) {
   const response = await fetch(path, { cache: "no-store", signal: AbortSignal.timeout(6000) });
@@ -125,6 +137,11 @@ canvas.addEventListener("webglcontextlost", fallback, { once: true });
 import("/hub/system-map-scene.js").then(({ createMap }) => {
   scene = createMap(canvas, document.querySelector(".map-labels"), choose);
   reset.addEventListener("click", scene.reset);
+  const hint = document.querySelector(".map-hint");
+  const used = () => hint.classList.add("used");
+  for (const type of ["pointerdown", "wheel", "keydown"]) {
+    canvas.addEventListener(type, used, { once: true, passive: true });
+  }
   scene.setDevices(devices);
   choose(selected);
   for (const element of mapChrome) element.hidden = false;

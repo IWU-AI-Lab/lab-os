@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — OrbitControls' auto-rotate assumes 60 frames per second
+**What:** With `autoRotate`, `controls.update()` turns the camera by a fixed angle on each call. The System Map draws at most 30 frames per second while idle, so its spin ran at half speed, and it changed with the screen's frame rate.
+**Fix:** Give the time since the last frame: `controls.update(dt)` (in seconds). The spin is then the same on every screen.
+
 ### 2026-11-26 — `Object.assign` can't set a three.js object's `position` or `rotation` (quick job 151)
 **What:** `Object.assign(line, { position: new THREE.Vector3(…) })` threw "Cannot assign to read only property 'position'", and the persona table did not draw. three.js makes `position`, `rotation`, `quaternion` and `scale` read-only properties.
 **Fix:** Set their parts instead: `line.position.y = -0.45`, `line.rotation.x = tilt` (or `.set(…)`, `.copy(…)`).
