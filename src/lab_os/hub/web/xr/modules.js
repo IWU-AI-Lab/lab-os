@@ -10,7 +10,8 @@
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
-//     like their pages (it works from any screen).
+//     like their pages (it works from any screen). With two arms, Monitor shows both, each on its own grid
+//     (quick job 119).
 //   - ModuleTab: the open module's title and Back, floating at the left.
 //   - ExitButton: leaves VR or AR (quick job 78), under the hub on every page and on the off card.
 //   - RaspbotModule (xr/raspbot.js, quick job 107): drive raspbot1 with its camera as your eyes.
@@ -204,13 +205,11 @@ export class ArmHologram {
     this.id = id;
     this.group = new THREE.Group();
     this.link = getLink("monitor"); // a watcher: it can only stop
-    this.feed = getArmFeed(this.link);
-    this.turn = new THREE.Group(); // turns slowly
-    this.group.add(this.turn);
-    this.grid = floorGrid();
-    this.group.add(this.grid);
-    this.arm = null; this.loading = null;
-    this.callouts = [];
+    // one unit per arm (quick job 119): Monitor shows the left arm too while the brain drives two;
+    // AI Control shows the arm the AI tools drive (the first arm), as its desktop page does
+    this.units = [new HoloArm(getArmFeed(this.link), "right")];
+    if (id === "monitor") this.units.push(new HoloArm(getArmFeed(this.link, "left"), "left"));
+    for (const u of this.units) this.group.add(u.group);
     this.stop = new StopButton();
     this.stop.mesh.position.set(0, -0.14, 0.05);
     this.group.add(this.stop.mesh);
@@ -230,38 +229,11 @@ export class ArmHologram {
   targets() { return [this.stop.mesh]; }
   open(now) {
     this.t0 = now;
-    if (!this.loading) this.loading = this._load();
+    for (const u of this.units) u.load();
     if (this.id === "ai") { this.timer = setInterval(() => this._poll(), 1000); this._poll(); }
   }
   close() { clearInterval(this.timer); this.timer = null; }
 
-  async _load() {
-    const kind = this.feed.modelKind || "so101";
-    try {
-      this.arm = await loadArmModel(kind, { style: kind === "so101" ? "mesh" : "boxes" });
-    } catch {
-      this.arm = await loadArmModel(kind, { style: "stick" });
-    }
-    // line-drawn: see-through cyan, its edges brighter
-    this.arm.object.traverse((o) => {
-      if (!o.isMesh) return;
-      o.material = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.12, ...GLOW, depthWrite: false });
-      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.55, ...GLOW, depthWrite: false }));
-      o.add(edges);
-    });
-    this.arm.object.scale.setScalar(SCALE);
-    this.turn.add(this.arm.object);
-    // a callout per joint: a hexagon on the joint, a line with an elbow to its name and angle
-    for (const name of this.arm.jointNames) {
-      const joint = this.arm.object.getObjectByName(name);
-      if (!joint) continue;
-      const label = new CanvasPlane(0.42, 0.075, PX);
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.7, depthTest: false }));
-      const hex = new THREE.Mesh(new THREE.CircleGeometry(0.016, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.85, depthTest: false }));
-      for (const o of [label.mesh, line, hex]) { o.renderOrder = 30; this.group.add(o); }
-      this.callouts.push({ name, joint, label, line, hex });
-    }
-  }
   async _poll() {
     try {
       const r = await fetch(`/api/ai-calls?after=${this.after}`, { cache: "no-store" });
@@ -275,48 +247,24 @@ export class ArmHologram {
   step(dt, now, cameraPos, hits) {
     const k = arrive((now - this.t0) / 700);
     this.group.scale.setScalar(0.3 + 0.7 * k);
-    const s = this.feed.status;
-    if (this.arm && s?.joints) this.arm.setJoints(s.joints);
-    if (this.arm) this.arm.setTint(null);
-    this.turn.rotation.y += dt * 0.12;
-    this.grid.userData.step(now);
+    // two arms: the left arm on your left, the right arm on your right, each on its own floor grid
+    const two = this.units.length > 1 && !!this.units[1].feed.status;
+    for (const u of this.units) {
+      u.group.visible = u === this.units[0] || two;
+      u.group.position.x = two ? (u.side === "left" ? -0.8 : 0.8) : 0;
+      if (u.group.visible) u.step(dt, now, cameraPos, this.group, k, two);
+    }
     this.stop.hover = hits.some((h) => h.what.kind === "stop");
     this.stop.paint();
-    // the callouts: from the joint, out to the side that faces away from the arm's middle
-    const lim = s?.limits || {};
-    const world = new THREE.Vector3(), mid = new THREE.Vector3();
-    this.turn.getWorldPosition(mid);
-    this.group.updateMatrixWorld(true);
-    this.callouts.forEach((c, i) => {
-      c.joint.getWorldPosition(world);
-      const p = this.group.worldToLocal(world.clone()), side = i % 2 ? 1 : -1;
-      const elbow = p.clone().add(new THREE.Vector3(side * 0.12, 0.05, 0)), end = new THREE.Vector3(side * 0.62, 0.12 + i * 0.13, p.z);
-      c.hex.position.copy(p);
-      c.hex.lookAt(cameraPos);
-      const pts = c.line.geometry.attributes.position;
-      pts.setXYZ(0, p.x, p.y, p.z); pts.setXYZ(1, elbow.x, end.y, elbow.z); pts.setXYZ(2, end.x, end.y, end.z); pts.needsUpdate = true;
-      c.label.mesh.position.set(end.x + side * 0.22, end.y + 0.035, end.z);
-      const v = s?.joints?.[c.name];
-      const out = v != null && lim[c.name] && (v < lim[c.name][0] || v > lim[c.name][1]);
-      c.label.paint((g, w, h) => {
-        g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.42}px ${FONT.lines}`; g.fillStyle = C.text;
-        g.textAlign = side < 0 ? "right" : "left";
-        const x = side < 0 ? w - 4 : 4;
-        g.fillText(c.name, x + (side < 0 ? -h * 2.3 : h * 2.3), h / 2);
-        g.font = `${h * 0.48}px ${FONT.digits}`; g.fillStyle = out ? C.accent : C.primary;
-        // numbers never shift: a sign slot and fixed digit places ("!" is DSEG7's digit-wide blank)
-        g.fillText(v == null ? "--" : `${v >= 0 ? "!" : "-"}${Math.abs(v).toFixed(1).padStart(5, "!")}`, x, h / 2);
-      }, `${v?.toFixed(1)}|${out}`);
-      c.label.opacity = k;
-    });
-    // the state under the arm: who has control, held / following / frozen
+    // the state under the arm: who has control (each arm's own state is under that arm with two)
+    const s = this.units[0].feed.status;
     const who = { free: "free", ai: "the AI tools" }[s?.control] || (s ? "an input page" : "");
-    const state = !s ? "connecting to the brain" : s.arm?.connected === false ? "disconnected" : s.frozen ? (s.needs_release ? "frozen: release grip" : "frozen") : s.clutch ? "following" : "holding";
+    const line = two ? (s ? `control: ${who}` : "connecting to the brain") : `${s?.arm?.name || "arm"} · ${armWord(s)}${who ? ` · control: ${who}` : ""}`;
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
-      g.fillStyle = s?.frozen ? C.accent : C.dim;
-      g.fillText(`${s?.arm?.name || "arm"} · ${state}${who ? ` · control: ${who}` : ""}`.replace(/ · /g, "   "), w / 2, h / 2);
-    }, `${state}|${who}|${s?.arm?.name}`);
+      g.fillStyle = !two && s?.frozen ? C.accent : C.dim;
+      g.fillText(line.replace(/ · /g, "   "), w / 2, h / 2);
+    }, line);
     if (this.log) this._paintLog();
   }
   _paintLog() {
@@ -344,6 +292,121 @@ export class ArmHologram {
         g.textAlign = "right"; g.fillText(String(c.outcome || ""), w - 5 * u, y); g.textAlign = "left";
       });
     }, key);
+  }
+}
+
+
+/** "holding", "following", "frozen", ... for an arm's status (null: not connected yet). */
+function armWord(s) {
+  return !s ? "connecting to the brain" : s.arm?.connected === false ? "disconnected" : s.frozen ? (s.needs_release ? "frozen: release grip" : "frozen") : s.clutch ? "following" : "holding";
+}
+
+/** One arm as a hologram: the line-drawn model turning slowly on its floor grid, a callout per joint
+ *  and, with two arms, its name and state under it. Each unit has the same look (quick job 119). */
+class HoloArm {
+  constructor(feed, side) {
+    this.feed = feed; this.side = side;
+    this.group = new THREE.Group();
+    this.turn = new THREE.Group(); // turns slowly
+    this.group.add(this.turn);
+    this.grid = floorGrid();
+    this.group.add(this.grid);
+    this.arm = null; this.loading = null; this.kind = null;
+    this.callouts = [];
+    this.name = new CanvasPlane(1.0, 0.1, PX);
+    this.name.mesh.position.set(0, -0.08, 0.02); // under its grid, beside STOP
+    this.group.add(this.name.mesh);
+  }
+  load() {
+    const kind = this.feed.modelKind;
+    if (!kind && this.side === "left") return; // no left arm yet: step() loads it when it comes
+    if (this.loading && this.kind === (kind || "so101")) return;
+    this.kind = kind || "so101";
+    this.loading = this._load(this.kind);
+  }
+  async _load(kind) {
+    let arm;
+    try {
+      arm = await loadArmModel(kind, { style: kind === "so101" ? "mesh" : "boxes" });
+    } catch {
+      arm = await loadArmModel(kind, { style: "stick" });
+    }
+    if (kind !== this.kind) return; // another arm came meanwhile
+    if (this.arm) this.turn.remove(this.arm.object);
+    for (const c of this.callouts) for (const o of [c.label.mesh, c.line, c.hex]) this.group.remove(o);
+    this.callouts = [];
+    this.arm = arm;
+    // line-drawn: see-through cyan, its edges brighter
+    arm.object.traverse((o) => {
+      if (!o.isMesh) return;
+      o.material = new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.12, ...GLOW, depthWrite: false });
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(o.geometry, 25), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.55, ...GLOW, depthWrite: false }));
+      o.add(edges);
+    });
+    arm.object.scale.setScalar(SCALE);
+    this.turn.add(arm.object);
+    // a callout per joint: a hexagon on the joint, a line with an elbow to its name and angle
+    for (const name of arm.jointNames) {
+      const joint = arm.object.getObjectByName(name);
+      if (!joint) continue;
+      const label = new CanvasPlane(0.42, 0.075, PX);
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.7, depthTest: false }));
+      const hex = new THREE.Mesh(new THREE.CircleGeometry(0.016, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(C.primary), transparent: true, opacity: 0.85, depthTest: false }));
+      for (const o of [label.mesh, line, hex]) { o.renderOrder = 30; this.group.add(o); }
+      this.callouts.push({ name, joint, label, line, hex });
+    }
+  }
+  /** `two`: both arms show, so the callouts go to the outer side and the name and state show under it. */
+  step(dt, now, cameraPos, root, k, two) {
+    const s = this.feed.status;
+    if (s?.arm?.model && s.arm.model !== this.kind) this.load(); // the left arm came, or another arm
+    if (this.arm && s?.joints) this.arm.setJoints(s.joints);
+    if (this.arm) this.arm.setTint(null);
+    this.turn.rotation.y += dt * 0.12;
+    this.grid.userData.step(now);
+    // the callouts: from the joint, out to a side (two arms: the outer side, so they never meet)
+    const lim = s?.limits || {};
+    const world = new THREE.Vector3();
+    root.updateMatrixWorld(true);
+    this.callouts.forEach((c, i) => {
+      c.joint.getWorldPosition(world);
+      const p = this.group.worldToLocal(world.clone());
+      const side = two ? (this.side === "left" ? -1 : 1) : i % 2 ? 1 : -1;
+      const row = two ? 0.12 + i * 0.11 : 0.12 + i * 0.13;
+      const elbow = p.clone().add(new THREE.Vector3(side * 0.12, 0.05, 0)), end = new THREE.Vector3(side * 0.62, row, p.z);
+      c.hex.position.copy(p);
+      c.hex.lookAt(cameraPos);
+      const pts = c.line.geometry.attributes.position;
+      pts.setXYZ(0, p.x, p.y, p.z); pts.setXYZ(1, elbow.x, end.y, elbow.z); pts.setXYZ(2, end.x, end.y, end.z); pts.needsUpdate = true;
+      c.label.mesh.position.set(end.x + side * 0.22, end.y + 0.035, end.z);
+      const v = s?.joints?.[c.name];
+      const out = v != null && lim[c.name] && (v < lim[c.name][0] || v > lim[c.name][1]);
+      c.label.paint((g, w, h) => {
+        g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.42}px ${FONT.lines}`; g.fillStyle = C.text;
+        g.textAlign = side < 0 ? "right" : "left";
+        const x = side < 0 ? w - 4 : 4;
+        g.fillText(c.name, x + (side < 0 ? -h * 2.3 : h * 2.3), h / 2);
+        g.font = `${h * 0.48}px ${FONT.digits}`; g.fillStyle = out ? C.accent : C.primary;
+        // numbers never shift: a sign slot and fixed digit places ("!" is DSEG7's digit-wide blank)
+        g.fillText(v == null ? "--" : `${v >= 0 ? "!" : "-"}${Math.abs(v).toFixed(1).padStart(5, "!")}`, x, h / 2);
+      }, `${v?.toFixed(1)}|${out}|${side}`);
+      c.label.opacity = k;
+    });
+    // two arms: "RIGHT ARM so101-white · holding" under each arm, in the same style for both
+    this.name.mesh.visible = two;
+    if (!two) return;
+    const word = armWord(s), title = `${this.side === "left" ? "LEFT" : "RIGHT"} ARM`, name = s?.arm?.name || "";
+    this.name.paint((g, w, h) => {
+      g.textBaseline = "middle"; g.textAlign = "center";
+      g.font = `600 ${h * 0.36}px ${FONT.ui}`; spaced(g, 0.18);
+      const a = `${title}   `; const aw = g.measureText(a).width;
+      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0);
+      const b = `${name}   ${word}`; const bw = g.measureText(b).width;
+      const x0 = (w - aw - bw) / 2;
+      g.textAlign = "left";
+      g.font = `600 ${h * 0.36}px ${FONT.ui}`; spaced(g, 0.18); g.fillStyle = C.primary; g.fillText(a, x0, h / 2);
+      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.accent : C.dim; g.fillText(b, x0 + aw, h / 2);
+    }, `${name}|${word}`);
   }
 }
 

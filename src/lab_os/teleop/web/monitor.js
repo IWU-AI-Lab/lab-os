@@ -56,6 +56,9 @@ function show(s) {
   $("left-card").hidden = !l || l.connected === false;
   $("arm-label").textContent = l ? "Right arm" : "Arm";
   $("joints-title").textContent = gone ? `${s.arm?.name || "The arm"} is unplugged` : l ? "Right arm" : "Joints";
+  // two arms: both cards say the arm's name, in the same place (quick job 119)
+  $("right-name").textContent = l && !gone ? s.arm?.name || "" : gone ? "" : "what the arm reports";
+  document.body.classList.toggle("two-arms", !!l);
   if (!l) return;
   armState($("left-state"), l);
   $("left-name").textContent = l.name;
