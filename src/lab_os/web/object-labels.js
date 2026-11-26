@@ -8,7 +8,8 @@
 //   frontIndex(found, panDeg)  which object the ultrasonic sensor measures, or -1
 //   labelsSwitch({button, canvas, img, say, send, status})   a page's Labels button (the Raspbot page, Monitor)
 //
-// The labels look like a HUD: the design's UI font (Chakra Petch), the name in capitals, letters spaced out.
+// The labels look like a HUD: corner brackets around each object, the design's UI font (Chakra Petch), the
+// name in capitals, letters spaced out.
 
 export const FRONT_PAN_DEG = 15; // the ultrasonic sensor looks ahead: only with the camera this near the centre
 
@@ -35,7 +36,7 @@ export function labelText(f, distanceMm) {
 
 export const HUD_FONT = "'Chakra Petch', system-ui, sans-serif"; // the design's UI font (theme.yaml → fonts.family)
 
-/** Draw the boxes and labels on a canvas `w` × `h` that shows the picture. */
+/** Draw the corner brackets and labels on a canvas `w` × `h` that shows the picture. */
 export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = HUD_FONT } = {}) {
   const size = Math.max(12, Math.round(h * 0.04)), pad = size * 0.4, line = Math.max(1.5, h / 320);
   g.save();
@@ -47,7 +48,15 @@ export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, colo
     const x = f.box.x * w, y = f.box.y * h, bw = f.box.w * w, bh = f.box.h * h;
     g.strokeStyle = color;
     g.lineWidth = line;
-    g.strokeRect(x, y, bw, bh);
+    g.lineCap = "square";
+    const c = Math.min(bw / 2, bh / 2, Math.max(size * 0.7, Math.min(bw, bh) * 0.22)); // the brackets' arm
+    g.beginPath(); // a HUD's corner brackets, not a full box
+    for (const [cx, cy, dx, dy] of [[x, y, 1, 1], [x + bw, y, -1, 1], [x, y + bh, 1, -1], [x + bw, y + bh, -1, -1]]) {
+      g.moveTo(cx, cy + dy * c);
+      g.lineTo(cx, cy);
+      g.lineTo(cx + dx * c, cy);
+    }
+    g.stroke();
     const text = labelText({ ...f, name: f.name.toUpperCase() }, i === front ? distanceMm : null);
     const tw = g.measureText(text).width + pad * 2, th = size + pad * 2;
     const lx = Math.min(Math.max(0, x), w - tw), ly = y - th >= 0 ? y - th : Math.min(h - th, y + bh);
