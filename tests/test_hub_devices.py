@@ -280,7 +280,8 @@ def test_the_hub_pages_join_as_devices():
 
     web = SRC / "hub" / "web"
     text = (web / "design.html").read_text()
-    assert "connectDevice(" in text and "fillOpenOn(" in text and "fillSent(" in text
+    assert "connectDevice(" in text and "fillOpenOn(" in text
+    assert "fillSent(" not in text and "Bring it back" not in text
     device = (SRC / "web" / "device.js").read_text()
     assert "/ws/hub-device" in device and "setTimeout(open, retry)" in device  # reconnects
     settings = (web / "settings.js").read_text()
