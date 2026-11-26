@@ -293,7 +293,11 @@ export class HubView {
       this.scene.add(scene);
     } else {
       view = this.views[id] ||= id === "raspbot" ? new RaspbotModule() : new ArmHologram(id);
-      view.group.position.set(0, -0.62, -1.55);
+      if (id === "raspbot") {
+        view.group.add(this.tab.mesh);
+        this.tab.mesh.position.set(0, 0.46, 0);
+        this.tab.mesh.rotation.y = 0;
+      } else view.group.position.set(0, -0.62, -1.55);
       this.group.parent.add(view.group);
       view.open(now);
       this.module = { id, view, at: now };
@@ -305,6 +309,11 @@ export class HubView {
     this.module = null;
     this.mode = "hub";
     if (m.scene) this.scene.remove(m.scene);
+    if (m.id === "raspbot") {
+      this.group.parent.add(this.tab.mesh);
+      this.tab.mesh.position.set(-0.62, 0.42, -1.35);
+      this.tab.mesh.rotation.y = 0.4;
+    }
     if (m.view.group) m.view.group.parent?.remove(m.view.group);
     m.view.close();
     this.sfx.close();

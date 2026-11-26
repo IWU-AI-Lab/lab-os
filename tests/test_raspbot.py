@@ -442,10 +442,12 @@ async def test_pictures_and_recordings_are_saved_here(aiohttp_client, tmp_path):
         assert m["on"] and m["path"].endswith(".mjpeg")
         await asyncio.sleep(0.1)
         assert cam.status()["recording"]
+        assert cam.status()["recording_seconds"] >= 0
         await ws.send_json({"type": "record", "on": False})
         m = await answer()
         assert not m["on"] and Path(m["path"]).read_bytes().startswith(jpeg * 2)
         assert cam.status()["recording"] == ""
+        assert cam.status()["recording_seconds"] is None
         await ws.send_json({"type": "record", "on": True})
         await answer()
     for _ in range(50):  # the page closed: its recording ends
