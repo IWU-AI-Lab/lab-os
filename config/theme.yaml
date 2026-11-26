@@ -89,7 +89,7 @@ motion:                  # (planned; the designed hub reads some)
 hub:                     # (planned) except where "Used by" says otherwise
                          # The top-left title and the startup title are the place's name: `name` in place.yaml, not here.
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
-  modules: [teleop, monitor, ai, training, cameras]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub
+  modules: [teleop, monitor, ai, training, cameras, system-map]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub
                          # (the ids: MODULES in src/lab_os/hub/server.py; ai = AI Control, the arm and every AI tool call;
                          # unknown ids get no button). Also on the settings page (the hub's gear).
                          # Chat isn't listed: it belongs to the core (tap it or start typing) and is always there.

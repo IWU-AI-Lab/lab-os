@@ -37,7 +37,8 @@ HUB_CLASS = "09"  # USB hubs: not a device a person plugs in for itself
 # built into the computer (the desktop's Bluetooth, its keyboard light; quick job 141): not listed
 FIXED = "fixed"
 ARM_KINDS = ("so101", "so101-leader", "xarm1s")
-STORED = ("name", "kind", "known", "what", "via", "first_seen", "last_seen")
+DETAILS = ("name", "kind", "known", "what", "via", "model")
+STORED = (*DETAILS, "first_seen", "last_seen")
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$")
 
 
@@ -297,7 +298,7 @@ class LiveDevices:
             self.dismissed.discard(i)  # connected again: back on the list
             d = fresh[i]
             entry = seen.get(i, {"first_seen": stamp})
-            entry |= {k: d[k] for k in ("name", "kind", "known", "what", "via") if k in d}
+            entry |= {k: d[k] for k in DETAILS if k in d}
             entry["last_seen"] = stamp
             seen[i] = entry
             wrote = True
@@ -312,7 +313,7 @@ class LiveDevices:
             if self.activity is not None and self.now[i].get("kind") != "screen":
                 self.activity.add(f"{self.now[i].get('name') or i} disconnected")
         for i in fresh.keys() & self.now.keys():  # a camera's name can change with its arm
-            for k in ("name", "kind", "what"):
+            for k in DETAILS:
                 if i in seen and k in fresh[i] and seen[i].get(k) != fresh[i][k]:
                     seen[i][k] = fresh[i][k]
                     wrote = True

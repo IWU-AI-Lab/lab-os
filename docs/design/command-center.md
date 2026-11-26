@@ -49,7 +49,7 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Show only the actions that apply to every selected item. Make clear when an action changes more than one device or screen.
 
 ## 2D and 3D
-The 2D workspace is the first version and does every main task by itself. Keep the design open to a 3D view later. 3D is not part of the first version.
+The 2D workspace is the first version and does every main task by itself. Keep the design open to a 3D view later. The hub’s separate **System Map** shows live connections in 3D (quick job 152).
 
 ## Order of the work
 1. The 2D workspace for devices and screens.
