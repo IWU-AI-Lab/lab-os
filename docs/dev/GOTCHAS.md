@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — A double-click in the System Map's device list reached no device
+**What:** The first click chooses the device, and the details above the list ("Connected to the brain · Network · SO-101 Monitor") can grow by a line. The list moves down under the pointer, so the second click lands between two rows. The browser then sends `dblclick` to the list, not to a row.
+**Fix:** The list counts a second click within 450 ms as a double-click on the device that the first click chose (`system-map.js`).
+
 ### 2026-11-26 — OrbitControls' auto-rotate assumes 60 frames per second
 **What:** With `autoRotate`, `controls.update()` turns the camera by a fixed angle on each call. The System Map draws at most 30 frames per second while idle, so its spin ran at half speed, and it changed with the screen's frame rate.
 **Fix:** Give the time since the last frame: `controls.update(dt)` (in seconds). The spin is then the same on every screen.
