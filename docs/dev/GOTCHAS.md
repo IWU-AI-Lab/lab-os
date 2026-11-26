@@ -8,6 +8,11 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 **What:** a browser allows full screen and sound only after a press on the page. A start screen that another device starts (a message from the brain) has had no press. Full screen fails, and Chrome keeps the page's sound off.
 **Fix:** that screen goes full screen at its next tap or key. lab-os's own browser (`lab-os serve --open`, the "Start lab-os" icon) and the "Lab Hub" icon from ⚙ → This Device start Chrome with `--autoplay-policy=no-user-gesture-required`, so the startup's sound plays. A "Lab Hub" icon made before 2026-11-26 does not have it: make it again. The flag works only when Chrome was not already open with the same profile. Lab step C.5 tells.
 
+### 2026-11-26 — Simplifying the whole Raspbot base dropped small parts
+
+**What:** The first mesh reduction removed the front sensor from the base mesh.
+**Fix:** Simplify each connected part separately. See `models/raspbot/README.md`.
+
 ### 2026-11-26 — Older Raspbot programs stop when they receive four wheel speeds (quick job 142)
 
 **What:** the older program unpacks exactly two speeds. A four-speed command makes it stop.
