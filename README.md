@@ -30,7 +30,7 @@ uv run lab-os-teleop serve                               # teleop only: the head
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay a recording (no browser, no headset)
 ```
 - After `lab-os serve`, open http://localhost:8080/ for the hub. The options are in `docs/archive/guides-2026-11-25/hub.md` → "Start it".
-- After `lab-os-teleop serve`, open http://localhost:8080/monitor to watch the fake arm.
+- After `lab-os-teleop serve`, open http://localhost:8080/monitor/so101 to watch the fake arm (`/monitor` lists the Monitor pages).
 - To test teleop at home, or to connect the real Quest over USB, read `docs/guides/quest-setup.md`.
 
 ## Repository map

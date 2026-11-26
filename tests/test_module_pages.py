@@ -31,7 +31,9 @@ async def test_the_pages(aiohttp_client):
     client = await aiohttp_client(make_app())
     pages = {
         "/teleop": ['id="enter"', 'id="desk-mode"', "/web/design/kit.css"],
-        "/monitor": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
+        "/monitor": ['id="kinds"', "/static/monitor-list.js", "/web/design/kit.css"],
+        "/monitor/so101": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
+        "/monitor/xarm": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
         "/ai": ["/hub/ai.js", 'id="calls"'],
         "/settings": ["/hub/settings.js", 'id="list"'],
     }
@@ -56,6 +58,7 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
     pages = {  # page → what brings the button
         "/teleop": "/web/design/kit.js",
         "/monitor": "/web/design/kit.js",
+        "/monitor/so101": "/web/design/kit.js",
         "/ai": "/web/design/kit.js",
         "/settings": "/web/design/kit.js",
         "/training": "/web/design/kit.js",

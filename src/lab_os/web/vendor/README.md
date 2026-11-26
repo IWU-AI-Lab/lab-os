@@ -13,6 +13,6 @@ Files are unmodified copies from the npm tarballs (`registry.npmjs.org/<name>/-/
 
 MediaPipe: the wasm file is 14.6 MB and the model 7.8 MB, the biggest files here; only the webcam page loads them.
 
-To update: download the new tarball, copy the same files over (keep the paths, the import map depends on them), update this table, and check the 3D view still loads (`uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop`, open `/monitor`).
+To update: download the new tarball, copy the same files over (keep the paths, the import map depends on them), update this table, and check the 3D view still loads (`uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop`, open `/monitor/so101`).
 
 Fonts: re-download from `fonts.googleapis.com/css2?family=…` with a current browser's user agent (it then answers with `.woff2`), keep the `/* latin */` blocks, and rewrite `fonts.css` (theme.yaml `font.bundled` lists the families).

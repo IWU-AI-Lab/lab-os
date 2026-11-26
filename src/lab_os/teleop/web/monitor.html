@@ -15,11 +15,13 @@
 <!--
   The arm monitor, in the hub's design (2026-11-10): for an onlooker screen. It watches, and its STOP
   works; it never drives. (The plain page at /classic/monitor was removed on 2026-11-20.)
+  One page for each kind of robot (quick job 147): /monitor/so101 and /monitor/xarm serve this page;
+  monitor.js and arm-panel.js read the kind from the address. /monitor is the list (monitor-list.html).
 -->
 <body class="monitor">
 <div class="page">
   <header class="bar">
-    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg><span>Monitor</span></div>
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg><span id="page-title">Monitor</span></div>
     <span class="place"></span>
     <div class="chips" aria-label="Status">
       <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
@@ -47,7 +49,7 @@
   </main>
 </div>
 <script type="module" src="/web/design/kit.js"></script>
-<script src="/static/monitor.js"></script>
+<script type="module" src="/static/monitor.js"></script>
 <script type="module" src="/static/arm/arm-panel.js"></script>
 </body>
 </html>
