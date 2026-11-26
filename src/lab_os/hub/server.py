@@ -165,7 +165,8 @@ MODULES = {
 
 # Every page the brain serves: (address, name, one line). All Pages (`/pages`, a button in the hub's
 # strip next to ⚙; quick jobs 67 and 82) lists them, so each opens from the hub in two taps; a test
-# checks that no page is missing here.
+# checks that no page is missing here. In the hub, each opens as a module (its DEVICE_VIEWS entry,
+# quick job 133); "Open on…" moves it to a window of its own.
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
     ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
@@ -209,6 +210,9 @@ DEVICE_VIEWS = {
     "system": ("System Diagram", ""),
     "chat": ("The Conversation", ""),
     "raspbot": ("Raspbot", "/raspbot"),  # quick job 72
+    # quick job 133: every page in All Pages opens as a module of the hub
+    "wake-word": ("Wake Word", "/wake-word"),
+    "remote": ("Phone Remote", "/remote"),
     "xr": ("VR Hub", "/xr"),  # only on a headset's browser
 }
 

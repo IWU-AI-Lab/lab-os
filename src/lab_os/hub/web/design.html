@@ -3272,7 +3272,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { webcam: "i-cam", settings: "i-gear", pages: "i-link" };
+const VIEW_ICONS = { webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;
@@ -3633,6 +3633,14 @@ $("#mod-send").addEventListener("click", (e) => {
   $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
 });
 $("#open-on").addEventListener("click", (e) => e.stopPropagation());
+// All Pages in the module asks for a page (quick job 133): it opens as a module here, in place of All Pages
+// (the hub itself, "/", only goes back to the hub)
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || e.data?.type !== "lab-os-open-view") return;
+  if (!$("#mod-slot iframe") || e.source !== $("#mod-slot iframe").contentWindow) return;
+  SFX.blip();
+  if (e.data.id === "hub") closeModule(); else openHere(e.data.id, null);
+});
 // a tap anywhere outside "Open on…" closes it (quick job 129); the page in the frame has its own listener
 addEventListener("pointerdown", (e) => { if (!$("#open-on").hidden && !e.target.closest("#open-on, #mod-send")) closeOpenOn(); });
 // a module sent from another device: shown at once, even from the start screen (that device has the hub open,
