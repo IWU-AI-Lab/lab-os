@@ -13,7 +13,7 @@
 //
 // Controls: drag to orbit; right-drag, Shift-drag or two fingers to pan; scroll or pinch to zoom (toward
 // the pointer); double-click a device to focus it. Keys: arrows orbit, Shift + arrows pan, + and - zoom,
-// F focuses the selected device, 0 or Home resets the view.
+// F focuses the selected device, R or Home resets the view.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
@@ -84,6 +84,19 @@ const links = {
   usb: new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.55 }),
   network: new THREE.LineDashedMaterial({ color: primary, dashSize: 0.16, gapSize: 0.13, transparent: true, opacity: 0.55 }),
 };
+// Decorations, on the full and maximal looks only (DESIGN.md → Quality levels): a polar floor grid with
+// + marks, a line from each device down to the floor, a turning tick ring under each connected device,
+// a radar ping from the core now and then; maximal adds drifting dots and a satellite ring at the core.
+const faint = (opacity) => new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity, depthWrite: false });
+const dropLine = faint(0.16), footLine = faint(0.32), plusLine = faint(0.22), tickLine = faint(0.45);
+const dropGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, -1, 0)]);
+const footGeometry = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 25 }, (_, i) =>
+  new THREE.Vector3(Math.cos(i * Math.PI / 12) * 0.28, 0, Math.sin(i * Math.PI / 12) * 0.28)));
+const tickGeometry = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, (_, i) => {
+  const a = i * Math.PI / 24, edge = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+  return i % 2 ? edge.multiplyScalar(i % 12 === 1 ? 1.22 : 1.1) : edge.multiplyScalar(1.02);
+}).flatMap((v, i, all) => (i % 2 ? [] : [v, all[i + 1]])));
+const decorLines = [dropGeometry, footGeometry, tickGeometry];
 const TRACE_POINTS = 25;  // the trace as a polyline, so it can draw itself in
 
 const modelTypes = { so101: "so101", "so101-leader": "so101", xarm1s: "xarm1s", raspbot: "raspbot" };
@@ -341,6 +354,38 @@ export function createMap(canvas, labels, onSelect) {
   const pulsePool = Array.from({ length: 16 }, () => halo(texture, hot, 0.95, 0.52));
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   scene.add(graph, core, signals, starField());
+  // The decorations that don't belong to one device (rebuilt floor, the ping, maximal's extras).
+  const stage = new THREE.Group(), floor = new THREE.Group(), extras = new THREE.Group();
+  const ping = new THREE.LineLoop(footGeometry, faint(0.5));
+  ping.visible = false;
+  stage.add(floor, ping);
+  const motes = (() => {
+    const at = [];
+    let n = 77;
+    const rand = () => ((n = (Math.imul(n, 1664525) + 1013904223) >>> 0) / 4294967296);
+    for (let i = 0; i < 260; i++) {
+      const v = new THREE.Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.5, rand() * 2 - 1);
+      if (v.length() <= 1) at.push(v); else i--;
+    }
+    return new THREE.Points(new THREE.BufferGeometry().setFromPoints(at), new THREE.PointsMaterial({
+      color: primary, size: 2, sizeAttenuation: false, transparent: true, opacity: 0.35, depthWrite: false,
+    }));
+  })();
+  const satellite = new THREE.Group();
+  const satelliteSpin = new THREE.Group();
+  satelliteSpin.add(arc(2.75, 0, 1.4, 0, tickLine), arc(2.75, 2.1, 1.4, 0, tickLine), arc(2.75, 4.2, 1.4, 0, tickLine));
+  for (let i = 0; i < 3; i++) {
+    const bead = new THREE.Mesh(marker, point);
+    bead.scale.setScalar(1.6);
+    bead.position.set(Math.cos(i * 2.1 + 1.4) * 2.75, 0, Math.sin(i * 2.1 + 1.4) * 2.75);
+    satelliteSpin.add(bead);
+  }
+  satellite.add(satelliteSpin);
+  satellite.position.y = 0.87;
+  satellite.rotation.set(1.05, 0, 0.35);
+  extras.add(motes, satellite);
+  scene.add(stage, extras);
+  let floorY = -3, nextPing = 0;
   scene.fog = new THREE.FogExp2(color("colors.background"), 0.0105);
   const nodes = new Map();
   const project = new THREE.Vector3();
@@ -421,6 +466,29 @@ export function createMap(canvas, labels, onSelect) {
     spin += (want - spin) * Math.min(1, dt * (want ? 0.9 : 6));
     controls.autoRotate = spin > 0.002;
     controls.autoRotateSpeed = spin * 60 / SPIN_S;
+    const fancy = firing(), most = look() === "maximal";
+    stage.visible = fancy;
+    extras.visible = most;
+    for (const node of nodes.values()) for (const d of node.decor) d.visible = fancy;
+    if (fancy) {
+      for (const node of nodes.values()) if (node.ticks) node.ticks.rotation.y += dt * 2 * Math.PI / ringTurns[1];
+      // The ping: a ring that runs out from the core along the core's level and fades.
+      if (time > nextPing) {
+        ping.userData.start = time;
+        const [a, b] = motion.idle?.event_every_s || [8, 20];
+        nextPing = time + 1000 * (a + Math.random() * (b - a));
+      }
+      const t = (time - (ping.userData.start ?? -Infinity)) / 2600;
+      ping.visible = t >= 0 && t < 1;
+      if (ping.visible) {
+        ping.scale.setScalar((2.3 + arrive(t) * (edge - 2.3)) / 0.28);
+        ping.material.opacity = 0.45 * (1 - t);
+      }
+    }
+    if (most) {
+      motes.rotation.y += dt * 2 * Math.PI / (ringTurns[2] * 2);
+      satelliteSpin.rotation.y -= dt * 2 * Math.PI / ringTurns[0];
+    }
     if (!still) {
       const s = time / 1000;
       for (const [object, period, direction] of turning) object.rotation.y = direction * s * 2 * Math.PI / period;
@@ -440,6 +508,7 @@ export function createMap(canvas, labels, onSelect) {
       const k = arrive(Math.min(1, Math.max(0, (time - node.moveStart) / (panelMs * 1.6))));
       node.group.position.lerpVectors(node.moveFrom, node.to, k);
       if (node.trace) retrace(node);
+      dropTo(node);
       if (k >= 1) node.moveStart = 0;
     }
     // The reticle closes in on the selected device.
@@ -702,6 +771,16 @@ export function createMap(canvas, labels, onSelect) {
     const wire = new THREE.LineSegments(outline, wires[device.connected ? "on" : "off"]);
     group.add(base, wire);
     const node = { group, wire, device, height: device.kind === "brain" ? 1.95 : device.connected ? 1.75 : 0.98 };
+    // A line down to the floor (it shows the height) and a small ring where it lands.
+    node.drop = new THREE.Line(dropGeometry, dropLine);
+    node.foot = new THREE.LineLoop(footGeometry, footLine);
+    node.decor = [node.drop, node.foot];
+    if (device.connected && device.kind !== "brain") {
+      node.ticks = new THREE.LineSegments(tickGeometry, tickLine);
+      node.ticks.position.y = 0.02;
+      node.decor.push(node.ticks);
+    }
+    group.add(...node.decor);
     const key = Object.hasOwn(shapes, device.kind) ? device.kind : "usb";
     const simple = device.connected
       ? new THREE.Mesh(shapes[key], holo)
@@ -779,7 +858,7 @@ export function createMap(canvas, labels, onSelect) {
 
   function setDevices(devices) {
     graph.traverse((child) => {
-      if (child.isLine && !sharedLines.has(child.geometry)) child.geometry.dispose();
+      if (child.isLine && !sharedLines.has(child.geometry) && !decorLines.includes(child.geometry)) child.geometry.dispose();
       if (child.isSprite) child.material.dispose();
     });
     graph.clear();
@@ -822,6 +901,8 @@ export function createMap(canvas, labels, onSelect) {
       graph.add(trace, tip);
     });
     spots = nextSpots;
+    buildFloor(targets);
+    for (const node of nodes.values()) dropTo(node);
     // New devices (and ones that changed state) arrive one after another, nearest first.
     fresh.sort((a, b) => a.to.length() - b.to.length());
     fresh.forEach((node, i) => {
@@ -838,6 +919,40 @@ export function createMap(canvas, labels, onSelect) {
     }
     introduced = true;
     resize();
+  }
+
+  // The floor sits a little under the lowest device: a polar grid as wide as the map, + marks where
+  // its rings meet its spokes.
+  function buildFloor(targets) {
+    floor.traverse((child) => {
+      if (child.isLine) child.geometry.dispose();
+      if (child.material && child.material !== plusLine) child.material.dispose();
+    });
+    floor.clear();
+    floorY = Math.min(-2.6, ...targets.map((t) => t.y - 2.6));
+    const rings = Math.max(3, Math.round(edge / 3));
+    const grid = new THREE.PolarGridHelper(edge, 12, rings, 72, primary, primary);
+    grid.material.transparent = true;
+    grid.material.opacity = 0.07;
+    grid.material.depthWrite = false;
+    const plus = [];
+    for (let r = 1; r <= rings; r++) {
+      for (let k = 0; k < 12; k++) {
+        const a = k * Math.PI / 6, at = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(edge * r / rings);
+        const across = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)).multiplyScalar(0.16);
+        const along = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(0.16);
+        plus.push(at.clone().add(across), at.clone().sub(across), at.clone().add(along), at.clone().sub(along));
+      }
+    }
+    floor.add(grid, new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(plus), plusLine));
+    floor.position.y = floorY;
+    motes.scale.setScalar(edge * 0.9);
+  }
+
+  function dropTo(node) {
+    const h = Math.max(0.01, node.group.position.y - floorY);
+    node.drop.scale.y = h;
+    node.foot.position.y = -h;
   }
 
   function placeReticle(node, animate) {
@@ -884,7 +999,7 @@ export function createMap(canvas, labels, onSelect) {
 
   canvas.addEventListener("keydown", (event) => {
     const { key, shiftKey } = event;
-    if (key === "0" || key === "Home") {
+    if (key === "r" || key === "R" || key === "Home") {
       event.preventDefault();
       reset();
       return;
