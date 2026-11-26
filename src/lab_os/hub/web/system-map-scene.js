@@ -85,17 +85,21 @@ const links = {
   network: new THREE.LineDashedMaterial({ color: primary, dashSize: 0.16, gapSize: 0.13, transparent: true, opacity: 0.55 }),
 };
 // Decorations, on the full and maximal looks only (DESIGN.md → Quality levels): a polar floor grid with
-// + marks, a line from each device down to the floor, a turning tick ring under each connected device,
-// a radar ping from the core now and then; maximal adds drifting dots and a satellite ring at the core.
+// + marks, a line from each device down to the floor, a turning segmented ring under each connected device,
+// a radar ping from the core now and then; maximal adds a satellite ring at the core.
 const faint = (opacity) => new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity, depthWrite: false });
 const dropLine = faint(0.16), footLine = faint(0.32), plusLine = faint(0.22), tickLine = faint(0.45);
 const dropGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, -1, 0)]);
 const footGeometry = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 25 }, (_, i) =>
   new THREE.Vector3(Math.cos(i * Math.PI / 12) * 0.28, 0, Math.sin(i * Math.PI / 12) * 0.28)));
-const tickGeometry = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, (_, i) => {
-  const a = i * Math.PI / 24, edge = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-  return i % 2 ? edge.multiplyScalar(i % 12 === 1 ? 1.22 : 1.1) : edge.multiplyScalar(1.02);
-}).flatMap((v, i, all) => (i % 2 ? [] : [v, all[i + 1]])));
+// A segmented ring: four arcs with gaps between them, as line pairs.
+const tickGeometry = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 4 }, (_, q) => {
+  const steps = 16, from = q * Math.PI / 2 + 0.12, span = Math.PI / 2 - 0.24;
+  return Array.from({ length: steps }, (_, i) => [i, i + 1].map((k) => {
+    const a = from + span * k / steps;
+    return new THREE.Vector3(Math.cos(a) * 1.08, 0, Math.sin(a) * 1.08);
+  })).flat();
+}).flat());
 const decorLines = [dropGeometry, footGeometry, tickGeometry];
 const TRACE_POINTS = 25;  // the trace as a polyline, so it can draw itself in
 
@@ -359,18 +363,6 @@ export function createMap(canvas, labels, onSelect) {
   const ping = new THREE.LineLoop(footGeometry, faint(0.5));
   ping.visible = false;
   stage.add(floor, ping);
-  const motes = (() => {
-    const at = [];
-    let n = 77;
-    const rand = () => ((n = (Math.imul(n, 1664525) + 1013904223) >>> 0) / 4294967296);
-    for (let i = 0; i < 260; i++) {
-      const v = new THREE.Vector3(rand() * 2 - 1, (rand() * 2 - 1) * 0.5, rand() * 2 - 1);
-      if (v.length() <= 1) at.push(v); else i--;
-    }
-    return new THREE.Points(new THREE.BufferGeometry().setFromPoints(at), new THREE.PointsMaterial({
-      color: primary, size: 2, sizeAttenuation: false, transparent: true, opacity: 0.35, depthWrite: false,
-    }));
-  })();
   const satellite = new THREE.Group();
   const satelliteSpin = new THREE.Group();
   satelliteSpin.add(arc(2.75, 0, 1.4, 0, tickLine), arc(2.75, 2.1, 1.4, 0, tickLine), arc(2.75, 4.2, 1.4, 0, tickLine));
@@ -383,7 +375,7 @@ export function createMap(canvas, labels, onSelect) {
   satellite.add(satelliteSpin);
   satellite.position.y = 0.87;
   satellite.rotation.set(1.05, 0, 0.35);
-  extras.add(motes, satellite);
+  extras.add(satellite);
   scene.add(stage, extras);
   let floorY = -3, nextPing = 0;
   scene.fog = new THREE.FogExp2(color("colors.background"), 0.0105);
@@ -486,7 +478,6 @@ export function createMap(canvas, labels, onSelect) {
       }
     }
     if (most) {
-      motes.rotation.y += dt * 2 * Math.PI / (ringTurns[2] * 2);
       satelliteSpin.rotation.y -= dt * 2 * Math.PI / ringTurns[0];
     }
     if (!still) {
@@ -946,7 +937,6 @@ export function createMap(canvas, labels, onSelect) {
     }
     floor.add(grid, new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(plus), plusLine));
     floor.position.y = floorY;
-    motes.scale.setScalar(edge * 0.9);
   }
 
   function dropTo(node) {
