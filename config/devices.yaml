@@ -32,6 +32,9 @@ devices:
     # refuses if the copy differs from it or the motors don't hold it (2026-11-17).
     training_calibration: robots/so_follower/sheep.json
     table_z_cm: 0  # stands on the table
+    # Reads ~1.8 cm low at its folded rest (GOTCHAS 2026-11-18), so the floor stopped it higher than
+    # so101-white. Lab check T.3 measures it: `lab-os measure-arm so101-green` writes table_z_cm and
+    # joint_offsets_deg here, as quick job 106 did for so101-white (quick job 121).
     notes: >-
       Follower of the SO-101 training set (the builder's training project, LeLab). Drivable by
       lab-os since 2026-11-12 with four rules: no motor setup, calibration read only, the lerobot
