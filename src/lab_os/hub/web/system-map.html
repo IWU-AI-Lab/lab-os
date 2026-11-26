@@ -22,7 +22,7 @@
   </header>
   <main class="map-layout">
     <section class="map-view" aria-label="3D map">
-      <canvas tabindex="0" aria-label="Orbit the System Map with the arrow keys. Use plus or minus to zoom."></canvas>
+      <canvas tabindex="0" aria-label="The System Map. Arrow keys turn it. Shift and the arrow keys move it. Plus and minus zoom. F shows the selected device up close. 0 resets the view."></canvas>
       <div class="map-labels" aria-hidden="true"></div>
       <ul class="map-key" aria-label="Connection types" hidden>
         <li>USB</li>
@@ -30,7 +30,7 @@
       </ul>
       <p class="map-message" role="status" hidden>The 3D view is unavailable. The device list shows each connection.</p>
       <div class="map-controls" hidden>
-        <p>Drag to orbit. Scroll or pinch to zoom.</p>
+        <p class="map-hint"><span class="fine">Drag to turn. Right-drag to move. Scroll to zoom. Double-click a device to go to it.</span><span class="coarse">Drag to turn. Two fingers move and zoom. Double-tap a device to go to it.</span></p>
         <button class="btn small" type="button" id="reset-view">Reset view</button>
       </div>
     </section>
