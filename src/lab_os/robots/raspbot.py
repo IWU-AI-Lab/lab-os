@@ -29,7 +29,11 @@ log = logging.getLogger(__name__)
 PORT = 8765  # the program on the Raspbot listens here
 WATCHDOG_S = 0.5  # the Raspbot stops its motors when no command came for this long
 RECONNECT_S = 3.0
-DIAGNOSTICS_S = 1.0
+DIAGNOSTICS_S = 0.1
+LEGACY_DIAGNOSTICS_S = 1.0
+DISTANCE_MAX_AGE_S = 0.3
+OBSTACLE_STOP_MM = 200
+AI_SPEED_LIMIT = 0.25  # a fraction of the onboard speed cap, independent of the page slider
 LOOK_MAX = 90.0  # a look command may ask for at most 90 degrees from the centre
 LOOK_LIMITS = ((-90.0, 90.0), (-25.0, 85.0))  # factory mount, for older programs
 
@@ -45,6 +49,8 @@ class FakeRaspbot:
     looked: tuple = (0.0, 0.0)  # the camera's last look
     distance_mm: int | None = None
     look_limits = LOOK_LIMITS
+    obstacle_stop_mm = OBSTACLE_STOP_MM
+    drive_stop = ""
 
     @property
     def is_fake(self) -> bool:
@@ -53,7 +59,11 @@ class FakeRaspbot:
     async def run(self) -> None:
         await asyncio.Event().wait()  # nothing to connect to
 
-    async def drive(self, left: float, right: float) -> None:
+    @property
+    def fresh_distance_mm(self) -> int | None:
+        return self.distance_mm if self.connected else None
+
+    async def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
         self.sent.append(("drive", round(left, 3), round(right, 3)))
 
     async def stop(self) -> None:
@@ -77,6 +87,9 @@ class TcpRaspbot:
         self.camera_port = 0
         self.distance_mm: int | None = None
         self.look_limits = LOOK_LIMITS
+        self.obstacle_stop_mm: int | None = None
+        self.drive_stop = ""
+        self._distance_at = 0.0
         self._writer: asyncio.StreamWriter | None = None
         self.said = ""  # why it isn't connected, for the page
 
@@ -99,6 +112,8 @@ class TcpRaspbot:
                 hello = json.loads(await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S))
                 self.camera_port = int(hello.get("camera_port") or 0)
                 self.look_limits = hello.get("look_limits", LOOK_LIMITS)
+                stop_mm = hello.get("obstacle_stop_mm")
+                self.obstacle_stop_mm = stop_mm if type(stop_mm) is int and stop_mm > 0 else None
                 self._writer = writer
                 self.said = ""
                 log.info("%s connected (%s:%s)", self.name, self.host, self.port)
@@ -115,6 +130,9 @@ class TcpRaspbot:
                     writer.close()
                 self._writer = None
                 self.distance_mm = None
+                self.obstacle_stop_mm = None
+                self.drive_stop = ""
+                self._distance_at = 0.0
             await asyncio.sleep(RECONNECT_S)
 
     async def _read_diagnostics(self, reader: asyncio.StreamReader) -> None:
@@ -123,8 +141,15 @@ class TcpRaspbot:
             line = await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S)
             if not line:
                 return
-            self.distance_mm = json.loads(line).get("distance_mm")
-            await asyncio.sleep(DIAGNOSTICS_S)
+            report = json.loads(line)
+            distance = report.get("distance_mm")
+            self.distance_mm = distance if type(distance) is int and 0 < distance < 0xFFFF else None
+            reason = report.get("drive_stop")
+            self.drive_stop = (
+                reason if reason in ("obstacle", "sensor_unavailable", "input_timeout") else ""
+            )
+            self._distance_at = time.monotonic()
+            await asyncio.sleep(DIAGNOSTICS_S if self.obstacle_stop_mm else LEGACY_DIAGNOSTICS_S)
 
     async def _send(self, msg: dict) -> None:
         if not self.connected:
@@ -136,8 +161,17 @@ class TcpRaspbot:
         except (OSError, TimeoutError):  # the Raspbot's watchdog stops it; reconnect
             writer.close()
 
-    async def drive(self, left: float, right: float) -> None:
-        await self._send({"drive": [round(left, 3), round(right, 3)]})
+    @property
+    def fresh_distance_mm(self) -> int | None:
+        if self.connected and time.monotonic() - self._distance_at <= DISTANCE_MAX_AGE_S:
+            return self.distance_mm
+        return None
+
+    async def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
+        msg = {"drive": [round(left, 3), round(right, 3)]}
+        if require_clear:
+            msg["require_clear"] = True
+        await self._send(msg)
 
     async def stop(self) -> None:
         await self._send({"stop": True})
@@ -165,8 +199,8 @@ def stick_speeds(forward: float, turn: float) -> tuple[float, float]:
 
 
 class RaspbotDesk:
-    """Drives one Raspbot for the pages: one page at a time, STOP from any page, the freeze, and
-    the Speed slider (one speed for every page, 0 … 1 of the program's cap).
+    """Drives one Raspbot for the pages and AI tools. They share control, STOP, the freeze,
+    and the Speed slider (0 … 1 of the program's cap).
 
     A page drives by sending its button again and again while it is held (every 100 ms). The
     first page to drive while nobody does has control, until it lets go or closes. When the
@@ -199,30 +233,63 @@ class RaspbotDesk:
             "control": control,
             "camera": bool(self.bot.camera_port),
             "speed": self.speed,
-            "distance_mm": self.bot.distance_mm if self.bot.connected else None,
+            "distance_mm": (
+                self.bot.distance_mm
+                if self.bot.connected and not self.bot.obstacle_stop_mm
+                else self.bot.fresh_distance_mm
+            ),
+            "obstacle_stop_mm": self.bot.obstacle_stop_mm if self.bot.connected else None,
         }
         if not self.bot.connected:
             msg["message"] = getattr(self.bot, "said", "") or f"{self.bot.name} is not connected."
         return msg
 
-    async def press(self, page, direction: str, stick: tuple[float, float] | None = None) -> str:
+    async def press(
+        self,
+        page,
+        direction: str,
+        stick: tuple[float, float] | None = None,
+        *,
+        ai: bool = False,
+    ) -> str:
         """The page holds a button, or a stick (direction "stick", `stick` = (forward, turn); the
         hub's VR Raspbot, quick job 107). Returns "" when it drives, else why not."""
         if direction not in DIRECTIONS and not (direction == "stick" and stick):
             raise ValueError(f"unknown direction {direction!r}")
         if page in self._blocked:
             return "Let go of the button after STOP, then press again."
-        if self.driver is None:
-            self.driver = page
-            log.info("raspbot: control taken by a page")
-        elif self.driver is not page:
+        if self.driver is not None and self.driver is not page:
             return "Another page has control."
         if not self.bot.connected:
             return self.status()["message"]
-        self._last_input = time.monotonic()
+        limit = self.bot.obstacle_stop_mm
+        if ai and limit is None:
+            return "Deploy the current Raspbot program before driving with AI."
+        if (
+            ai
+            and self.driver is page
+            and time.monotonic() - self._last_input > self.INPUT_TIMEOUT_S
+        ):
+            await self._halt()
+            return "The drive input stopped."
         left, right = stick_speeds(*stick) if direction == "stick" else DIRECTIONS[direction]
-        await self.bot.drive(left * self.speed, right * self.speed)
+        if left + right > 0:
+            distance = self.bot.fresh_distance_mm
+            if limit is not None and distance is not None and distance <= limit:
+                await self._halt()
+                return "The ultrasonic sensor sees an obstacle ahead."
+            if ai and distance is None:
+                await self._halt()
+                return "The ultrasonic sensor has no current distance."
+        speed = min(self.speed, AI_SPEED_LIMIT) if ai else self.speed
+        if ai and speed == 0:
+            return "Set the Raspbot Speed above zero."
+        if self.driver is None:
+            self.driver = page
+            log.info("raspbot: control taken by %s", "an AI tool" if ai else "a page")
+        self._last_input = time.monotonic()
         self.moving = direction
+        await self.bot.drive(left * speed, right * speed, require_clear=ai)
         return ""
 
     async def look(self, page, pan: float, tilt: float, *, relative: bool = False) -> str:
@@ -276,8 +343,8 @@ class RaspbotDesk:
 
     async def _halt(self, always: bool = False) -> None:
         if self.moving or always:
+            self.moving = ""
             await self.bot.stop()
-        self.moving = ""
 
     async def tick(self) -> None:
         """The freeze: the driver's input stopped coming, so the car stops (it keeps control)."""

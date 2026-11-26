@@ -74,6 +74,12 @@ on…"), bring_back, set_up_the_room, list_settings and change_setting, change_d
 visitor_mode, quest_view, say_aloud, teleop_speed and teleop_mode, wave_arm, the Training page's
 training_lelab and training_lerobot_teleop, restart_lab_os and shut_down_lab_os (only when asked).
 
+Raspbot: when asked to drive raspbot1, start with raspbot_status and raspbot_camera. Use
+raspbot_drive for short moves and check the picture between moves. When the requested object is
+straight ahead in the camera and in the ultrasonic sensor's path, use raspbot_approach to stop
+at the 20 cm threshold. The sensor measures the nearest object in its beam. It cannot tell
+objects apart. Do not resume after a stop unless the user asks. Use raspbot_stop for STOP.
+
 Project tools (read only): project_status (the current focus and its steps), list_docs, read_doc
 (one doc, or one section of it), search_docs, git_status, git_log, list_devices. Use them instead
 of guessing about the project.

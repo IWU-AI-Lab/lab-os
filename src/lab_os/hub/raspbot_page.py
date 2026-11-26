@@ -55,7 +55,10 @@ def split_jpegs(buf: bytes) -> tuple[list[bytes], bytes]:
 async def mjpeg_frames(url: str) -> AsyncIterator[bytes]:
     """Each JPEG picture of the MJPEG stream at `url`, as it comes."""
     timeout = aiohttp.ClientTimeout(total=None, sock_connect=3, sock_read=5)
-    async with aiohttp.ClientSession(timeout=timeout) as session, session.get(url) as up:
+    async with (
+        aiohttp.ClientSession(timeout=timeout) as session,
+        session.get(url, raise_for_status=True) as up,
+    ):
         rest = b""
         async for chunk in up.content.iter_any():
             frames, rest = split_jpegs(rest + chunk)
@@ -117,19 +120,24 @@ class RaspbotCamera:
         stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
         return folder / f"{self.desk.bot.name}_{stamp}.{ext}"
 
-    async def picture(self) -> Path:
-        """Save the camera's next picture. LookupError when there is no camera picture."""
+    async def snapshot(self) -> bytes:
+        """Read one JPEG from the same camera stream as the page."""
         url = self._url()
         try:
-            async with asyncio.timeout(5):
-                async for jpeg in self.frames(url):
-                    path = self._path("jpg")
-                    path.write_bytes(jpeg)
-                    log.info("raspbot: picture saved: %s", path)
-                    return path
+            async with asyncio.timeout(5), contextlib.aclosing(self.frames(url)) as frames:
+                async for jpeg in frames:
+                    return jpeg
         except (aiohttp.ClientError, TimeoutError, OSError) as e:
             log.info("raspbot picture: %s", e)
         raise LookupError("The Raspbot's camera does not answer.")
+
+    async def picture(self) -> Path:
+        """Save the camera's next picture."""
+        jpeg = await self.snapshot()
+        path = self._path("jpg")
+        path.write_bytes(jpeg)
+        log.info("raspbot: picture saved: %s", path)
+        return path
 
     def start(self, page) -> Path:
         """Start a recording. LookupError when there is no camera picture."""
@@ -275,7 +283,7 @@ async def _save(cam: RaspbotCamera, page, kind: str, raw: dict) -> dict:
             return {"type": "saved", "what": "recording", "on": True, "path": str(cam.start(page))}
         path = await cam.stop()
         return {"type": "saved", "what": "recording", "on": False, "path": str(path or "")}
-    except LookupError as e:
+    except (LookupError, OSError) as e:
         return {"type": "error", "message": str(e)}
 
 
