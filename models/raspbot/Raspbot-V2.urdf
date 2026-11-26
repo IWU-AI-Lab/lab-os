@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Yahboom Raspbot V2 model from ros-humble:0.1.0 in the factory disk image.
      The four wheel joints and the camera pan (arm1_Joint) and tilt (arm2_Joint)
-     are continuous. The physical servos use 0 to 180 degrees of pan and 0 to
-     110 degrees of tilt. The URDF does not enforce those ranges. -->
+     are continuous. Joint zero is the forward camera pose (pan servo 90 degrees,
+     tilt servo 25 degrees). Positive pan is left and positive tilt is up.
+     See README.md for the physical camera check. -->
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
