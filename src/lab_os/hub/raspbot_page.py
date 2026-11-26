@@ -5,8 +5,8 @@ WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.Raspbo
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
 The hub's VR Raspbot (quick job 107) uses the same socket: a stick drives ("drive" with "stick"),
-the head and the other stick turn the camera ("look"), and "picture" and "record" save the camera's
-picture on this computer (`RaspbotCamera`, in recordings/raspbot/, not in git).
+the head and the other stick turn the camera ("look"). Both pages use "picture" and "record" to
+save the camera's picture on this computer (`RaspbotCamera`, in recordings/raspbot/, not in git).
 
 Who may drive: the same rule as the arm. A page on this computer, or from an address in
 `drive_from` (`--drive-from`, place.yaml), drives the real Raspbot; any other page watches and can
@@ -72,6 +72,7 @@ class RaspbotCamera:
         self.frames = frames or mjpeg_frames  # url → async JPEGs (tests give their own)
         self.recording: Path | None = None
         self.by = None  # the page that started the recording
+        self._started_at = 0.0
         self._task: asyncio.Task | None = None
 
     def _url(self) -> str:
@@ -106,6 +107,7 @@ class RaspbotCamera:
             return self.recording
         url = self._url()
         self.recording, self.by = self._path("mjpeg"), page
+        self._started_at = time.monotonic()
         self._task = asyncio.create_task(self._record(url, self.recording))
         log.info("raspbot: recording to %s", self.recording)
         return self.recording
@@ -136,7 +138,11 @@ class RaspbotCamera:
 
     def status(self) -> dict:
         name = self.recording.name if self.recording else ""
-        return {"recording": name, "folder": str(self.folder())}
+        return {
+            "recording": name,
+            "recording_seconds": int(time.monotonic() - self._started_at) if name else None,
+            "folder": str(self.folder()),
+        }
 
 
 CAMERA = web.AppKey("raspbot_camera", RaspbotCamera)
