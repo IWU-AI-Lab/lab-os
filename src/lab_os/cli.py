@@ -278,7 +278,19 @@ def main(argv: list[str] | None = None) -> None:
         "docs/guides/plug-in.md)",
     )
     us.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
+    ma = sub.add_parser(
+        "measure-arm",
+        help="measure an SO-101's height error by hand, read only (jaw tips on the table), and "
+        "write its shoulder offset and table height to devices.yaml (quick job 121)",
+    )
+    ma.add_argument("arm", help="the arm's name, e.g. so101-green")
+    ma.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
     args = parser.parse_args(argv)
+    if args.command == "measure-arm":
+        from lab_os.robots import measure_arm
+
+        use_config(args)
+        raise SystemExit(measure_arm.run(args.arm))
     if args.command == "usb":
         from lab_os import usb_map
 
