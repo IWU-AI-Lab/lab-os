@@ -24,6 +24,7 @@ from pathlib import Path
 import yaml
 
 from lab_os import config
+from lab_os.activity import Activity
 from lab_os.devices import Registry, socket_on_hub, unknown_camera_name
 
 log = logging.getLogger(__name__)
@@ -278,6 +279,7 @@ class LiveDevices:
     now: dict[str, dict] = field(default_factory=dict)
     seen: dict[str, dict] | None = None  # read on first use
     dismissed: set[str] = field(default_factory=set)  # removed while connected
+    activity: Activity | None = None  # the Command Center's activity list (quick job 149)
 
     def _seen(self) -> dict[str, dict]:
         if self.seen is None:
@@ -300,11 +302,15 @@ class LiveDevices:
             seen[i] = entry
             wrote = True
             log.info("device %s connected (%s)", d.get("name", i), d.get("what", ""))
+            if self.activity is not None and d.get("kind") != "screen":  # screens: "opened the hub"
+                self.activity.add(f"{d.get('name') or i} connected")
         for i in went:
             if i in seen:
                 seen[i]["last_seen"] = stamp
                 wrote = True
             log.info("device %s disconnected", self.now[i].get("name", i))
+            if self.activity is not None and self.now[i].get("kind") != "screen":
+                self.activity.add(f"{self.now[i].get('name') or i} disconnected")
         for i in fresh.keys() & self.now.keys():  # a camera's name can change with its arm
             for k in ("name", "kind", "what"):
                 if i in seen and k in fresh[i] and seen[i].get(k) != fresh[i][k]:

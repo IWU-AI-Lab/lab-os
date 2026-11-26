@@ -75,3 +75,8 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **The Pages list:** a tile for each page that can open on another screen, in three groups (Robots, Cameras, The hub; a new page goes in "Other"). "The Hub" closes what a screen shows. A press chooses the page for the inspector's **Open**; a drag onto a screen or a device opens it there. ⌃ folds the list; the page remembers it.
 - **The drag:** one carrier with four steps (start, move, drop, cancel) at screen coordinates. The mouse and touch use it through pointer events. A webcam hand can call the same steps later.
 - **The inspector:** in place of the actions under the workspace. One device: its details, actions, modules and settings. One screen: what it shows, its resolution and its actions. Several items: only the actions for all of them.
+
+## Built (quick job 149, 2026-11-26)
+- **Zoom to fit:** the workspace zooms to fit its items again when an item comes or goes, or the page changes size. A pan or a zoom by hand stops that; **Fit** starts it again.
+- **Devices that are off:** each device of the seen list (quick job 109) that is off now is a dim card with a dashed frame and no text, in the workspace and in the list. It keeps its place, and it lights up once when it connects. The inspector shows when it was last seen.
+- **The activity list:** under the device list, the newest event first, with its time. The brain keeps the last 100 events in memory: a device connected or disconnected, a screen opened the hub, a page, or went back to the hub, and STOP (the arms' pages and the Raspbot page).
