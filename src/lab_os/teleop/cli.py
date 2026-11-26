@@ -322,11 +322,13 @@ async def serve(
     host: str = "127.0.0.1",
     banner: str = "",
     after_start=None,
+    https: tuple[int, object] | None = None,
 ) -> None:
     """Run `app` until `extra` finishes (or forever, or until the app's shutdown event is set:
     the hub's "Shut down lab-os"). The default host is localhost only: a secure context for
     WebXR, and nothing else on the network can connect. `after_start()` runs once it listens
-    (lab-os serve --open: the browser)."""
+    (lab-os serve --open: the browser). `https`: (port, ssl context) for the same app over
+    HTTPS too (phones, quick job 124)."""
     # shutdown_timeout: a request still running when it stops (a chat answer streaming) gets
     # this long, then it's cancelled. aiohttp's default, 60 s, kept lab-os up ~30 s (quick job 44).
     runner = web.AppRunner(app, access_log=None, shutdown_timeout=STOP_WAIT_S)
@@ -339,6 +341,11 @@ async def serve(
             f"Port {port} is in use ({e.strerror}): is another lab-os already running? Stop it "
             f"(Ctrl+C in its terminal), or use another port: --port {port + 10}"
         ) from None
+    if https:
+        try:
+            await web.TCPSite(runner, host, https[0], ssl_context=https[1]).start()
+        except OSError as e:  # the hub still runs over http; only phones miss it
+            print(f"HTTPS port {https[0]} is in use ({e.strerror}): phones get no microphone.")
     print(
         banner or f"XR page:  http://localhost:{port}/\nMonitor:  http://localhost:{port}/monitor"
     )

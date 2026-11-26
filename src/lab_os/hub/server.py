@@ -5,6 +5,10 @@ GET /                    the hub: start screen, status strip, module buttons, as
 GET /design              the designed hub, whatever `hub.look` says (docs/design/DESIGN.md)
 GET /ai                  AI Control: the arm and every robot-tool call, live (a module page)
 GET /xr                  the hub in VR/AR for the Quest (watch-only)
+GET /remote              the phone's remote (quick job 124): talk or type to the assistant; a
+                         phone opening / gets it (`?hub=1`: the whole hub)
+GET /lab-os-ca.crt       the place's certificate authority, for a phone to trust the https hub
+GET /api/remote          {"https_port"}: where the hub is over https (0 = not)
 GET /training            the training launcher's page (so101-green + LeLab,
                          docs/archive/guides-2026-11-25/green-launcher.md)
 GET /api/green           the training launcher's port check (port names only, nothing opened)
@@ -86,7 +90,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import Registry, load_registry, users_of
-from lab_os.hub import card_reader, launch, wake_clips
+from lab_os.hub import card_reader, launch, tls, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
@@ -105,6 +109,7 @@ from lab_os.hub.project import FOCUS_FILE, project_summary
 from lab_os.hub.raspbot_page import RASPBOT, add_raspbot
 from lab_os.hub.room import RoomDesk
 from lab_os.hub.room import set_up as set_up_room
+from lab_os.hub.screens import ScreensDesk
 from lab_os.hub.system_tools import add_system_tools
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
 from lab_os.hub.voice import VoiceDesk, voice_ws
@@ -179,6 +184,11 @@ PAGES = (
         "Teach the wake word your voice: say it in many tones, then Train (this computer only).",
     ),
     ("/xr", "VR Hub", "The hub in the headset (opens only in a VR browser)."),
+    (
+        "/remote",
+        "Phone Remote",
+        "Talk or type to the assistant and name a screen; a phone opening the hub gets it.",
+    ),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
 )
@@ -258,6 +268,7 @@ MCP = web.AppKey("mcp", McpHttp | None)
 HUB_DEVICES = web.AppKey("hub_devices", HubDevices)
 WAVES = web.AppKey("waves", set)  # waves playing (kept so they aren't dropped half way)
 QUEST_VIEW = web.AppKey("quest_view", QuestView)
+HTTPS_PORT = web.AppKey("https_port", int)  # the hub over https too (phones; set by lab-os serve)
 FEEDS = web.AppKey("feeds", camera_feed.CameraFeeds)  # quick job 63: the cameras open for pages
 ADB_REVERSE = web.AppKey("adb_reverse", object)  # quick job 73: an AdbReverse, or None
 FIND_ARM = web.AppKey("find_arm", object)  # quick job 73: lab_os.teleop.cli.arm_finder(), or None
@@ -312,9 +323,19 @@ def _headset_start(request: web.Request) -> bool:
     return "OculusBrowser" in request.headers.get("User-Agent", "") and "flat" not in request.query
 
 
+def _phone(request: web.Request) -> bool:
+    """A phone opening the hub gets the remote (quick job 124: a phone screen is best as a
+    remote). An iPhone, or Android with "Mobile" (a tablet has none); `?hub=1`: the whole hub."""
+    agent = request.headers.get("User-Agent", "")
+    phone = "iPhone" in agent or ("Android" in agent and "Mobile" in agent)
+    return phone and "OculusBrowser" not in agent and "hub" not in request.query
+
+
 async def hub_page(request: web.Request) -> web.FileResponse:
     if _headset_start(request):
         return await _file(request, "xr.html")
+    if _phone(request):
+        return await _file(request, "remote.html")
     look = str((load_theme().get("hub") or {}).get("look") or "plain")
     if look not in LOOKS:
         log.warning("theme hub.look: %r isn't one of %s; showing plain", look, ", ".join(LOOKS))
@@ -365,6 +386,21 @@ async def pages_page(request: web.Request) -> web.FileResponse:
 
 async def xr_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "xr.html")
+
+
+async def remote_page(request: web.Request) -> web.FileResponse:
+    return await _file(request, "remote.html")
+
+
+async def ca_certificate(request: web.Request) -> web.FileResponse:
+    """The place's certificate authority (no key): an iPhone installs it as a profile, then
+    trusts it, so the https hub and its WebSockets work (lab_os.hub.tls)."""
+    path = await asyncio.to_thread(tls.authority_file)
+    return web.FileResponse(path, headers={"Content-Type": "application/x-x509-ca-cert"})
+
+
+async def api_remote(request: web.Request) -> web.Response:
+    return web.json_response({"https_port": request.app.get(HTTPS_PORT, 0)})
 
 
 async def cameras_page(request: web.Request) -> web.FileResponse:
@@ -1797,7 +1833,12 @@ def create_brain_app(
     if chat.tools is None:  # a conversation made elsewhere (tests): the brain's tools too
         chat.tools = ChatTools(server, full_access=config.assistant_full_access)
     # the arm's: preview 4; the room's layout: quick job 71
-    chat.actions = Actions(visitors, ArmDesk(app[TOOLS]), RoomDesk(lambda: app[HUB_DEVICES]))
+    chat.actions = Actions(
+        visitors,
+        ArmDesk(app[TOOLS]),
+        RoomDesk(lambda: app[HUB_DEVICES]),
+        ScreensDesk(lambda: app[HUB_DEVICES]),
+    )
     voice = VoiceDesk(
         chat,
         assistant,
@@ -1846,6 +1887,9 @@ def create_brain_app(
         app, lambda a: a[BRAIN].voice.wake_models, lambda a: a[BRAIN].voice.wake_word()
     )
     app.router.add_get("/xr", xr_page)
+    app.router.add_get("/remote", remote_page)
+    app.router.add_get("/lab-os-ca.crt", ca_certificate)
+    app.router.add_get("/api/remote", api_remote)
     app.router.add_get("/manifest.webmanifest", web_manifest)
     app.router.add_get("/api/green", api_green)
     app.router.add_post("/api/green/start", api_green_start)
