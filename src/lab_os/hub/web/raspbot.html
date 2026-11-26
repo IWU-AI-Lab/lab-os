@@ -6,6 +6,9 @@
   <title>Raspbot</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
+  <script type="importmap">
+    {"imports":{"three":"/web/vendor/three/three.module.js","three/examples/jsm/":"/web/vendor/three/examples/jsm/"}}
+  </script>
   <script>
     document.documentElement.classList.toggle("raspbot-phone", /iPhone|Android.*Mobile/i.test(navigator.userAgent));
   </script>
@@ -73,6 +76,10 @@
     #drive-pad [data-dir="strafe-right"] { --turn: 90deg; }
     #drive-pad [data-dir="back-left"] { --turn: -135deg; }
     #drive-pad [data-dir="back-right"] { --turn: 135deg; }
+    .model-preview { border-top: 1px solid var(--line); text-align: center; }
+    .model-preview canvas { display: block; width: 100%; height: clamp(4.3rem, 15vh, 9rem); }
+    .model-preview canvas[hidden] { display: none; }
+    .raspbot-phone .model-preview canvas { height: clamp(4.3rem, calc(var(--control-h) / 5), 8rem); }
     .speed { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
     .speed input { width: 100%; min-height: 2.6rem; margin: 0; }
     .speed output { font-variant-numeric: tabular-nums; color: var(--c); }
@@ -171,6 +178,10 @@
           <button class="btn" type="button" data-dir="right" aria-label="Pan right" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
           <button class="btn" type="button" data-dir="back" aria-label="Tilt down" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
         </div>
+        <div class="model-preview">
+          <canvas id="raspbot-model" role="img" aria-label="Live 3D Raspbot"></canvas>
+          <p id="model-error" class="hint" hidden>3D model unavailable.</p>
+        </div>
       </div></section>
     </div>
     <section class="card diagnostics" aria-label="Diagnostics"><div class="in">
@@ -210,6 +221,13 @@
   const drivePad = $("#drive-pad");
   const lookPad = $("#look-pad");
   let ws = null, recording = false, camOn = false, error = "", errorAt = 0;
+
+  let modelView, lastStatus;
+  const modelCanvas = $("#raspbot-model");
+  import("/web/raspbot-view.js")
+    .then(({ createRaspbotView }) => createRaspbotView(modelCanvas))
+    .then((view) => { modelView = view; view.update(lastStatus); })
+    .catch(() => { modelCanvas.hidden = true; $("#model-error").hidden = false; });
 
   function send(msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
 
@@ -316,6 +334,8 @@
     $("#tally").textContent = recording ? `${s.recording_seconds ?? 0} s` : "";
   }
   function show(s) {
+    lastStatus = s;
+    modelView?.update(s);
     showMedia(s);
     const st = $("#state");
     st.textContent = s.fake ? "Fake Raspbot" : s.connected ? "Connected" : "Not connected";
@@ -354,6 +374,8 @@
       }
     };
     ws.onclose = () => {
+      lastStatus = null;
+      modelView?.update(null);
       releasePads();
       $("#state").textContent = "Brain not reachable"; $("#state").className = "pill bad";
       $("#control").textContent = "Unavailable"; $("#control").className = "pill off";
