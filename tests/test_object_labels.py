@@ -258,8 +258,10 @@ def test_the_label_says_the_name_how_sure_and_the_distance():
 @needs_node
 def test_the_labels_look_like_a_hud():
     g = (
-        "{save(){}, restore(){}, fillRect(){}, letterSpacing: '0px', lines: 0, strokes: 0,"
+        "{save(){}, restore(){}, fillRect(){}, letterSpacing: '0px',"
+        " lines: 0, strokes: 0, rects: 0,"
         " beginPath(){}, moveTo(){}, lineTo() { this.lines++; }, stroke() { this.strokes++; },"
+        " strokeRect() { this.rects++; },"
         " measureText: (t) => ({width: t.length * 10}),"
         " fillText(t) { (this.said ||= []).push(t); }}"
     )
@@ -267,13 +269,13 @@ def test_the_labels_look_like_a_hud():
     out = run_js(
         f"(() => {{ const g = {g};"
         f" m.drawLabels(g, 640, 480, {found}, {{front: 0, distanceMm: 342}});"
-        " return [g.said, g.font, g.letterSpacing, g.lines, g.strokes]; })()"
+        " return [g.said, g.font, g.letterSpacing, g.lines, g.strokes, g.rects]; })()"
     )
-    said, font, spacing, lines, strokes = out
+    said, font, spacing, lines, strokes, rects = out
     assert said == ["CELL PHONE   82%   34 cm", "LEGO BRICK   80%"]  # the name in capitals
     assert "Chakra Petch" in font and spacing != "0px"  # the design's UI font, spaced out
-    # four corner brackets (two lines each) for each object, no full box (no strokeRect)
-    assert (lines, strokes) == (16, 2)
+    # for each object: a thin light outline and four corner brackets (two lines each)
+    assert (lines, strokes, rects) == (16, 2, 2)
 
 
 def test_the_raspbot_page_and_the_monitor_have_the_switch_off_by_default():
