@@ -36,6 +36,7 @@ from pathlib import Path
 from aiohttp import WSCloseCode, WSMsgType, web
 
 from lab_os import REPO_ROOT
+from lab_os.activity import note
 from lab_os.teleop.loop import TeleopLoop
 from lab_os.teleop.messages import parse_frame, parse_joint_frame
 from lab_os.teleop.recording import Recorder
@@ -137,6 +138,8 @@ def handle_message(app: web.Application, raw: dict, ws=None, is_input: bool = Tr
     if kind == "stop":  # from any page, monitors included
         loop.stop()
         log.info("STOP pressed on a %s page", "input" if is_input else "monitor")
+        who = app[NAMES].get(ws, "") if ws is not None else ""
+        note(app, f"STOP pressed on {who}" if who else "STOP pressed", "stop")
         if app[RECORDER]:
             app[RECORDER].write(raw)
         return True

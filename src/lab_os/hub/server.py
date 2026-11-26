@@ -84,6 +84,7 @@ from pathlib import Path
 from aiohttp import web
 
 from lab_os import REPO_ROOT, camera_feed, config, green, lerobot_teleop, settings
+from lab_os.activity import ACTIVITY, Activity
 from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used by tests)
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
@@ -1949,15 +1950,18 @@ def create_brain_app(
         started_in=venue.name,
     )
     app[WAVES] = set()
+    app[ACTIVITY] = Activity()  # the Command Center's activity list (quick job 149)
     app[HUB_DEVICES] = HubDevices(
-        lambda: {vid: title for vid, (title, _) in DEVICE_VIEWS.items()}, device_settings
+        lambda: {vid: title for vid, (title, _) in DEVICE_VIEWS.items()},
+        device_settings,
+        activity=app[ACTIVITY],
     )
     app[QUEST_VIEW] = quest_view or QuestView()
     app[RESTART] = {"asked": False}
     app[FIND_ARM] = find_arm
     app[FEEDS] = camera_feed.FEEDS
     app[ADB_REVERSE] = adb_reverse
-    app[LIVE] = LiveDevices(seen_devices or SeenStore())
+    app[LIVE] = LiveDevices(seen_devices or SeenStore(), activity=app[ACTIVITY])
     project.live = app[LIVE].listing  # the assistant's list_devices: what is connected now
     app[LIVE_SCAN] = live_scan or (lambda: scan_system())  # looked up each time (tests)
     app.router.add_get("/", hub_page)

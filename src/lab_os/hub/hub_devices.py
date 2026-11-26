@@ -45,6 +45,7 @@ import yaml
 from aiohttp import WSMsgType, web
 
 from lab_os import config
+from lab_os.activity import Activity
 
 log = logging.getLogger(__name__)
 
@@ -235,6 +236,9 @@ class DeviceSettings:
         tmp.replace(p)
 
 
+BACK_QUIET_S = 1.5  # the activity list: how long a page shows nothing before "went back to the hub"
+
+
 @dataclass
 class Window:
     """One hub page of a device (one per monitor)."""
@@ -250,6 +254,8 @@ class Window:
     screen: dict = field(default_factory=dict)  # label, left, top, width, height (as the page saw)
     since: float = field(default_factory=time.time)
     here: bool = False  # open on the brain's own computer (the card reader there starts it)
+    reported: str | None = None  # what the page itself said it shows, for the activity list
+    back_timer: asyncio.TimerHandle | None = field(default=None, repr=False)
 
     @property
     def key(self) -> str:
@@ -261,10 +267,20 @@ class HubDevices:
     """The windows connected right now, by id. `modules()` gives the module ids and titles that may
     be opened (the hub's buttons)."""
 
-    def __init__(self, modules: Callable[[], dict[str, str]], store: DeviceSettings | None = None):
+    def __init__(
+        self,
+        modules: Callable[[], dict[str, str]],
+        store: DeviceSettings | None = None,
+        activity: Activity | None = None,
+    ):
         self.windows: dict[str, Window] = {}
         self.modules = modules
         self.settings = store or DeviceSettings()
+        self.activity = activity  # the Command Center's activity list (quick job 149)
+
+    def _note(self, w: Window, text: str) -> None:
+        if self.activity is not None:
+            self.activity.add(f"{self.shown(w.key) if w.device else w.address} {text}", "page")
 
     # ---------- the list ----------
     def of(self, device: str) -> list[Window]:
@@ -520,12 +536,38 @@ class HubDevices:
             w.showing = str(showing)[:40] if showing else None
             w.sent_from = str(msg.get("from") or "")[:32] if w.showing else ""
             w.sent_from_window = str(msg.get("from_window") or "")[:40] if w.showing else ""
+            self._track(w)
         if isinstance(msg.get("screen"), dict):
             s = msg["screen"]
             w.screen = {
                 "label": str(s.get("label") or "")[:40],
                 **{k: _num(s.get(k)) for k in ("left", "top", "width", "height", "ratio")},
             }
+
+    def _track(self, w: Window) -> None:
+        """The activity list's "opened …" and "went back to the hub", from what the page itself
+        reports. A page that wakes or changes pages reports nothing for a moment: "went back"
+        waits BACK_QUIET_S, and a new page in that time cancels it."""
+        if self.activity is None:
+            return
+        if w.back_timer is not None:
+            w.back_timer.cancel()
+            w.back_timer = None
+        if w.showing:
+            if w.showing != w.reported:
+                title = self.modules().get(w.showing, w.showing)
+                self._note(w, f"opened {title}" + (f" (from {w.sent_from})" if w.sent_from else ""))
+            w.reported = w.showing
+        elif w.reported:
+
+            def back() -> None:
+                w.reported, w.back_timer = None, None
+                self._note(w, "went back to the hub")
+
+            try:
+                w.back_timer = asyncio.get_running_loop().call_later(BACK_QUIET_S, back)
+            except RuntimeError:  # no event loop (a plain test): at once
+                back()
 
     async def connection(self, request: web.Request) -> web.WebSocketResponse:
         """`/ws/hub-device?device=<name>&window=<id>`: one hub page, for as long as it's open."""
@@ -550,8 +592,11 @@ class HubDevices:
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
         w = Window(wid, name, ws, address, here=here)
+        first = not self.of(w.key)
         self.windows[wid] = w
         log.info("device %s connected (%s, window %s)", name or "(no name)", w.address, wid)
+        if first:
+            self._note(w, "opened the hub")
         try:
             settings = self.settings.get(name) if name else {}
         except DeviceError:
@@ -586,7 +631,11 @@ class HubDevices:
                     await self.start(str(msg.get("how", "tap")), sender=who, sender_window=wid)
         finally:
             self.windows.pop(wid, None)
+            if w.back_timer is not None:
+                w.back_timer.cancel()
             log.info("device %s left (window %s)", name or "(no name)", wid)
+            if not self.of(w.key):
+                self._note(w, "closed the hub")
             await self.broadcast()
         return ws
 
