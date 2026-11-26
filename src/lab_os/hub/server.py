@@ -166,6 +166,7 @@ MODULES = {
     "teleop": ("Teleop", "/teleop"),
     "monitor": ("Monitor", "/monitor"),  # the list of the Monitor pages (quick job 147)
     **{f"monitor-{kind}": (title, f"/monitor/{kind}") for kind, title in MONITOR_KINDS.items()},
+    "monitor-raspbot": ("Raspbot Monitor", "/monitor/raspbot"),
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
     "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
@@ -189,6 +190,7 @@ PAGES = (
         "The SO-101 arms' joints and 3D view, with STOP; drives nothing.",
     ),
     ("/monitor/xarm", "xArm Monitor", "The xArm's joints and 3D view, with STOP; drives nothing."),
+    ("/monitor/raspbot", "Raspbot Monitor", "The Raspbot’s camera, 3D view and status, with STOP."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
     ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),

@@ -34,6 +34,7 @@ async def test_the_pages(aiohttp_client):
         "/monitor": ['id="kinds"', "/static/monitor-list.js", "/web/design/kit.css"],
         "/monitor/so101": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
         "/monitor/xarm": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
+        "/monitor/raspbot": ['id="raspbot-model"', 'id="stop"', "/hub/raspbot-monitor.js"],
         "/ai": ["/hub/ai.js", 'id="calls"'],
         "/settings": ["/hub/settings.js", 'id="list"'],
     }
