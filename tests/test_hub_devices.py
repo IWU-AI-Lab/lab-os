@@ -109,7 +109,7 @@ async def test_a_copied_tab_gets_its_own_window(aiohttp_client):
     await b.close()
 
 
-async def test_open_on_another_device_and_bring_it_back(aiohttp_client):
+async def test_open_and_close_a_module_by_api(aiohttp_client):
     client = await aiohttp_client(make_app())
     desk, _ = await page(client, "desk")
     newline, nw = await page(client, "newline")
@@ -131,7 +131,7 @@ async def test_open_on_another_device_and_bring_it_back(aiohttp_client):
         "from": "newline",
         "from_window": nw["window"],
     }
-    # the sender sees it's there: "bring it back"
+    # the API reports which screen shows the module
     listed = await next_of(newline, "devices", lambda m: m["devices"][0]["windows"][0]["showing"])
     shown = listed["devices"][0]["windows"][0]
     assert shown["showing"] == {"id": "monitor", "title": "Monitor"}
@@ -270,7 +270,7 @@ async def test_pages_reconnect_after_the_brain_restarts(aiohttp_client):
     back, again = await page(
         second, "desk", window=welcome["window"], showing="monitor", **{"from": "newline"}
     )
-    assert again["window"] == welcome["window"]  # the same window, so "bring it back" still works
+    assert again["window"] == welcome["window"]  # the same window after reconnecting
     got = await (await second.get("/api/hub-devices")).json()
     assert got["sent"][0]["from"] == "newline"
     await back.close()

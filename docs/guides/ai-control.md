@@ -86,7 +86,7 @@ Each action that a button on a hub page does is also a tool, for Claude Code, Co
 | Tool | Tier | The button |
 |---|---|---|
 | `hub_screens` | read | The devices with the hub open, their monitors and what each shows; the pages that can open on a device |
-| `open_on_device`, `bring_back` | act | "Open on…" a device, and "Bring it back" |
+| `open_on_device`, `bring_back` | act | Open or close a module on another device |
 | `set_up_the_room` | act | ⚙ → Set Up the Room (`room.yaml`) |
 | `list_settings` | read | ⚙: every setting, its key and its value |
 | `change_setting` | act | One setting of ⚙ (a setting that applies on a restart says so) |
