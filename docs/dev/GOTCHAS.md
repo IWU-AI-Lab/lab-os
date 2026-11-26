@@ -4,6 +4,11 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — Simplifying the whole Raspbot base dropped small parts
+
+**What:** The first mesh reduction removed the front sensor from the base mesh.
+**Fix:** Simplify each connected part separately. See `models/raspbot/README.md`.
+
 ### 2026-11-26 — Older Raspbot programs stop when they receive four wheel speeds (quick job 142)
 
 **What:** the older program unpacks exactly two speeds. A four-speed command makes it stop.
