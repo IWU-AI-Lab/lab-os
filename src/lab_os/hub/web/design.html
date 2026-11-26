@@ -662,7 +662,7 @@ body.waiting #hub, body.waiting #frame, body.waiting #verses, body.waiting #edge
 #ignite.card #ign-orb .shut { transition: scale 0.5s cubic-bezier(0.7, 0, 0.84, 0) 1s, opacity 0.4s 1.2s; }
 #ignite.card #ign-orb .core-g { transition: scale 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.24s, opacity 0.6s 1.44s; }
 #ignite.card #ign-orb .burst { animation: burst 1.2s ease-out 1.32s both; }
-#ignite.card #ign-what { transition-delay: 0.6s; }
+#ignite.card #ign-what, #ignite.from #ign-what { transition-delay: 0.6s; }  /* "Card read", "Started from desk" (quick job 139) */
 #ignite .stack > *, #ignite .ign-foot { transition: opacity 0.35s, translate 0.5s cubic-bezier(0.7, 0, 0.84, 0); }
 #ignite.unlock .stack > *, #ignite.unlock .ign-foot { opacity: 0; translate: 0 14px; }
 #ignite.unlock #ign-icons { transition-delay: 0.05s; } #ignite.unlock .safe { transition-delay: 0.1s; }
@@ -3108,16 +3108,28 @@ ignitionText();
 addEventListener("gamepadconnected", () => { hasPad = true; ignitionText(); });
 const UNLOCK_MS_TAP = 1350;  // the unlock finishes before the startup begins
 const CARD_MS = 1800;    // a card swipe's unlock (quick job 79; slower in quick job 136)
-function ignite(how = "tap") {
+// One start for every start screen (quick job 139): a person's start here tells the brain, and the brain starts
+// every other start screen (`from`: the device it came from). A screen started from elsewhere plays the same
+// unlock and startup, but starts no new conversation and speaks no greeting: the screen where the person started
+// has them. It had no press, so the browser allows full screen only at its next tap or key (sound: GOTCHAS).
+// tell = false: the brain already started the others (its own card reader, quick job 113).
+function ignite(how = "tap", from = null, tell = true) {
   const ig = $("#ignite");
   if (!ig || ig.classList.contains("unlock") || performance.now() < S.startGuardUntil) return;
-  const card = how === "card", UNLOCK_MS = card ? CARD_MS : UNLOCK_MS_TAP;
-  goFull();
+  const card = how === "card", UNLOCK_MS = card ? CARD_MS : UNLOCK_MS_TAP, remote = from !== null;
+  if (remote) refull = !document.fullscreenElement; else goFull();
   audio(); (card ? SFX.card : SFX.unlock)(); V?.unlock();
   if (card) { ig.classList.add("card"); $("#ign-what").textContent = "Card read"; }
+  else if (from) { ig.classList.add("from"); $("#ign-what").textContent = `Started from ${from}`; }
   startVideo();
-  S.greetP = startChat();
-  S.greetP.then(spokenGreeting);
+  if (remote) {  // the conversation the other screen started (its greeting is in it by then)
+    S.greet = null;
+    S.greetP = wait(800).then(loadChat).then(() => null);
+  } else {
+    S.greetP = startChat();
+    S.greetP.then(spokenGreeting);
+    if (tell) D?.started(how);
+  }
   ig.classList.add("unlock");
   setTimeout(() => ig.classList.add("gone"), UNLOCK_MS + 100);
   setTimeout(() => ig.remove(), UNLOCK_MS + 700);
@@ -3679,7 +3691,8 @@ import("/web/device.js").then((m) => {
     onOpen: (id, from, fromWindow) => openHere(id, { from, from_window: fromWindow }),
     onClose: () => { if (S.moduleOpen) closeModule(); },
     onLive: (list) => setLive(list),
-    onCard: () => { if ($("#ignite")) ignite("card"); },  // the brain read the swipe (quick job 113)
+    onCard: () => { if ($("#ignite")) ignite("card", null, false); },  // the brain read the swipe (quick job 113)
+    onStart: (how, from) => { if ($("#ignite")) ignite(how, from); },  // started on another device (quick job 139)
     onDevices: () => { if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),
@@ -3709,7 +3722,7 @@ function toStart(why) {
   setState("idle");
   body.insertAdjacentHTML("beforeend", IGNITE_HTML);
   body.classList.add("waiting");
-  $("#ignite").addEventListener("click", ignite);
+  $("#ignite").addEventListener("click", () => ignite());
   ignitionText();
   if (S.status) $("#ign-venue").textContent = S.status.venue;
   S.startGuardUntil = performance.now() + 600;

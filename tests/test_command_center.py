@@ -115,4 +115,5 @@ def test_the_page_keeps_its_rules():
     assert 'classList.contains("foc")) focus(node)' in js  # focus only from its own mark
     assert 'b.className = `btn small${a.real ? "" : " virtual"}`' in js
     assert "/api/hub-devices/open" in js and "/api/hub-devices/close" in js
+    assert "/api/hub-devices/start" in js and "#start-all" in js  # quick job 139
     assert 'data-k="display_name"' in js

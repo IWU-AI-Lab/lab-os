@@ -64,4 +64,5 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **Real or only the workspace:** a button that changes the real device has the Open on… mark (two screens); a button that changes only the workspace has a dashed frame. The legend is above the workspace.
 - **Grouping:** drag a screen onto another device to group it there, or onto empty space to put it on its own. "Ungroup" puts it back under its own device.
 - **Modules in the focus modal:** an arm: its kind's Monitor (SO-101 or xArm), Teleop, AI Control; raspbot1: Raspbot; a camera: Cameras; the Quest: Teleop. Each opens in the Command Center, with "Own window".
+- **Start (quick job 139):** **Start All** above the workspace starts every screen that shows the start screen; **Start** starts the highlighted ones. Each shows only while a screen waits on its start screen.
 - **Settings in the focus modal:** the display name, the level of detail, the way in to voice and the sound. The other "This device" settings stay in ⚙ on that device.

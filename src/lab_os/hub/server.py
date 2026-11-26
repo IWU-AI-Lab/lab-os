@@ -54,6 +54,7 @@ GET /ws/hub-device       one hub page of a device (?device=desk): the brain's li
 GET /api/hub-devices     the devices with the hub open now, their windows, what each shows
 POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on another device
 POST /api/hub-devices/close  {"device", "window"}: close the module on that screen
+POST /api/hub-devices/start  {"windows"?}: start every start screen, or those (quick job 139)
 POST /api/room/setup     open each page of the room's layout on its device (room.yaml, quick job 71)
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 POST /api/hub-devices/{name}/rename         another device name for a device (quick job 132)
@@ -1457,14 +1458,10 @@ async def _live_devices_task(app: web.Application):
 
 async def _card_reader_task(app: web.Application):
     """The card swipe without the page in focus (quick job 113): on Linux, the brain reads its own
-    card reader and starts the hub pages on this computer."""
+    card reader and starts the hub pages on this computer (quick job 139: every start screen)."""
     task = None
     if sys.platform == "linux":
-
-        async def swipe() -> None:
-            await app[HUB_DEVICES].tell_here({"type": "card"})
-
-        task = asyncio.create_task(card_reader.run(load_registry(), swipe))
+        task = asyncio.create_task(card_reader.run(load_registry(), app[HUB_DEVICES].swipe))
     yield
     if task:
         task.cancel()
@@ -1642,6 +1639,20 @@ async def api_room_setup(request: web.Request) -> web.Response:
     """Set up the room (quick job 71): each page of `room.yaml` on its device, as "Open on…"
     does; any page may ask (it only changes what the screens show)."""
     return web.json_response(await set_up_room(request.app[HUB_DEVICES]))
+
+
+async def api_hub_devices_start(request: web.Request) -> web.Response:
+    """Start the start screen on every device, or on the windows given (the Command Center, quick
+    job 139). A window that has already started does not change. Any page may: it only starts
+    the hub there."""
+    b = await _body(request)
+    windows = b.get("windows")
+    windows = [str(w) for w in windows] if isinstance(windows, list) else None
+    n = await request.app[HUB_DEVICES].start(sender="the Command Center", windows=windows)
+    message = (
+        f"Started {n} screen{'' if n == 1 else 's'}." if n else "No screen shows the start screen."
+    )
+    return web.json_response({"ok": True, "started": n, "message": message})
 
 
 async def api_hub_devices_close(request: web.Request) -> web.Response:
@@ -2007,6 +2018,7 @@ def create_brain_app(
     app.router.add_get("/api/hub-devices", api_hub_devices)
     app.router.add_post("/api/hub-devices/open", api_hub_devices_open)
     app.router.add_post("/api/hub-devices/close", api_hub_devices_close)
+    app.router.add_post("/api/hub-devices/start", api_hub_devices_start)
     app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)
