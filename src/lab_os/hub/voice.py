@@ -376,15 +376,16 @@ class VoiceDesk:
                 log.warning("voice: couldn't save the %s preview (%s)", persona.id, e)
         return text, wav
 
-    def why_not(self) -> str | None:
-        """Why there's no voice right now (a sentence), or None."""
+    def why_not(self, detail: bool = False) -> str | None:
+        """Why there's no voice right now (a short sentence; `detail`: with the key names and the
+        file, for the tooltip), or None."""
         try:
             setup = self.setup()
         except NoVoice as e:
-            return str(e)
+            return e.detail if detail else str(e)
         if self.internet() is False and not setup.local:
             return "No internet, so no voice for now. Typing works when the AI does."
-        return self.chat.paused()
+        return self.chat.paused(detail=detail)
 
     def wake_word(self) -> str:
         return self.persona().wake_word
@@ -415,7 +416,8 @@ class VoiceDesk:
             where = {"setup": None, "where": None, "service": None}
         wake_why = self.wake_why_not()
         wake = {"available": wake_why is None, "why": wake_why, "phrase": self.wake_phrase()}
-        return {"available": why is None, "why": why} | where | {"wake": wake}
+        out = {"available": why is None, "why": why, "why_detail": self.why_not(detail=True)}
+        return out | where | {"wake": wake}
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 
@@ -1131,7 +1133,7 @@ class VoiceLink:
             return
         why = self.desk.why_not()
         if why:
-            self.send({"type": "error", "message": why})
+            self.send({"type": "error", "message": why, "detail": self.desk.why_not(detail=True)})
             return
         if mode == "ask" and self.desk.chat.busy:
             self.send({"type": "error", "message": "I'm still answering the last question."})
