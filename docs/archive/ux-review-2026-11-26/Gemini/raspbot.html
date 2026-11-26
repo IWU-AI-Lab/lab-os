@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raspbot</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <script type="importmap">
+    {"imports":{"three":"/web/vendor/three/three.module.js","three/examples/jsm/":"/web/vendor/three/examples/jsm/"}}
+  </script>
+  <script>
+    document.documentElement.classList.toggle("raspbot-phone", /iPhone|Android.*Mobile/i.test(navigator.userAgent));
+  </script>
+  <style>
+    body.raspbot .page { padding-inline: clamp(0.5rem, 3vw, 2.2rem); }
+    main.bot { min-height: 0; overflow: auto; scrollbar-width: thin; }
+    .controller { display: grid; grid-template-columns: clamp(7.8rem, 22vw, 15rem) minmax(0, 1fr) clamp(7.8rem, 22vw, 15rem); gap: clamp(0.25rem, 1vw, 1rem); }
+    .controller .in { padding-inline: clamp(0.3rem, 1vw, 1rem); }
+    .controller h2 { justify-content: center; text-align: center; }
+    .view { position: relative; aspect-ratio: 4 / 3; min-height: 6rem; max-height: min(52vh, max(6rem, calc(100dvh - 22rem))); width: 100%; background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
+    .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .view .why { position: relative; margin: 0; padding: 0.25rem; text-align: center; color: var(--text-dim); }
+    .media { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.5rem; }
+    .media .btn { flex: 1; min-height: 2.5rem; padding-inline: 0.3rem; }
+    .view canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .media .btn[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 22%, var(--surface)); border-color: var(--primary); }
+    .tally { position: absolute; top: 0.4rem; left: 0.4rem; background: var(--bg); padding: 0.25rem; font: 0.9rem var(--f-digits); }
+    .tally::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--danger); margin-right: 0.35rem; }
+    #media-msg { overflow-wrap: anywhere; }
+    .pad {
+      --key: clamp(40px, 6.5vw, 4.3rem);
+      position: relative; container-type: inline-size;
+      width: min(100%, calc(3 * var(--key) + 0.5rem)); aspect-ratio: 1;
+      margin: 0.5rem auto; touch-action: none; user-select: none; -webkit-user-select: none;
+    }
+    .pad .btn {
+      /* Cut the two inner corners farther in when the buttons move closer together. */
+      --inner-cut: clamp(0.35rem, calc((3 * var(--key) - 100cqw) / 2 + 2px), calc(var(--key) / 2));
+      position: absolute; top: 0; left: 50%; translate: -50% 0;
+      rotate: var(--turn, 0deg); transform-origin: 50% 50cqw;
+      width: var(--key); height: var(--key); min-height: 0; padding: 0; touch-action: none;
+      clip-path: polygon(0.35rem 0, calc(100% - 0.35rem) 0, 100% 0.35rem,
+        100% calc(100% - var(--inner-cut)), calc(100% - var(--inner-cut)) 100%,
+        var(--inner-cut) 100%, 0 calc(100% - var(--inner-cut)), 0 0.35rem);
+      background: color-mix(in srgb, var(--c) 55%, transparent); box-shadow: none;
+    }
+    .pad .btn::before {
+      content: ""; position: absolute; inset: 1px; clip-path: inherit;
+      background: color-mix(in srgb, var(--c) 10%, var(--surface)); transition: background 0.12s;
+    }
+    .pad .btn:not(:disabled, .lit):is(:hover, :focus-visible)::before {
+      background: color-mix(in srgb, var(--c) 28%, var(--surface));
+    }
+    .pad .btn:disabled { background: var(--line); }
+    .pad .btn:disabled::before { background: var(--surface); }
+    .pad .btn.lit { color: var(--bg); }
+    .pad .btn.lit::before { background: var(--c); }
+    .pad .btn .ico { position: relative; width: 55%; height: 55%; rotate: -90deg; }
+    .pad [data-dir="left"] { --turn: -90deg; }
+    .pad [data-dir="right"] { --turn: 90deg; }
+    .pad [data-dir="back"] { --turn: 180deg; }
+    #drive-pad {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px;
+      aspect-ratio: auto;
+    }
+    #drive-pad .btn {
+      position: relative; inset: auto; translate: none; rotate: none;
+      width: 100%; height: var(--key); clip-path: polygon(
+        5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+    }
+    #drive-pad .btn .ico { rotate: calc(var(--turn, 0deg) - 90deg); }
+    #drive-pad .turn { grid-column: 1 / -1; display: flex; gap: 2px; }
+    #drive-pad .turn .btn span { position: relative; font-size: 1.35rem; }
+    #drive-pad [data-dir="forward-left"] { --turn: -45deg; }
+    #drive-pad [data-dir="forward-right"] { --turn: 45deg; }
+    #drive-pad [data-dir="strafe-left"] { --turn: -90deg; }
+    #drive-pad [data-dir="strafe-right"] { --turn: 90deg; }
+    #drive-pad [data-dir="back-left"] { --turn: -135deg; }
+    #drive-pad [data-dir="back-right"] { --turn: 135deg; }
+    .model-preview { border-top: 1px solid var(--line); text-align: center; }
+    .model-preview canvas { display: block; width: 100%; height: clamp(4.3rem, 15vh, 9rem); }
+    .model-preview canvas[hidden] { display: none; }
+    .raspbot-phone .model-preview canvas { height: clamp(4.3rem, calc(var(--control-h) / 5), 8rem); }
+    .speed { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
+    .speed input { width: 100%; min-height: 2.6rem; margin: 0; }
+    .speed output { font-variant-numeric: tabular-nums; color: var(--c); }
+    .diagnostics { margin-top: 0.5rem; }
+    .diagnostics .in { padding: 0.55rem clamp(0.55rem, 1.6vw, 1.1rem); }
+    .diagnostics .facts { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.6rem 0.75rem; margin: 0; }
+    .diagnostics .ico { position: absolute; left: 0; top: 50%; translate: 0 -50%; width: 1.35rem; height: 1.35rem; color: var(--c); }
+    .diagnostics .facts > div { position: relative; display: block; padding-left: 1.85rem; }
+    .diagnostics dt { font: 600 0.72rem/1.2 var(--f-ui); text-transform: uppercase; letter-spacing: 0.06em; }
+    .diagnostics .unavailable { color: var(--text-dim); }
+    .raspbot .bar #stop { order: 1; }
+    .raspbot-phone body { overflow: hidden; }
+    .raspbot-phone body::before { display: none; }
+    .raspbot-phone body .page {
+      --control-w: 100dvw;
+      --control-h: 100dvh;
+      gap: 0.45rem; width: var(--control-w); height: var(--control-h); padding: 0.55rem 0.65rem;
+    }
+    .raspbot-phone .bar { gap: 0.5rem; }
+    .raspbot-phone .bar .place, .raspbot-phone .bar .clock { display: none; }
+    .raspbot-phone .bar .stop { min-height: 40px; padding-inline: 1.2rem; }
+    .raspbot-phone .controller { grid-template-columns: clamp(7.8rem, 22%, 11rem) minmax(0, 1fr) clamp(7.8rem, 22%, 11rem); }
+    .raspbot-phone .controller .in { padding: 0.5rem; }
+    .raspbot-phone .controller h2 { margin-bottom: 0.35rem; }
+    .raspbot-phone .pad { --key: clamp(40px, calc(var(--control-h) / 8.5), 54px); margin-block: 0.35rem; }
+    .raspbot-phone .view { max-height: max(6rem, calc(var(--control-h) - 15.5rem)); }
+    .raspbot-phone .media { margin-top: 0.35rem; }
+    .raspbot-phone .diagnostics .facts { grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
+    @media (orientation: portrait) {
+      .raspbot-phone body .page {
+        /* Keep the controller sideways when the browser leaves the viewport in portrait. */
+        --control-w: 100dvh;
+        --control-h: 100dvw;
+        position: fixed; top: 0; left: 100dvw;
+        transform-origin: top left; transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+<!--
+  Raspbot (quick job 72): drive raspbot1 through the brain (lab_os/hub/raspbot_page.py). Hold a
+  button (or an arrow key) to drive; the page sends it again every 100 ms while it is held. Let go,
+  and the car stops. The brain stops the car when the input stops for 0.3 s (a page that hangs, lost
+  Wi-Fi), and the program on the Raspbot stops it after 0.5 s without a command. STOP (or Space)
+  works from every page, also a page that only watches. One page drives at a time. Speed: 0 % (the
+  wheels don't turn) to 100 % (the program's own cap); one speed for every page, kept by the brain.
+-->
+<body class="raspbot">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-pi"/></svg><span>Raspbot</span></div>
+    <span class="place"></span>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <button id="stop" class="stop" type="button" title="Stop the Raspbot (Space on the keyboard)">STOP</button>
+  </header>
+  <main class="bot">
+    <div class="controller">
+      <section class="card"><div class="in">
+        <h2>Drive</h2>
+        <div id="drive-pad" class="pad" role="group" aria-label="Hold a button to drive">
+          <button class="btn" type="button" data-dir="forward-left" aria-label="Forward left" title="Forward left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="forward" aria-label="Forward" title="Forward" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="forward-right" aria-label="Forward right" title="Forward right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="strafe-left" aria-label="Sideways left" title="Sideways left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <span></span>
+          <button class="btn" type="button" data-dir="strafe-right" aria-label="Sideways right" title="Sideways right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back-left" aria-label="Back left" title="Back left" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back" aria-label="Back" title="Back" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back-right" aria-label="Back right" title="Back right" disabled><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <div class="turn">
+            <button class="btn" type="button" data-dir="left" aria-label="Turn left" title="Turn left" disabled><span aria-hidden="true">↶</span></button>
+            <button class="btn" type="button" data-dir="right" aria-label="Turn right" title="Turn right" disabled><span aria-hidden="true">↷</span></button>
+          </div>
+        </div>
+        <label class="speed"><span>Speed</span><input id="speed" type="range" min="0" max="100" step="5" value="50" disabled><output id="speed-out" for="speed">50%</output></label>
+      </div></section>
+      <section class="card"><div class="in">
+        <h2>Camera</h2>
+        <div class="view">
+          <p id="cam-why" class="why">No camera picture.</p>
+          <img id="cam" alt="The Raspbot's camera" hidden>
+          <canvas id="labels" aria-hidden="true"></canvas>
+          <span id="tally" class="tally" aria-label="Recording time" hidden></span>
+        </div>
+        <div class="media">
+          <button id="picture" class="btn" type="button" disabled>Picture</button>
+          <button id="record" class="btn" type="button" disabled>Record</button>
+          <button id="labels-btn" class="btn" type="button" aria-pressed="false" title="A box and a label on each object the brain finds in the picture" disabled>Labels off</button>
+        </div>
+        <p id="media-msg" class="msg" aria-live="polite"></p>
+      </div></section>
+      <section class="card"><div class="in">
+        <h2>Pan and Tilt</h2>
+        <div id="look-pad" class="pad" role="group" aria-label="Hold a button to turn the camera">
+          <button class="btn" type="button" data-dir="forward" aria-label="Tilt up" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="left" aria-label="Pan left" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="right" aria-label="Pan right" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+          <button class="btn" type="button" data-dir="back" aria-label="Tilt down" disabled><svg class="ico"><use href="/web/design/icons.svg#i-next"/></svg></button>
+        </div>
+        <div class="model-preview">
+          <canvas id="raspbot-model" role="img" aria-label="Live 3D Raspbot"></canvas>
+          <p id="model-error" class="hint" hidden>3D model unavailable.</p>
+        </div>
+      </div></section>
+    </div>
+    <section class="card diagnostics" aria-label="Diagnostics"><div class="in">
+      <dl class="facts">
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-link"/></svg>Connection</dt><dd><span id="state" class="pill off">Connecting</span></dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-pad"/></svg>Control</dt><dd><span id="control" class="pill off">Unavailable</span></dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-next"/></svg>Motion</dt><dd id="moving">Unavailable</dd>
+        </div>
+        <div>
+          <dt title="Ultrasonic distance"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h.1M8 8a5.7 5.7 0 0 1 0 8m3-11a10 10 0 0 1 0 14m3-17a14 14 0 0 1 0 20"/></svg>Distance</dt><dd id="distance">Unavailable</dd>
+        </div>
+        <div>
+          <dt><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 7h17v10H2zM19 10h3v4h-3"/></svg>Battery</dt><dd class="unavailable">Unavailable</dd>
+        </div>
+      </dl>
+      <p id="msg" class="msg" aria-live="polite"></p>
+    </div></section>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module">
+  import { raspbotMotion } from "/web/raspbot-status.js";
+  import { labelsSwitch } from "/web/object-labels.js";
+
+  const $ = (s) => document.querySelector(s);
+  const device = new URLSearchParams(location.search).get("device") || "";
+  const KEYS = { ArrowUp: "forward", w: "forward", ArrowDown: "back", s: "back", ArrowLeft: "left", a: "left", ArrowRight: "right", d: "right" };
+  const LOOK = { forward: [0, 4], back: [0, -4], left: [4, 0], right: [-4, 0] };
+  const drivePad = $("#drive-pad");
+  const lookPad = $("#look-pad");
+  let ws = null, recording = false, camOn = false, error = "", errorAt = 0;
+
+  let modelView, lastStatus;
+  const modelCanvas = $("#raspbot-model");
+  import("/web/raspbot-view.js")
+    .then(({ createRaspbotView }) => createRaspbotView(modelCanvas))
+    .then((view) => { modelView = view; view.update(lastStatus); })
+    .catch(() => { modelCanvas.hidden = true; $("#model-error").hidden = false; });
+
+  function send(msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
+
+  function bindPad(pad, press, release) {
+    let held, timer, active;
+    function hold(input, button) {
+      if (held != null || button.disabled) return;
+      held = input;
+      active = button;
+      active.classList.add("lit");
+      const repeat = () => press(button.dataset.dir);
+      repeat();
+      timer = setInterval(repeat, 100);
+    }
+    function letGo(input) {
+      if (held == null || (input != null && held !== input)) return;
+      held = null;
+      clearInterval(timer);
+      active.classList.remove("lit");
+      active = null;
+      release?.();
+    }
+    for (const button of pad.querySelectorAll("button")) {
+      button.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        button.setPointerCapture(e.pointerId);
+        hold(e.pointerId, button);
+      });
+      for (const event of ["pointerup", "pointercancel", "lostpointercapture"]) {
+        button.addEventListener(event, (e) => letGo(e.pointerId));
+      }
+      button.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        if (!e.repeat) hold(button, button);
+      });
+    }
+    addEventListener("keyup", (e) => {
+      if (e.key === "Enter" && held === active) letGo(active);
+    });
+    return { hold, letGo };
+  }
+
+  const drive = bindPad(drivePad, (dir) => send({ type: "drive", dir }), () => send({ type: "release" }));
+  const look = bindPad(lookPad, (dir) => {
+    const [pan, tilt] = LOOK[dir];
+    send({ type: "look", pan, tilt, relative: true });
+  });
+  function releasePads() { drive.letGo(); look.letGo(); }
+  if (document.documentElement.classList.contains("raspbot-phone")) {
+    matchMedia("(orientation: portrait)").addEventListener("change", releasePads);
+    document.addEventListener("fullscreenchange", () => {
+      releasePads();
+      if (document.fullscreenElement) screen.orientation?.lock?.("landscape").catch(() => {});
+    });
+  }
+  function stop() { send({ type: "stop", device }); releasePads(); }
+
+  $("#stop").onclick = stop;
+  $("#picture").onclick = () => send({ type: "picture" });
+  $("#record").onclick = () => send({ type: "record", on: !recording });
+  let sliding = false;
+  const speed = $("#speed");
+  speed.addEventListener("input", () => {
+    $("#speed-out").textContent = `${speed.value}%`;
+    send({ type: "set_speed", speed: Number(speed.value) / 100 });
+  });
+  speed.addEventListener("pointerdown", () => { sliding = true; });
+  for (const ev of ["pointerup", "pointercancel", "change"]) speed.addEventListener(ev, () => { sliding = false; });
+  speed.addEventListener("pointerup", () => speed.blur());  // the arrow keys drive the car again
+  const keyName = (e) => e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  addEventListener("keydown", (e) => {
+    if (e.key === " ") { e.preventDefault(); if (!e.repeat) stop(); return; }
+    if (e.target === speed) return;
+    const key = keyName(e);
+    const dir = KEYS[key];
+    if (dir) {
+      e.preventDefault();
+      if (!e.repeat) drive.hold(key, drivePad.querySelector(`[data-dir="${dir}"]`));
+    }
+  });
+  addEventListener("keyup", (e) => drive.letGo(keyName(e)));
+  addEventListener("blur", releasePads);
+  addEventListener("pagehide", releasePads);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) releasePads(); });
+
+  function camera(on) {
+    if (on === camOn) return;
+    camOn = on;
+    const img = $("#cam");
+    img.hidden = !on;
+    $("#cam-why").hidden = on;
+    img.src = on ? `/api/raspbot/camera.mjpg?t=${Date.now()}` : "";
+  }
+  $("#cam").onerror = () => { camOn = false; $("#cam").hidden = true; $("#cam-why").hidden = false; $("#cam-why").textContent = "The camera does not answer."; };
+
+  // Labels (quick job 128): the brain finds the objects in the camera's picture; this page draws the boxes.
+  const labels = labelsSwitch({
+    button: $("#labels-btn"), canvas: $("#labels"), img: $("#cam"), send, status: () => lastStatus,
+    say: (text) => { $("#media-msg").textContent = text; },
+  });
+
+  function showMedia(s) {
+    recording = !!s?.recording;
+    const canCapture = s?.may_drive && s.connected;
+    $("#picture").disabled = !(canCapture && s.camera);
+    $("#record").disabled = !(canCapture && (s.camera || recording));
+    $("#record").textContent = recording ? "End rec" : "Record";
+    $("#labels-btn").disabled = !(s?.connected && s.camera);
+    $("#tally").hidden = !recording;
+    $("#tally").textContent = recording ? `${s.recording_seconds ?? 0} s` : "";
+  }
+  function show(s) {
+    lastStatus = s;
+    modelView?.update(s);
+    showMedia(s);
+    const st = $("#state");
+    st.textContent = s.fake ? "Fake Raspbot" : s.connected ? "Connected" : "Not connected";
+    st.className = `pill ${s.connected && !s.fake ? "on" : s.fake ? "off" : "bad"}`;
+    const c = $("#control");
+    c.textContent = !s.may_drive ? "View only" : { you: "You", other: "Another page", free: "Free" }[s.control];
+    c.className = `pill ${s.control === "you" ? "on" : s.control === "other" || !s.may_drive ? "warn" : "off"}`;
+    $("#moving").textContent = raspbotMotion(s);
+    $("#distance").textContent = s.connected && s.distance_mm != null ? `${s.distance_mm / 10} cm` : "Unavailable";
+    const disabled = !s.connected || !s.may_drive;
+    if (disabled) releasePads();
+    for (const b of document.querySelectorAll(".pad button")) b.disabled = disabled;
+    speed.disabled = disabled;
+    if (!sliding && document.activeElement !== speed) {  // another page moved it
+      speed.value = Math.round(s.speed * 100);
+      $("#speed-out").textContent = `${speed.value}%`;
+    }
+    if (!s.camera) $("#cam-why").textContent = s.fake ? "The fake Raspbot has no camera." : "No camera picture.";
+    camera(s.camera && s.connected);
+    const recent = error && Date.now() - errorAt < 3000 ? error : "";
+    $("#msg").textContent = !s.may_drive
+      ? `View only. To drive from this device, allow it in the Command Center on the brain's computer, or add ${s.address || "its address"} to drive_from in place.yaml (docs/guides/raspbot.md).`
+      : s.message || recent;
+  }
+  function connect() {
+    ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/raspbot`);
+    ws.onmessage = (e) => {
+      const m = JSON.parse(e.data);
+      if (m.type === "raspbot_status") show(m);
+      else if (m.type === "labels") labels.message(m);
+      else if (m.type === "saved") {
+        $("#media-msg").textContent = m.what === "picture" ? `Picture saved: ${m.path}`
+          : m.on ? `Recording to ${m.path}`
+          : m.path ? `Recording saved: ${m.path}` : "No recording was on.";
+      } else if (m.type === "error") {
+        error = m.message; errorAt = Date.now();
+      }
+    };
+    ws.onopen = () => labels.reconnect();  // labels on again after a reconnect
+    ws.onclose = () => {
+      lastStatus = null;
+      modelView?.update(null);
+      releasePads();
+      $("#state").textContent = "Brain not reachable"; $("#state").className = "pill bad";
+      $("#control").textContent = "Unavailable"; $("#control").className = "pill off";
+      $("#moving").textContent = "Unavailable";
+      $("#distance").textContent = "Unavailable";
+      $("#msg").textContent = "";
+      speed.disabled = true;
+      for (const b of document.querySelectorAll(".pad button")) b.disabled = true;
+      camera(false);
+      showMedia(null);
+      setTimeout(connect, 2000);
+    };
+  }
+  connect();
+</script>
+</body>
+</html>

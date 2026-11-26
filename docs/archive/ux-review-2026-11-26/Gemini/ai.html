@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Control</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/static/pages.css">
+  <style>
+    .view .in { display: flex; flex-direction: column; }
+    #side { flex: 1 1 auto; min-height: 14rem; width: 100%; display: block; }
+    .readouts { display: flex; flex-wrap: wrap; gap: 0.4rem 2rem; padding-top: 0.6rem; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    .readouts div { display: grid; gap: 0.15rem; }
+    .readouts b { font: 600 0.6rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+    .readouts span { font: 1.3rem/1 var(--f-digits); color: var(--hot); }
+    #calls { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+    .call { --o: var(--c); display: grid; grid-template-columns: auto 1fr auto; gap: 0.15rem 0.7rem; padding: 0.5rem 0 0.55rem 0.7rem; border-left: 2px solid var(--o);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--o) 9%, transparent), transparent 70%); animation: arrive 0.5s var(--arrive); }
+    .call .t { font: 0.72rem/1.4 var(--f-digits); color: var(--text-dim); }
+    .call .tool { font: 600 0.9rem/1.3 var(--f-ui); letter-spacing: 0.06em; color: var(--hot); }
+    .call .o { font: 600 0.62rem/1.6 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--o); }
+    .call code, .call p { grid-column: 2 / -1; margin: 0; }
+    .call code { color: var(--text); font-size: 0.75rem; }
+    .call p { font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+    .call.clipped, .call.refused, .call.short { --o: var(--accent); }
+    .call.stopped, .call.error { --o: var(--danger); }
+    @keyframes arrive { from { opacity: 0; transform: translateX(-0.6rem); } }
+    .empty p { margin: 0.4rem 0 0; }
+    .empty pre { margin: 0.5rem 0; padding: 0.6rem 0.7rem; background: color-mix(in srgb, var(--bg) 70%, transparent); border: 1px solid var(--line); color: var(--hot); }
+    .moving .view { animation: moving 1.6s ease-in-out infinite; }
+    @keyframes moving { 50% { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 45%, transparent)); } }
+  </style>
+</head>
+<!--
+  AI Control: what an AI tool (Claude Code + Fable, Codex, …) is doing with the arm, live. The arm seen
+  from its side (real geometry from the arm's kinematics, /api/arm), where the last move aimed, and
+  every robot-tool call as it happens (/api/ai-calls), with STOP. It never moves anything itself.
+-->
+<body class="ai">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-chip"/></svg><span>AI Control</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b>AI tools</b><span id="c-tools" class="pill off">—</span></span>
+      <span class="chip"><b>Control</b><span id="c-control" class="pill off">—</span></span>
+      <span class="chip"><b>Moves</b><span id="c-motion" class="pill off">—</span></span>
+      <span class="chip"><b>Arm</b><span id="c-arm" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <button id="stop" class="stop" type="button" title="Stop the arm at once (ends an AI move; works from every page)">STOP</button>
+  </header>
+  <main class="split">
+    <section class="card view"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg><span id="arm-name">The arm</span> <small id="side-note"></small></h2>
+      <canvas id="side" aria-label="The arm seen from its side"></canvas>
+      <div class="readouts">
+        <div><b>Gripper x</b><span id="gx">—</span></div>
+        <div><b>y</b><span id="gy">—</span></div>
+        <div><b>z</b><span id="gz">—</span></div>
+        <div><b>Open</b><span id="gopen">—</span></div>
+      </div>
+    </div></section>
+    <aside class="side">
+      <section class="card grow-card"><div class="in">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-hist"/></svg>What the AI did <small id="n-calls"></small></h2>
+        <div class="empty" id="empty">
+          <p>No AI tool has used the arm since the brain started.</p>
+          <p class="hint">Connect Claude Code on this computer (once):</p>
+          <pre id="add-cmd">claude mcp add --transport http lab-os http://127.0.0.1:8081/mcp</pre>
+          <p class="hint">Then ask, e.g. "Use the lab-os tools: read the arm's status." Every move asks you first (docs/guides/ai-control.md).</p>
+        </div>
+        <ol id="calls" reversed></ol>
+      </div></section>
+    </aside>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/ai.js"></script>
+</body>
+</html>

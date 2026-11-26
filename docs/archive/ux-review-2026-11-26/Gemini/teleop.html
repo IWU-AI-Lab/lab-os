@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teleop</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <link rel="stylesheet" href="/static/pages.css">
+  <script type="importmap">
+    { "imports": { "three": "/web/vendor/three/three.module.js",
+                   "three/examples/jsm/": "/web/vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<!--
+  Teleop, in the hub's design (2026-11-10). Same element ids as before, so the scripts are shared with
+  the plain page that was at /classic/teleop (removed 2026-11-20). Left: what the arm does (3D). Right: how to drive it.
+-->
+<body class="teleop">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg><span>Teleop</span></div>
+    <span class="place"></span>
+    <div class="chips" aria-label="Status">
+      <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
+      <span class="chip"><b>Control</b><span id="control" class="pill off">—</span></span>
+      <span class="chip"><b id="arm-label">Arm</b><span id="state" class="pill off">—</span></span>
+      <span class="chip" id="left-chip" hidden><b>Left arm</b><span id="left-state" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+    <span id="stop-key" class="stop-key" hidden title="Desktop control is on: X on the keyboard freezes the arm"><kbd>X</kbd> = STOP</span>
+    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page; X on the keyboard, A/X on the Quest)">STOP</button>
+  </header>
+
+  <main class="split">
+    <section class="card view"><div id="arm-panel" class="in arm3d" data-role="input"></div></section>
+
+    <aside class="side">
+      <section class="card"><div class="in">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
+        <div class="sources">
+          <!-- the order (quick job 87): Desktop control, Enter AR, Enter VR; Controls in its own box under them -->
+          <button id="desktop" class="btn primary" type="button">Desktop control</button>
+          <button id="enter-ar" class="btn primary" type="button" disabled>Enter AR (passthrough)</button>
+          <button id="enter" class="btn primary" type="button" disabled>Enter VR</button>
+        </div>
+        <p id="xr-msg" class="msg" aria-live="polite"></p>
+        <p id="control-why" class="msg" aria-live="polite" hidden></p>
+        <dl class="facts">
+          <dt>Gripper</dt><dd id="gripper">—</dd>
+          <dt>Speed</dt><dd id="speed">—</dd>
+        </dl>
+        <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down: the arm holds still. <b>Hands</b> (hub → VR Teleop → Options): hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper.</p>
+        <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
+      </div></section>
+
+      <details id="desk-help" class="card" open><summary>Controls</summary><div class="in">
+        <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
+        <label class="row">Hand → arm
+          <select id="mode-set" disabled>
+            <option value="relative">Relative: half scale, grab again to recenter</option>
+            <option value="one_to_one">1:1: the gripper goes where the hand is</option>
+          </select>
+        </label>
+        <p class="hint" id="mode-speed"></p>
+        <label class="row">3D arm in the headset
+          <select id="xr-style">
+            <option value="">Full model</option>
+            <option value="stick">Light (stick figure, if frames drop)</option>
+          </select>
+        </label>
+        <button id="xr-place-reset" class="btn small" type="button" title="The 3D arm starts at its first place again (left Grip moves it in the headset, Y puts it back)">Put the 3D arm back at its first place</button>
+        <p class="hint" id="mode-hint" hidden>1:1 (Quest): line the 3D arm up on the real one first (left <b>Grip</b>; with two arms, <b>Y</b> and that hand's <b>Grip</b>), then put your hand in the green ball at the gripper and hold <b>Grip</b>. The gripper stays with your hand; let go to pause. Desktop control stays relative.</p>
+        <h3>Desktop control</h3>
+        <label class="row">Mode
+          <select id="desk-mode">
+            <option value="keys">Keys: a key pair per motor</option>
+            <option value="mouse">Mouse: hold a motor key, move the mouse</option>
+            <option value="hand">Virtual hand (prototype)</option>
+          </select>
+        </label>
+        <table class="keys">
+          <tbody>
+            <tr class="stop-row"><td><kbd>X</kbd></td><td><b>STOP</b>: the arm freezes; let go of everything to continue</td></tr>
+          </tbody>
+          <tbody id="desk-keys"></tbody>
+          <tbody>
+            <tr><td><kbd>`</kbd> or <kbd>Esc</kbd></td><td>leave desktop control and free the pointer (the arm freezes; another page may take over)</td></tr>
+          </tbody>
+        </table>
+        <label class="row">Mouse / trackpad speed <input id="desk-sens" type="range" min="1" max="10" value="4"></label>
+        <label class="row"><input id="desk-invert" type="checkbox"> Invert scroll (virtual hand)</label>
+        <p class="hint">Keys and Mouse turn one motor each. The virtual hand moves a pretend Quest controller (through IK where the arm has it).</p>
+      </div></details>
+
+      <section class="card grow-card"><div class="in">
+        <h2>What this page sends</h2>
+        <pre id="readout">nothing yet: pick a way to drive it</pre>
+      </div></section>
+
+      <p class="hint" id="monitor-link"><a href="/monitor" target="_blank">Open the monitor</a> on another screen · <a href="/webcam">webcam control (preview)</a></p>
+    </aside>
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/static/teleop-page.js"></script>
+<script type="module" src="/static/arm/arm-panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Training</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    /* the two choices side by side (quick job 91) */
+    main.one { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 96rem; width: 100%; margin: 0 auto; padding: 1rem; align-items: start; }
+    .lines { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+    .lines li { display: grid; grid-template-columns: 1.4rem 1fr; gap: 0.6rem; align-items: start; font: var(--w-lines) 0.92rem/1.45 var(--f-lines); color: var(--text); }
+    .lines .ico { width: 1.2rem; height: 1.2rem; color: var(--c); }
+    .lines li.no .ico { color: var(--danger); }
+    .lines li.no { color: var(--hot); }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; margin-top: 1.1rem; }
+    .msg { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); margin: 0.8rem 0 0; }
+    #lr-log { max-height: 9rem; overflow: auto; margin: 0.6rem 0 0; font: var(--w-lines) 0.75rem/1.35 var(--f-lines); color: var(--text-dim); white-space: pre-wrap; }
+    #lr-log:empty { display: none; }
+    @media (max-width: 900px) { main.one { grid-template-columns: 1fr; } }
+    .hint { font: var(--w-lines) 0.82rem/1.45 var(--f-lines); color: var(--text-dim); margin: 0.4rem 0 0; }
+  </style>
+</head>
+<!--
+  Two choices for the green set (quick job 91): LeLab, or LeRobot's own teleop with its Rerun view
+  (lab_os.lerobot_teleop: the same checks, the training calibration through a temporary copy).
+
+  Training: one press to start the SO-101 training setup (so101-green + LeLab) on the brain's
+  computer, after lab_os.green's check: both green arms plugged in, nothing else on a serial port,
+  LeLab's saved ports exactly the green ones, the same way round as last time. lab-os opens no port;
+  LeLab does, when you press teleop or record in its own page. docs/archive/guides-2026-11-25/green-launcher.md.
+-->
+<body class="training">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-leader"/></svg><span>Training</span></div>
+    <span class="place"></span>
+    <div class="chips">
+      <span class="chip"><b>LeLab</b><span id="state" class="pill off">—</span></span>
+      <span class="chip"><b>LeRobot teleop</b><span id="lr-state" class="pill off">—</span></span>
+    </div>
+    <span class="grow"></span>
+    <span class="clock"></span>
+  </header>
+  <main class="one">
+    <section class="card"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-shield"/></svg>SO-101 training setup</h2>
+      <p class="hint">The green arms with LeLab. Checked first; nothing is opened until every line is fine.</p>
+      <ul id="lines" class="lines"><li><span></span><span>Checking…</span></li></ul>
+      <div class="actions">
+        <button id="start" class="btn primary" type="button" disabled>Start</button>
+        <button id="stop-lelab" class="btn small" type="button" hidden>Stop LeLab</button>
+        <button id="again" class="btn small" type="button">Check again</button>
+        <a id="open" class="btn small" target="_blank" rel="noopener" hidden>Open LeLab</a>
+      </div>
+      <p id="msg" class="msg" aria-live="polite"></p>
+    </div></section>
+
+    <section class="card"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>LeRobot teleop with Rerun</h2>
+      <p class="hint">LeRobot's own teleop command: the green leader drives the green follower. Rerun opens in its own window and shows the cameras and the joints over time. Checked first; nothing is opened until every line is fine.</p>
+      <p class="hint"><b>Warning:</b> at Start the follower moves to the leader's pose at once. Put both arms in the same pose first.</p>
+      <ul id="lr-lines" class="lines"><li><span></span><span>Checking…</span></li></ul>
+      <div class="actions">
+        <button id="lr-start" class="btn primary" type="button" disabled>Start</button>
+        <button id="lr-stop" class="btn small" type="button" hidden>Stop</button>
+        <button id="lr-again" class="btn small" type="button">Check again</button>
+      </div>
+      <p id="lr-msg" class="msg" aria-live="polite"></p>
+      <pre id="lr-log"></pre>
+    </div></section>
+
+  </main>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module">
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const icon = (ok) => `<svg class="ico"><use href="/web/design/icons.svg#${ok ? "i-shield" : "i-warn"}"/></svg>`;
+  function show(c) {
+    $("#lines").innerHTML = c.lines.map((l) => `<li class="${l.ok ? "ok" : "no"}">${icon(l.ok)}<span>${esc(l.text)}</span></li>`).join("");
+    const st = $("#state");
+    st.textContent = c.running ? "running" : c.ok ? "ready" : "not safe";
+    st.className = `pill ${c.running ? "on" : c.ok ? "off" : "warn"}`;
+    $("#start").disabled = !c.ok || c.running || !c.here;
+    $("#open").hidden = !c.running;
+    $("#stop-lelab").hidden = !c.running || !c.here;
+    $("#open").href = c.url;  // LeLab's own page, on this computer
+    $("#msg").textContent = !c.here ? "It starts only on the brain's computer."
+      : c.started ? "Starting in a terminal on this desktop; LeLab opens in the browser (Ctrl+C in the terminal stops it)."
+      : c.ok ? "" : "Not safe to start: fix the lines marked with a warning, then Check again.";
+  }
+  async function load() {
+    const r = await fetch("/api/green").catch(() => null);
+    if (r?.ok) show(await r.json());
+    else $("#msg").textContent = "The brain didn't answer.";
+  }
+  $("#again").onclick = load;
+  $("#stop-lelab").onclick = async () => {
+    if (!confirm("Stop LeLab? A recording or training run in it stops too.")) return;
+    $("#stop-lelab").disabled = true;
+    const r = await fetch("/api/green/stop", { method: "POST" }).catch(() => null);
+    $("#stop-lelab").disabled = false;
+    if (r?.ok) { const d = await r.json(); show(d); $("#msg").textContent = d.said; }
+    else $("#msg").textContent = r ? await r.text() : "The brain didn't answer.";
+  };
+  // ---- LeRobot teleop with Rerun (quick job 91) ----
+  function showLr(c) {
+    $("#lr-lines").innerHTML = c.lines.map((l) => `<li class="${l.ok ? "ok" : "no"}">${icon(l.ok)}<span>${esc(l.text)}</span></li>`).join("");
+    const st = $("#lr-state");
+    st.textContent = c.running ? "running" : c.ok ? "ready" : "not safe";
+    st.className = `pill ${c.running ? "on" : c.ok ? "off" : "warn"}`;
+    $("#lr-start").disabled = !c.ok || c.running || !c.here;
+    $("#lr-stop").hidden = !c.running || !c.here;
+    $("#lr-log").textContent = (c.log || []).join("\n");
+    $("#lr-msg").textContent = !c.here ? "It starts only on the brain's computer."
+      : c.said || (c.running ? "Rerun opened in its own window." : "");
+  }
+  async function loadLr() {
+    const r = await fetch("/api/lerobot-teleop").catch(() => null);
+    if (r?.ok) showLr(await r.json());
+    else $("#lr-msg").textContent = "The brain didn't answer.";
+  }
+  async function postLr(path, button) {
+    button.disabled = true;
+    const r = await fetch(path, { method: "POST" }).catch(() => null);
+    button.disabled = false;
+    if (r?.ok) showLr(await r.json());
+    else $("#lr-msg").textContent = r ? await r.text() : "The brain didn't answer.";
+  }
+  $("#lr-again").onclick = loadLr;
+  $("#lr-start").onclick = () => { $("#lr-msg").textContent = "Starting (Rerun first, about 10 s)…"; postLr("/api/lerobot-teleop/start", $("#lr-start")); };
+  $("#lr-stop").onclick = () => {
+    if (!confirm("Stop LeRobot's teleop? The green follower goes limp, as with Ctrl+C. Hold it first if it is lifted.")) return;
+    postLr("/api/lerobot-teleop/stop", $("#lr-stop"));
+  };
+  loadLr();
+  setInterval(loadLr, 3000);
+
+  $("#start").onclick = async () => {
+    $("#start").disabled = true;
+    const r = await fetch("/api/green/start", { method: "POST" }).catch(() => null);
+    if (r?.ok) show(await r.json());
+    else $("#msg").textContent = r ? await r.text() : "The brain didn't answer.";
+    setTimeout(load, 6000);
+  };
+  load();
+  setInterval(load, 10000);
+</script>
+</body>
+</html>
