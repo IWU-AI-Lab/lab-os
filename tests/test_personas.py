@@ -217,7 +217,6 @@ async def test_status_greeting_and_switching_without_restart(aiohttp_client, hom
 
 def test_the_page_shows_the_persona_and_the_greeting():
     web = Path(__file__).resolve().parents[1] / "src" / "lab_os" / "hub" / "web"
-    html = (web / "index.html").read_text()
+    html = (web / "design.html").read_text()
     assert 'id="f-persona"' in html and 'id="boot-greet"' in html
-    js = (web / "hub.js").read_text()
-    assert "/api/chat/start" in js and "st.persona.display_name" in js
+    assert "/api/chat/start" in html and "st.persona.display_name" in html

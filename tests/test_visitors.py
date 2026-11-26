@@ -234,7 +234,7 @@ async def test_the_ai_starts_visitor_mode_and_welcomes_them(hub):
     assert not (await (await client.get("/api/spend")).json())["available"]
     s = await (await client.get("/api/settings")).json()
     assert s["sections"] == [] and s["visitor_mode"]["on"] and s["visitor_mode"]["back_to"] == "lab"
-    r = await client.post("/api/settings", json={"key": "theme:hub.look", "value": "design"})
+    r = await client.post("/api/settings", json={"key": "theme:clock", "value": "12h"})
     assert r.status == 403
     loop, tools = app[LOOP], app[TOOLS]
     assert tools.venue.name == "visit-day" and loop.one_to_one_deg_per_s == 180  # 1:1 stays

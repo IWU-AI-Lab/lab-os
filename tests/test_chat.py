@@ -366,7 +366,7 @@ async def test_a_public_venue_hides_spend(aiohttp_client, tmp_path):
 
 
 def test_the_page_has_the_chat_parts():
-    html = (SRC / "hub" / "web" / "index.html").read_text()
+    html = (SRC / "hub" / "web" / "design.html").read_text()
     for part in (
         'id="ask-btn"',
         'id="quick"',
@@ -379,9 +379,8 @@ def test_the_page_has_the_chat_parts():
         'id="errmsg"',
     ):
         assert part in html, part
-    js = (SRC / "hub" / "web" / "hub.js").read_text()
-    assert "clearChat(); // the next visitor" in js  # the reset clears the conversation
-    assert "/api/chat" in js and "/api/spend" in js
+    assert '"/api/chat/clear"' in html  # the reset clears the conversation
+    assert "/api/chat" in html and "/api/spend" in html
 
 
 def test_the_budget_is_read_live(tmp_path):
@@ -473,9 +472,9 @@ async def test_a_lasting_failure_is_not_connected_and_says_why(
 
 
 def test_every_ai_spend_panel_says_estimated_and_this_brain_only():
-    # quick job 41: the plain hub, the designed hub and the VR hub
+    # quick job 41: the hub and the VR hub
     web = SRC / "hub" / "web"
-    for page in ("index.html", "design.html", "xr/panels.js"):
+    for page in ("design.html", "xr/panels.js"):
         assert "Estimated · this computer's brain only" in (web / page).read_text(), page
     assert "This month, estimated" in (web / "design.html").read_text()
     assert "This month, estimated" in (web / "xr" / "panels.js").read_text()

@@ -87,8 +87,6 @@ motion:                  # (planned; the designed hub reads some)
     sleep_after_s: 900         # nobody using it (15 min): dim to network + breathing assistant; any input wakes it
 
 hub:                     # (planned) except where "Used by" says otherwise
-  look: plain            # plain | design: which hub `/` shows. design = the approved concept made real (the
-                         # reveal, docs/plan/current-focus.md step 10); /design always shows the design. Used by: the brain
                          # The top-left title and the startup title are the place's name: `name` in place.yaml, not here.
   layout: launcher       # launcher = buttons around the core open full-screen modules | panels
   modules: [teleop, monitor, ai, training, cameras]  # buttons, in order, alternating left/right of the core; [] works. Used by: the hub

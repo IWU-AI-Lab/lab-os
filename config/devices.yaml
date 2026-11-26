@@ -139,7 +139,7 @@ devices:
 
   # The lab's three Meta Quest 3 headsets (quick job 8, 2026-11-16). No labels on them: tell them
   # apart by serial number (Quest's Settings → About, or `adb devices`). The name is also what the
-  # Quest's browser uses for the hub (`/design?device=quest-a`).
+  # Quest's browser uses for the hub (`/?device=quest-a`).
   quest-a:
     kind: quest
     serial: 2G97C5ZHB300FG
