@@ -36,14 +36,14 @@ function show(rows) {
     button.type = "button";
     button.className = "btn";
     button.dataset.id = device.id;
+    const dot = document.createElement("span");
+    dot.className = device.connected ? "pill on" : "pill off";
+    dot.setAttribute("aria-hidden", "true");
     const title = document.createElement("span");
     title.textContent = device.name;
-    button.append(title);
+    button.append(dot, title);
     if (device !== brain) {
-      const state = document.createElement("span");
-      state.className = device.connected ? "pill on" : "pill off";
-      state.textContent = device.connected ? "Connected" : "Disconnected";
-      button.append(state);
+      button.setAttribute("aria-label", `${device.name}, ${device.connected ? "Connected" : "Disconnected"}`);
     }
     li.append(button);
     return li;
