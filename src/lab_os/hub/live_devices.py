@@ -341,11 +341,10 @@ class LiveDevices:
         out = []
         for i, entry in self._seen().items():
             live = self.now.get(i)
-            out.append(
-                {"id": i, **{k: entry.get(k) for k in STORED}}
-                | (live or {})
-                | {"connected": live is not None}
-            )
+            item = {"id": i, **{k: entry.get(k) for k in STORED}} | (live or {})
+            if live is None and item.get("kind") == "screen":  # quick job 154
+                item["what"] = "The hub is not open there now."
+            out.append(item | {"connected": live is not None})
         out.sort(key=lambda d: (not d["connected"], d.get("kind") or "", d.get("name") or ""))
         return out
 

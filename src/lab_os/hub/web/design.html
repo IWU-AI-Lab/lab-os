@@ -37,8 +37,10 @@
   --f-digits: "DSEG7", "JetBrains Mono", ui-monospace, monospace;
   --f-mono: "JetBrains Mono", ui-monospace, monospace;
   --arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --dock: min(16vh, 8.5rem);  /* the docked core on an open page: its corner stays free (quick job 154) */
 }
-html { font-size: clamp(11px, min(0.95vw, 1.7vh), 26px); }
+/* up to 40 px on a 4K screen (quick job 154: capped at 26 px, the hub was a band in the middle of the 4K) */
+html { font-size: clamp(11px, min(0.95vw, 1.7vh), 40px); }
 @media (orientation: portrait) { html { font-size: clamp(12px, min(3.3vw, 1.9vh), 26px); } }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -59,8 +61,8 @@ body[data-alert="critical"] .alertable { --c: var(--danger); }
 
 /* far-layer verses (maximal) */
 #verses { position: fixed; inset: 0; z-index: 1; pointer-events: none; transition: opacity 1s; }
-#verses .v { position: absolute; max-width: 34ch; font: 300 0.85rem/1.6 var(--f-lines); color: var(--text); opacity: 0.17; transition: opacity 2.5s; }
-#verses .v cite { display: block; margin-top: 4px; font: 500 0.6rem/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; font-style: normal; color: var(--c); }
+#verses .v { position: absolute; max-width: 34ch; font: 300 max(11px, 0.85rem)/1.6 var(--f-lines); color: var(--text); opacity: 0.17; transition: opacity 2.5s; }
+#verses .v cite { display: block; margin-top: 4px; font: 500 max(11px, 0.6rem)/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; font-style: normal; color: var(--c); }
 #verses .v.out { opacity: 0; }
 
 /* frame: cut corners, tabs and notches; extra ticks and sliders in maximal */
@@ -76,7 +78,7 @@ body[data-alert="critical"] .alertable { --c: var(--danger); }
 /* the hub grid. Columns and rows are symmetric, so the core sits exactly in the middle of the screen. */
 #hub {
   --edge-h: 5.4rem;
-  --mod-w: 11rem;
+  --mod-w: 12.6rem;
   --orb: min(54vh, 32vw);
   position: relative; z-index: 2; height: 100%;
   display: grid; gap: 1rem 1.4rem;
@@ -116,18 +118,20 @@ body[data-layout="panels"] #hub {
 }
 
 /* status strip: real facts only */
-.strip { grid-area: strip; align-self: start; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.6rem; }
+.strip { grid-area: strip; align-self: start; position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.6rem; }
 .brand { font: 700 1.2rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); margin-right: auto; text-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
-.fact { display: flex; align-items: center; gap: 0.45rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--text); }
+.fact { display: flex; align-items: center; gap: 0.45rem; font: var(--w-lines) max(11px, 0.85rem)/1 var(--f-lines); color: var(--text); }
 .fact .ico { color: var(--c); font-size: 0.9rem; }
 .fact.off, .fact.off .ico { color: var(--offline); }
+.fact[hidden] { display: none; }  /* the venue, while it is the place's default one (quick job 154) */
+.facts { display: contents; }     /* a group of its own only on a phone (a second row there) */
 /* listening for the wake word: a small dot, separate from the core's own `listening` */
 #f-wake[hidden] { display: none; }
 #f-wake.stalled .wdot { background: var(--accent); animation: none; opacity: 0.9; }  /* the microphone gives no audio */
 #f-wake .wdot { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: var(--c); opacity: 0.5; animation: wdot 4s ease-in-out infinite; }
 @keyframes wdot { 50% { opacity: 0.15; } }
 .clock { font-family: var(--f-digits); font-size: 1.05rem; color: var(--c); letter-spacing: 0.04em; }
-.ampm { font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.12em; color: var(--c); margin-left: 0.3rem; }
+.ampm { font: 600 max(11px, 0.62rem)/1 var(--f-ui); letter-spacing: 0.12em; color: var(--c); margin-left: 0.3rem; }
 
 /* module buttons: built from the module list (hub.modules), split left/right of the core */
 #mods { display: contents; }
@@ -139,7 +143,7 @@ body[data-layout="panels"] .mcol { display: contents; }
 .mod .in { display: grid; grid-template-columns: 3rem 1fr; align-items: center; gap: 0.6rem; padding: 0.6rem 0.9rem 0.6rem 0.5rem; }
 .mod .mico { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .mod svg { width: 3rem; height: 3rem; color: var(--c); overflow: visible; }
-.mod .name { font: 600 1.05rem/1.1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; }
+.mod .name { font: 600 1.05rem/1.1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }  /* "AI Control" on one line */
 .mod:hover .cut, .mod:focus-visible .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
 .mod:hover .name, .mod:focus-visible .name { color: var(--hot); }
 .mod:focus-visible { outline: none; }
@@ -179,7 +183,7 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #quick:focus, #quick:not(:placeholder-shown) { width: min(24rem, 60vw); }
 #ask-btn:focus-within .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
 #open-chat { display: flex; align-items: center; gap: 0.25rem; min-width: 2.2rem; min-height: 2rem; justify-content: center; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
-#open-chat b { font: 0.7rem/1 var(--f-digits); color: var(--c); }
+#open-chat b { font: max(11px, 0.7rem)/1 var(--f-digits); color: var(--c); }
 /* the mic (step 7): hold it (or Space) and talk; only where this screen has a microphone and voice works */
 .mic { position: relative; display: flex; align-items: center; justify-content: center; min-width: 2.4rem; min-height: 2rem; padding: 0 0.45rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--text-dim); cursor: pointer; font-size: 1.1rem; touch-action: none; user-select: none; -webkit-user-select: none; }
 .mic[hidden] { display: none; }
@@ -203,12 +207,12 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #reply.on { opacity: 1; pointer-events: auto; cursor: pointer; }
 /* conversation mode (quick job 68): a clear, calm sign above the core while it keeps listening */
 #conv-sign { position: absolute; bottom: calc(50% + min(var(--orb), 100%) / 2 + 1.6rem); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0.9rem;
-  border: 1px solid var(--c); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--hot); font: 500 0.82rem/1.2 var(--f-ui); letter-spacing: 0.04em; white-space: nowrap;
+  border: 1px solid var(--c); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--hot); font: 500 max(11px, 0.82rem)/1.2 var(--f-ui); letter-spacing: 0.04em; white-space: nowrap;
   box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent); }
 #conv-sign[hidden] { display: none; }
 #conv-sign i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); animation: wdot 2.4s ease-in-out infinite; }
 #conv-btn[aria-pressed="true"] { color: var(--hot); background: color-mix(in srgb, var(--c) 18%, transparent); }
-#reply .q { font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); margin-bottom: 0.35rem; }
+#reply .q { font: var(--w-lines) max(11px, 0.78rem)/1.4 var(--f-lines); color: var(--text-dim); margin-bottom: 0.35rem; }
 #reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
 #reply .a .code { font: 400 0.85em var(--f-mono); color: var(--c); }
@@ -222,7 +226,7 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 .trycard .in { display: grid; align-content: center; grid-template-columns: 1.6rem 1fr; align-items: center; gap: 0.15rem 0.7rem; padding: 0.75rem 1rem 0.75rem 0.8rem; }
 .trycard .ico { grid-row: span 2; width: 1.5rem; height: 1.5rem; color: var(--c); }
 .trycard b { font: 600 1.05rem/1.25 var(--f-ui); color: var(--text); }
-.trycard small { font: var(--w-lines) 0.8rem/1.3 var(--f-lines); color: var(--text-dim); }
+.trycard small { font: var(--w-lines) max(11px, 0.8rem)/1.3 var(--f-lines); color: var(--text-dim); }
 .trycard.read .cut { background: color-mix(in srgb, var(--line) 90%, transparent); }
 .trycard.read .ico { color: var(--text-dim); }
 button.trycard { cursor: pointer; }
@@ -235,11 +239,13 @@ body:is(.q-full, .q-maximal) button.trycard::after { bottom: -5px; left: -5px; b
 body:is(.q-full, .q-maximal) button.trycard:hover::before { top: -8px; right: -8px; }
 body:is(.q-full, .q-maximal) button.trycard:hover::after { bottom: -8px; left: -8px; }
 body[data-layout="panels"] #ask-btn { display: none; }
-#errmsg { position: absolute; top: calc(50% + min(var(--orb), 100%) * 0.2); left: 50%; transform: translateX(-50%); width: min(92%, 21rem); display: none; }
+/* what went wrong shows under the core, where the answer would be (quick job 154: it covered the core) */
+#errmsg { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(92vw, 26rem); display: none; z-index: 2; }
+[data-state="error"] #reply { visibility: hidden; }
 #errmsg b { display: block; font: 600 0.95rem/1.3 var(--f-ui); color: var(--text); }
-#errmsg span { display: block; font: var(--w-lines) 0.78rem/1.4 var(--f-lines); color: var(--text-dim); margin-top: 0.2rem; }
+#errmsg span { display: block; font: var(--w-lines) max(11px, 0.78rem)/1.4 var(--f-lines); color: var(--text-dim); margin-top: 0.2rem; }
 [data-state="error"] #errmsg { display: block; }
-#errmsg .in { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.7rem; align-items: center; padding: 0.55rem 0.8rem; font: 500 0.85rem/1.35 var(--f-ui); }
+#errmsg .in { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.7rem; align-items: center; padding: 0.55rem 0.8rem; font: 500 max(11px, 0.85rem)/1.35 var(--f-ui); }
 #errmsg .ico { width: 1.6rem; height: 1.6rem; color: var(--danger); }
 
 /* the core's dock: while a module is open the core moves here, so it stays visible and alive */
@@ -247,10 +253,12 @@ body[data-layout="panels"] #ask-btn { display: none; }
 #orb-dock #orb { width: 100%; }
 body[data-mod] #orb-dock { display: block; }
 body[data-mod="chat"] #orb-dock { left: 9vw; top: 50%; width: min(58vh, 34vw); translate: 0 -50%; }
-body[data-mod]:not([data-mod="chat"]) #orb-dock { right: calc(5vw + 1.4rem); bottom: calc(5vh + 1.4rem); width: min(19vh, 10rem); }
+body[data-mod]:not([data-mod="chat"]) #orb-dock { right: calc(5vw + 1.4rem); bottom: calc(5vh + 1.4rem); width: var(--dock); }
+/* the System diagram has its own core: the docked one would be a second (quick job 154) */
+body[data-view="system"] #orb-dock { display: none; }
 /* the docked core works on an open page too (2026-11-14): hold it to talk; what it hears and says shows beside it */
 body[data-mod]:not([data-mod="chat"]) #orb-dock.talk { pointer-events: auto; cursor: pointer; touch-action: none; }
-#dock-say { position: fixed; z-index: 7; display: none; pointer-events: none; right: calc(5vw + 2.2rem + min(19vh, 10rem)); bottom: calc(5vh + 1.4rem); width: min(24rem, 40vw); }
+#dock-say { position: fixed; z-index: 7; display: none; pointer-events: none; right: calc(5vw + 2.2rem + var(--dock)); bottom: calc(5vh + 1.4rem); width: min(24rem, 40vw); }
 body[data-mod]:not([data-mod="chat"]) #dock-say { display: block; }
 #dock-say #reply { position: static; transform: none; width: auto; text-align: right; padding: 0.6rem 0.8rem; background: color-mix(in srgb, var(--surface) 90%, transparent); border: 1px solid var(--line); clip-path: polygon(0.6rem 0, 100% 0, 100% calc(100% - 0.6rem), calc(100% - 0.6rem) 100%, 0 100%, 0 0.6rem); }
 #dock-say #reply .a { max-height: 6.5em; overflow: hidden; }
@@ -263,7 +271,7 @@ body[data-mod]:not([data-mod="chat"]) #dock-say { display: block; }
   padding: 0 16px; font: 500 clamp(15px, 1.25vw, 26px)/1.4 var(--f-title); letter-spacing: 0.1em; color: var(--text); text-shadow: 0 0 12px var(--bg); transition: opacity 0.6s, translate 0.8s var(--leave); }
 #boot-greet.leave { opacity: 0; translate: 0 -0.8rem; }
 #boot-greet.typing::after { height: 0.9em; }
-#bootlines { position: fixed; left: 50%; bottom: 7vh; transform: translateX(-50%); width: min(90vw, 24rem); z-index: 7; font: var(--w-lines) 0.85rem/1.65 var(--f-lines); color: var(--text); transition: opacity 0.8s, transform 1s var(--arrive); pointer-events: none; }
+#bootlines { position: fixed; left: 50%; bottom: 7vh; transform: translateX(-50%); width: min(90vw, 24rem); z-index: 7; font: var(--w-lines) max(11px, 0.85rem)/1.65 var(--f-lines); color: var(--text); transition: opacity 0.8s, transform 1s var(--arrive); pointer-events: none; }
 #bootlines div { position: relative; display: flex; justify-content: space-between; gap: 0.7rem; white-space: nowrap; animation: rowin 0.4s var(--arrive) both; }
 #bootlines div::after { content: ""; position: absolute; top: 15%; bottom: 15%; width: 2px; background: var(--hot); box-shadow: 0 0 8px var(--c), 0 0 2px var(--hot); animation: rowscan 0.45s var(--arrive) both; pointer-events: none; }
 #bootlines .lead { flex: 1; align-self: center; height: 0; margin-top: 0.15em; border-bottom: 1px dotted color-mix(in srgb, var(--c) 50%, transparent); transform: scaleX(0); transform-origin: left; transition: transform 0.3s var(--arrive); }
@@ -331,9 +339,9 @@ body[data-layout="launcher"] #hub > .chat { display: none; }
 #ask::placeholder { color: var(--text-dim); }
 
 /* typed log */
-.log { grid-area: log; align-self: end; font: var(--w-lines) 0.78rem/1.7 var(--f-lines); color: var(--text-dim); min-width: 0; }
+.log { grid-area: log; align-self: end; font: var(--w-lines) max(11px, 0.78rem)/1.7 var(--f-lines); color: var(--text-dim); min-width: 0; }
 .log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 1.2s; }
-.log .t { font-family: var(--f-digits); font-size: 0.68rem; color: var(--c); margin-right: 0.8rem; opacity: 0.8; }
+.log .t { font-family: var(--f-digits); font-size: max(11px, 0.68rem); color: var(--c); margin-right: 0.8rem; opacity: 0.8; }
 .log .now { color: var(--text); }
 
 /* arm readouts (panels layout) */
@@ -341,10 +349,10 @@ body[data-layout="launcher"] #hub > .chat { display: none; }
 body[data-layout="launcher"] .arm { display: none; }
 .arm .in { padding: 0.6rem 0.9rem; }
 .arm-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
-.arm-head .name { font: 600 0.8rem/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; }
-.arm-head .word { display: flex; align-items: center; gap: 0.35rem; font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--c); }
+.arm-head .name { font: 600 max(11px, 0.8rem)/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; }
+.arm-head .word { display: flex; align-items: center; gap: 0.35rem; font: 600 max(11px, 0.62rem)/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--c); }
 .joints { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3rem 0.9rem; }
-.j b { display: block; font: var(--w-lines) 0.62rem/1.2 var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.j b { display: block; font: var(--w-lines) max(11px, 0.62rem)/1.2 var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .j span { display: block; font: 0.95rem/1.2 var(--f-digits); color: var(--hot); white-space: pre; }
 .j i { display: block; height: 2px; background: var(--line); margin-top: 3px; position: relative; }
 .j i::after { content: ""; position: absolute; top: -1px; width: 4px; height: 4px; left: var(--p, 50%); background: var(--c); }
@@ -360,18 +368,18 @@ body[data-layout="panels"] .side { display: none; }
 .side.left { grid-area: left; } .side.right { grid-area: right; }
 .side .in { padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .head { display: flex; align-items: center; gap: 0.5rem; color: var(--c); font-size: 1rem; }
-.head .n { font: 0.8rem/1 var(--f-digits); color: var(--text-dim); }
+.head .n { font: max(11px, 0.8rem)/1 var(--f-digits); color: var(--text-dim); }
 .head .grow { margin-left: auto; }
 /* each panel says what it is in a few words: icon + small CAPS title; numbers carry their unit */
-.cap { font: 500 0.66rem/1 var(--f-ui); letter-spacing: var(--label-spacing, 0.12em); text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+.cap { font: 500 max(11px, 0.66rem)/1 var(--f-ui); letter-spacing: var(--label-spacing, 0.12em); text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
 .head .n.grow, .head .meta { margin-left: auto; }
 /* words stay in the interface font; the digit font is for numbers only */
-.meta { font: var(--w-lines) 0.7rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
-.meta b { font: 600 0.8rem/1 var(--f-ui); color: var(--c); }
+.meta { font: var(--w-lines) max(11px, 0.7rem)/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+.meta b { font: 600 max(11px, 0.8rem)/1 var(--f-ui); color: var(--c); }
 .steps { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; }
 .steps span { height: 5px; background: var(--line); }
 .steps span.now { background: linear-gradient(90deg, var(--c) 60%, var(--line) 60%); animation: pulse 2.4s ease-in-out infinite; }
-.thin .k { font: 500 0.6rem/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); margin-right: 0.2rem; }
+.thin .k { font: 500 max(11px, 0.6rem)/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); margin-right: 0.2rem; }
 /* callout panels: the title sits on a line, plain words; the content sits under it on a see-through fill.
    No icon + CAPS title + big number tiles: that's the stock dashboard look. */
 .side .cut, .side .cut > .in { background: none; clip-path: none; padding: 0; }
@@ -419,31 +427,32 @@ body.q-maximal .side .head::before { background: linear-gradient(var(--c), var(-
 .side .big { font: 600 1.1rem/1.25 var(--f-ui); }
 .prog { display: flex; align-items: center; gap: 0.8rem; }
 .prog .steps { flex: 1; }
-.stepn { font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+.stepn { font: var(--w-lines) max(11px, 0.78rem)/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
 .next { display: flex; align-items: center; gap: 0.65rem; font: 500 0.98rem/1.3 var(--f-ui); color: var(--text); margin-top: 0.15rem; }
-.next .k { font: 600 0.82rem/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
+.next .k { font: 600 max(11px, 0.82rem)/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
 /* a pixel double chevron between "Next" and the step; light runs through it now and then */
 .next .chev { width: 0.95rem; height: 0.7rem; flex: none; color: var(--c); shape-rendering: crispEdges; overflow: visible; }
 .next .chev rect { fill: currentColor; opacity: 0.45; animation: chevrun 3.2s steps(1) infinite; animation-delay: calc(var(--i) * 0.12s); }
 @keyframes chevrun { 0%, 70% { opacity: 0.45; } 74%, 82% { opacity: 1; } }
-.row2 { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; font: var(--w-lines) 0.78rem/1.3 var(--f-lines); color: var(--text-dim); }
+.row2 { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; font: var(--w-lines) max(11px, 0.78rem)/1.3 var(--f-lines); color: var(--text-dim); }
 .row2 .k { color: var(--c); }
 .row2 .tot { font: 1.3rem/1 var(--f-digits); color: var(--hot); margin-right: 0.2rem; }
-#devcount b { font: 600 0.85rem/1 var(--f-ui); color: var(--c); }
+#devcount { white-space: nowrap; }
+#devcount b { font: 600 max(11px, 0.85rem)/1 var(--f-ui); color: var(--c); }
 .range { display: flex; gap: 2px; }
-.range button { font: 500 0.7rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.2rem 0.4rem; cursor: pointer; }
+.range button { font: 500 max(11px, 0.7rem)/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.2rem 0.4rem; cursor: pointer; }
 .range button[aria-pressed="true"] { color: var(--bg); background: var(--c); border-color: var(--c); }
-.axis { display: flex; justify-content: space-between; font: var(--w-lines) 0.6rem/1 var(--f-lines); color: var(--text-dim); margin-top: -0.2rem; }
+.axis { display: flex; justify-content: space-between; font: var(--w-lines) max(11px, 0.6rem)/1 var(--f-lines); color: var(--text-dim); margin-top: -0.2rem; }
 .big { font: 600 0.95rem/1.25 var(--f-ui); }
-.thin { display: flex; align-items: center; gap: 0.35rem; font: var(--w-lines) 0.75rem/1.4 var(--f-lines); color: var(--text-dim); }
+.thin { display: flex; align-items: center; gap: 0.35rem; font: var(--w-lines) max(11px, 0.75rem)/1.4 var(--f-lines); color: var(--text-dim); }
 .thin .ico { color: var(--c); flex: none; }
 .money { font: 1.35rem/1 var(--f-digits); color: var(--hot); white-space: pre; }
 .money small { font: var(--w-lines) 0.55em/1 var(--f-lines); color: var(--text-dim); margin-left: 0.5rem; }
 .meter { height: 6px; background: var(--line); position: relative; }
-.how { font: var(--w-lines) 0.7rem/1.3 var(--f-lines); color: var(--text-dim); }
+.how { font: var(--w-lines) max(11px, 0.7rem)/1.3 var(--f-lines); color: var(--text-dim); }
 .meter::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); min-width: 2px; background: var(--c); }
 #spark { width: 100%; height: 3.4rem; overflow: visible; color: var(--c); }
-#spark text { font: 10px var(--f-mono); fill: var(--text-dim); }
+#spark text { font: 11px var(--f-mono); fill: var(--text-dim); }
 #devgraph { width: 100%; height: 7.2rem; overflow: visible; transition: height 0.5s var(--arrive), opacity 0.4s; }
 #devgraph text { font: 300 9px var(--f-lines); fill: var(--text-dim); }
 #devgraph .on { stroke: var(--c); }
@@ -459,13 +468,13 @@ body.q-maximal .side .head::before { background: linear-gradient(var(--c), var(-
 @keyframes beat { 0%, 86%, 100% { fill-opacity: 0.75; } 92% { fill-opacity: 1; stroke: var(--hot); } }
 body.q-minimal #devgraph .beat { animation: none; }
 #devlist { display: none; max-height: 16rem; overflow-y: auto; }
-#devlist table { width: 100%; border-collapse: collapse; font: 0.88rem/1.2 var(--f-ui); }
-#devlist thead th { font: 500 0.68rem/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.3rem 0.3rem; }
+#devlist table { width: 100%; border-collapse: collapse; font: max(11px, 0.88rem)/1.2 var(--f-ui); }
+#devlist thead th { font: 500 max(11px, 0.68rem)/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.3rem 0.3rem; }
 #devlist thead th .ico, #devlist td .ico { font-size: 1rem; }
-#devlist tr.g th { font: 500 0.68rem/1 var(--f-ui); letter-spacing: 0.08em; color: var(--text-dim); text-align: left; padding: 0.55rem 0.3rem 0.2rem; border-bottom: 1px solid var(--line); }
+#devlist tr.g th { font: 500 max(11px, 0.68rem)/1 var(--f-ui); letter-spacing: 0.08em; color: var(--text-dim); text-align: left; padding: 0.55rem 0.3rem 0.2rem; border-bottom: 1px solid var(--line); }
 #devlist td { padding: 0.3rem; vertical-align: middle; }
 #devlist td:first-child { width: 1.2rem; color: var(--text-dim); }
-#devlist td small { display: block; font: var(--w-lines) 0.7rem/1.2 var(--f-lines); color: var(--text-dim); }
+#devlist td small { display: block; font: var(--w-lines) max(11px, 0.7rem)/1.2 var(--f-lines); color: var(--text-dim); }
 #devlist tr[data-dev] { cursor: pointer; outline: none; }
 #devlist tr[data-dev]:hover, #devlist tr[data-dev]:focus-visible { background: color-mix(in srgb, var(--c) 12%, transparent); }
 #devlist .st { color: var(--offline); }
@@ -477,7 +486,7 @@ body.q-minimal #devgraph .beat { animation: none; }
 /* beside the count, on the right: a framed button sized to its words, still big enough for a finger */
 .devices .row2 { align-items: center; }
 .devmore { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; min-height: 2.3rem; padding: 0 0.6rem 0 0.8rem; white-space: nowrap;
-  font: 500 0.82rem/1 var(--f-ui); letter-spacing: 0.04em; color: var(--c); background: color-mix(in srgb, var(--c) 7%, transparent);
+  font: 500 max(11px, 0.82rem)/1 var(--f-ui); letter-spacing: 0.04em; color: var(--c); background: color-mix(in srgb, var(--c) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 40%, transparent); cursor: pointer; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%); }
 .devmore .ico { font-size: 1.1rem; transition: rotate 0.3s var(--arrive); }
 #devsys { padding: 0; width: 2.3rem; justify-content: center; }
@@ -499,14 +508,14 @@ body.q-minimal #devgraph .beat { animation: none; }
 /* the name takes the space that's left and shortens with "…"; status columns never wrap */
 #devlist td:nth-child(2) { width: 100%; max-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #devlist td:nth-child(n+3), #devlist th { white-space: nowrap; }
-#devlist .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
+#devlist .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) max(11px, 0.8rem)/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
 #devlist .sw i { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; flex: none; }
 #devlist .sw.ok { color: var(--text); }
 #devlist .sw.ok i { background: var(--c); border-color: var(--c); box-shadow: 0 0 6px var(--c); }
 #devlist .sw.lock { color: var(--accent); }
-#devlist .sw.lock .ico { font-size: 0.85rem; }
+#devlist .sw.lock .ico { font-size: max(11px, 0.85rem); }
 /* the device card's action: a real (framed) button, big enough to press */
-#devcard .act { margin-top: 0.4rem; min-height: 2.4rem; font: 500 0.85rem/1 var(--f-ui); color: var(--c); background: color-mix(in srgb, var(--c) 8%, transparent);
+#devcard .act { margin-top: 0.4rem; min-height: 2.4rem; font: 500 max(11px, 0.85rem)/1 var(--f-ui); color: var(--c); background: color-mix(in srgb, var(--c) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); cursor: pointer; }
 #devcard .act:hover, #devcard .act:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
 #devcard .act:disabled { color: var(--offline); border-color: var(--line); background: none; cursor: default; }
@@ -515,7 +524,7 @@ body.q-minimal #devgraph .beat { animation: none; }
 #devcard { position: fixed; z-index: 8; width: min(17rem, calc(100vw - 32px)); }
 #devcard[hidden] { display: none; }
 #devcard .cut { background: color-mix(in srgb, var(--c) 55%, transparent); }
-#devcard .in { background: color-mix(in srgb, var(--bg) 94%, transparent); padding: 0.75rem 0.9rem; display: grid; gap: 0.35rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+#devcard .in { background: color-mix(in srgb, var(--bg) 94%, transparent); padding: 0.75rem 0.9rem; display: grid; gap: 0.35rem; font: var(--w-lines) max(11px, 0.8rem)/1.4 var(--f-lines); color: var(--text-dim); }
 #devcard .t { display: flex; align-items: center; gap: 0.5rem; font: 600 1rem/1.2 var(--f-ui); color: var(--text); }
 #devcard .t .ico { color: var(--c); font-size: 1.2rem; }
 #devcard .t button { margin-left: auto; background: none; border: 0; color: var(--text-dim); font: 1.1rem/1 var(--f-ui); cursor: pointer; }
@@ -525,12 +534,12 @@ body.q-minimal #devgraph .beat { animation: none; }
 #devcard .row.on { color: var(--text); }
 #devcard .row.lock { color: var(--text); }
 #devcard .row.lock .ico { color: var(--accent); flex: none; }
-#devcard dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.8rem; margin: 0.2rem 0 0; font-size: 0.75rem; }
+#devcard dl { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.8rem; margin: 0.2rem 0 0; font-size: max(11px, 0.75rem); }
 #devcard dt { color: var(--text-dim); }
-#devcard dd { margin: 0; color: var(--text); font-family: var(--f-mono); font-size: 0.72rem; }
+#devcard dd { margin: 0; color: var(--text); font-family: var(--f-mono); font-size: max(11px, 0.72rem); }
 #devgraph .hx.net { fill: transparent; stroke: var(--c); }
 #devlist small { color: var(--text-dim); margin-left: 0.3rem; }
-#devcard .ex { font-size: 0.68rem; opacity: 0.7; }
+#devcard .ex { font-size: max(11px, 0.68rem); opacity: 0.7; }
 
 /* alert toast */
 #toast { position: absolute; top: 1%; left: 50%; transform: translate(-50%, -8px); width: min(92%, 24rem); max-width: calc(100vw - 1.6rem); overflow-wrap: anywhere; opacity: 0; transition: opacity 0.4s, transform 0.5s var(--arrive); pointer-events: none; z-index: 3; }
@@ -563,7 +572,9 @@ body.jolt #hub { animation: jolt 0.42s steps(2) 1; }
 #module > .cut > .in { position: relative; }
 body[data-mod="chat"] #module > .cut > .in { background: color-mix(in srgb, var(--bg) 90%, transparent); }
 #mod-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#mod-slot { position: absolute; inset: 3.6rem 6% 1.4rem; display: flex; pointer-events: none; }
+/* the content starts under the title's left edge; on a page the docked core keeps the bottom-right corner (quick job 154) */
+#mod-slot { position: absolute; inset: 3.9rem 1.7rem 1.4rem; display: flex; pointer-events: none; }
+body[data-mod]:not([data-mod="chat"]) #mod-slot { right: calc(2.6rem + var(--dock)); }
 body[data-mod="chat"] #mod-slot { left: calc(9vw + min(58vh, 34vw) - 5vw + 3vw); right: 4%; }
 #mod-slot > * { pointer-events: auto; }
 #mod-slot .chat { flex: 1; width: 100%; max-width: 50rem; margin: 0 auto; }
@@ -571,11 +582,16 @@ body[data-mod="chat"] #mod-slot { left: calc(9vw + min(58vh, 34vw) - 5vw + 3vw);
 #mod-empty { position: absolute; inset: 0; display: none; place-items: center; color: var(--line); font-size: 7rem; }
 #mod-empty .ico { stroke-width: 0.6; }
 body[data-mod="empty"] #mod-empty { display: grid; }
-#module .tab { position: absolute; left: 1.7rem; top: 1.1rem; display: flex; align-items: center; gap: 0.7rem; font: 700 1.1rem/1 var(--f-title); letter-spacing: 0.18em; color: var(--hot); text-transform: uppercase; }
+/* the title, then "Open on…" with its drop-down; × alone at the top right (choice 2) */
+#module .mod-head { position: absolute; left: 1.7rem; top: 0.8rem; right: calc(2.4rem + max(2.6rem, 44px)); height: max(2.6rem, 44px); display: flex; align-items: center; gap: 1.4rem; min-width: 0; }
+#module .tab { min-width: 0; display: flex; align-items: center; gap: 0.7rem; font: 700 1.1rem/1 var(--f-title); letter-spacing: 0.18em; color: var(--hot); text-transform: uppercase; }
 #module .tab .ico { color: var(--c); font-size: 1.25rem; }
-#module .back { position: absolute; right: 1.2rem; top: 0.8rem; display: flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; font-size: 1.3rem; color: var(--text); background: transparent; border: 1px solid var(--line); padding: 0; cursor: pointer; }
+#module .back { position: absolute; right: 1.2rem; top: 0.8rem; display: flex; align-items: center; justify-content: center; width: max(2.6rem, 44px); height: max(2.6rem, 44px); font-size: 1.3rem; color: var(--text); background: transparent; border: 1px solid var(--line); padding: 0; cursor: pointer; }
 #module .back:hover, #module .back:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 body.folded #hub { transform: scale(0.93); opacity: 0.12; filter: blur(2px); }
+/* minimal: a plain fill and a short fade, no blur and no scale (quick job 154) */
+body.q-minimal #hub { transition: opacity 0.15s; }
+body.q-minimal.folded #hub { transform: none; filter: none; opacity: 0.08; }
 
 /* details: a callout opened full-screen. Same callout shapes, more room: the whole story behind the panel */
 #mod-slot .detail { flex: 1; width: 100%; max-width: 66rem; margin: 0 auto; overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 2rem 3.2rem; align-content: start; padding: 1.2rem 0.4rem 1rem; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--c) 55%, transparent) transparent; }
@@ -590,8 +606,8 @@ body.folded #hub { transform: scale(0.93); opacity: 0.12; filter: blur(2px); }
 .d-steps li { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 0.8rem; align-items: center; padding: 0.55rem 0.8rem 0.55rem 0.6rem; border-left: 2px solid var(--line); }
 .d-steps .n { font: 1.1rem/1 var(--f-digits); color: var(--text-dim); text-align: right; }
 .d-steps b { display: block; font: 500 1rem/1.25 var(--f-ui); color: var(--text); }
-.d-steps small { display: block; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
-.d-steps .w { font: 600 0.72rem/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); }
+.d-steps small { display: block; font: var(--w-lines) max(11px, 0.8rem)/1.4 var(--f-lines); color: var(--text-dim); }
+.d-steps .w { font: 600 max(11px, 0.72rem)/1 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); }
 .d-steps li.now { border-left-color: var(--c); background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%); }
 .d-steps li.now .n { color: var(--hot); }
 .d-steps li.later b { color: var(--text-dim); font-weight: 400; }
@@ -599,21 +615,21 @@ body.folded #hub { transform: scale(0.93); opacity: 0.12; filter: blur(2px); }
 .d-chart text { font: 300 11px var(--f-lines); fill: var(--text-dim); }
 .d-chart .num { font: 11px var(--f-digits); fill: var(--hot); }
 .d-stats { display: flex; flex-wrap: wrap; gap: 1.2rem 2.4rem; margin-top: 1.2rem; }
-.d-stats div { font: var(--w-lines) 0.85rem/1.3 var(--f-lines); color: var(--text-dim); }
+.d-stats div { font: var(--w-lines) max(11px, 0.85rem)/1.3 var(--f-lines); color: var(--text-dim); }
 .d-stats b { display: block; font: 1.7rem/1.1 var(--f-digits); color: var(--hot); margin-bottom: 0.2rem; }
 .d-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
 .d-list li { display: grid; grid-template-columns: 4.2rem 1fr; gap: 0.8rem; font: 500 0.92rem/1.35 var(--f-ui); color: var(--text); }
-.d-list li span { font: var(--w-lines) 0.8rem/1.6 var(--f-lines); color: var(--text-dim); }
+.d-list li span { font: var(--w-lines) max(11px, 0.8rem)/1.6 var(--f-lines); color: var(--text-dim); }
 .d-table { width: 100%; border-collapse: collapse; font: 0.92rem/1.25 var(--f-ui); }
-.d-table th { font: 500 0.72rem/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.6rem 0.5rem; white-space: nowrap; }
+.d-table th { font: 500 max(11px, 0.72rem)/1 var(--f-ui); color: var(--text-dim); text-align: left; padding: 0 0.6rem 0.5rem; white-space: nowrap; }
 .d-table td { padding: 0.5rem 0.6rem; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); vertical-align: middle; }
 .d-table td.num { font-family: var(--f-digits); color: var(--hot); white-space: pre; }
 .d-table tr.g th { padding-top: 1.1rem; letter-spacing: 0.08em; border-bottom: 1px solid var(--line); }
-.d-table td.mono { font: 0.82rem var(--f-mono); color: var(--text-dim); white-space: nowrap; }
-.d-table td small { display: block; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); }
+.d-table td.mono { font: max(11px, 0.82rem) var(--f-mono); color: var(--text-dim); white-space: nowrap; }
+.d-table td small { display: block; font: var(--w-lines) max(11px, 0.75rem)/1.3 var(--f-lines); color: var(--text-dim); }
 .d-table tr[data-dev] { cursor: pointer; }
 .d-table tr[data-dev]:hover { background: color-mix(in srgb, var(--c) 10%, transparent); }
-.detail .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) 0.85rem/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
+.detail .sw { display: inline-flex; align-items: center; gap: 0.4rem; font: var(--w-lines) max(11px, 0.85rem)/1 var(--f-lines); color: var(--offline); white-space: nowrap; }
 .detail .sw i { width: 0.45rem; height: 0.45rem; border-radius: 50%; border: 1px solid currentColor; flex: none; }
 .detail .sw.ok { color: var(--text); }
 .detail .sw.ok i { background: var(--c); border-color: var(--c); box-shadow: 0 0 6px var(--c); }
@@ -677,8 +693,11 @@ body.waiting #hub, body.waiting #frame, body.waiting #verses, body.waiting #edge
 #ign-icons .ico { stroke-width: 1.3; }
 .safe { display: flex; align-items: center; gap: 0.7rem; margin: 0; max-width: 46ch; font: 300 clamp(15px, 0.95rem, 22px)/1.45 var(--f-lines); color: var(--text); text-align: left; }
 .safe .ico { flex: none; font-size: 1.5rem; color: var(--primary); }
-.ign-foot { position: absolute; bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; justify-content: center; gap: 1.6rem; font: 300 0.8rem/1 var(--f-lines); color: var(--text-dim); }
-.ign-foot .clock { font-size: 0.85rem; }
+.ign-foot { position: absolute; bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; justify-content: center; gap: 1.6rem; font: 300 max(11px, 0.8rem)/1 var(--f-lines); color: var(--text-dim); }
+.ign-foot .clock { font-size: max(11px, 0.85rem); }
+.ign-place { display: inline-flex; align-items: center; gap: 0.45rem; }
+.ign-place .ico { color: var(--primary); }
+.ign-place:has(#ign-venue:empty) { display: none; }
 
 /* concept controls (not part of the design) */
 
@@ -687,6 +706,20 @@ body.q-reduced #orb .glow { filter: drop-shadow(0 0 4px var(--c)); }
 body.q-minimal #orb .glow, body.q-minimal .mod svg, body.q-minimal #frame .hi, body.q-minimal #toast .ico { filter: none !important; }
 body.q-minimal .brand, body.q-minimal #boot-title { text-shadow: none; }
 body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation: none !important; }
+/* minimal is flat (quick job 154): no glow, no light passing, no blur */
+body.q-minimal :is(#conv-sign, #conv-sign i, #devlist .sw.ok i, #devcard .row.on .dot, .detail .sw.ok i, #cc-launch .cut) { box-shadow: none; }
+body.q-minimal :is(.mic.on, .tool[aria-pressed="true"], #devlist .st.ok, #reply .a) { filter: none; text-shadow: none; }
+body.q-minimal #cc-launch .in::after { display: none; }
+body.q-minimal #core-dot circle { fill: var(--c); r: 15px; }
+body.q-minimal .dd > .cut > .in { backdrop-filter: none; background: var(--bg); }
+body.q-minimal .panel { transition: opacity 0.4s; }
+body.q-minimal .panel.hold { clip-path: none; }
+/* minimal: the rings stay still, and each state has its own still look (choice 3) */
+body.q-minimal [data-state="listening"] #orb .rg.on { opacity: 1; }
+body.q-minimal [data-state="listening"] #orb { color: color-mix(in srgb, var(--c) 55%, var(--hot)); }
+body.q-minimal [data-state="thinking"] #orb #ripple { stroke-dasharray: 6 6; stroke-width: 2.5; }
+body.q-minimal [data-state="thinking"] #orb #r-seg .ring { stroke-dasharray: 3 9; }
+body.q-minimal [data-state="speaking"] #orb { --c: var(--hot); }
 
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes pulse { 50% { opacity: 0.45; } }
@@ -721,7 +754,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
   body[data-layout] .mcol { display: contents; }
   .mod { width: 6.4rem; }
   .mod .in { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 0.2rem; padding: 0.5rem 0.3rem; }
-  .mod .name { font-size: 0.8rem; }
+  .mod .name { font-size: max(11px, 0.8rem); }
   body[data-layout="panels"] .side { display: flex; }
   body[data-layout="panels"] #hub > .chat { height: 22rem; }
   body[data-layout] .arm { display: none; }
@@ -735,19 +768,20 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 .panel.gone { display: none !important; }
 .steps span.done { background: color-mix(in srgb, var(--c) 55%, var(--line)); }
 #mod-slot iframe { flex: 1; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: dark; }
-#reply .a .look { color: var(--text-dim); font: var(--w-lines) 0.85rem/1.4 var(--f-lines); }
+#reply .a .look { color: var(--text-dim); font: var(--w-lines) max(11px, 0.85rem)/1.4 var(--f-lines); }
 #log-chat .msg.err .body { color: var(--danger); }
-#log-chat .copy { display: block; margin-top: 0.5rem; font: 500 0.75rem/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); padding: 0.35rem 0.6rem; cursor: pointer; }
+#log-chat .copy { display: block; margin-top: 0.5rem; font: 500 max(11px, 0.75rem)/1 var(--f-ui); color: var(--c); background: none; border: 1px solid var(--line); padding: 0.35rem 0.6rem; cursor: pointer; }
 #log-chat .copy:hover, #log-chat .copy:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 #restore-chat { display: flex; align-items: center; justify-content: center; min-width: 2.2rem; min-height: 2rem; padding: 0 0.4rem; border: 0; border-left: 1px solid var(--line); background: none; color: var(--accent); cursor: pointer; }
 #restore-chat:hover, #restore-chat:focus-visible { color: var(--hot); outline: none; }
 #restore-chat[hidden], #restore-line[hidden] { display: none; }
-#restore-line { align-self: flex-start; display: flex; align-items: center; gap: 0.5rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.5rem 0.8rem; cursor: pointer; }
+#restore-line { align-self: flex-start; display: flex; align-items: center; gap: 0.5rem; font: 500 max(11px, 0.8rem)/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.5rem 0.8rem; cursor: pointer; }
 #restore-line:hover, #restore-line:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
 /* the Command Center's way in (quick job 140): on the brain's own computer only, in the strip between the
    title and the facts. Not a quiet tool: a labelled panel with a turning reticle and a light that passes */
 #cc-launch { position: relative; margin-right: auto; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; --cut: 0.6rem; }
 #cc-launch[hidden] { display: none; }
+#cc-launch.mid { position: absolute; left: 50%; top: 50%; translate: -50% -50%; margin: 0; }
 #cc-launch .cut { background: color-mix(in srgb, var(--c) 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 30%, transparent); }
 #cc-launch .in { position: relative; display: flex; align-items: center; gap: 0.65rem; padding: 0.4rem 1.1rem 0.4rem 0.55rem; overflow: hidden;
   background: color-mix(in srgb, var(--surface) 80%, color-mix(in srgb, var(--c) 12%, transparent)); }
@@ -755,7 +789,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 #cc-launch .cc-ring { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-dasharray: 9 4 2 4; transform-origin: 0 0; animation: ccturn 9s linear infinite; }
 #cc-launch .cc-ring2 { fill: none; stroke: currentColor; stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.7; transform-origin: 0 0; animation: ccturn 14s linear infinite reverse; }
 #cc-launch .cc-ico { fill: none; stroke: var(--hot); stroke-width: 1.6; stroke-linecap: round; }
-#cc-launch .name { font: 700 0.78rem/1 var(--f-title); letter-spacing: 0.2em; text-transform: uppercase; color: var(--hot); white-space: nowrap; }
+#cc-launch .name { font: 700 max(11px, 0.78rem)/1 var(--f-title); letter-spacing: 0.2em; text-transform: uppercase; color: var(--hot); white-space: nowrap; }
 #cc-launch .in::after { content: ""; position: absolute; inset: 0 auto 0 -40%; width: 30%; pointer-events: none;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--hot) 22%, transparent), transparent); animation: ccshine 7s ease-in-out infinite 2s; }
 #cc-launch:hover .cut, #cc-launch:focus-visible .cut { background: var(--c); }
@@ -766,35 +800,49 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 @keyframes ccshine { 0%, 80% { left: -40%; } 100% { left: 110%; } }
 @keyframes ccgo { 40% { filter: brightness(2.4); } }
 /* the strip's quiet tools: back to the start screen, settings */
-.tools { display: flex; gap: 0.2rem; margin-left: -0.6rem; }
-.tool { display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; opacity: 0.7; }
-.tool:hover, .tool:focus-visible { color: var(--hot); opacity: 1; outline: none; }
+/* larger, in the text colour, a 44 px area (quick job 154: they were small and dim) */
+.tools { display: flex; gap: 0.2rem; margin-left: -0.4rem; }
+.tool { display: grid; place-items: center; width: max(2.6rem, 44px); height: max(2.6rem, 44px); padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; font-size: max(1.4rem, 20px); }
+.tool:hover, .tool:focus-visible, .tool[aria-expanded="true"] { color: var(--hot); outline: none; }
 .tool[hidden] { display: none; }  /* .tool's display: grid would otherwise beat the hidden attribute */
 .tool.fs-unavailable { opacity: 0.4; }
 /* ⏻ on the brain's own screen (quick job 6): back to the start screen, or shut lab-os down (asks first) */
-#power-menu { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; width: min(24rem, calc(100vw - 2.8rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px);
-  --cut: 0.7rem; clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
-#power-menu[hidden] { display: none; }
-#power-menu p { margin: 0.2rem 0 0.6rem; font: var(--w-lines) 0.85rem/1.45 var(--f-lines); color: var(--text-dim); }
-#power-menu .warn { display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.8rem; padding: 0.55rem 0.7rem; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 0.95rem; color: var(--accent); }
+/* a drop-down attached to its button (⏻, Open on…; quick job 154): a notch toward the button, the cut
+   corner, the title in the title font, an icon on each row. dropUnder() puts it under its button. */
+.dd { position: fixed; z-index: 40; width: min(16rem, calc(100vw - 1.6rem)); --nx: 50%; }
+.dd[hidden] { display: none; }
+.dd::before { content: ""; position: absolute; top: -7px; left: calc(var(--nx) - 7px); border: 7px solid transparent; border-top: 0; border-bottom-color: color-mix(in srgb, var(--c) 55%, transparent); }
+.dd > .cut { --cut: 0.7rem; background: color-mix(in srgb, var(--c) 55%, transparent); }
+.dd > .cut > .in { padding: 0.8rem; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
+.dd .oo-head, .dd .dd-title { margin: 0.1rem 0 0.6rem; font: 700 max(11px, 0.85rem)/1.3 var(--f-title); letter-spacing: 0.14em; text-transform: uppercase; color: var(--hot); }
+.dd .oo-row:first-of-type { margin-top: 0; }
+.dd-row { justify-content: flex-start; align-items: center; gap: 0.7rem; }
+.dd-row .ico { flex: none; font-size: 1.15rem; color: var(--c); }
+.dd .acts { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+.dd .acts .btn { flex: 1; }
+.btn.danger { background: var(--danger); color: var(--hot); box-shadow: none; }
+.btn.danger:hover:not(:disabled), .btn.danger:focus-visible { background: color-mix(in srgb, var(--danger) 80%, var(--hot)); color: var(--hot); }
+#power-menu p:not(.dd-title) { margin: 0.2rem 0 0.6rem; font: var(--w-lines) max(11px, 0.85rem)/1.45 var(--f-lines); color: var(--text-dim); }
+#power-menu .warn { margin-top: 0; display: flex; gap: 0.6rem; align-items: flex-start; margin-bottom: 0.8rem; padding: 0.55rem 0.7rem; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 0.95rem; color: var(--accent); }
 #power-menu .warn .ico { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.1rem; }
-#power-menu .oo-row.go { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
-#power-menu .oo-row.go:hover:not(:disabled), #power-menu .oo-row.go:focus-visible { border-color: var(--danger); color: var(--hot); }
+/* the verses dim while a menu is open (quick job 154) */
+body.menu-open #verses { opacity: 0.25; }
 .tool[aria-pressed="true"] { color: var(--c); opacity: 1; filter: drop-shadow(0 0 4px var(--c)); }  /* the Quest's view is open */
 .fs-why { position: fixed; top: 4.6rem; right: 1.4rem; z-index: 40; max-width: 26rem; padding: 0.7rem 0.9rem; border: 1px solid var(--line); background: var(--surface, var(--bg));
-  font: var(--w-lines) 0.8rem/1.45 var(--f-lines); color: var(--accent); }
+  font: var(--w-lines) max(11px, 0.8rem)/1.45 var(--f-lines); color: var(--accent); }
 .fs-why[hidden] { display: none; }
 /* a module page can go to another monitor of this computer */
-#module .send { position: absolute; right: 4.2rem; top: 0.8rem; display: none; align-items: center; gap: 0.5rem; height: 2.6rem; padding: 0 0.9rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
+#module .send { flex: none; display: none; align-items: center; gap: 0.5rem; height: max(2.6rem, 44px); padding: 0 0.9rem; font: 500 max(11px, 0.8rem)/1 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
 /* "Open on…" for every view (2026-11-21): a page, a details page, the conversation */
 body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body[data-mod="chat"] #module .send { display: flex; }
 #module .send:hover, #module .send:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 #module .send[aria-expanded="true"] { border-color: var(--c); color: var(--hot); }
 /* "open on…" (step 8): the other devices with the hub open. On the left: the module pages keep STOP at the
    right of their bar, and nothing may cover it */
-#open-on { position: absolute; left: 1.7rem; top: 4.4rem; z-index: 6; width: min(24rem, calc(100vw - 6rem)); padding: 0.9rem; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px); }
-#open-on[hidden] { display: none; }
-.oo-head { margin: 0 0 0.6rem; font: 600 0.72rem/1.3 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
+/* "Open on…" is a drop-down under its button at the left of the bar, so the page's STOP (at the right of
+   its bar) stays free (step 8) */
+#open-on { width: min(20rem, calc(100vw - 1.6rem)); }
+.oo-head { margin: 0 0 0.6rem; font: 600 max(11px, 0.72rem)/1.3 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-dim); }
 .oo-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; width: 100%; margin: 0.3rem 0 0; padding: 0.65rem 0.8rem; text-align: left; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: transparent; border: 1px solid var(--line); cursor: pointer; }
 .oo-row:hover:not(:disabled), .oo-row:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 .oo-row:disabled { opacity: 0.5; cursor: default; }
@@ -808,26 +856,33 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   transition: background 0.12s, color 0.12s; }
 .btn:hover:not(:disabled), .btn:focus-visible { background: color-mix(in srgb, var(--c) 28%, transparent); color: var(--hot); outline: none; }
 .btn:disabled { color: var(--offline); box-shadow: inset 0 0 0 1px var(--line); background: none; cursor: default; }
-.btn.small { min-height: 2.1rem; padding: 0.35rem 0.8rem; font-size: 0.8rem; }
-.oo-sub { font: var(--w-lines) 0.78rem/1.2 var(--f-lines); color: var(--text-dim); }
-.oo-msg, .oo-none { margin: 0.7rem 0 0; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--accent); }
+.btn.small { min-height: 2.1rem; padding: 0.35rem 0.8rem; font-size: max(11px, 0.8rem); }
+.oo-sub { font: var(--w-lines) max(11px, 0.78rem)/1.2 var(--f-lines); color: var(--text-dim); }
+.oo-msg, .oo-none { margin: 0.7rem 0 0; font: var(--w-lines) max(11px, 0.8rem)/1.4 var(--f-lines); color: var(--accent); }
 .oo-msg:empty { display: none; }
-#module .mod-from { position: absolute; left: 1.7rem; top: 3.1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
+#module .mod-from { position: absolute; left: 1.7rem; top: 3.5rem; font: var(--w-lines) max(11px, 0.78rem)/1 var(--f-lines); color: var(--text-dim); }
 #module .mod-from[hidden] { display: none; }
 /* ---------- small screens: a phone, the Pi's touchscreen (quick job 96) ----------
    Large screens keep the layout above. A screen 1100 px wide or less, or 640 px high or less, gets
    controls big enough for a finger (44 px, quick job 153), and an open page keeps the docked core out of its way. */
 /* touch screens of any size (the Newline too): the same 44 px touch areas, the layout unchanged */
+/* the Commits range buttons stay small to look at; the area that takes the tap is bigger (quick job 154:
+   44 px made them tall squares on the Pi) */
+.range button { position: relative; }
+.range button::after { content: ""; position: absolute; inset: -12px -1px; }
+.send-btn { display: flex; align-items: center; justify-content: center; min-width: 2.4rem; min-height: 2rem; padding: 0 0.45rem; border: 0; background: none; color: var(--c); cursor: pointer; font-size: 1.1rem; }
+.send-btn:hover, .send-btn:focus-visible { color: var(--hot); outline: none; }
+#quick-form .send-btn { align-self: stretch; }
+#quick-form:not(:focus-within) #quick:placeholder-shown ~ .send-btn { display: none; }
 @media (pointer: coarse) {
-  .tool { width: max(2rem, 44px); height: max(2rem, 44px); }
-  .range button, .devmore, .mic, #open-chat, #restore-chat, #devcard .t button, #log-chat .copy { min-width: 44px; min-height: 44px; }
+  .devmore, .mic, #open-chat, #restore-chat, #devcard .t button, #log-chat .copy { min-width: 44px; min-height: 44px; }
   #devsys { width: 44px; flex: none; }
-  .oo-row, .btn, .btn.small { min-height: 44px; }
+  .oo-row, .btn, .btn.small, .send-btn { min-height: 44px; }
+  .send-btn { min-width: 44px; }
 }
 @media (max-width: 1100px), (max-height: 640px) {
-  .tool { width: max(2rem, 44px); height: max(2rem, 44px); font-size: max(1rem, 18px); }
-  .range button { min-width: 44px; min-height: 44px; }
   .devmore { min-height: 44px; }
+  .send-btn { min-width: 44px; min-height: 44px; }
   #devsys { width: 44px; flex: none; }
   #quick { height: max(2rem, 44px); line-height: max(2rem, 44px); }
   .mic, #open-chat, #restore-chat { min-width: 44px; min-height: 44px; }
@@ -840,13 +895,14 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   /* an open page: a thin frame, the docked core small in the corner, the page beside it (not under it) */
   #module > .cut { inset: 0.6rem; }
   #mod-slot { inset: 3.8rem 1rem 0.8rem; }
-  #module .back { width: max(2.6rem, 44px); height: max(2.6rem, 44px); }
-  #module .send { height: max(2.6rem, 44px); right: calc(1.2rem + max(2.6rem, 44px) + 0.5rem); }
-  #module .tab { right: calc(2.4rem + max(2.6rem, 44px) + 9rem); overflow: hidden; }
+  #module .mod-head { left: 1rem; gap: 0.8rem; }
+  #module .tab { overflow: hidden; }
   #mod-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   body[data-mod]:not([data-mod="chat"]) #orb-dock { right: 1.2rem; bottom: 1.2rem; width: max(4.4rem, 52px); }
   body[data-mod]:not([data-mod="chat"]) #mod-slot { right: calc(1.6rem + max(4.4rem, 52px)); }
   #dock-say { right: calc(2rem + max(4.4rem, 52px)); bottom: 1.2rem; }
+  /* the device list stops above the log; its count on a line of its own, the two buttons together */
+  .devices .row2 #devcount { flex-basis: 100%; }
 }
 /* a small screen on its side (the Pi's 800 × 480 touchscreen): less frame and air, a smaller core, so the
    fact panels beside it keep room for their words */
@@ -860,13 +916,29 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   .row2 { flex-wrap: wrap; }
   .mod .in { grid-template-columns: 2.4rem 1fr; padding: 0.45rem 0.6rem 0.45rem 0.4rem; }
   .mod svg { width: 2.4rem; height: 2.4rem; }
-  .mod .name { font-size: 0.95rem; letter-spacing: 0.08em; }
+  .mod .name { font-size: 0.85rem; letter-spacing: 0.04em; }
+  /* the Pi: one row in the strip (the facts shorten), the log clear of the frame's cut corner */
+  .strip { flex-wrap: nowrap; gap: 0.5rem 0.9rem; }
+  .fact span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8rem; }
+  #f-persona span, #f-net span { display: none; }
+  .tools { margin-left: -0.6rem; gap: 0; }
+  #cc-launch .in { padding: 0.3rem 0.7rem 0.3rem 0.4rem; }
+  #cc-launch .name { letter-spacing: 0.1em; }
+  .log { padding-left: 1.8rem; }
 }
 /* a phone held upright: the core with room for the ask line under it; the latest answer lies on a fill
    (it can cover the buttons for a moment); on a narrow phone the fact panels in one column */
 @media (orientation: portrait) {
-  body[data-layout] #hub { grid-template-rows: auto calc(var(--orb) + 7rem) auto auto auto auto auto; padding: 2.6rem max(26px, env(safe-area-inset-right, 0px)) 1.4rem max(26px, env(safe-area-inset-left, 0px)); }
-  .strip { gap: 0.5rem 1rem; }
+  body[data-layout] #hub { grid-template-rows: auto calc(var(--orb) + 9rem) auto auto auto auto auto; padding: 2.6rem max(26px, env(safe-area-inset-right, 0px)) 1.4rem max(26px, env(safe-area-inset-left, 0px)); }
+  /* the strip in two rows (quick job 154: it took four): the title, the clock and the tools, then the facts */
+  .strip { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 0.5rem 0.8rem; }
+  .brand { grid-row: 1; grid-column: 1; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; letter-spacing: 0.1em; }
+  #f-clock { grid-row: 1; grid-column: 2; }
+  .tools { grid-row: 1; grid-column: 3; margin: 0; }
+  .facts { grid-row: 2; grid-column: 1 / -1; display: flex; gap: 0.4rem 1rem; min-width: 0; overflow: hidden; }
+  .facts .fact { min-width: 0; }
+  .facts .fact span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cc-launch { grid-row: 3; grid-column: 1 / -1; justify-self: center; margin: 0; }
   .side.left, .side.right { padding: 0; }
   #reply { z-index: 3; padding: 0.6rem 0.8rem; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); }
   #reply { transition: opacity 0.6s, visibility 0.6s; }
@@ -876,14 +948,15 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 @media (orientation: portrait) and (max-width: 559px) {
   body[data-layout] #hub {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto calc(var(--orb) + 7rem) auto auto auto auto auto auto;
+    grid-template-rows: auto calc(var(--orb) + 9rem) auto auto auto auto auto auto;
     grid-template-areas: "strip" "core" "mods" "try" "chat" "left" "right" "log";
   }
   .side { gap: 1.6rem; }
   /* "Open on…" as its icon only, so the page's title keeps its room */
   #module .send { width: max(2.6rem, 44px); padding: 0; justify-content: center; font-size: 0; }
   #module .send .ico { font-size: 1.1rem; }
-  #module .tab { right: calc(2.4rem + 2 * max(2.6rem, 44px)); }
+>>>>
+
   body[data-mod]:not([data-mod="chat"]) #mod-slot { right: 1rem; bottom: calc(2rem + max(4.4rem, 52px)); }
   #dock-say { left: 1rem; width: auto; }
 }
@@ -913,6 +986,9 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     <symbol id="i-touch" viewBox="0 0 24 24"><path d="M10 13V5.5a1.5 1.5 0 0 1 3 0V11l4.2.9a2 2 0 0 1 1.6 2.3L18 19.5H10.5L7 15.2a1.4 1.4 0 0 1 2.1-1.9z"/><path d="M6.5 6.5a4.5 4.5 0 0 1 10 0"/></symbol>
     <symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 7h10a4.5 4.5 0 0 1 4.3 5.8l-1.1 3.8a2.3 2.3 0 0 1-3.8 1L14.5 16h-5l-1.9 1.6a2.3 2.3 0 0 1-3.8-1l-1.1-3.8A4.5 4.5 0 0 1 7 7z"/><path d="M7 10.5v3M5.5 12h3M16 11h.1M18 13h.1"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-apps" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5"/><rect x="13.5" y="4" width="6.5" height="6.5"/><rect x="4" y="13.5" width="6.5" height="6.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M3.5 11.5 20.5 4l-6.5 16.5-3-6.5z"/><path d="m11 14 9.5-10"/></symbol>
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></symbol>
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h12M13 7l5 5-5 5"/></symbol>
     <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2.1 0 2.9 5.8 1.6 5.8 4.3 0 1.3-1.3 2.1-3 2.1-1.3 0-2.4-.5-2.9-1.5M12 6v1.8M12 16.3V18"/></symbol>
@@ -949,18 +1025,20 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     <button id="cc-launch" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
       <div class="cut"><div class="in"><svg viewBox="-16 -16 32 32" aria-hidden="true"><circle class="cc-ring" r="14"/><circle class="cc-ring2" r="10.5"/><use href="#i-target" x="-8" y="-8" width="16" height="16" class="cc-ico"/></svg><span class="name">Command Center</span></div></div>
     </button>
-    <div class="fact" id="f-venue" title="Venue"><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
-    <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
-    <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>Checking</span></div>
-    <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
-    <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">Listening for the wake word</span></div>
-    <div class="fact"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
+    <div class="facts">
+      <div class="fact" id="f-venue" title="Venue" hidden><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
+      <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
+      <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>Checking</span></div>
+      <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
+      <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">Listening for the wake word</span></div>
+    </div>
+    <div class="fact" id="f-clock"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
     <div class="tools">
       <button class="tool" id="fs-btn" type="button" title="Full screen" aria-label="Full screen" hidden><svg class="ico"><use href="#i-full"/></svg></button>
       <button class="tool" id="xr-btn" type="button" title="The hub in VR" aria-label="The hub in VR" hidden><svg class="ico"><use href="#i-headset"/></svg></button>
       <button class="tool" id="qv-btn" type="button" title="Show what the Quest sees, in a window on this computer" aria-label="Show what the Quest sees" aria-pressed="false" hidden><svg class="ico"><use href="#i-qview"/></svg></button>
       <button class="tool" id="sleep-btn" type="button" title="Back to the start screen" aria-label="Back to the start screen"><svg class="ico"><use href="#i-power"/></svg></button>
-      <button class="tool" id="pages-btn" data-module="pages" type="button" title="All Pages" aria-label="All Pages"><svg class="ico"><use href="#i-link"/></svg></button>
+      <button class="tool" id="pages-btn" data-module="pages" type="button" title="All Pages" aria-label="All Pages"><svg class="ico"><use href="#i-apps"/></svg></button>
       <button class="tool" id="settings-btn" data-module="settings" type="button" title="Settings" aria-label="Settings"><svg class="ico"><use href="#i-gear"/></svg></button>
     </div>
   </header>
@@ -997,7 +1075,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     <span class="sr" id="state-word" aria-live="polite">Idle</span>
     <div id="ask-btn" class="panel"><div class="cut"><div class="in">
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
-      <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"></form>
+      <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"><button class="send-btn" type="submit" aria-label="Send" title="Send"><svg class="ico"><use href="#i-send"/></svg></button></form>
       <button id="mic" class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button>
       <button id="conv-btn" class="mic" type="button" hidden aria-pressed="false" aria-label="Conversation" title="Conversation: it keeps listening and answering, no wake word. Say &quot;that's all&quot; or press again to end."><svg class="ico"><use href="#i-talk"/></svg></button>
       <button id="open-chat" type="button" title="Open the conversation" aria-label="Open the conversation"><svg class="ico"><use href="#i-hist"/></svg><b id="chat-n"></b></button>
@@ -1013,7 +1091,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     <div class="cut" style="height:100%"><div class="in">
       <button id="restore-line" type="button" hidden></button>
       <div id="log-chat" aria-live="polite"></div>
-      <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"><button class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button></form>
+      <form class="ask" id="ask-form" autocomplete="off"><span aria-hidden="true">›</span><input id="ask" aria-label="Ask the assistant" placeholder="Ask about the lab or the project" maxlength="2000"><button class="mic" type="button" hidden aria-label="Hold to talk" title="Hold to talk (or hold Space)"><svg class="ico"><use href="#i-mic"/></svg></button><button class="send-btn" type="submit" aria-label="Send" title="Send"><svg class="ico"><use href="#i-send"/></svg></button></form>
     </div></div>
   </section>
 
@@ -1067,11 +1145,12 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
     <canvas id="mod-canvas"></canvas>
     <div id="mod-empty" aria-hidden="true"><svg class="ico"><use href="#i-test"/></svg></div>
     <div id="mod-slot"></div>
-    <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title"></span></div>
-    <button class="back" id="mod-back" type="button" aria-label="Back to the hub"><svg class="ico"><use href="#i-back"/></svg></button>
+    <div class="mod-head">
+      <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title"></span></div>
+      <button class="send" id="mod-send" type="button" aria-haspopup="true" aria-expanded="false" title="Open this page on another device (or another monitor of this computer)"><svg class="ico"><use href="#i-cast"/></svg>Open on…</button>
+    </div>
+    <button class="back" id="mod-back" type="button" aria-label="Back to the hub" title="Back to the hub"><svg class="ico"><use href="#i-close"/></svg></button>
     <div class="mod-from" id="mod-from" hidden></div>
-    <button class="send" id="mod-send" type="button" aria-haspopup="true" aria-expanded="false" title="Open this page on another device (or another monitor of this computer)"><svg class="ico"><use href="#i-cast"/></svg>Open on…</button>
-    <div id="open-on" hidden></div>
   </div></div>
 </div>
 <div id="orb-dock" aria-hidden="true"></div>
@@ -1080,6 +1159,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 <canvas id="fx" aria-hidden="true"></canvas>
 <video id="startup-video" muted playsinline preload="none" aria-hidden="true"></video>
 <div id="devcard" role="dialog" aria-label="Device details" hidden><div class="cut"><div class="in"></div></div></div>
+<div id="open-on" class="dd" hidden><div class="cut"><div class="in"></div></div></div>
 
 <div id="ignite" role="button" tabindex="0" aria-label="Start the hub">
     <svg id="ign-orb" viewBox="-70 -70 140 140" aria-hidden="true">
@@ -1093,9 +1173,9 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   <div class="stack">
     <p id="ign-what">Press any key to start</p>
     <div id="ign-icons" aria-hidden="true"></div>
-    <p class="safe"><svg class="ico"><use href="#i-shield"/></svg><span>Safe to start. This only opens the hub; no robot moves.</span></p>
+    <p class="safe"><svg class="ico"><use href="#i-shield"/></svg><span>Safe to start.</span></p>
   </div>
-  <div class="ign-foot"><span id="ign-venue"></span><span><span class="clock" id="ign-clock"></span><span class="ampm" id="ign-ampm"></span></span></div>
+  <div class="ign-foot"><span class="ign-place"><svg class="ico"><use href="#i-pin"/></svg><span id="ign-venue"></span></span><span><span class="clock" id="ign-clock"></span><span class="ampm" id="ign-ampm"></span></span></div>
 </div>
 
 <script type="module" src="/web/no-menu.js"></script>
@@ -1295,9 +1375,10 @@ function seedNetwork() {
   }
 }
 function drawStillGrid() {
+  // brighter than the line colour: very faint on a projector (quick job 154)
   cx.clearRect(0, 0, W, H);
-  cx.fillStyle = rgba(lineRGB, 0.9);
-  for (let y = 16; y < H; y += 32) for (let x = 16; x < W; x += 32) cx.fillRect(x, y, 1.2, 1.2);
+  cx.fillStyle = rgba(mainRGB, 0.4);
+  for (let y = 16; y < H; y += 32) for (let x = 16; x < W; x += 32) cx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
 }
 // pulses fire along links; "in" walks toward the assistant (thinking), "out" walks away (speaking)
 function pickNext(d, mode) {
@@ -1596,7 +1677,7 @@ function buildFrame() {
     }
   }
   const hatch = el("g", { style: "color: var(--c); opacity: .45" }, mx);
-  el("rect", { x: x1 - c - L - 90, y: y0 + 12, width: 70, height: 7, fill: "url(#hatchP)" }, hatch);
+  if (W > 1200) el("rect", { x: x1 - c - L - 90, y: y0 + 12, width: 70, height: 7, fill: "url(#hatchP)" }, hatch);  // a narrow strip has words there (quick job 154)
   el("rect", { x: x0 + c + L + 20, y: y1 - 19, width: 70, height: 7, fill: "url(#hatchP)" }, hatch);
   frameSliders = [
     { node: el("path", { d: "M 0 -5 L 7 0 L 0 5 Z", class: "slider" }, mx), x: x0 + 3, a: y0 + c + L + 30, b: na - 30, dir: 1, speed: 0.07 },
@@ -1722,7 +1803,12 @@ function stepOrb(dt, now) {
     g.setAttribute("transform", `rotate(${g._a})`);
   });
 }
+// minimal: drawn once per state, not 60 times a second (quick job 154)
+let stillKey = "";
 function stepOrbStill() {
+  const key = `${S.state}`;
+  if (key === stillKey) return;
+  stillKey = key;
   for (const k in rings) rings[k].el.removeAttribute("transform");
   const cd = $("#core-dot");
   cd.style.transform = ""; cd.style.opacity = S.state === "offline" ? 0.45 : 1;
@@ -1807,7 +1893,12 @@ function layoutTraces() {
   for (const n of nodes) {
     const r = n.getBoundingClientRect(); if (!r.width) continue;
     const R = { l: r.left - hb.left, r: r.right - hb.left, t: r.top - hb.top, b: r.bottom - hb.top };
-    const { d, ax, ay, sx, sy } = route(c, rr, R);
+    let { d, ax, ay, sx, sy } = route(c, rr, R);
+    // the trace down to the log starts under the ask box, not through it (quick job 154)
+    const ask = $("#ask-btn").getBoundingClientRect();
+    if (n.classList.contains("log") && ask.width && Math.abs(ax - c.x) < 1 && ask.left - hb.left < ax && ask.right - hb.left > ax && ask.bottom - hb.top < ay) {
+      sy = ask.bottom - hb.top; d = `M ${sx} ${sy} V ${ay}`;
+    }
     const p = el("path", { d, class: "base" }, svg), len = p.getTotalLength();
     p.style.strokeDasharray = len; p.style.strokeDashoffset = S.booted ? 0 : len;
     p.style.transition = "stroke-dashoffset 1.1s cubic-bezier(0.16,1,0.3,1)";
@@ -1876,7 +1967,7 @@ const VERSES = [
   ["If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not.", "James 1:5"],
   ["Commit thy works unto the LORD, and thy thoughts shall be established.", "Proverbs 16:3"],
 ];
-const VERSE_SLOTS = [[0.05, 0.15], [0.66, 0.12], [0.04, 0.62], [0.6, 0.7], [0.36, 0.86], [0.72, 0.42]];
+const VERSE_SLOTS = [[0.05, 0.2], [0.66, 0.18], [0.04, 0.62], [0.6, 0.7], [0.36, 0.8], [0.72, 0.42]];  // away from the strip (quick job 154)
 let verseIdx = Math.floor(Math.random() * VERSES.length), lastSlot = -1, verseBusy = false;
 async function typeVerse() {
   if (verseBusy || S.quality !== "maximal" || S.sleeping || S.moduleOpen) return;
@@ -1927,7 +2018,9 @@ let COMMITS = [], COMMITS_END = new Date(), COMMIT_RANGES = [7, 14, 30], commitD
 const dayName = (n) => new Date(COMMITS_END - n * 864e5).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 function drawSpark(days) {
   commitDays = days;
-  const counts = COMMITS.slice(-days), sp = $("#spark"), max = Math.max(1, ...counts), w = 220, h = 54;
+  // drawn at its real size, so the bars use the whole width and the number stays 11 px (quick job 154)
+  const counts = COMMITS.slice(-days), sp = $("#spark"), max = Math.max(1, ...counts), box = sp.getBoundingClientRect();
+  const w = Math.round(box.width) || 220, h = Math.round(box.height) || 54;
   sp.innerHTML = ""; sp.setAttribute("viewBox", `0 0 ${w} ${h}`);
   $("#commit-total").textContent = counts.reduce((a, b) => a + b, 0);
   $("#ax0").textContent = dayName(days - 1); $("#ax1").textContent = "Today";
@@ -1935,7 +2028,7 @@ function drawSpark(days) {
   counts.forEach((n, i) => {
     const step = w / counts.length, bw = Math.max(1.5, step - (days > 20 ? 2 : 4)), x = i * step + (step - bw) / 2, bh = Math.max(1, (n / max) * (h - 14));
     el("rect", { x, y: h - bh, width: bw, height: bh, fill: n === max ? "var(--hot)" : "currentColor", opacity: n === max ? 1 : 0.6 }, sp);
-    if (n === max) { const lt = el("text", { x: x + bw / 2, y: h - bh - 4, "text-anchor": "middle" }, sp); lt.textContent = String(n); }
+    if (n === max) { const lt = el("text", { x: clamp(x + bw / 2, 8, w - 8), y: h - bh - 4, "text-anchor": "middle" }, sp); lt.textContent = String(n); }
   });
   $("#range").innerHTML = COMMIT_RANGES.map((d) => `<button type="button" aria-pressed="${d === days}" data-d="${d}">${d}d</button>`).join("");
   $("#range").querySelectorAll("button").forEach((btn) => btn.addEventListener("click", (e) => { e.stopPropagation(); drawSpark(+btn.dataset.d); SFX.blip(); }));
@@ -1949,7 +2042,8 @@ function renderProject() {
   const steps = $("#steps");
   steps.style.gridTemplateColumns = `repeat(${p.steps.length}, 1fr)`;
   steps.innerHTML = p.steps.map((s) => `<span class="${s.done ? "done" : s.n === p.step ? "now" : ""}"></span>`).join("");
-  panel.querySelector(".stepn").textContent = `Step ${p.step} of ${p.of}`;
+  // one count, the same as the details page (quick job 154: "Step 2 of 12" here, "6 of 13 steps done" there)
+  panel.querySelector(".stepn").textContent = `${p.steps.filter((s) => s.done).length} of ${p.steps.length} done`;
   panel.querySelector(".next > span:last-child").textContent = p.next || "All steps done";
 }
 function renderSpend() {
@@ -1997,7 +2091,8 @@ const COLUMNS = {
   power: { head: "Motor power", title: "The motors' power, for the arms the brain drives", cell: powerWord },
   use: { head: "What it is", title: "From devices.yaml, or what the system says it is", cell: (d) => esc(d.use) },
   seen: { head: "Last seen", title: "When it last connected or disconnected", cell: (d) => (d.on ? "Now" : esc(d.last)) },
-  remove: { head: "", title: "Remove it from this list", cell: (d) => `<button type="button" class="btn small" data-remove="${esc(d.id)}" title="Remove it from this list. It comes back when it connects again.">Remove</button>` },
+  // only a device that isn't connected: a connected one comes back at once (quick job 154)
+  remove: { head: "", title: "Remove it from this list", cell: (d) => (d.on ? "" : `<button type="button" class="btn small" data-remove="${esc(d.id)}" title="Remove it from this list. It comes back when it connects again.">Remove</button>`) },
 };
 let DEVICE_COLUMNS = ["id", "on", "power"];
 const deviceList = () => LAB;
@@ -2015,6 +2110,8 @@ function renderDevices() {
   const w = 220;
   if (!hive) {
     const named = n <= 6, h = named ? 128 : 112, c = [w / 2, h / 2], rx = 84, ry = h / 2 - (named ? 22 : 12);
+    // the names at 11 px or more on the screen, whatever the drawing's scale (quick job 154: 7 px on a laptop)
+    const shown = g.getBoundingClientRect().width, namePx = shown ? Math.max(9, (11 * w) / shown).toFixed(1) : 9;
     g.setAttribute("viewBox", `0 0 ${w} ${h}`);
     devs.forEach((d, i) => {
       // spread around an ellipse, starting top-left, so 1 to 8 devices all look intentional
@@ -2023,7 +2120,7 @@ function renderDevices() {
       const node = nodeFor(d, g);
       el("circle", { cx: x, cy: y, r: 9, fill: "transparent", stroke: "none" }, node);  // a bigger tap target
       el("circle", { cx: x, cy: y, r: 4, fill: d.brain ? "var(--c)" : d.lock ? "url(#hatch)" : "none", stroke: d.brain || d.on ? "var(--c)" : d.lock ? "var(--text-dim)" : "var(--offline)" }, node);
-      if (named) { const tx = el("text", { x, y: y + (y < c[1] ? -9 : 15), "text-anchor": x < 40 ? "start" : x > 180 ? "end" : "middle" }, node); tx.textContent = d.name; }
+      if (named) { const tx = el("text", { x, y: y + (y < c[1] ? -9 : 15), "text-anchor": x < 40 ? "start" : x > 180 ? "end" : "middle", "font-size": namePx }, node); tx.textContent = d.name; }
       if (d.brain && S.quality !== "minimal") {
         const p = el("circle", { r: 2, fill: "var(--hot)" }, g);
         el("animateMotion", { dur: "2.4s", repeatCount: "indefinite", path: `M ${c[0]} ${c[1]} L ${x} ${y}` }, p);
@@ -2076,14 +2173,15 @@ function showDevice(d, from) {
   const problem = d.problem ? `<div>${esc(d.problem)}</div>` : "";
   card.querySelector(".in").innerHTML = `<div class="t"><svg class="ico"><use href="#${ico}"/></svg>${esc(d.name)}<button type="button" aria-label="Close">×</button></div>
     <div>${esc(d.use)}</div>${conn}${power}${problem}
-    <div class="row">${S.page.diagnostics ? `<button type="button" class="btn small" data-dx title="This device's motors, picture rate, power or connection">Diagnostics</button>` : ""}<button type="button" class="btn small" data-remove="${esc(d.id)}" title="It comes back when it connects again.">Remove from the list</button></div>`;
+    <div class="row">${S.page.diagnostics ? `<button type="button" class="btn small" data-dx title="This device's motors, picture rate, power or connection">Diagnostics</button>` : ""}${d.on ? "" : `<button type="button" class="btn small" data-remove="${esc(d.id)}" title="It comes back when it connects again.">Remove from the list</button>`}</div>`;
   card.hidden = false;
-  // beside what was tapped, kept on screen
+  // under what was tapped, at the right edge of its panel, kept on screen (quick job 154: beside the panel it
+  // covered the module buttons)
   const b = from.getBoundingClientRect(), pb = (from.closest(".panel") || from).getBoundingClientRect(), cw = card.offsetWidth, ch = card.offsetHeight;
-  let x = pb.left - cw - 12; if (x < 16) x = Math.min(innerWidth - cw - 16, b.right + 14);
-  card.style.left = `${x}px`; card.style.top = `${clamp(b.top + b.height / 2 - ch / 2, 16, innerHeight - ch - 16)}px`;
+  const x = clamp(pb.right - cw, 16, innerWidth - cw - 16), below = b.bottom + 8 + ch < innerHeight - 16;
+  card.style.left = `${x}px`; card.style.top = `${below ? b.bottom + 8 : clamp(b.top - ch - 8, 16, innerHeight - ch - 16)}px`;
   card.querySelector("button").addEventListener("click", hideDevice);
-  card.querySelector("[data-remove]").addEventListener("click", (e) => { e.stopPropagation(); removeDevice(d.id); });
+  card.querySelector("[data-remove]")?.addEventListener("click", (e) => { e.stopPropagation(); removeDevice(d.id); });
   // this device's diagnostics (quick job 135), as a module that unfolds from the device's row
   card.querySelector("[data-dx]")?.addEventListener("click", (e) => {
     e.stopPropagation(); hideDevice();
@@ -2115,7 +2213,7 @@ function listFits() {
   if (!list.offsetParent) return;
   list.style.maxHeight = "";
   const floor = $(".log").getBoundingClientRect().top - 16, below = 24;
-  list.style.maxHeight = `${Math.max(140, Math.min(list.scrollHeight, floor - list.getBoundingClientRect().top - below))}px`;
+  list.style.maxHeight = `${Math.max(88, Math.min(list.scrollHeight, floor - list.getBoundingClientRect().top - below))}px`;  // never under the log (quick job 154)
   moreFade();
 }
 function moreFade() { const l = $("#devlist"); l.parentElement.classList.toggle("more", $(".devices").dataset.open === "1" && l.scrollTop + l.clientHeight < l.scrollHeight - 2); }
@@ -2188,10 +2286,12 @@ function errBox(title, msg) {
   $("#errmsg b").textContent = title;
   $("#errmsg span").textContent = msg || "";
 }
-// a turn that went wrong: the brain's own full sentence, shown at the core for a while
+// a turn that went wrong: the brain's own full sentence, shown under the core for a while. The AI is off (the
+// note on top says why): what broke and what still works (quick job 154: only the note nudged, so nothing seemed to happen)
+const STILL_WORKS = "The pages, the robots and STOP still work.";
 function showError(msg) {
-  if (onTop(msg)) return;
-  errBox("No answer", msg);
+  if (onTop(msg)) errBox("The AI is off", `${msg} ${STILL_WORKS}`);
+  else errBox("No answer", msg);
   S.errorUntil = performance.now() + 9000;
   setState("error");
 }
@@ -2475,8 +2575,8 @@ function onVoiceEvent(ev) {
     }
   } else if (ev.type === "error" || ev.type === "mic_error") {
     if (VS.voiced) endVoice();
-    if (onTop(ev.message)) return;
-    errBox(ev.type === "mic_error" ? "Can't listen" : "No answer", ev.message);
+    if (onTop(ev.message)) errBox("The AI is off", `${ev.message} ${STILL_WORKS}`);
+    else errBox(ev.type === "mic_error" ? "Can't listen" : "No answer", ev.message);
     S.errorUntil = performance.now() + 9000; setState("error");
   } else if (ev.type === "voice_error") { voiceNote(ev.message); freeText(); }
   else if (ev.type === "playing" && VS.shown) {
@@ -2579,7 +2679,7 @@ const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
 // every module the hub knows: id -> [title, icon, kind]. The theme's hub.modules picks which ones and
 // their order. "page" = a page from the brain, opened inside the hub (only when /api/hub lists it).
 // Settings opens from the gear in the strip. Chat isn't one: it belongs to the core.
-const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], training: ["Training", "i-leader", "page"], cameras: ["Cameras", "i-cam", "page"], settings: ["Settings", "i-gear", "page"], pages: ["All Pages", "i-link", "page"] };
+const MODULES = { teleop: ["Teleop", "i-hand", "page"], monitor: ["Monitor", "i-screen", "page"], ai: ["AI Control", "i-chip", "page"], training: ["Training", "i-leader", "page"], cameras: ["Cameras", "i-cam", "page"], settings: ["Settings", "i-gear", "page"], pages: ["All Pages", "i-apps", "page"] };
 const CHAT = ["Chat", "i-chat", "chat"];
 function buildMring(g) {
   el("circle", { r: 22, fill: "none", stroke: "currentColor", "stroke-width": 1, "stroke-dasharray": "14 5 2 5", opacity: 0.8 }, g);
@@ -2626,15 +2726,16 @@ function openModule(btn) {
   if (kind === "detail") showDetail(btn.dataset.detail);
   if (kind === "page") openPage(btn.dataset.module);
   modCv.style.display = kind === "holo" || kind === "side" ? "" : "none";
-  body.dataset.mod = kind;
-  const orb = $("#orb");
+  body.dataset.mod = kind; body.dataset.view = S.showing || "";
+  const orb = $("#orb"), flat = S.quality === "minimal";
   orbHome = orb.getBoundingClientRect();
   $("#orb-dock").appendChild(orb);
-  flipOrb(orb, orbHome);
+  if (!flat) flipOrb(orb, orbHome);
   setTimeout(() => { const o = orb.getBoundingClientRect(); S.orbC = { x: o.left + o.width / 2, y: o.top + o.height / 2 }; }, 800);
-  m.style.transition = "none"; m.style.clipPath = modFrom; m.style.opacity = ""; m.classList.remove("closing"); m.classList.add("open");
+  // minimal: a short fade, no unfolding and no flying core (quick job 154)
+  m.style.transition = "none"; m.style.clipPath = flat ? "inset(0 0 0 0)" : modFrom; m.style.opacity = flat ? 0 : ""; m.classList.remove("closing"); m.classList.add("open");
   m.getBoundingClientRect();
-  m.style.transition = ""; m.style.clipPath = "inset(0 0 0 0)";
+  m.style.transition = flat ? "opacity 0.15s" : ""; m.style.clipPath = "inset(0 0 0 0)"; m.style.opacity = "";
   body.classList.add("folded");
   SFX.open();
   setTimeout(() => (kind === "chat" ? $("#ask") : $("#mod-back")).focus(), 320);
@@ -2648,14 +2749,16 @@ function closeModule() {
   // removing the page closes its connection at once: the arm freezes (dead-man) and control is free
   $("#mod-slot iframe")?.remove();
   closeOpenOn();
-  S.sentFrom = null; S.closing = true; S.closingUntil = performance.now() + 720;
+  const flat = S.quality === "minimal", ms = flat ? 160 : 700;
+  S.sentFrom = null; S.closing = true; S.closingUntil = performance.now() + ms + 20;
   D?.update();  // not showing it any more (the animation still runs)
-  m.style.transition = "clip-path 0.4s cubic-bezier(0.7,0,0.84,0), opacity 0.22s ease-in";
-  m.style.clipPath = modFrom; m.style.opacity = 0;
+  m.style.transition = flat ? "opacity 0.15s" : "clip-path 0.4s cubic-bezier(0.7,0,0.84,0), opacity 0.22s ease-in";
+  if (!flat) m.style.clipPath = modFrom;
+  m.style.opacity = 0;
   body.classList.remove("folded");
   SFX.close();
   // fly the core home first, then put it back in the hub
-  if (orbHome && d.width) {
+  if (orbHome && d.width && !flat) {
     orb.style.transition = "transform 0.7s cubic-bezier(0.16,1,0.3,1)";
     orb.style.transform = `translate(${orbHome.left + orbHome.width / 2 - d.left - d.width / 2}px, ${orbHome.top + orbHome.height / 2 - d.top - d.height / 2}px) scale(${orbHome.width / d.width})`;
   }
@@ -2663,7 +2766,7 @@ function closeModule() {
     m.classList.remove("open");
     orb.style.transition = "none"; orb.style.transform = "";
     $(".core").insertBefore(orb, $(".core").firstChild);
-    delete body.dataset.mod;
+    delete body.dataset.mod; delete body.dataset.view;
     if (S.moduleOpen === "chat") $("#hub").insertBefore($(".chat"), $(".side.left"));
     REPLY_HOME.parent.insertBefore($("#reply"), REPLY_HOME.next); $("#orb-dock").classList.remove("talk");
     S.showing = null;
@@ -2671,7 +2774,7 @@ function closeModule() {
     document.querySelectorAll("#mod-slot .detail, #mod-slot .sysbox").forEach((n) => n.remove());
     S.moduleOpen = null; S.closing = false;
     layoutTraces(); showTraces();
-  }, 700);
+  }, ms);
 }
 function openChat() {
   if (S.layout === "panels") { $("#ask").focus(); return; }
@@ -2778,13 +2881,15 @@ function showDetail(id) {
     const C = COMMITS.length ? COMMITS : [0], w = 640, h = 170, n = C.length, step = w / n, max = Math.max(1, ...C);
     const total = C.reduce((a, b) => a + b, 0), active = C.filter(Boolean).length, top = C.indexOf(Math.max(...C));
     const bars = C.map((c, i) => { const bh = Math.max(1, (c / max) * (h - 18)), bx = i * step + 3; return `<rect x="${bx}" y="${h - bh}" width="${Math.max(1, step - 6)}" height="${bh}" fill="${c === max ? "var(--hot)" : "currentColor"}" opacity="${c ? (c === max ? 1 : 0.7) : 0.25}"/>${c ? `<text class="num" x="${bx + (step - 6) / 2}" y="${h - bh - 5}" text-anchor="middle">${c}</text>` : ""}`; }).join("");
-    const ticks = [n - 1, Math.round((n - 1) * 0.75), Math.round((n - 1) * 0.5), Math.round((n - 1) * 0.25), 0].map((k) => `<text x="${(n - 1 - k) * step + step / 2}" y="${h + 18}" text-anchor="middle">${k ? dayName(k) : "today"}</text>`).join("");
+    // the first date starts at the left edge and "Today" ends at the right one (quick job 154: "ct 28")
+    const ticks = [n - 1, Math.round((n - 1) * 0.75), Math.round((n - 1) * 0.5), Math.round((n - 1) * 0.25), 0].map((k, i) => `<text x="${i === 0 ? 0 : i === 4 ? w : (n - 1 - k) * step + step / 2}" y="${h + 18}" text-anchor="${i === 0 ? "start" : i === 4 ? "end" : "middle"}">${k ? dayName(k) : "Today"}</text>`).join("");
     const recent = S.recent.map((c) => { const [yy, mm, dd] = c.date.split("-").map(Number); return `<li><span>${new Date(yy, mm - 1, dd).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>${esc(c.subject)}</li>`; }).join("");
     html = `<div class="detail wide"><div><div class="d-line">Commits per day, last ${n} days, all branches</div><svg class="d-chart" viewBox="0 0 ${w} ${h + 22}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--line)"/>${bars}${ticks}</svg>
       <div class="d-stats"><div><b>${total}</b>commits</div><div><b>${active}</b>days with commits</div><div><b>${Math.max(...C)}</b>on ${dayName(n - 1 - top)}, the busiest day</div></div></div>
       <div><div class="d-line">Latest</div><ul class="d-list">${recent}</ul></div></div>`;
   } else if (id === "devices") {
-    const devs = deviceList(), cols = ["id", "on", "power", "use", "seen", "remove"].map((k) => [k, COLUMNS[k]]);
+    // a column with nothing in it is left out (quick job 154: an empty "Motor power" with no arm)
+    const devs = deviceList(), cols = ["id", "on", "power", "use", "seen", "remove"].map((k) => [k, COLUMNS[k]]).filter(([, c]) => devs.some((d) => c.cell(d)));
     const rows = Object.entries(KINDS).map(([kind, [ico, label]]) => {
       const list = devs.filter((d) => d.kind === kind);
       if (!list.length) return "";
@@ -2809,7 +2914,7 @@ async function drawSystem() {
   const calls = await getJSON("/api/ai-calls?after=" + Date.now() / 1000);
   const f = sysMod.systemFacts({ devices: S.devRaw || [], hubDevices: D?.devices() || [], status: S.status, mcp: !!calls?.mcp, here: D?.name || "" });
   const still = S.quality === "minimal" || matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if ($("#mod-slot .sysbox") === box) box.innerHTML = sysMod.systemSVG(f, { animate: !still });
+  if ($("#mod-slot .sysbox") === box) box.innerHTML = sysMod.systemSVG(f, { animate: !still, flat: S.quality === "minimal" });
 }
 function labelColumn(h, items, labelX, fontLines, fontDigits, narrow) {
   items.forEach(([p, ji], k) => {
@@ -2928,8 +3033,45 @@ function centerOrb(scale) {
 // sent on the start press); the persona's own line when there's no news. Never invented here.
 const GREET_LINE = () => S.greet?.text || `${greeting()}.`;
 const CHECK_ICONS = { Theme: "i-hex", Sound: "i-chip", Display: "i-screen", Internet: "i-globe", AI: "i-chip", Assistant: "i-user", Arm: "i-arm" };
+// minimal (quick job 154): the title, the checks and the greeting at once, then the hub fades in (about 1 s)
+function bootChecks() {
+  const st = S.status, ai = st?.ai;
+  return [
+    ["Theme", S.themeOk ? "Loaded" : "Defaults", S.themeOk], ["Sound", S.sound && ac ? "Unlocked" : "Muted", !!(S.sound && ac)],
+    ["Display", `${screen.width}×${screen.height}`, true],
+    ["Internet", st?.internet === true ? "Online" : st?.internet === false ? "Offline" : "Checking", st?.internet === true],
+    ["AI", !ai ? "Brain not reachable" : ai.paused ? "Paused" : ai.connected ? ai.setup : "Not connected", !!ai?.connected && !ai.paused],
+    ["Assistant", st?.persona?.display_name || "Unknown", !!st],
+    ["Arm", S.arm?.connected ? S.arm.name : "Disconnected", !!S.arm?.connected],
+  ];
+}
+function checkRow([k, v, ok]) {
+  const row = document.createElement("div");
+  row.innerHTML = `<span class="k"><svg class="ico"><use href="#${CHECK_ICONS[k]}"/></svg><span></span></span><i class="lead"></i><span class="v${ok ? "" : " no"}"></span>`;
+  row.querySelector(".k span").textContent = k; row.querySelector(".v").textContent = v;
+  return row;
+}
+async function bootMinimal() {
+  const bl = $("#bootlines");
+  bl.replaceChildren(...bootChecks().map((c) => { const r = checkRow(c); r.classList.add("led"); return r; }));
+  const bt = $("#boot-title"); bt.textContent = S.title; bt.style.transition = "opacity 0.3s"; bt.classList.add("on");
+  ringsOn(true); S.igniteAt = performance.now();
+  await Promise.race([S.greetP, wait(400)]);
+  $("#boot-greet").textContent = GREET_LINE();
+  if (VS.greeting) { V.playHeld(); setState("speaking"); }
+  await pause(700);
+  finishBoot();
+}
 async function boot() {
   if (S.readyP) await Promise.race([S.readyP, wait(1500)]);
+  if (S.quality === "minimal") {
+    S.booting = true; S.booted = false; skip = false; S.reveal = 1e9; S.hyper = null; S.morph = null;
+    setAlert("none"); setState("idle"); drawFrame();
+    $("#bootlines").innerHTML = ""; $("#bootlines").style.opacity = 1; $("#bootlines").style.transform = "translateX(-50%)";
+    $("#boot-title-wrap").style.display = ""; $(".brand").style.opacity = 0; $("#boot-greet").className = "";
+    document.querySelectorAll(".panel").forEach((p) => { p.style.transitionDelay = ""; p.classList.add("hold"); });
+    return bootMinimal();
+  }
   S.booting = true; S.booted = false; skip = false;
   S.igniteAt = 0; S.reveal = 0; S.spinBoost = 12; S.hyper = null; S.morph = null;
   setAlert("none"); setState("idle");
@@ -2980,7 +3122,7 @@ async function boot() {
   for (let i = 0; i < RING_ORDER.length; i++) {
     lockRing(RING_ORDER[i]);
     SFX.lock(i);
-    await pause(hyper ? 75 : 110);
+    await pause(hyper ? 60 : 100);
     if (skip) return finishBoot();
   }
   // the core ignites with a lens flare
@@ -2997,32 +3139,25 @@ async function boot() {
     (function grow(t) { const k = clamp((t - t0) / 1500, 0, 1); S.reveal = Math.max(S.reveal, maxR * (1 - Math.pow(1 - k, 3))); if (k < 1 && !S.booted) requestAnimationFrame(grow); })(t0);
   }
   // real checks only: each line reads something that just happened or the brain just reported
-  const st = S.status, ai = st?.ai;
-  const checks = [
-    ["Theme", S.themeOk ? "loaded" : "defaults", S.themeOk], ["Sound", S.sound && ac ? "unlocked" : "muted", !!(S.sound && ac)],
-    ["Display", `${screen.width}×${screen.height}`, true],
-    ["Internet", st?.internet === true ? "online" : st?.internet === false ? "offline" : "checking", st?.internet === true],
-    ["AI", !ai ? "brain not reachable" : ai.paused ? "paused" : ai.connected ? ai.setup : "not connected", !!ai?.connected && !ai.paused],
-    ["Assistant", st?.persona?.display_name || "unknown", !!st],
-    ["Arm", S.arm?.connected ? S.arm.name : "disconnected", !!S.arm?.connected],
-  ];
+  const checks = bootChecks();
   // the checks type out while the title decodes above them
   const typeChecks = (async () => {
     for (const [k, v, ok] of checks) {
       const row = document.createElement("div");
       row.innerHTML = `<span class="k"><svg class="ico"><use href="#${CHECK_ICONS[k]}"/></svg><span></span></span><i class="lead"></i><span class="v${ok ? "" : " no"}"></span>`;
       bl.appendChild(row);
-      await pause(70);
-      await typeInto(row.querySelector(".k span"), k, hyper ? 10 : 16);
-      row.classList.add("led"); await pause(90);
-      await typeInto(row.querySelector(".v"), v, hyper ? 10 : 16);
+      // quicker than before (quick job 154: the startup took 9.5 s; DESIGN.md says about 8 s)
+      await pause(40);
+      await typeInto(row.querySelector(".k span"), k, hyper ? 8 : 12);
+      row.classList.add("led"); await pause(50);
+      await typeInto(row.querySelector(".v"), v, hyper ? 8 : 12);
       if (skip) return;
       row.querySelector(".v").classList.add("pop");
       SFX.line();
-      await pause(40);
+      await pause(20);
     }
   })();
-  await pause(hyper ? 650 : 900);
+  await pause(hyper ? 450 : 700);
   if (skip) return finishBoot();
   await decodeTitle();
   if (skip) return finishBoot();
@@ -3031,11 +3166,11 @@ async function boot() {
   await Promise.race([S.greetP, wait(1500)]);
   gr.classList.add("typing");
   if (VS.greeting) { V.playHeld(); setState("speaking"); }  // the greeting is spoken while it's typed
-  await typeInto(gr, GREET_LINE(), 22);
+  await typeInto(gr, GREET_LINE(), 16);
   gr.classList.remove("typing");
   await typeChecks;
   if (skip) return finishBoot();
-  await pause(800);
+  await pause(450);
   finishBoot();
 }
 function flyToPlace(instant) {
@@ -3067,7 +3202,9 @@ function finishBoot() {
   S.hyper = null; if (!S.morph) stars = [];
   drawFrame(); ringsOn(true);
   if (S.reveal < 2000) { const t0 = performance.now(), maxR = Math.hypot(W, H), r0 = S.reveal; (function grow(t) { const k = clamp((t - t0) / 900, 0, 1); S.reveal = r0 + (maxR - r0) * (1 - Math.pow(1 - k, 3)); if (k < 1) requestAnimationFrame(grow); })(t0); }
-  flyToPlace(instant);
+  const flat = S.quality === "minimal";
+  flyToPlace(instant || flat);
+  if (flat) $("#boot-title").classList.remove("on");
   $("#boot-greet").classList.add("leave");
   S.readyAt = performance.now() + 1200;
   if (!instant) SFX.land();
@@ -3077,14 +3214,14 @@ function finishBoot() {
     const oc = S.orbC;
     document.querySelectorAll(".panel").forEach((p) => {
       const r = p.getBoundingClientRect(), d = Math.hypot(r.left + r.width / 2 - oc.x, r.top + r.height / 2 - oc.y);
-      p.style.transitionDelay = `${Math.round(d / 2.4)}ms`;
+      p.style.transitionDelay = flat ? "" : `${Math.round(d / 2.4)}ms`;  // minimal: all at once, a fade
       p.classList.remove("hold");
     });
     setTimeout(() => document.querySelectorAll(".panel").forEach((p) => (p.style.transitionDelay = "")), 1700);
-  }, instant ? 0 : 450);
+  }, instant || flat ? 0 : 450);
   setTimeout(async () => {
     $("#bootlines").innerHTML = "";
-    typeLogLine();
+    typeLogLine(); renderDevices();  // the names at their real size, now the panel has one
     // the greeting waits in the conversation as its first message (the brain put it there); the core glows once
     await Promise.race([S.greetP, wait(2000)]);
     if (S.asking) return;
@@ -3184,9 +3321,11 @@ function ignite(how = "tap", from = null, tell = true) {
     if (tell) D?.started(how);
   }
   ig.classList.add("unlock");
-  setTimeout(() => ig.classList.add("gone"), UNLOCK_MS + 100);
-  setTimeout(() => ig.remove(), UNLOCK_MS + 700);
-  setTimeout(() => body.classList.remove("waiting"), UNLOCK_MS + (S.startup === "hyperspace" ? 700 : 360));
+  // minimal: no unlock to watch, the start screen fades at once (quick job 154)
+  const flat = S.quality === "minimal", wait0 = flat ? 0 : UNLOCK_MS;
+  setTimeout(() => ig.classList.add("gone"), wait0 + 100);
+  setTimeout(() => ig.remove(), wait0 + 700);
+  setTimeout(() => body.classList.remove("waiting"), flat ? 100 : UNLOCK_MS + (S.startup === "hyperspace" ? 700 : 360));
   resize();
   PAD = padChar(); setMoney();
   setTimeout(boot, S.quality === "minimal" ? 0 : UNLOCK_MS);
@@ -3232,6 +3371,9 @@ addEventListener("keydown", (e) => {
   if (S.sleeping) wake();
   if ($("#ignite")) { startKey(e); return; }
   if (S.booting && !S.booted) { finishBoot(); return; }
+  // Esc closes the innermost thing first (quick job 154): "Open on…", the device card, then the module
+  if (e.key === "Escape" && !$("#open-on").hidden) { closeOpenOn(); return; }
+  if (e.key === "Escape" && !$("#devcard").hidden) { hideDevice(); return; }
   if (e.key === "Escape" && S.moduleOpen) { backByEsc(); closeModule(); return; }
   if (e.key === "Escape" && V?.conversing) { V.converse(false); }  // Esc ends a conversation too
   if (e.key === "Escape" && V && (V.pressed || V.wakeTurn || V.speaking())) { if (V.pressed || V.wakeTurn) { VW?.cancel(); VW = null; V.cancel(); endVoice(); } else V.stopSpeaking(); return; }
@@ -3337,7 +3479,7 @@ function setQuality(q) {
 }
 // Every view that opens on a device (the builder, 2026-11-21; /api/hub → views): a page without a button here
 // (webcam teleop, a module that isn't a button) opens in the module frame like the others
-const VIEW_ICONS = { "system-map": "i-net", command: "i-target", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", "monitor-raspbot": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-link", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
+const VIEW_ICONS = { "system-map": "i-net", command: "i-target", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", "monitor-raspbot": "i-screen", webcam: "i-cam", settings: "i-gear", pages: "i-apps", raspbot: "i-pi", "wake-word": "i-mic", remote: "i-touch" };
 function setViews(views) {
   for (const v of views) {
     if (!v.page || v.id === "xr" || S.page[v.id]) continue;
@@ -3374,6 +3516,7 @@ async function init() {
   setModules(t?.hub?.modules, hub?.modules || []);
   setViews(hub?.views || []);
   $("#cc-launch").hidden = !(hub?.here && S.page.command);  // the Command Center opens only on the brain's computer
+  placeCC();
   await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
 }
 // a setting changed (the settings page inside the hub, or another window): apply it without a reload
@@ -3393,6 +3536,23 @@ async function reapply() {
 addEventListener("message", (e) => e.origin === location.origin && e.data?.type === "lab-os:settings" && reapply());
 addEventListener("storage", (e) => (e.key === "lab-os.screen" || e.key?.startsWith("lab-os.device.")) && reapply());
 function setFact(id, text, off) { const f = $(id); f.querySelector("span").textContent = text; f.classList.toggle("off", !!off); }
+// a venue's file name as words: "visit-day" → "Visit day"
+const venueName = (v) => { const s = String(v || "").replace(/[-_]+/g, " ").trim(); return s && s[0].toUpperCase() + s.slice(1); };
+// the start screen's place line: the place's name with the pin, and the venue when it isn't the default one
+const placeLine = (st) => [S.title, st && !st.venue_default ? venueName(st.venue) : ""].filter(Boolean).join(", ");
+// the Command Center's button in the middle of the strip (the builder, 2026-11-26), where it fits; else in line
+function placeCC() {
+  const b = $("#cc-launch");
+  if (b.hidden) return;
+  b.classList.remove("mid");
+  if (portrait()) return;
+  b.classList.add("mid");
+  const r = b.getBoundingClientRect(), brand = $("#brand").getBoundingClientRect();
+  const first = [...document.querySelectorAll(".strip .fact")].find((f) => !f.hidden && f.offsetWidth);
+  const right = first ? first.getBoundingClientRect().left : innerWidth;
+  if (r.left < brand.right + 24 || r.right > right - 24) b.classList.remove("mid");
+}
+addEventListener("resize", placeCC);
 let noteShown = null;
 function showNote(msg, detail = "") {  // a calm sentence at the top of the core (e.g. why the chat is paused)
   msg = msg || null;
@@ -3423,9 +3583,12 @@ async function pollStatus() {
     return st;
   }
   S.clockOffset = st.time_ms - Date.now();
-  setFact("#f-venue", st.venue); setFact("#f-persona", st.persona.display_name);
+  // the venue shows only while it isn't the place's default one (quick job 154: a lone "lab" with a pin)
+  setFact("#f-venue", venueName(st.venue)); $("#f-venue").hidden = !!st.venue_default;
+  setFact("#f-persona", st.persona.display_name);
   renderTry(st.visitors);
-  const iv = $("#ign-venue"); if (iv) iv.textContent = st.venue;
+  placeCC();
+  const iv = $("#ign-venue"); if (iv) iv.textContent = placeLine(st);
   setFact("#f-net", st.internet === true ? "Online" : st.internet === false ? "Offline" : "Checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
   if (performance.now() > S.noteUntil) showNote(st.ai.paused, st.ai.paused_detail);
@@ -3542,6 +3705,8 @@ function watchFrame(frame) {
     w.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (w.document.pointerLockElement) { w.document.exitPointerLock(); return; }
+      if (!$("#open-on").hidden) { closeOpenOn(); return; }  // the innermost thing first (quick job 154)
+      if (e.defaultPrevented) return;  // the page closed something of its own (the Command Center's focus window)
       e.preventDefault(); backByEsc(); closeModule();
     });
   } catch (e) {
@@ -3589,27 +3754,40 @@ addEventListener("focus", pollQuestView);
 // that can also shut lab-os down, with a confirmation that warns about the arm first (quick job 6)
 let canShutDown = false;
 getJSON("/api/shutdown").then((r) => (canShutDown = !!r?.allowed));
-const PM = document.body.appendChild(Object.assign(document.createElement("div"), { id: "power-menu", hidden: true }));  // outside the strip: its cut corner would clip it
-function closePower() { PM.hidden = true; $("#sleep-btn").setAttribute("aria-expanded", "false"); }
-function powerRow(label, sub, run, cls = "") {
+// a drop-down under its button (quick job 154): the notch points at the button, kept on the screen
+function dropUnder(menu, btn) {
+  const b = btn.getBoundingClientRect(), w = menu.offsetWidth, mid = b.left + b.width / 2;
+  const left = clamp(mid - w / 2, 8, innerWidth - w - 8);
+  menu.style.left = `${left}px`; menu.style.top = `${b.bottom + 9}px`;
+  menu.style.setProperty("--nx", `${clamp(mid - left, 16, w - 16)}px`);
+}
+function menuOpen() { body.classList.toggle("menu-open", !PM.hidden || !$("#open-on").hidden); }
+const PM = document.body.appendChild(Object.assign(document.createElement("div"), { id: "power-menu", className: "dd", hidden: true }));  // outside the strip: its cut corner would clip it
+PM.innerHTML = `<div class="cut"><div class="in"></div></div>`;
+const PMI = PM.querySelector(".in");
+function closePower() { PM.hidden = true; $("#sleep-btn").setAttribute("aria-expanded", "false"); menuOpen(); }
+function powerRow(label, icon, run) {
   const b = document.createElement("button");
-  b.type = "button"; b.className = `oo-row ${cls}`;
-  b.innerHTML = `<span class="oo-name"></span><span class="oo-sub"></span>`;
-  b.querySelector(".oo-name").textContent = label; b.querySelector(".oo-sub").textContent = sub;
+  b.type = "button"; b.className = "oo-row dd-row";
+  b.innerHTML = `<svg class="ico"><use href="#${icon}"/></svg><span class="oo-name"></span>`;
+  b.querySelector(".oo-name").textContent = label;
   b.addEventListener("click", (e) => { e.stopPropagation(); run(); });
   return b;
 }
+const ddTitle = (text) => Object.assign(document.createElement("p"), { className: "dd-title", textContent: text });
 function powerMenu() {
-  PM.replaceChildren(Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Power" }),
-    powerRow("Back to the start screen", "lab-os stays on", () => { closePower(); SFX.close(); toStart("the power button"); }),
-    powerRow("Shut down lab-os", "asks first", confirmShutDown));
+  PMI.replaceChildren(ddTitle("Power"),
+    powerRow("Back to the start screen", "i-screen", () => { closePower(); SFX.close(); toStart("the power button"); }),
+    powerRow("Shut down lab-os", "i-power", confirmShutDown));
 }
 async function confirmShutDown() {
   const r = await getJSON("/api/shutdown");
-  if (!r?.allowed) { PM.replaceChildren(Object.assign(document.createElement("p"), { className: "oo-msg", textContent: r?.why_not || "The brain didn't answer." })); return; }
+  if (!r?.allowed) { PMI.replaceChildren(ddTitle("Power"), Object.assign(document.createElement("p"), { className: "oo-msg", textContent: r?.why_not || "The brain didn't answer." })); return; }
+  const limp = r.limp || [];
   const say = document.createElement("p");
-  say.textContent = "Stops any move, lets go of the arm, closes the cameras and microphones and stops the brain. Every screen then says lab-os is off; the \"Start lab-os\" icon starts it again.";
-  const parts = [Object.assign(document.createElement("p"), { className: "oo-head", textContent: "Shut down lab-os?" })];
+  say.textContent = "Stops any move, lets go of the arm, closes the cameras and microphones and stops the brain. Every screen then says lab-os is off; the \"Start lab-os\" icon starts it again."
+    + (limp.length ? ` ${limp.join(" and ")} ${limp.length > 1 ? "go" : "goes"} limp.` : "");
+  const parts = [ddTitle("Shut down lab-os?")];
   if (r.warning) { // first, before the rest (quick job 44: it was missed under the paragraph)
     const w = document.createElement("p");
     w.className = "warn";
@@ -3618,10 +3796,15 @@ async function confirmShutDown() {
     parts.push(w);
   }
   parts.push(say);
-  const limp = r.limp || [];
   const msg = Object.assign(document.createElement("p"), { className: "oo-msg" });
   msg.setAttribute("aria-live", "polite");
-  const go = powerRow("Shut down", "now", async () => {
+  // "Shut down" a red filled button, "Cancel" beside it; Cancel has the focus (quick job 154)
+  const button = (label, cls, run) => {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: `btn small ${cls}`, textContent: label });
+    b.addEventListener("click", (e) => { e.stopPropagation(); run(); });
+    return b;
+  };
+  const go = button("Shut down", "danger", async () => {
     PM.querySelectorAll("button").forEach((b) => (b.disabled = true));
     msg.textContent = "Shutting down…";
     try {
@@ -3636,11 +3819,13 @@ async function confirmShutDown() {
       msg.textContent = `Not shut down: ${e.message}`;
       PM.querySelectorAll("button").forEach((b) => (b.disabled = false));
     }
-  }, "go");
-  if (limp.length) go.querySelector(".oo-sub").textContent = `${limp.join(" and ")} ${limp.length > 1 ? "go" : "goes"} limp`;
-  parts.push(go, powerRow("Cancel", "keep it running", closePower), msg);
-  PM.replaceChildren(...parts);
-  go.focus();
+  });
+  const cancel = button("Cancel", "", closePower), acts = Object.assign(document.createElement("div"), { className: "acts" });
+  acts.append(go, cancel);
+  parts.push(acts, msg);
+  PMI.replaceChildren(...parts);
+  dropUnder(PM, $("#sleep-btn"));
+  cancel.focus();
 }
 $("#sleep-btn").addEventListener("click", (e) => {
   e.stopPropagation();
@@ -3648,7 +3833,9 @@ $("#sleep-btn").addEventListener("click", (e) => {
   if (!PM.hidden) return closePower();
   SFX.blip(); powerMenu();
   PM.hidden = false; $("#sleep-btn").setAttribute("aria-expanded", "true");
+  dropUnder(PM, $("#sleep-btn")); menuOpen();
 });
+addEventListener("resize", () => { if (!PM.hidden) dropUnder(PM, $("#sleep-btn")); if (!$("#open-on").hidden) dropUnder($("#open-on"), $("#mod-send")); });
 PM.addEventListener("click", (e) => e.stopPropagation());
 addEventListener("pointerdown", (e) => { if (!PM.hidden && !PM.contains(e.target) && e.target.closest("#sleep-btn") === null) closePower(); });
 addEventListener("keydown", (e) => { if (e.key === "Escape" && !PM.hidden) { e.stopImmediatePropagation(); closePower(); } }, { capture: true });
@@ -3703,10 +3890,10 @@ async function sendToScreen(id, say) {
   if (place) setTimeout(closeModule, 900);  // it lives there now; the hub's copy would hold a second connection
 }
 /* ---------- devices (step 8): this one's name, "open on…", pages sent here ---------- */
-function closeOpenOn() { $("#open-on").hidden = true; $("#mod-send").setAttribute("aria-expanded", "false"); }
+function closeOpenOn() { $("#open-on").hidden = true; $("#mod-send").setAttribute("aria-expanded", "false"); menuOpen(); }
 function fillMenu() {
   const id = S.showing;  // any view: a page, a details page, the conversation (2026-11-21)
-  DM.fillOpenOn($("#open-on"), D, id, {
+  DM.fillOpenOn($("#open-on .in"), D, id, {
     title: (MODULES[id] || DETAILS[id] || (id === "chat" ? ["The Conversation"] : [id]))[0],
     onSent: () => setTimeout(() => S.showing === id && closeModule(), 900),  // it lives there now
     extra: [{ label: "Another monitor of this computer", sub: "a window of its own", run: (msg) => sendToScreen(id, (m) => (msg.textContent = m)) }],
@@ -3719,6 +3906,7 @@ $("#mod-send").addEventListener("click", (e) => {
   if (!D) return sendToScreen(S.showing, (m) => console.warn(`hub: ${m}`));  // devices not loaded: the old way
   SFX.blip(); fillMenu();
   $("#open-on").hidden = false; $("#mod-send").setAttribute("aria-expanded", "true");
+  dropUnder($("#open-on"), $("#mod-send")); menuOpen();
 });
 $("#open-on").addEventListener("click", (e) => e.stopPropagation());
 // All Pages in the module asks for a page (quick job 133): it opens as a module here, in place of All Pages
@@ -3769,7 +3957,7 @@ import("/web/device.js").then((m) => {
     onLive: (list) => setLive(list),
     onCard: () => { if ($("#ignite")) ignite("card", null, false); },  // the brain read the swipe (quick job 113)
     onStart: (how, from) => { if ($("#ignite")) ignite(how, from); },  // started on another device (quick job 139)
-    onDevices: () => { if (DM.shouldRefill($("#open-on")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
+    onDevices: () => { if (DM.shouldRefill($("#open-on .in")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),
   });
@@ -3835,7 +4023,9 @@ addEventListener("resize", () => { resize(); if (S.booted) { drawFrame(); showTr
 resize();
 readColors();
 setMoney();
-document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); if (S.booted) { layoutTraces(); showTraces(); } });
+document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); placeCC(); if (S.booted) { layoutTraces(); showTraces(); } });
+// the commits and the device names are drawn at the screen's real size (quick job 154)
+addEventListener("resize", () => { if (COMMITS.length) drawSpark(commitDays); renderDevices(); });
 // start: the theme and the brain's facts load while the start screen waits
 if ($("#ignite")) body.classList.add("waiting");
 S.readyP = init().then(() => {
