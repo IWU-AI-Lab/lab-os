@@ -5,8 +5,8 @@ The detector is YOLOE-26m (Ultralytics, AGPL-3.0), an open-vocabulary model: it 
 that the words in `config/labels.yaml` name, also words outside the usual 80 kinds ("blue cube",
 "LEGO brick"). `uv run lab-os labels build` turns the words into the model file
 `models/labels/yoloe-26m.onnx` once (it needs the internet and Ultralytics then, never after).
-lab-os runs that file with onnxruntime on the processor (6 threads): about 100 ms a picture on the
-lab desktop, no GPU, no PyTorch.
+lab-os runs that file with onnxruntime on the processor (6 threads), on a 640 × 480 input (the
+Raspbot's picture): about 75 ms a picture on the lab desktop, no GPU, no PyTorch.
 
     det = Detector()              # FileNotFoundError: the model is not built
     det.detect(jpeg)              # [{name, score, box: {x, y, w, h}}], the box as fractions
@@ -36,7 +36,7 @@ MODEL = REPO_ROOT / "models" / "labels" / "yoloe-26m.onnx"
 BUILD = "uv run lab-os labels build"
 NO_MODEL = f"The labels model is not on this computer. Run `{BUILD}` on the brain's computer."
 OLD_MODEL = f"The words in config/labels.yaml changed. Run `{BUILD}` again."
-SIZE = 640  # the model's square input, in pixels
+SIZE = (640, 480)  # the model's input (width, height): the Raspbot's picture, without grey bars
 EVERY_S = 0.15  # at most this often (the picture comes at about 30 a second)
 
 
@@ -88,16 +88,23 @@ def build(words: list[str] | None = None, out: Path = MODEL) -> int:
     return code or 1
 
 
-def letterbox(img: Image.Image, size: int = SIZE) -> tuple[np.ndarray, float, int, int]:
-    """The picture scaled into a `size` square without changing its shape (grey bars around it,
-    as the model learnt), as the model's input; and the scale and the bars' widths."""
+def letterbox(img: Image.Image, size: tuple[int, int] = SIZE) -> tuple[np.ndarray, float, int, int]:
+    """The picture scaled into the model's `size` (width, height) without changing its shape (grey
+    bars around it, as the model learnt), as the model's input; and the scale and the bars'
+    widths. A 640 × 480 picture fills the 640 × 480 input as it is."""
     w, h = img.size
-    scale = min(size / w, size / h)
+    sw, sh = size
+    scale = min(sw / w, sh / h)
     nw, nh = round(w * scale), round(h * scale)
-    px, py = (size - nw) // 2, (size - nh) // 2
-    canvas = Image.new("RGB", (size, size), (114, 114, 114))
-    canvas.paste(img.convert("RGB").resize((nw, nh), Image.BILINEAR), (px, py))
-    x = np.asarray(canvas, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
+    px, py = (sw - nw) // 2, (sh - nh) // 2
+    img = img.convert("RGB")
+    if (nw, nh) != (w, h):
+        img = img.resize((nw, nh), Image.BILINEAR)
+    if (nw, nh) != (sw, sh):
+        canvas = Image.new("RGB", (sw, sh), (114, 114, 114))
+        canvas.paste(img, (px, py))
+        img = canvas
+    x = np.asarray(img, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
     return x, scale, px, py
 
 
@@ -130,7 +137,7 @@ def decode(
     iou: float = 0.5,
     most: int = 8,
 ) -> list[dict]:
-    """The model's output (4 + one score per word, for each of its 8400 places: centre x, y,
+    """The model's output (4 + one score per word, for each of its places: centre x, y,
     width, height in input pixels) → the objects, with boxes as fractions of the `w` × `h`
     picture. An object found as two words keeps only the surer one."""
     out = out.reshape(4 + len(names), -1).T
@@ -168,17 +175,19 @@ class Detector:
         if not path.is_file():
             raise FileNotFoundError(NO_MODEL)
         opts = ort.SessionOptions()
-        opts.intra_op_num_threads = threads  # leave the other cores to the brain (8: 76 ms, 4: 137)
+        opts.intra_op_num_threads = threads  # leave the other cores to the brain
         self.session = ort.InferenceSession(str(path), opts, providers=["CPUExecutionProvider"])
         meta = self.session.get_modelmeta().custom_metadata_map
         names = ast.literal_eval(meta.get("names", "{}"))
         self.names = [names[i] for i in sorted(names)]
-        self.input = self.session.get_inputs()[0].name
+        first = self.session.get_inputs()[0]
+        self.input = first.name
+        self.size = (int(first.shape[3]), int(first.shape[2]))  # (width, height)
         self.min_score = min_score
 
     def detect(self, jpeg: bytes) -> list[dict]:
         img = Image.open(io.BytesIO(jpeg))
-        x, scale, px, py = letterbox(img)
+        x, scale, px, py = letterbox(img, self.size)
         out = self.session.run(None, {self.input: x})[0]
         return decode(out, self.names, scale, px, py, *img.size, min_score=self.min_score)
 

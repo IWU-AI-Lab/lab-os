@@ -43,12 +43,17 @@ def jpeg(w=640, h=480, color=(200, 30, 30)) -> bytes:
 # ---- the model's output → the objects ----
 
 
-def test_the_picture_keeps_its_shape_in_the_square():
-    x, scale, px, py = letterbox(Image.new("RGB", (640, 480), (255, 255, 255)))
-    assert x.shape == (1, 3, 640, 640) and x.dtype == np.float32
-    assert (scale, px, py) == (1.0, 0, 80)
+def test_the_picture_keeps_its_shape_in_the_models_input():
+    white = Image.new("RGB", (640, 480), (255, 255, 255))
+    x, scale, px, py = letterbox(white)  # the Raspbot's picture fills the 640 × 480 input
+    assert x.shape == (1, 3, 480, 640) and x.dtype == np.float32
+    assert (scale, px, py) == (1.0, 0, 0) and float(x.min()) == 1.0
+    x, scale, px, py = letterbox(white, (640, 640))  # a square model: grey bars
+    assert x.shape == (1, 3, 640, 640) and (scale, px, py) == (1.0, 0, 80)
     assert x[0, :, 0, 320].tolist() == pytest.approx([114 / 255] * 3)  # the grey bar on top
     assert x[0, :, 320, 320].tolist() == pytest.approx([1.0] * 3)  # the picture
+    x, scale, px, py = letterbox(Image.new("RGB", (480, 640)))  # upright: bars at the sides
+    assert x.shape == (1, 3, 480, 640) and (scale, px, py) == (0.75, 140, 0)
 
 
 def test_overlapping_boxes_become_one_object_with_fractions_of_the_picture():
@@ -83,6 +88,7 @@ def test_the_words_include_the_labs_own_things():
 def test_the_built_model_runs_on_a_picture():
     det = Detector()
     assert det.names == load_words()  # built from today's words
+    assert det.size == (640, 480)
     assert det.detect(jpeg()) == []  # a plain red picture: nothing
 
 
@@ -247,6 +253,15 @@ def test_the_label_says_the_name_how_sure_and_the_distance():
     assert run_js(f"m.labelText({f}, null)") == "Cell phone   82%"
     assert run_js(f"m.labelText({f}, 342)") == "Cell phone   82%   34 cm"
     assert run_js(f"m.labelText({json.dumps(box('LEGO brick', 0, 1))}, null)") == "LEGO brick   80%"
+
+
+def test_the_browser_page_has_the_switch_off_by_default():
+    html = (REPO_ROOT / "src/lab_os/hub/web/raspbot.html").read_text()
+    assert 'id="labels-btn"' in html and 'aria-pressed="false"' in html and ">Labels off<" in html
+    assert 'import { drawLabels, frontIndex } from "/web/object-labels.js";' in html
+    assert 'send({ type: "labels", on })' in html
+    assert 'if (labels.on) send({ type: "labels", on: true })' in html  # a reconnect
+    assert "frontIndex(found, lastStatus?.pan_deg)" in html
 
 
 def test_the_vr_window_asks_the_brain_and_is_off_by_default():

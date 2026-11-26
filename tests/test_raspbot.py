@@ -17,7 +17,7 @@ from PIL import Image
 from test_hub_server import SRC, make_app
 
 from lab_os.devices import Device, Registry
-from lab_os.hub.raspbot_page import CAMERA, RASPBOT
+from lab_os.hub.raspbot_page import CAMERA, RASPBOT, CameraShare
 from lab_os.hub.server import BRAIN
 from lab_os.robots import raspbot
 from lab_os.robots.raspbot import FakeRaspbot, RaspbotDesk, TcpRaspbot
@@ -263,8 +263,8 @@ async def test_the_camera_picture_is_relayed(aiohttp_client):
 
     class StubCamera:
         def frames(self):
-            yield b"\xff\xd8one"
-            yield b"\xff\xd8two"
+            yield b"\xff\xd8one\xff\xd9"  # whole JPEGs: the brain reads each picture
+            yield b"\xff\xd8two\xff\xd9"
 
     port = _free_port()
     srv = mod.camera_server(StubCamera(), port)
@@ -284,10 +284,63 @@ async def test_the_camera_picture_is_relayed(aiohttp_client):
         resp = await client.get("/api/raspbot/camera.mjpg")
         assert resp.status == 200 and "multipart/x-mixed-replace" in resp.headers["Content-Type"]
         body = await resp.read()
-        assert b"one" in body and b"two" in body
+        # the newest picture, as one MJPEG part (both came in one read: "one" is skipped)
+        assert b"Content-Length: 7\r\n\r\n\xff\xd8two\xff\xd9\r\n" in body
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+async def test_one_camera_connection_for_every_reader():
+    opened, closed = [], []
+
+    async def source(url):
+        opened.append(url)
+        try:
+            for n in range(1000):
+                yield b"\xff\xd8%d" % n
+                await asyncio.sleep(0.01)
+        finally:
+            closed.append(url)
+
+    share = CameraShare(source)
+
+    async def read(n):
+        got = []
+        async for jpeg in share.frames("cam"):
+            got.append(jpeg)
+            if len(got) == n:
+                return got
+
+    a, b = await asyncio.gather(read(5), read(20))
+    assert opened == ["cam"]  # the page, the labels and a recording: one connection
+    assert len(a) == 5 and len(b) == 20 and len(set(b)) == 20  # each picture once, in order
+    await asyncio.sleep(0.05)
+    assert closed == ["cam"] and share.readers("cam") == 0  # the last reader left: closed
+    await read(1)
+    assert opened == ["cam", "cam"]  # a new reader opens it again
+
+    async def broken(url):
+        raise ConnectionError("no camera")
+        yield b""
+
+    share = CameraShare(broken)
+    with pytest.raises(ConnectionError):
+        await read(1)
+
+
+async def test_a_slow_reader_skips_pictures_and_never_falls_behind():
+    async def source(url):
+        for n in range(30):
+            yield b"%d" % n
+            await asyncio.sleep(0.01)
+
+    share = CameraShare(source)
+    got = []
+    async for jpeg in share.frames("cam"):
+        got.append(int(jpeg))
+        await asyncio.sleep(0.05)  # a page on slow Wi-Fi
+    assert len(got) < 25 and got[-1] == 29 and got == sorted(got)  # skipped some, ends current
 
 
 async def test_the_speed_slider_from_none_to_the_cap(aiohttp_client):
