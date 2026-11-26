@@ -897,16 +897,18 @@ async def _tell_off_on_stop(app: web.Application) -> None:
 
 async def api_window_state(request: web.Request) -> web.Response:
     """Full screen without a press, for lab-os's own browser windows on the brain's computer: a page
-    sent to another monitor, and the hub that sent it (quick job 74). Elsewhere `ok` is false with
+    sent to another monitor, and the hub that sent it (quick job 74); with "bounds", the page sent
+    to another monitor moves there first (quick job 138). Elsewhere `ok` is false with
     the reason, and the page asks for a press as before."""
     if not is_local(request):
         return web.json_response({"ok": False, "why": "Only on the brain's computer."})
     try:
         body = await request.json()
         url, state = str(body["url"]), str(body.get("state", "fullscreen"))
+        bounds = body.get("bounds")  # another monitor (quick job 138)
     except (ValueError, KeyError, TypeError, AttributeError):
         raise web.HTTPBadRequest(text='Send {"url": the page\'s address, "state"}.') from None
-    why = await launch.set_window_state(url, state)
+    why = await launch.set_window_state(url, state, bounds=bounds)
     if why:
         log.info("window state %s for %s: %s", state, url, why)
     return web.json_response({"ok": not why, "why": why})

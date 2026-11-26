@@ -141,26 +141,39 @@ def close_hub_windows(port: int, profile: Path | None = None) -> int:
     return closed
 
 
-WINDOW_STATES = ("fullscreen", "normal")
+WINDOW_STATES = ("fullscreen", "normal", "keep")
+BOUNDS = ("left", "top", "width", "height")
 
 
-async def set_window_state(url: str, state: str, profile: Path | None = None) -> str:
-    """Put the window of lab-os's own browser that shows exactly `url` in full screen or back to a
-    window (quick job 74): a web page may go full screen only from a press, but the browser's
-    DevTools may. Returns "" when done, else why not (a sentence)."""
+async def set_window_state(
+    url: str, state: str, profile: Path | None = None, bounds: dict | None = None
+) -> str:
+    """Put the window of lab-os's own browser that shows `url` in full screen or back to a window
+    (quick job 74): a web page may go full screen only from a press, but the browser's DevTools
+    may. With `bounds` ({left, top, width, height}, screen pixels) the window first moves there:
+    "Open on…" → another monitor (quick job 138). State "keep": full screen again only if it was.
+    Returns "" when done, else why not (a sentence)."""
     import asyncio
 
     import aiohttp
 
     if state not in WINDOW_STATES:
         return f"Unknown window state {state!r}."
+    if bounds is not None:
+        try:
+            bounds = {k: int(bounds[k]) for k in BOUNDS}
+        except (KeyError, TypeError, ValueError):
+            return "Bounds need left, top, width and height."
     try:
         lines = ((profile or PROFILE) / "DevToolsActivePort").read_text().split()
         port, path = int(lines[0]), lines[1]
     except (OSError, ValueError, IndexError):
         return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
     pages = await asyncio.to_thread(hub_windows, "", urlsplit(url).port or 80, profile)
-    page = next((p for p in pages if p.get("url") == url), None)
+    # the exact address, else one that grew a hash or more of a query after it opened
+    page = next((p for p in pages if p.get("url") == url), None) or next(
+        (p for p in pages if str(p.get("url", "")).startswith(url)), None
+    )
     if page is None:
         return "This page isn't in lab-os's own browser window (the \"Start lab-os\" icon)."
     try:
@@ -170,7 +183,9 @@ async def set_window_state(url: str, state: str, profile: Path | None = None) ->
         ):
             got = await _cdp(ws, 1, "Browser.getWindowForTarget", targetId=page["id"])
             window = got["windowId"]
-            if state == "fullscreen" and got.get("bounds", {}).get("windowState") == "minimized":
+            was = got.get("bounds", {}).get("windowState", "normal")
+            if was != "normal" and (bounds or (state == "fullscreen" and was == "minimized")):
+                # a window moves or leaves "minimized" only from "normal" (the DevTools' rule)
                 await _cdp(
                     ws,
                     2,
@@ -178,9 +193,14 @@ async def set_window_state(url: str, state: str, profile: Path | None = None) ->
                     windowId=window,
                     bounds={"windowState": "normal"},
                 )
-            await _cdp(
-                ws, 3, "Browser.setWindowBounds", windowId=window, bounds={"windowState": state}
-            )
+            if bounds:
+                await _cdp(ws, 3, "Browser.setWindowBounds", windowId=window, bounds=bounds)
+            if state == "keep":
+                state = "fullscreen" if bounds and was in ("fullscreen", "maximized") else ""
+            if state:
+                await _cdp(
+                    ws, 4, "Browser.setWindowBounds", windowId=window, bounds={"windowState": state}
+                )
     except (OSError, TimeoutError, aiohttp.ClientError, KeyError, RuntimeError) as e:
         return f"The browser didn't change the window ({e or type(e).__name__})."
     return ""
