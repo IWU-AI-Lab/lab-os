@@ -3,7 +3,8 @@
 The Raspbot runs one small program, `robots/raspbot/lab_os_raspbot.py` (deployed from this repo,
 `lab-os raspbot deploy`). The brain connects to it over TCP and sends one JSON line per command:
 
-    {"drive": [left, right]}   wheel speeds, -1.0 … 1.0 (a fraction of the Raspbot's own cap)
+    {"drive": [fl, rl, fr, rr]}  wheel speeds, -1.0 … 1.0 (a fraction of the Raspbot's own cap)
+    {"drive": [left, right]}   same speed for both wheels on each side (legacy)
     {"stop": true}             all motors off
     {"look": [pan, tilt]}      the camera's pan-and-tilt servos, degrees from their centre
                                (pan + = left, tilt + = up); the Raspbot keeps their limits
@@ -19,6 +20,7 @@ or network that hangs never leaves the car driving.
 import asyncio
 import json
 import logging
+import math
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -51,6 +53,7 @@ class FakeRaspbot:
     look_limits = LOOK_LIMITS
     obstacle_stop_mm = OBSTACLE_STOP_MM
     drive_stop = ""
+    mecanum = True
 
     @property
     def is_fake(self) -> bool:
@@ -63,8 +66,8 @@ class FakeRaspbot:
     def fresh_distance_mm(self) -> int | None:
         return self.distance_mm if self.connected else None
 
-    async def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
-        self.sent.append(("drive", round(left, 3), round(right, 3)))
+    async def drive(self, wheels: tuple[float, ...], *, require_clear: bool = False) -> None:
+        self.sent.append(("drive", *(round(speed, 3) for speed in wheels)))
 
     async def stop(self) -> None:
         self.sent.append(("stop",))
@@ -89,6 +92,7 @@ class TcpRaspbot:
         self.look_limits = LOOK_LIMITS
         self.obstacle_stop_mm: int | None = None
         self.drive_stop = ""
+        self.mecanum = False
         self._distance_at = 0.0
         self._writer: asyncio.StreamWriter | None = None
         self.said = ""  # why it isn't connected, for the page
@@ -114,6 +118,7 @@ class TcpRaspbot:
                 self.look_limits = hello.get("look_limits", LOOK_LIMITS)
                 stop_mm = hello.get("obstacle_stop_mm")
                 self.obstacle_stop_mm = stop_mm if type(stop_mm) is int and stop_mm > 0 else None
+                self.mecanum = hello.get("mecanum") is True
                 self._writer = writer
                 self.said = ""
                 log.info("%s connected (%s:%s)", self.name, self.host, self.port)
@@ -132,6 +137,7 @@ class TcpRaspbot:
                 self.distance_mm = None
                 self.obstacle_stop_mm = None
                 self.drive_stop = ""
+                self.mecanum = False
                 self._distance_at = 0.0
             await asyncio.sleep(RECONNECT_S)
 
@@ -167,8 +173,8 @@ class TcpRaspbot:
             return self.distance_mm
         return None
 
-    async def drive(self, left: float, right: float, *, require_clear: bool = False) -> None:
-        msg = {"drive": [round(left, 3), round(right, 3)]}
+    async def drive(self, wheels: tuple[float, ...], *, require_clear: bool = False) -> None:
+        msg = {"drive": wheels if self.mecanum else wheels[::2]}
         if require_clear:
             msg["require_clear"] = True
         await self._send(msg)
@@ -180,22 +186,37 @@ class TcpRaspbot:
         await self._send({"look": [round(pan, 1), round(tilt, 1)]})
 
 
-# Each button → (left, right) wheel speeds, before the speed cap. Turns spin in place, slower.
+# Each button → (forward, sideways right, turn right) before the speed cap.
 DIRECTIONS = {
-    "forward": (1.0, 1.0),
-    "back": (-1.0, -1.0),
-    "left": (-0.6, 0.6),
-    "right": (0.6, -0.6),
+    "forward": (1.0, 0.0, 0.0),
+    "back": (-1.0, 0.0, 0.0),
+    "left": (0.0, 0.0, -1.0),
+    "right": (0.0, 0.0, 1.0),
+    "strafe-left": (0.0, -1.0, 0.0),
+    "strafe-right": (0.0, 1.0, 0.0),
+    "forward-left": (1.0, -1.0, 0.0),
+    "forward-right": (1.0, 1.0, 0.0),
+    "back-left": (-1.0, -1.0, 0.0),
+    "back-right": (-1.0, 1.0, 0.0),
 }
-TURN = 0.6  # a stick turns as slowly as the buttons: full sideways = "left" or "right"
+TURN = 0.6  # keep the existing slower turn speed
 
 
-def stick_speeds(forward: float, turn: float) -> tuple[float, float]:
-    """A stick (forward + = ahead, turn + = right; -1 … 1) → (left, right) wheel speeds, -1 … 1."""
-    f, t = (max(-1.0, min(float(v), 1.0)) for v in (forward, turn))
-    left, right = f + TURN * t, f - TURN * t
-    big = max(1.0, abs(left), abs(right))
-    return left / big, right / big
+def wheel_speeds(forward: float, sideways: float, turn: float) -> tuple[float, ...]:
+    """Mix the three axes in motor order (front left, rear left, front right, rear right)."""
+    if not all(math.isfinite(axis) for axis in (forward, sideways, turn)):
+        raise ValueError("drive axes must be finite")
+    forward, sideways, turn = (max(-1.0, min(axis, 1.0)) for axis in (forward, sideways, turn))
+    turn *= TURN
+    sideways_plus_turn, sideways_minus_turn = sideways + turn, sideways - turn
+    wheels = (
+        forward + sideways_plus_turn,
+        forward - sideways_minus_turn,
+        forward - sideways_plus_turn,
+        forward + sideways_minus_turn,
+    )
+    peak = max(1.0, *(abs(speed) for speed in wheels))
+    return tuple(speed / peak for speed in wheels)
 
 
 class RaspbotDesk:
@@ -248,20 +269,30 @@ class RaspbotDesk:
         self,
         page,
         direction: str,
-        stick: tuple[float, float] | None = None,
+        stick: tuple[float, ...] | None = None,
         *,
         ai: bool = False,
     ) -> str:
-        """The page holds a button, or a stick (direction "stick", `stick` = (forward, turn); the
-        hub's VR Raspbot, quick job 107). Returns "" when it drives, else why not."""
-        if direction not in DIRECTIONS and not (direction == "stick" and stick):
+        """Drive from a held button or stick. Return an empty string on success."""
+        if direction == "stick" and stick is not None:
+            if len(stick) not in (2, 3):
+                raise ValueError("expected two or three drive axes")
+            forward, turn = stick[0], stick[-1]
+            sideways = stick[1] if len(stick) == 3 else 0.0
+        elif direction in DIRECTIONS:
+            forward, sideways, turn = DIRECTIONS[direction]
+        else:
             raise ValueError(f"unknown direction {direction!r}")
+        wheels = wheel_speeds(forward, sideways, turn)
         if page in self._blocked:
             return "Let go of the button after STOP, then press again."
         if self.driver is not None and self.driver is not page:
             return "Another page has control."
         if not self.bot.connected:
             return self.status()["message"]
+        if sideways and not self.bot.mecanum:
+            await self._halt()
+            return "Deploy the current Raspbot program to drive sideways or diagonally."
         limit = self.bot.obstacle_stop_mm
         if ai and limit is None:
             return "Deploy the current Raspbot program before driving with AI."
@@ -272,8 +303,7 @@ class RaspbotDesk:
         ):
             await self._halt()
             return "The drive input stopped."
-        left, right = stick_speeds(*stick) if direction == "stick" else DIRECTIONS[direction]
-        if left + right > 0:
+        if forward > 0:
             distance = self.bot.fresh_distance_mm
             if limit is not None and distance is not None and distance <= limit:
                 await self._halt()
@@ -289,7 +319,7 @@ class RaspbotDesk:
             log.info("raspbot: control taken by %s", "an AI tool" if ai else "a page")
         self._last_input = time.monotonic()
         self.moving = direction
-        await self.bot.drive(left * speed, right * speed, require_clear=ai)
+        await self.bot.drive(tuple(wheel * speed for wheel in wheels), require_clear=ai)
         return ""
 
     async def look(self, page, pan: float, tilt: float, *, relative: bool = False) -> str:

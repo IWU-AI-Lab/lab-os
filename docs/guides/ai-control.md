@@ -11,7 +11,7 @@ In a terminal, in the `lab-os` folder, run:
 ```bash
 uv run lab-os serve
 ```
-The brain shows its addresses. The address for AI tools is `http://127.0.0.1:8081/mcp`. Only this computer can use it; nothing on the network can connect to it. Open **http://localhost:8080/monitor** in a browser to watch the arm. To stop the brain, press **Ctrl+C**.
+The brain shows its addresses. The address for AI tools is `http://127.0.0.1:8081/mcp`. Only this computer can use it; nothing on the network can connect to it. Open **http://localhost:8080/monitor/so101** in a browser to watch the arm. To stop the brain, press **Ctrl+C**.
 
 For another port, run `uv run lab-os serve --mcp-port 8091` and use that port below. To start the brain without the AI tools, add `--mcp-port 0`.
 
@@ -137,7 +137,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
    ```bash
    uv run --extra so101 lab-os serve --speed 0.3
    ```
-   The brain finds `so101-white` when it is plugged in (the terminal says "Plugged in: so101-white"). It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor` (3D). On a second monitor of this computer they can stay open in full screen (`docs/archive/guides-2026-11-25/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
+   The brain finds `so101-white` when it is plugged in (the terminal says "Plugged in: so101-white"). It says "AI tools can move the REAL so101-white". To watch, open **http://localhost:8080/ai** (AI Control: the arm from the side, where each move goes, each call and its result, STOP) or `/monitor/so101` (3D). On a second monitor of this computer they can stay open in full screen (`docs/archive/guides-2026-11-25/hub.md` → "Other monitors"). To show the hub on the Newline at the same time, add `--host 0.0.0.0`. Other screens then only watch (their STOP works).
 3. In the Claude Code session, type `/mcp` → `lab-os` → reconnect (the brain restarted).
 4. Start with small steps. Claude Code does not ask before moves, so watch with STOP near:
    > Use the lab-os tools. Read the arm's status and tell me where the gripper is.

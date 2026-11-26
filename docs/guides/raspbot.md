@@ -1,6 +1,6 @@
 # The Raspbot page
 
-The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold an arrow under **Drive** to move the Raspbot. Let go to stop. Hold an arrow under **Pan and Tilt** to turn the camera. The picture is between the controls on every screen. On a phone, hold the screen sideways. Full screen locks the phone in landscape when the browser allows it. The page turns sideways if the browser keeps the phone screen in portrait. Use **Speed** to set the speed from 0 % to 100 % of the top speed. The status strip shows the connection, control, motion and ultrasonic distance. Deploy the current program to get the distance reading. The factory board has no documented battery reading.
+The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold an arrow under **Drive** to move straight, sideways or diagonally. Hold a curved arrow to turn in place. Let go to stop. Hold an arrow under **Pan and Tilt** to turn the camera. The picture is between the controls on every screen. On a phone, hold the screen sideways. Full screen locks the phone in landscape when the browser allows it. The page turns sideways if the browser keeps the phone screen in portrait. Use **Speed** to set the speed from 0 % to 100 % of the top speed. The status strip shows the connection, control, motion and ultrasonic distance. Deploy the current program to move sideways or diagonally and get the distance reading. The factory board has no documented battery reading.
 
 ## How it works
 - A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor and servo library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
@@ -13,7 +13,7 @@ The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the
 - **The freeze:** when the page's input stops for 0.3 s (a page that hangs, lost Wi-Fi), the brain stops the car.
 - **On the car:** the program stops the motors when no command comes for 0.5 s, when the brain's connection drops, and when the program ends. The Raspbot's board has no stop of its own.
 - **One driver at a time:** a page or an AI tool keeps control until it releases control. Another page shows "Another page" under Control.
-- **Front obstacle:** the current program stops forward motion when the ultrasonic sensor reads 20 cm or less. The sensor measures only objects in front.
+- **Front obstacle:** The program stops every move with a forward component when the ultrasonic sensor reads 20 cm or less. The sensor measures only objects in front. Check the clearance before you move sideways or back, or turn.
 - **Speed:** the program never drives faster than 120 of the board's 255. That is 100 % on the slider. All pages share one speed. A page that only watches cannot change it. A change applies at once, also while you hold a button.
 - **Who may drive:** the same rule as the arm. A page on the brain's computer may drive. A page on another device only watches and can press STOP, unless its address is in `drive_from` in `config/place.yaml` (or `--drive-from`). The page says which address to add. On the brain's computer, the Command Center (`/command-center`) can also allow a device to drive.
 
@@ -56,10 +56,11 @@ The brain needs `ffmpeg` to make the `.mp4` (`sudo apt install ffmpeg`). Without
 
 ## Drive it from the Quest
 In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.
-- **Left stick:** push it to drive (forward, back, turn). Let go, and the car stops.
+- **Left stick:** push it to drive forward, back, sideways or diagonally.
+- **Right stick:** push it left or right to turn the Raspbot. Release both sticks to stop.
 - **Your head:** turn your head to turn the camera the same way. This control is on when you open **Raspbot**.
 - **Head:** select **Head on** to turn head control off. Select **Head off** to turn it on again.
-- **Right stick:** move it to turn the camera.
+- **Legacy:** select **Legacy off** to use the earlier controls. The left stick drives forward and back and turns the Raspbot. The right stick turns the camera. Select **Legacy on** to return to the default controls.
 - **Centre:** select **Centre** or press the right stick to centre the camera. If head control is on, the direction you look becomes the new centre.
 - **Window:** point at the picture or its controls. Hold the grip and move or turn your controller. Release the grip to leave the window in its new position.
 - **STOP** (or A / X) stops the car. Press **B**, **Y**, **Back** or **Exit** to close the module. The car stops when the module closes.

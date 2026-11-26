@@ -4,7 +4,8 @@ GET /teleop      the XR input page (Quest browser or a desktop browser + WebXR e
                  also at GET / for `lab-os-teleop` (`lab-os serve` puts the hub there)
 GET /webcam      webcam teleop (preview 2): a bare hand in front of a webcam, same input as the
                  Quest's bare hands (docs/archive/guides-2026-11-25/webcam-teleop.md)
-GET /monitor     live view of the (fake) arm, for a second tab or the onlooker monitor
+GET /monitor     the list of the Monitor pages: a card for each kind of robot (quick job 147)
+GET /monitor/<kind>  live view of the arms of one kind (so101, xarm), for the onlooker screen
 GET /static/...  the teleop pages' own scripts
 GET /web/...     web files every page shares (vendored libraries, theme.js): src/lab_os/web/
 GET /models/...  robot models (URDF + meshes) for the 3D view
@@ -93,7 +94,18 @@ async def webcam(_request: web.Request) -> web.FileResponse:
     return await _page("webcam.html")
 
 
-async def monitor(_request: web.Request) -> web.FileResponse:
+# The kinds of robot with a Monitor page of their own (quick job 147): kind → its title. A new
+# kind is one more entry here and in KINDS (web/arm/kinds.js).
+MONITOR_KINDS = {"so101": "SO-101 Monitor", "xarm": "xArm Monitor"}
+
+
+async def monitor_list(_request: web.Request) -> web.FileResponse:
+    return await _page("monitor-list.html")
+
+
+async def monitor(request: web.Request) -> web.FileResponse:
+    if request.match_info["kind"] not in MONITOR_KINDS:
+        raise web.HTTPNotFound(text=f"No Monitor page for {request.match_info['kind']!r}.")
     return await _page("monitor.html")
 
 
@@ -335,7 +347,8 @@ def create_app(
     if root_page:
         app.router.add_get("/", index)
     app.router.add_get("/teleop", index)
-    app.router.add_get("/monitor", monitor)
+    app.router.add_get("/monitor", monitor_list)
+    app.router.add_get("/monitor/{kind}", monitor)
     app.router.add_get("/webcam", webcam)
     app.router.add_get("/theme.json", theme)
     app.router.add_get("/ws", websocket)

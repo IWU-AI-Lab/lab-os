@@ -169,6 +169,7 @@ def identify(
                     "via": "USB",
                     "borrowed": dev.borrowed,
                     "leader": dev.kind == "so101-leader",
+                    "model": dev.kind,  # devices.yaml's kind (the Command Center's modules)
                 }
             )
         else:

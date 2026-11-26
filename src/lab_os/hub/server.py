@@ -137,6 +137,7 @@ from lab_os.teleop.server import (
     CONTROL,
     LINKS,
     LOOP,
+    MONITOR_KINDS,
     OFF_TELL_S,
     OFF_TOLD,
     OUTBOX,
@@ -163,7 +164,8 @@ HUB_PAGE = "design.html"  # the hub at / (the plain hub is archived: quick job 1
 # get a button and in what order; ids without a page here get no button (only claim what's real).
 MODULES = {
     "teleop": ("Teleop", "/teleop"),
-    "monitor": ("Monitor", "/monitor"),
+    "monitor": ("Monitor", "/monitor"),  # the list of the Monitor pages (quick job 147)
+    **{f"monitor-{kind}": (title, f"/monitor/{kind}") for kind, title in MONITOR_KINDS.items()},
     "ai": ("AI Control", "/ai"),  # what an AI tool is doing with the arm, live
     "training": ("Training", "/training"),  # start so101-green + LeLab after a port check
     "cameras": ("Cameras", "/cameras"),  # every camera's picture (quick job 93)
@@ -176,7 +178,17 @@ MODULES = {
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
     ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
-    ("/monitor", "Monitor", "The arm's joints and 3D view, with STOP; drives nothing."),
+    (
+        "/monitor",
+        "Monitor",
+        "A card for each kind of robot: a small live picture; a tap opens its page.",
+    ),
+    (
+        "/monitor/so101",
+        "SO-101 Monitor",
+        "The SO-101 arms' joints and 3D view, with STOP; drives nothing.",
+    ),
+    ("/monitor/xarm", "xArm Monitor", "The xArm's joints and 3D view, with STOP; drives nothing."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
     ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
     ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
@@ -1309,7 +1321,15 @@ def live_entries(
         if dev is None or dev.kind == "fake" or not each.arm_connected or name in have:
             continue
         out.append(
-            {"id": name, "name": name, "kind": "arm", "known": True, "what": dev.kind, "via": "USB"}
+            {
+                "id": name,
+                "name": name,
+                "kind": "arm",
+                "known": True,
+                "what": dev.kind,
+                "via": "USB",
+                "model": dev.kind,
+            }
         )
     for d in out:
         if d["kind"] == "arm" and d["id"] in driven:

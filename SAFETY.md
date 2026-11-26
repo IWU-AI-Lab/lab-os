@@ -28,7 +28,7 @@ An AI tool (Claude Code, Codex, …) moves an arm only through the brain's tools
 
 ## Raspbot
 
-Keep the Raspbot page's **STOP** in reach during manual and AI drives. The page and AI tools share one drive controller. The current program stops forward motion at the 20 cm ultrasonic threshold. AI forward motion also stops if the distance reading is unavailable. Check rear and side clearance before a reverse move or a turn. See [the Raspbot guide](docs/guides/raspbot.md#safety).
+Keep the Raspbot page's **STOP** in reach during manual and AI drives. The page and AI tools share one drive controller. The program stops every move with a forward component at the 20 cm ultrasonic threshold. AI forward motion also stops if the distance reading is unavailable. Check the clearance before you move sideways or back, or turn. See [the Raspbot guide](docs/guides/raspbot.md#safety).
 
 ## Remote mode
 Remote sessions (from home, Remote Control, any off-site connection) = **no motion by default**. Read-only checks only, unless someone is physically next to the robot.

@@ -84,6 +84,8 @@ details.card > .in { padding-top: 0.2rem; }
 /* an unplugged arm (quick job 109): no gauges, only its title says so */
 .monitor .card.unplugged .joint { display: none; }
 .monitor .card.unplugged h2 { color: var(--accent); }
+/* a Monitor page of one kind with no arm of that kind connected (quick job 147): no gauges */
+.monitor.no-arm .gauges .joint { display: none; }
 
 /* monitor: one gauge per joint, the value in digits; the line marks zero, the diamond the joint.
    The right arm's card (#joints) and the left arm's (#joints-left) look the same (quick job 119). */

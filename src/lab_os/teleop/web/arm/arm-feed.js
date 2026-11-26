@@ -9,21 +9,31 @@
 // (status.arm), the "left" feed the left controller's arm. Each takes only the arm_* messages whose
 // `device` is its arm. The left feed's `status` is the status as one arm would have it (its own
 // joints, limits, frozen, clutch, arm), and null while the brain drives one arm.
-// No imports, so tests run it with node.
+//
+// One kind of robot (a Monitor page of its own, quick job 147: /monitor/so101, /monitor/xarm): the
+// feeds see only the arms of that kind (armView). The "right" feed is the first arm of the kind, the
+// "left" feed the second one; both are null while no arm of the kind is connected.
+// Imports only kinds.js (no imports), so tests run it with node.
+import { kindOf } from "./kinds.js";
+
 export class ArmFeed {
-  /** @param {"right"|"left"} side */
-  constructor(link, side = "right") {
+  /** @param {"right"|"left"} side @param {string|null} kind */
+  constructor(link, side = "right", kind = null) {
     this.side = side;
+    this.kind = kind;
     this.joints = {};
     this.lastCommand = null;
     this.frozen = false;
     this.status = null;
     this.armId = null; // "name/model" of the connected arm; a change (or a reconnect) starts over
+    this.heard = false; // a status came: a null status now means "no such arm", not "connecting"
     this._listeners = [];
     // A reconnect may be a restarted server with another arm: forget the old arm's commands.
     link.on("open", () => this._forget());
     link.on("status", (raw) => {
-      const s = side === "left" ? leftView(raw) : raw;
+      const s = armView(raw, side, kind);
+      const first = !this.heard;
+      this.heard = true;
       const id = s ? `${s.arm?.name}/${s.arm?.model}` : null;
       if (id !== this.armId) {
         this._forget();
@@ -32,7 +42,10 @@ export class ArmFeed {
         this._emit("arm");
       }
       this.status = s;
-      if (!s) return;
+      if (!s) {
+        if (first) this._emit("status"); // the page can say there is no such arm
+        return;
+      }
       this.frozen = s.frozen;
       if (!this.lastCommand) {
         this.lastCommand = s.last_command;
@@ -106,12 +119,26 @@ export function leftView(s) {
   };
 }
 
+/**
+ * The status as one side's arm would have it. No kind: the right arm is the brain's first arm, the
+ * left arm its left controller's arm. A kind ("so101", "xarm"): only the arms of that kind count, the
+ * first one is "right" and the second "left"; null when there is no such arm.
+ */
+export function armView(raw, side = "right", kind = null) {
+  if (!kind) return side === "left" ? leftView(raw) : raw;
+  const mine = [raw?.arm ? raw : null, leftView(raw)].filter((s) => s && kindOf(s.arm?.model) === kind);
+  const s = mine[side === "left" ? 1 : 0];
+  if (!s || side === "left") return s || null;
+  return { ...s, left_arm: mine[1] ? raw.left_arm : null };
+}
+
 const feeds = new Map();
 
-/** One ArmFeed per link and side, so modules on the same page share it. */
-export function getArmFeed(link, side = "right") {
+/** One ArmFeed per link, side and kind, so modules on the same page share it. */
+export function getArmFeed(link, side = "right", kind = null) {
   if (!feeds.has(link)) feeds.set(link, {});
   const mine = feeds.get(link);
-  if (!mine[side]) mine[side] = new ArmFeed(link, side);
-  return mine[side];
+  const key = `${side}/${kind || ""}`;
+  if (!mine[key]) mine[key] = new ArmFeed(link, side, kind);
+  return mine[key];
 }

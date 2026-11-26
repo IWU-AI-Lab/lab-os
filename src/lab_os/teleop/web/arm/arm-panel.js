@@ -13,11 +13,15 @@
 // Two arms at once (status.left_arm): both models in the one view, the left arm to the left
 // (arm-view.js), and the readout in two parts, "Right arm" then "Left arm". Each arm has its own
 // ArmFeed, so each model moves with exactly its own driver's commands.
+//
+// A Monitor page of one kind of robot (/monitor/so101, /monitor/xarm; quick job 147): only the arms of
+// that kind, only that kind's 3D models in the list, and a sentence while no such arm is connected.
 import { createArmView } from "./arm-view.js";
 import { loadArmModel, MODEL_CHOICES } from "./arm-model.js";
 import { getLink } from "../link.js";
 import { getArmFeed } from "./arm-feed.js";
 import { jointFlags } from "./joint-flags.js";
+import { KINDS, kindOf, pageKind } from "./kinds.js";
 import { color } from "/web/theme.js";
 
 const $ = (id) => document.getElementById(id);
@@ -40,28 +44,30 @@ $("arm-panel").innerHTML = `
 const view = createArmView($("arm-view"));
 const select = $("arm-model");
 const link = getLink($("arm-panel").dataset.role || "monitor");
+const KIND = pageKind(location.pathname); // null: every arm (Teleop, AI Control)
+const CHOICES = MODEL_CHOICES.filter((c) => !KIND || kindOf(c.kind) === KIND);
 // each arm: its feed, its model, and its readout's rows (every joint seen, in the arm's order)
-const arms = ["right", "left"].map((side) => ({ side, feed: getArmFeed(link, side), model: null, loading: null, shown: new Map() }));
+const arms = ["right", "left"].map((side) => ({ side, feed: getArmFeed(link, side, KIND), model: null, loading: null, shown: new Map() }));
 let picked = null; // the model the user chose in the list (both arms), or null: each arm's own
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const twoArms = () => !!arms[1].feed.status;
 
-for (const [i, c] of MODEL_CHOICES.entries()) select.add(new Option(c.label, String(i)));
+for (const [i, c] of CHOICES.entries()) select.add(new Option(c.label, String(i)));
 select.onchange = () => {
-  picked = MODEL_CHOICES[Number(select.value)];
+  picked = CHOICES[Number(select.value)];
   for (const arm of arms) if (arm.feed.status) useModel(arm, picked);
 };
 
 /** The model for an arm: the user's choice, else the first one of the arm's own kind. */
 function choiceFor(arm) {
-  return picked || MODEL_CHOICES.find((c) => c.kind === arm.feed.modelKind);
+  return picked || CHOICES.find((c) => c.kind === arm.feed.modelKind);
 }
 
 async function useModel(arm, choice) {
   const key = `${choice.kind}/${choice.style}`;
   if (arm.loading === key || (arm.model && `${arm.model.kind}/${arm.model.style}` === key)) return;
   arm.loading = key;
-  if (arm.side === "right") select.value = String(MODEL_CHOICES.indexOf(choice));
+  if (arm.side === "right") select.value = String(CHOICES.indexOf(choice));
   try {
     const next = await loadArmModel(choice.kind, { style: choice.style });
     if (arm.loading !== key) return; // another choice won meanwhile
@@ -114,9 +120,12 @@ function renderArm(arm) {
 function render() {
   const [right, left] = arms;
   const two = twoArms();
-  $("arm-source").textContent = two
-    ? `Right arm: ${sourceText(right)}. Left arm: ${sourceText(left)}.`
-    : sourceText(right);
+  const none = KIND && !right.feed.status && right.feed.heard;
+  $("arm-source").textContent = none
+    ? `No ${KINDS[KIND].robot} is connected to the brain.`
+    : two
+      ? `Right arm: ${sourceText(right)}. Left arm: ${sourceText(left)}.`
+      : sourceText(right);
   const rows = renderArm(right);
   const leftRows = two ? renderArm(left) : "";
   const head = (word, arm) => `<div class="jhead">${word} <small>${esc(arm.feed.status?.arm?.name || "")}</small></div>`;

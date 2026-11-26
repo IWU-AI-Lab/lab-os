@@ -23,12 +23,12 @@ const SHOT_W = 200, GAP = 48, ROW_W = 1500;  // workspace units (px at zoom 1)
 const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-cam", robot: "i-pi", headset: "i-headset", usb: "i-chip" };
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
 const VIEW_ICON = {
-  teleop: "i-hand", monitor: "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
+  teleop: "i-hand", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
   settings: "i-gear", pages: "i-link", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
   system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
 };
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
-const KIND_MODULES = { arm: ["monitor", "teleop", "ai"], leader: ["teleop"], robot: ["raspbot"], camera: ["cameras"], headset: ["teleop"] };
+const KIND_MODULES = { arm: ["teleop", "ai"], leader: ["teleop"], robot: ["raspbot"], camera: ["cameras"], headset: ["teleop"] };
 // "This device" settings the modal can change (the rest stay in ⚙ → This device on that device)
 const SETTINGS = [
   { key: "quality", label: "Level of detail", choices: [["", "Default"], ["maximal", "Maximal"], ["full", "Full"], ["reduced", "Reduced"], ["minimal", "Minimal"]] },
@@ -556,7 +556,9 @@ async function focus(key) {
   const mine = scr.filter((s) => s.device.name === d.id && d.kind === "hub");
   const facts = [["Kind", KIND_WORD[d.kind]], ["What", d.what], ["Connected", d.live?.via || (d.kind === "hub" ? "The hub is open" : "")], ["Address", d.address || ""]]
     .filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
-  const mods = (KIND_MODULES[d.kind] || []).map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page);
+  // an arm's Monitor page is its kind's (quick job 147): /monitor/xarm or /monitor/so101
+  const monitor = d.kind === "arm" ? [String(d.live?.model || "").startsWith("xarm") ? "monitor-xarm" : "monitor-so101"] : [];
+  const mods = [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page);
   veil.innerHTML = `<div class="card modal" role="dialog" aria-label="${esc(d.title)}"><div class="in">
     <div class="top"><h2>${ico(KIND_ICON[d.kind])}${esc(d.title)}${d.sub ? ` <small class="hint">${esc(d.sub)}</small>` : ""}</h2>
       <button class="btn small" type="button" data-close>${ico("i-back")}Back</button></div>
