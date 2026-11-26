@@ -49,8 +49,11 @@ log = logging.getLogger(__name__)
 # itself at its Max_Temperature_Limit (70 °C by default); this keeps well below it. A guess, not
 # measured: the logs (logs/servo-health/) will tell what 1:1 really does.
 HOT_C = 60.0
-# A minimum-jerk move's top speed is this many times its mean speed (smooth AI moves, Motion).
-MIN_JERK_PEAK = 1.875
+# A smooth AI move (Motion) speeds up for this long at its start and slows down for this long at
+# its end, at any speed. Between, it moves at the top speed. A minimum-jerk profile (the first
+# version of quick job 118) took 1.9 times as long as a move at the top speed; this takes RAMP_S
+# longer (the builder, 2026-11-25: the moves were already too slow).
+RAMP_S = 0.5
 
 
 @dataclass
@@ -78,9 +81,9 @@ class Motion:
     path: list[dict[str, float]]
     deg_per_s: float = 60.0
     hold_s: float = 0.0  # after the last waypoint, keep sending it this long (servos catch up)
-    # smooth: start slowly, speed up, slow down at the end (a minimum-jerk profile over the whole
-    # path; quick job 118). The top speed stays at most deg_per_s × the speed scale. Off: the
-    # whole path at that speed, starting and stopping at once.
+    # smooth: speed up for RAMP_S, then the top speed, then slow down for RAMP_S at the end of the
+    # whole path (quick job 118). The top speed stays at most deg_per_s × the speed scale. Off:
+    # the whole path at that speed, starting and stopping at once.
     smooth: bool = False
     result: str | None = None  # "arrived" / "stopped" once finished
     done: asyncio.Event = field(default_factory=asyncio.Event)
@@ -88,7 +91,7 @@ class Motion:
     _held_s: float = 0.0
     _commanded: dict[str, float] = field(default_factory=dict)
     _travel: float = 0.0  # smooth: the path's length (the furthest joint's degrees, summed)
-    _phase: float = 0.0  # smooth: 0 → 1 along the profile
+    _speed: float = 0.0  # smooth: the speed now (°/s)
     _done_deg: float = 0.0  # smooth: how far along the path the commands are
 
     def finish(self, result: str) -> None:
@@ -115,14 +118,13 @@ class Motion:
             return top_deg_per_s * dt
         if self._travel <= 1e-9 or top_deg_per_s <= 0:
             return math.inf if self._travel <= 1e-9 else 0.0
-        # minimum jerk: s(τ) = 10τ³ − 15τ⁴ + 6τ⁵ peaks at 1.875 × the mean speed; the phase moves
-        # so that the peak is the top speed now (the speed scale may change during the move)
-        self._phase = min(1.0, self._phase + dt * top_deg_per_s / (MIN_JERK_PEAK * self._travel))
-        t = self._phase
-        target = self._travel * t**3 * (10 - 15 * t + 6 * t * t)
-        if t >= 1.0:
-            return math.inf  # the end: whatever is left (rounding)
-        return max(target - self._done_deg, 0.0)
+        # speed up and slow down at the same rate (top speed / RAMP_S); the rate follows the speed
+        # scale if it changes during the move
+        accel = top_deg_per_s / RAMP_S
+        left = max(self._travel - self._done_deg, 0.0)
+        self._speed = min(self._speed + accel * dt, top_deg_per_s, math.sqrt(2 * accel * left))
+        step = self._speed * dt
+        return math.inf if step >= left else step  # the end: whatever is left (rounding)
 
 
 @dataclass

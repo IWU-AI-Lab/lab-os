@@ -14,7 +14,8 @@ decides when to use the tools; it never chooses the motion:
 - `let_go_of_the_cube`: opens the gripper when the person says so.
 Every move is a robot tool call (lab_os.tools.robot): the same checks as an AI tool's (the soft
 limits, the per-call steps, the floor, the venue's speed, one controller at a time), on the AI
-Control page, and STOP ends it. The moves run in the background: the answer doesn't wait.
+Control page, and STOP ends it. A named pose is one smooth move, without the per-call steps
+(quick job 118). The moves run in the background: the answer doesn't wait.
 """
 
 import asyncio
@@ -590,9 +591,10 @@ class ArmDesk:
         return "The gripper is open: the person can take the cube."
 
     async def _to_pose(self, name: str) -> bool:
-        """go_to_pose again until it's there (at most max_joint_change_deg a call)."""
+        """go_to_pose in one smooth move (quick job 118: no stops at each max_joint_change_deg
+        step). Again if it isn't there yet."""
         for _ in range(12):
-            r = await self.robot.call("go_to_pose", name=name)
+            r = await self.robot.call("go_to_pose", name=name, one_move=True)
             if r.get("result") in ENDED:
                 self.last = f"{r['result']} on the way to {name}"
                 return False

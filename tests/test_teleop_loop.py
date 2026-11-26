@@ -373,10 +373,10 @@ async def test_a_smooth_motion_starts_slowly_and_slows_down_at_the_end():
     assert abs(loop.arm.read_joints()["shoulder_pan"] - (start + 60)) < 1e-6
     moving = [s for s in speeds if s > 0]
     assert max(moving) <= 30 + 1e-6
-    assert max(moving) > 28  # it reaches the top speed in the middle
-    assert moving[0] < 1 and moving[-1] < 1  # slow at the start and at the end
-    # about 1.875 × 60° / 30 °/s = 3.75 s
-    assert 3.6 <= len(moving) * 0.02 <= 3.9
+    assert sum(1 for s in moving if s > 29.9) * 0.02 > 1.0  # the top speed in the middle
+    assert moving[0] < 2 and moving[-1] < 5  # slow at the start and at the end
+    # 60° / 30 °/s = 2 s, plus 0.5 s for the ramps
+    assert 2.4 <= len(moving) * 0.02 <= 2.6
 
 
 async def test_a_smooth_motion_of_nothing_arrives():
