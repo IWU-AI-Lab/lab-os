@@ -36,11 +36,12 @@
   <main class="split">
     <section class="card view"><div id="arm-panel" class="in arm3d" data-role="monitor"></div></section>
     <aside class="side">
-      <section class="card grow-card"><div class="in" id="joints">
-        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg><span id="joints-title">Joints</span> <small>what the arm reports</small></h2>
+      <!-- the right arm's card and the left arm's card are built the same (quick job 119) -->
+      <section class="card grow-card"><div class="in gauges" id="joints">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg><span id="joints-title">Joints</span> <small id="right-name">what the arm reports</small></h2>
       </div></section>
-      <section class="card grow-card" id="left-card" hidden><div class="in" id="joints-left">
-        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg>Left arm <small id="left-name"></small></h2>
+      <section class="card grow-card" id="left-card" hidden><div class="in gauges" id="joints-left">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-arm"/></svg><span>Left arm</span> <small id="left-name"></small></h2>
       </div></section>
     </aside>
   </main>

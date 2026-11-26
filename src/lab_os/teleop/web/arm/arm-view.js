@@ -1,6 +1,7 @@
 // Desktop 3D view: scene, camera, orbit controls, lights, floor grid. Holds one ArmModel for each arm:
 // the "right" one (the brain's first arm) where it always was, and with two arms at once the "left"
-// one LEFT_OFFSET_M to its left (a fixed spot: the desktop doesn't know where the real arms stand).
+// one LEFT_OFFSET_M to its left (a fixed spot: the desktop doesn't know where the real arms stand),
+// on a floor grid that is under both arms.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { drawRes } from "/web/screen.js";
@@ -19,10 +20,20 @@ export function createArmView(container) {
   const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(0.6, 1.2, 0.8);
   scene.add(sun);
-  const grid = new THREE.GridHelper(0.6, 12, color("arm3d.grid_center"), color("arm3d.grid"));
-  grid.material.transparent = true;
-  grid.material.opacity = 0.6;
-  scene.add(grid);
+  // the floor grid: 0.6 m under one arm; with two arms a wider one under both (quick job 119), 5 cm cells
+  let grid = null;
+  function setGrid(two) {
+    if (grid && grid.userData.two === two) return;
+    if (grid) scene.remove(grid);
+    const size = two ? 1.2 : 0.6;
+    grid = new THREE.GridHelper(size, size / 0.05, color("arm3d.grid_center"), color("arm3d.grid"));
+    grid.material.transparent = true;
+    grid.material.opacity = 0.6;
+    grid.position.z = two ? -LEFT_OFFSET_M / 2 : 0; // the middle between the two arms
+    grid.userData.two = two;
+    scene.add(grid);
+  }
+  setGrid(false);
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
   // Operator view: behind and above the arm (robots face +x), so screen left/right = hand left/right.
@@ -82,6 +93,7 @@ export function createArmView(container) {
         model.object.position.z = slot === "left" ? -LEFT_OFFSET_M : 0; // the robot's left is −z here
         scene.add(model.object);
       } else delete models[slot];
+      setGrid(!!models.left);
       if (reframe) frame();
       dirty = true;
     },

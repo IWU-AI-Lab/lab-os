@@ -404,3 +404,18 @@ async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client)
     assert 'this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop"' in main
     assert 'teleop ? "on-hit" : true' in main
     assert 'show === "on-hit" ? !!found : show' in graph["/hub/xr/pointer.js"]
+
+
+def test_two_arms_on_every_screen():
+    """Quick job 119: with two arms, Monitor in VR shows both arms (each on its own floor grid,
+    the left one on your left); the desktop 3D view's grid is under both arms; and on the Monitor
+    page the left arm's joints card is built and styled like the right arm's."""
+    mods = (SRC / "hub/web/xr/modules.js").read_text()
+    holo = mods.split("export class ArmHologram", 1)[1].split("\n}\n", 1)[0]
+    assert 'getArmFeed(this.link, "left")' in holo and 'id === "monitor"' in holo
+    view = (SRC / "teleop/web/arm/arm-view.js").read_text()
+    assert "setGrid(!!models.left)" in view
+    page = (SRC / "teleop/web/monitor.html").read_text()
+    assert 'class="in gauges" id="joints"' in page and 'class="in gauges" id="joints-left"' in page
+    css = (SRC / "teleop/web/pages.css").read_text()
+    assert "#joints .joint" not in css and ".gauges .joint" in css
