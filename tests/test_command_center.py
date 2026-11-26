@@ -196,3 +196,33 @@ async def test_stop_is_noted(aiohttp_client):
     assert app[ACTIVITY].recent()[0]["text"].startswith("STOP pressed")
     assert app[ACTIVITY].recent()[0]["kind"] == "stop"
     await ws.close()
+
+
+# ---------- quick job 140: the way in on the brain's hub, and the opening ----------
+async def test_the_way_in_is_on_the_brains_hub_only(aiohttp_client, monkeypatch):
+    import lab_os.hub.server as server
+
+    client = await aiohttp_client(make_app())
+    assert (await (await client.get("/api/hub")).json())["here"] is True
+    monkeypatch.setattr(server, "on_this_computer", lambda request: False)
+    assert (await (await client.get("/api/hub")).json())["here"] is False
+    hub = (SRC / "hub" / "web" / "design.html").read_text()
+    assert 'id="cc-launch"' in hub and 'data-module="command"' in hub
+    assert '$("#cc-launch").hidden = !(hub?.here && S.page.command)' in hub  # not on other screens
+    assert 'id === "command" ? $("#cc-launch")' in hub  # it unfolds from there, also by voice
+    # the frame's opening plays its sounds through the hub, only from the module frame
+    assert 'e.data?.type !== "lab-os-sfx"' in hub and 'e.source !== $("#mod-slot iframe")' in hub
+
+
+async def test_the_opening_plays_and_can_be_skipped(aiohttp_client):
+    client = await aiohttp_client(make_app())
+    assert (await client.get("/hub/command-center-intro.js")).status == 200
+    intro = (SRC / "hub" / "web" / "command-center-intro.js").read_text()
+    assert "export function playIntro(" in intro
+    assert 'addEventListener("pointerdown", skip, true)' in intro  # any press skips
+    assert 'addEventListener("keydown", skip, true)' in intro  # any key skips
+    assert "prefers-reduced-motion: reduce" in intro
+    js = (SRC / "hub" / "web" / "command-center.js").read_text()
+    assert 'import { playIntro } from "/hub/command-center-intro.js"' in js
+    html = await (await client.get("/command-center")).text()
+    assert "@property --hole" in html and "body.intro .page > *" in html
