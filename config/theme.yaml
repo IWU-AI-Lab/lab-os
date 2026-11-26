@@ -139,3 +139,7 @@ arm3d:                   # the 3D arm (desktop panel + headset), on a dark backg
     plate: "#24323a"
     cup: "#7d8b92"
     board: "#1f5a35"
+
+raspbot3d:
+  body: "#343c42"        # chassis and camera mount
+  wheel: "#d9a441"       # Mecanum wheels

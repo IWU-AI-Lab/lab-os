@@ -97,6 +97,9 @@ async def test_model_files_served(aiohttp_client):
     for path in (
         "/models/so101/so101_new_calib.urdf",
         "/models/so101/assets/base_so101_v2.stl",
+        "/models/raspbot/Raspbot-V2.urdf",
+        "/models/raspbot/assets/base_link.STL",
+        "/web/raspbot-model.js",
         "/web/vendor/three/examples/jsm/loaders/STLLoader.js",
         "/static/arm/arm-panel.js",
     ):

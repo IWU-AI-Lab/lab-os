@@ -4,6 +4,12 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — Docker Hub does not have the Raspbot V2 image tag
+
+**What:** Docker Hub returned `not found` for `yahboomtechnology/ros-humble:0.1.0`. Yahboom's factory disk image contains that tag. Its URDF defines continuous joints for four wheels and both camera axes. The camera joints do not enforce the physical servo limits.
+
+**Fix:** Extract the URDF and seven binary STL meshes from the factory image's cached Docker layer. The model is in `models/raspbot/`. See [Yahboom's factory downloads](https://drive.google.com/drive/folders/1RV4pGs8N0ATYlibx3DoaTCyOxKGn9I08).
+
 ### 2026-11-25 — "Another monitor of this computer" opened on the same monitor (quick job 138)
 
 **What:** Lab check M.7 (2026-11-24): Open on… → "Another monitor of this computer" opened a new window on the same monitor. The page asked for a place on the other monitor (`window.open` with `left` and `top` from the Window Management API), but a window manager may put a new window where it likes. Also, the API is only on a secure page: at `http://192.168.8.130:8080` on the lab desktop it is not there, so the window opens where the browser likes (localhost is secure).
