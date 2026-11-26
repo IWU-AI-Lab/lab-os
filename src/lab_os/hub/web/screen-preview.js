@@ -12,10 +12,18 @@ export const screenTitle = (window) => window.showing?.title || (window.stage ==
 
 const escape = (text) => String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-export function screenPreview(window, width) {
+/** The icon id (in /web/design/icons.svg) for the page a window shows. */
+export const previewIcon = (window) => (Object.hasOwn(icons, window.showing?.id) ? icons[window.showing.id] : "i-test");
+
+/** Height over width of a window's screen, kept between 0.42 and 1 (16:9 when unknown). */
+export function previewAspect(window) {
   const screen = window.screen || {};
-  const aspect = screen.width && screen.height ? Math.min(1, Math.max(0.42, screen.height / screen.width)) : 9 / 16;
-  const icon = Object.hasOwn(icons, window.showing?.id) ? icons[window.showing.id] : "i-test";
+  return screen.width && screen.height ? Math.min(1, Math.max(0.42, screen.height / screen.width)) : 9 / 16;
+}
+
+export function screenPreview(window, width) {
+  const aspect = previewAspect(window);
+  const icon = previewIcon(window);
   const image = window.showing
     ? `<div class="mod"><svg class="ico"><use href="/web/design/icons.svg#${icon}"/></svg></div>`
     : `<div class="${window.stage === "start" ? "ring" : "core"}"></div>`;
