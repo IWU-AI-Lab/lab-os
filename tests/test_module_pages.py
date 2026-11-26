@@ -357,7 +357,7 @@ async def test_every_page_is_listed(aiohttp_client):
             continue
         if path.startswith(("/api/", "/ws", "/static", "/web", "/models", "/hub/", "/mcp")):
             continue
-        if path.endswith((".json", ".js", ".css", ".svg", ".png", ".webmanifest")):
+        if path.endswith((".json", ".js", ".css", ".svg", ".png", ".webmanifest", ".crt")):
             continue
         served.add(path)
     served.discard("/design")  # it goes to / (quick job 131)

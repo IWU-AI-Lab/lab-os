@@ -12,10 +12,10 @@ from pathlib import Path
 
 from lab_os import brainlog, config, term
 from lab_os.devices import load_registry
-from lab_os.hub import launch
+from lab_os.hub import launch, tls
 from lab_os.hub.hub_devices import DeviceError, clean_name
 from lab_os.hub.internet import InternetCheck
-from lab_os.hub.server import RESTART, create_brain_app
+from lab_os.hub.server import HTTPS_PORT, RESTART, create_brain_app
 from lab_os.personas import current_persona, load_persona
 from lab_os.quest_view import AdbReverse
 from lab_os.robots.raspbot import from_registry as raspbot_from_registry
@@ -36,7 +36,19 @@ from lab_os.venues import load_venue
 LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
-def _banner(port: int, host: str, mcp_port: int) -> str:
+def _https(args) -> tuple[int, object] | None:
+    """(port, ssl context) for the hub over HTTPS (phones, quick job 124), or None: off, or the
+    brain listens on this computer only (no phone reaches it then)."""
+    if not args.https_port or args.host in LOCAL_HOSTS:
+        return None
+    try:
+        return args.https_port, tls.server_context()
+    except (OSError, ValueError) as e:
+        print(f"no HTTPS for phones: the certificate failed ({e})")
+        return None
+
+
+def _banner(port: int, host: str, mcp_port: int, https_port: int = 0) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
         f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
@@ -53,6 +65,11 @@ def _banner(port: int, host: str, mcp_port: int) -> str:
         lines.append(
             f"Other screens: http://<this computer's IP address>:{port}/ "
             "(docs/archive/guides-2026-11-25/hub.md)"
+        )
+    if https_port:
+        lines.append(
+            f"Phones:   https://<this computer's IP address>:{https_port}/   (the phone's "
+            "remote with its microphone; quick job 124)"
         )
     return "\n".join(lines)
 
@@ -144,6 +161,13 @@ def main(argv: list[str] | None = None) -> None:
         default=MCP_PORT,
         help=f"port of the robot tools for AI tools (MCP, on 127.0.0.1 only; default {MCP_PORT}; "
         "0 = off)",
+    )
+    s.add_argument(
+        "--https-port",
+        type=int,
+        default=tls.DEFAULT_PORT,
+        help="with --host 0.0.0.0: the hub over HTTPS on this port too, so a phone's browser gives "
+        f"the microphone (quick job 124; default {tls.DEFAULT_PORT}; 0 = off)",
     )
     s.add_argument(
         "--persona",
@@ -359,9 +383,18 @@ def main(argv: list[str] | None = None) -> None:
         print("--drive-from needs --host 0.0.0.0: other computers can't reach the hub yet.")
     try:
         with contextlib.suppress(KeyboardInterrupt):
-            banner = _banner(args.port, args.host, args.mcp_port)
+            https = _https(args)
+            app[HTTPS_PORT] = https[0] if https else 0
+            banner = _banner(args.port, args.host, args.mcp_port, https[0] if https else 0)
             asyncio.run(
-                serve(app, args.port, host=args.host, banner=banner, after_start=after_start)
+                serve(
+                    app,
+                    args.port,
+                    host=args.host,
+                    banner=banner,
+                    after_start=after_start,
+                    https=https,
+                )
             )
     finally:  # Ctrl+C, or "Shut down lab-os" in the hub: the same letting go
         close_arms(loop)

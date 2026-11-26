@@ -677,6 +677,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "colorlog" },
+    { name = "cryptography" },
     { name = "hid" },
     { name = "mcp" },
     { name = "numpy" },
@@ -704,6 +705,7 @@ dev = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.14.5" },
     { name = "colorlog", specifier = ">=6.12" },
+    { name = "cryptography", specifier = ">=46" },
     { name = "hid", specifier = ">=1.0.9" },
     { name = "lerobot", extras = ["feetech", "viz"], marker = "extra == 'so101'", specifier = ">=0.6.1" },
     { name = "mcp", specifier = ">=2.3,<3" },

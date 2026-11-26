@@ -183,6 +183,8 @@ async def test_move_the_arm_to_home(desk):
     assert all(abs(now[j] - min(max(v, soft[j][0]), soft[j][1])) < 1 for j, v in home.items())
     tools = {e["tool"] for e in desk.robot.calls.entries}
     assert tools == {"go_to_pose"}  # through the robot tools, on the AI Control page
+    # ready → home is 77° on shoulder_lift: one move, not 30° steps (quick job 118)
+    assert len(desk.robot.calls.entries) == 1
     result, _ = await desk.call(MOVE, True, '{"pose": "dance"}')
     assert "no pose 'dance'" in result
 
