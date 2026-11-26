@@ -305,7 +305,7 @@
     camera(s.camera && s.connected);
     const recent = error && Date.now() - errorAt < 3000 ? error : "";
     $("#msg").textContent = !s.may_drive
-      ? `View only. To drive from this device, add ${s.address || "its address"} to drive_from in place.yaml (docs/guides/raspbot.md).`
+      ? `View only. To drive from this device, allow it in the Command Center on the brain's computer, or add ${s.address || "its address"} to drive_from in place.yaml (docs/guides/raspbot.md).`
       : s.message || recent;
   }
   function connect() {

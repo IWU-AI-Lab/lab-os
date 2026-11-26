@@ -332,6 +332,7 @@ class HubDevices:
                     "display_name": display,
                     "named": named,
                     "address": wins[0].address,
+                    "here": wins[0].here,  # on the brain's own computer
                     "windows": [
                         {
                             "id": w.id,
@@ -344,6 +345,7 @@ class HubDevices:
                             ),
                             "from": w.sent_from,
                             "from_window": w.sent_from_window,
+                            "screen": w.screen,  # its monitor's size (CSS px) and pixel ratio
                         }
                         for w in wins
                     ],
@@ -485,7 +487,7 @@ class HubDevices:
             s = msg["screen"]
             w.screen = {
                 "label": str(s.get("label") or "")[:40],
-                **{k: _num(s.get(k)) for k in ("left", "top", "width", "height")},
+                **{k: _num(s.get(k)) for k in ("left", "top", "width", "height", "ratio")},
             }
 
     async def connection(self, request: web.Request) -> web.WebSocketResponse:

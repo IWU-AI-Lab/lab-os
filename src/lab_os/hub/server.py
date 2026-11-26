@@ -91,12 +91,18 @@ from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
 from lab_os.ai.voices import VoiceSetup, load_voices
 from lab_os.devices import Registry, load_registry, users_of
-from lab_os.hub import card_reader, launch, tls, wake_clips
+from lab_os.hub import card_reader, command_center, launch, tls, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
 from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
-from lab_os.hub.hub_devices import DeviceError, DeviceSettings, HubDevices, clean_name
+from lab_os.hub.hub_devices import (
+    DeviceError,
+    DeviceSettings,
+    HubDevices,
+    clean_name,
+    on_this_computer,
+)
 from lab_os.hub.internet import InternetCheck
 from lab_os.hub.live_devices import (
     ARM_KINDS,
@@ -191,6 +197,11 @@ PAGES = (
         "Phone Remote",
         "Talk or type to the assistant and name a screen; a phone opening the hub gets it.",
     ),
+    (
+        "/command-center",
+        "Command Center",
+        "Every device and screen in one workspace: see, arrange and control them (the brain only).",
+    ),
     ("/settings", "Settings", "⚙ on the hub."),
     ("/pages", "All Pages", "This list: the button next to ⚙ on the hub."),
 )
@@ -214,6 +225,7 @@ DEVICE_VIEWS = {
     "wake-word": ("Wake Word", "/wake-word"),
     "remote": ("Phone Remote", "/remote"),
     "xr": ("VR Hub", "/xr"),  # only on a headset's browser
+    "command": ("Command Center", "/command-center"),  # quick job 134: the brain's own computer
 }
 
 DEFAULT_RESET_AFTER_S = 1800.0
@@ -382,6 +394,24 @@ async def settings_page(request: web.Request) -> web.FileResponse:
 
 async def pages_page(request: web.Request) -> web.FileResponse:
     return await _file(request, "pages.html")
+
+
+async def command_center_page(request: web.Request) -> web.StreamResponse:
+    """The Command Center (quick job 134): only on the brain's own computer for now."""
+    if not on_this_computer(request):
+        return web.Response(
+            text=OTHER_COMPUTER.format(address=request.host), content_type="text/html", status=403
+        )
+    return await _file(request, "command-center.html")
+
+
+OTHER_COMPUTER = """<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Command Center</title>
+<link rel="stylesheet" href="/web/design/kit.css"></head><body><div class="page">
+<header class="bar"><div class="title"><span>Command Center</span></div></header>
+<main><p class="hint">The Command
+Center opens only on the brain's own computer. Open http://localhost:8080/command-center there.
+</p></main></div><script type="module" src="/web/design/kit.js"></script></body></html>"""
 
 
 async def xr_page(request: web.Request) -> web.FileResponse:
@@ -1926,6 +1956,8 @@ def create_brain_app(
     app.router.add_post("/api/window-state", api_window_state)
     app.router.add_get("/settings", settings_page)
     app.router.add_get("/pages", pages_page)
+    app.router.add_get("/command-center", command_center_page)
+    command_center.add_routes(app)
     app.router.add_get("/api/status", api_status)
     app.router.add_get("/api/project", api_project)
     app.router.add_get("/api/commits", api_commits)

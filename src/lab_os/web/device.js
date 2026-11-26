@@ -106,7 +106,7 @@ export async function setPref(key, value) {
 // which monitor this window is on: its position in the desktop, and the monitor's name where the browser
 // already allowed "window management" (never asks here)
 async function screenInfo() {
-  const s = screen, out = { left: s.availLeft ?? window.screenX ?? 0, top: s.availTop ?? 0, width: s.width, height: s.height, label: "" };
+  const s = screen, out = { left: s.availLeft ?? window.screenX ?? 0, top: s.availTop ?? 0, width: s.width, height: s.height, ratio: window.devicePixelRatio || 1, label: "" };
   try {
     if ("getScreenDetails" in window && (await navigator.permissions.query({ name: "window-management" })).state === "granted") {
       out.label = (await window.getScreenDetails()).currentScreen.label || "";

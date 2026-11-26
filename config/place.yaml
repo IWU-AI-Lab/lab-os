@@ -12,6 +12,7 @@ ai_budget_usd_month: 20   # the hub's chat pauses when this month's AI spend rea
 chat_keep_minutes: 30     # a reset or interrupted conversation can be brought back this long (0 = off)
 drive_from:           # other devices that may drive a real arm, by name or address; read when the brain
                       # starts, the same as `lab-os serve --drive-from` (quick job 95). The rest only watch.
+                      # The Command Center changes it (quick job 134: kept in local/place.yaml).
   - 192.168.8.180     # the Quest on the router's Wi-Fi (its address is reserved in the router)
 calendar:             # dates the hub's greeting mentions in the two weeks before (docs/dev/personas.md)
   - {date: 2026-12-15, what: "The semester ends"}

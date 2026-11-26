@@ -524,11 +524,20 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
         why = limits_locked_why(values("venue", venue))
         if why:
             raise SettingError(f"{f.label} can't be switched off here: {why}.")
-    values(f.file, venue)  # a layer that can't be read: ConfigError with the file and the line
-    path = file_path(f.file, venue)
+    return write_value(f.file, f.path, value, venue, flow=f.kind == "list")
+
+
+def write_value(
+    file: str, dotted: str, value: Any, venue: str | None = None, flow: bool = False
+) -> Any:
+    """Write one value at `dotted` into the place's local/ copy of `file` (made on the first
+    change), keeping that file's comments and layout. `flow`: a list in the one-line [a, b]
+    style. For values with no Field too (the Command Center's `drive_from`, quick job 134)."""
+    values(file, venue)  # a layer that can't be read: ConfigError with the file and the line
+    path = file_path(file, venue)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(LOCAL_HEAD.format(name=file_name(f.file, venue)))
+        path.write_text(LOCAL_HEAD.format(name=file_name(file, venue)))
     rt = YAML()
     rt.preserve_quotes = True
     rt.width = 4096  # never re-wrap long comment lines
@@ -538,13 +547,13 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
     except Exception as e:  # ruamel's own errors: the same sentence as a broken layer
         raise config.ConfigError(config.broken_yaml(path, e)) from None
     data = loaded if loaded is not None else {}
-    *parents, last = f.path.split(".")
+    *parents, last = dotted.split(".")
     node = data
     for part in parents:
         if part not in node or not isinstance(node[part], dict):
             node[part] = {}
         node = node[part]
-    if f.kind == "list":  # keep the one-line [a, b] style
+    if flow:  # keep the one-line [a, b] style
         from ruamel.yaml.comments import CommentedSeq
 
         seq = CommentedSeq(value)

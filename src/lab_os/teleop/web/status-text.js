@@ -75,7 +75,7 @@ function oneArmText(feed, noController, source) {
   // said "frozen: release grip", which didn't say either)
   const release = !noController && !!s && s.arm?.connected !== false && feed.frozen && !!s.needs_release;
   const taken = !noController && !!s && s.arm?.connected !== false && (s.may_drive === false || s.control === "ai" || s.control === "other");
-  const hint = taken ? s.may_drive === false ? ["Driven from the brain's computer", "drive_from in place.yaml allows it"] : ["It must stop first"]
+  const hint = taken ? s.may_drive === false ? ["Driven from the brain's computer", "The Command Center can allow it"] : ["It must stop first"]
     : release ? [hands ? "Let go of the pinch" : "Let go of the grip", hands ? "then pinch again" : "then grab again"]
     : oneToOne && !noController
     ? hands ? ["1:1: right wrist in the ball", "left pinch = move"] : ["1:1: hand in the ball", "hold grip = move", "A/X = stop"]

@@ -90,7 +90,7 @@ The Current Project panel reads this list: each step's **bold title** is what th
 - **The lab router:** the GL.iNet Beryl 7 (GL-MT3600BE) arrived on 2026-11-22 and works in the lab (2026-11-23): the hub is at `http://192.168.8.130:8080`. raspbot1 is on its 5 GHz Wi-Fi. The professor approved it, on the wall port too (2026-11-20). Lab check part N is done (2026-11-23). Then "Up next" below.
 
 ## Waiting on the builder
-- Nothing now. The Command Center's spec is in `docs/design/command-center.md` (quick job 134).
+- Nothing now.
 
 ## Hacks to clean up
 - `src/lab_os/lerobot_teleop.py` (`child_env`, quick job 91): `CI=1` for LeRobot's teleop and its Rerun turns off Rerun's anonymous usage data. Rerun 0.33 has no other switch except `rerun analytics disable`, which changes the user's own Rerun setting. Replace it when Rerun has an environment variable for it, or when the builder chooses to switch it off on the lab desktop.
