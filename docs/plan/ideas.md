@@ -44,6 +44,17 @@ Was "Up next" after teleop (decision 2026-10-24); the builder chose the core fir
 
 ---
 
+## Recent ideas (2026-11-26)
+
+### The Raspbot's board extras (from a Gemini session; after the demo)
+The Yahboom expansion board has more parts that `Raspbot_Lib` controls. The builder (2026-11-26): after the demo. Sideways driving is quick job 142.
+- **Buzzer and RGB light strip:** the "Find me" beep (below), and the car's state on the car itself: red on STOP or the freeze when input stops, green while a driver has control.
+- **Ultrasonic sensor:** a distance warning in the Quest's view (the front stop already exists, quick job 127).
+- **The 4-channel line tracker** (`read_data_array(0x0a, 1)` in Yahboom's Tracking tutorial): a taped line on the floor that the car does not cross, for visitors.
+- **OLED display and the KEY1 button:** the OLED shows the lab-os state and the address with no SSH; KEY1 is a physical stop or status button. The board also has an IR receiver.
+- **AprilTags and vision:** Yahboom's OpenCV, MediaPipe, YOLOv5-lite and AprilTag tutorials are plain Python (no ROS 2). They fit a later docking station, visual tracking or the Quest's AR labels (quick job 128).
+- **Battery:** the board sounds its own buzzer when the battery is low. Its ROS 2 driver gives no battery voltage, so `vcgencmd get_throttled` in `health.log` stays the main warning, unless `Raspbot_Lib` has an undocumented register.
+
 ## Recent ideas (2026-11-25)
 
 ### Agentic AI arm control (AMP1-style upgrades to `run_program`)
@@ -375,7 +386,7 @@ Turn a photo into a 3D Gaussian-splat scene to step into in the Quest (someone d
 - **Reality (2026-10-28):** the first person arrives to a closed, empty lab; every robot is off and needs a physical switch (SO-101s: no switch, wall power). So nothing but the brain, router, screens (and cameras) is on at startup.
 - **Default (decision 2026-10-28): robots are optional.** Startup assumes no robots are on; often the builder just wants to code or ask something. Startup covers the brain, screens and anything always-on. When someone switches a robot on, its status **flickers on** in the main system (with its chime), whenever that happens.
 - **Optional "power-up walk" (demo mode).** For demos: startup shows the devices for that demo dim, with what to do ("xarm1: flip the switch on the base"). As you walk around switching things on, each one lights up with its chime the moment it really answers, like a cockpit pre-flight. The manual chore becomes the show, and when you're done you know everything works. Devices you don't need today can be skipped. Fast: the brain part takes seconds; the rest goes as fast as you flip switches.
-- **Battery levels:** the xArm controller's protocol reportedly has a battery-voltage command (verify in our driver). Raspbot: unknown. A Pi can't measure a battery by itself, but Yahboom's expansion board might; check its docs before giving up.
+- **Battery levels:** the xArm controller's protocol reportedly has a battery-voltage command (verify in our driver). Raspbot: probably none ("The Raspbot's board extras", 2026-11-26). A Pi can't measure a battery by itself, but Yahboom's expansion board might; check its docs before giving up.
 - **Sound:** cosmetic, to add life (JARVIS feel). On while someone works in the lab, off otherwise (follows the on/off triggers); volume/mute in the sound pack.
 - **Rules:** "only claim what's real": nothing lights up unless it really answered. An arm "nodding awake" would be great for visitors, but it's robot motion: only under the safety rules, opt-in, workspace clear, never unattended.
 - **Plugs into:** triggers slot → roll call / health checks → theme + sound packs + decorative layer.
