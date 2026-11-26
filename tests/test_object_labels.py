@@ -255,13 +255,38 @@ def test_the_label_says_the_name_how_sure_and_the_distance():
     assert run_js(f"m.labelText({json.dumps(box('LEGO brick', 0, 1))}, null)") == "LEGO brick   80%"
 
 
-def test_the_browser_page_has_the_switch_off_by_default():
-    html = (REPO_ROOT / "src/lab_os/hub/web/raspbot.html").read_text()
-    assert 'id="labels-btn"' in html and 'aria-pressed="false"' in html and ">Labels off<" in html
-    assert 'import { drawLabels, frontIndex } from "/web/object-labels.js";' in html
-    assert 'send({ type: "labels", on })' in html
-    assert 'if (labels.on) send({ type: "labels", on: true })' in html  # a reconnect
-    assert "frontIndex(found, lastStatus?.pan_deg)" in html
+@needs_node
+def test_the_labels_look_like_a_hud():
+    g = (
+        "{save(){}, restore(){}, strokeRect(){}, fillRect(){}, letterSpacing: '0px',"
+        " measureText: (t) => ({width: t.length * 10}),"
+        " fillText(t) { (this.said ||= []).push(t); }}"
+    )
+    found = json.dumps([box("cell phone", 0.3, 0.4, score=0.823), box("LEGO brick", 0.0, 0.1)])
+    out = run_js(
+        f"(() => {{ const g = {g};"
+        f" m.drawLabels(g, 640, 480, {found}, {{front: 0, distanceMm: 342}});"
+        " return [g.said, g.font, g.letterSpacing]; })()"
+    )
+    said, font, spacing = out
+    assert said == ["CELL PHONE   82%   34 cm", "LEGO BRICK   80%"]  # the name in capitals
+    assert "Chakra Petch" in font and spacing != "0px"  # the design's UI font, spaced out
+
+
+def test_the_raspbot_page_and_the_monitor_have_the_switch_off_by_default():
+    hub = REPO_ROOT / "src/lab_os/hub/web"
+    page = (hub / "raspbot.html").read_text()
+    monitor = (hub / "raspbot-monitor.html").read_text()
+    for html in (page, monitor):
+        assert 'id="labels-btn"' in html and 'aria-pressed="false"' in html
+        assert ">Labels off<" in html and '<canvas id="labels"' in html
+    assert 'import { labelsSwitch } from "/web/object-labels.js";' in page
+    assert "ws.onopen = () => labels.reconnect();" in page  # labels on again after a reconnect
+    js = (hub / "raspbot-monitor.js").read_text()
+    assert "labelsSwitch({" in js and "send: link.send" in js and "labels?.reconnect()" in js
+    lab = MODULE.read_text()
+    assert 'send({ type: "labels", on })' in lab and "frontIndex(L.found, s?.pan_deg)" in lab
+    assert 'if (L.on) send({ type: "labels", on: true })' in lab
 
 
 def test_the_vr_window_asks_the_brain_and_is_off_by_default():

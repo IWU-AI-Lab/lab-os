@@ -6,6 +6,9 @@
 //   found                      [{name, score, box: {x, y, w, h}}], the box as fractions of the picture
 //   drawLabels(g, w, h, found, {front, distanceMm, color, bg, font})   on the picture's canvas
 //   frontIndex(found, panDeg)  which object the ultrasonic sensor measures, or -1
+//   labelsSwitch({button, canvas, img, say, send, status})   a page's Labels button (the Raspbot page, Monitor)
+//
+// The labels look like a HUD: the design's UI font (Chakra Petch), the name in capitals, letters spaced out.
 
 export const FRONT_PAN_DEG = 15; // the ultrasonic sensor looks ahead: only with the camera this near the centre
 
@@ -30,11 +33,14 @@ export function labelText(f, distanceMm) {
   return parts.join("   ");
 }
 
+export const HUD_FONT = "'Chakra Petch', system-ui, sans-serif"; // the design's UI font (theme.yaml → fonts.family)
+
 /** Draw the boxes and labels on a canvas `w` × `h` that shows the picture. */
-export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = "sans-serif" } = {}) {
-  const size = Math.max(12, Math.round(h * 0.04)), pad = size * 0.35, line = Math.max(1.5, h / 320);
+export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = HUD_FONT } = {}) {
+  const size = Math.max(12, Math.round(h * 0.04)), pad = size * 0.4, line = Math.max(1.5, h / 320);
   g.save();
   g.font = `600 ${size}px ${font}`;
+  if ("letterSpacing" in g) g.letterSpacing = `${(size * 0.1).toFixed(1)}px`;
   g.textBaseline = "middle";
   g.textAlign = "left";
   found.forEach((f, i) => {
@@ -42,7 +48,7 @@ export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, colo
     g.strokeStyle = color;
     g.lineWidth = line;
     g.strokeRect(x, y, bw, bh);
-    const text = labelText(f, i === front ? distanceMm : null);
+    const text = labelText({ ...f, name: f.name.toUpperCase() }, i === front ? distanceMm : null);
     const tw = g.measureText(text).width + pad * 2, th = size + pad * 2;
     const lx = Math.min(Math.max(0, x), w - tw), ly = y - th >= 0 ? y - th : Math.min(h - th, y + bh);
     g.fillStyle = bg;
@@ -51,4 +57,56 @@ export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, colo
     g.fillText(text, lx + pad, ly + th / 2);
   });
   g.restore();
+}
+
+/** A page's Labels button over a camera picture (an <img> under a <canvas> of the same place, object-fit:
+ * contain). `send(msg)` goes to /ws/raspbot; `say(text)` tells the person; `status()` is the newest
+ * raspbot_status (for the pan and the distance). Returns {message(m), reconnect()}: give it each
+ * {"type": "labels"} message, and call reconnect() when the socket opens again. */
+export function labelsSwitch({ button, canvas, img, say, send, status, oldMs = 1000 }) {
+  const L = { on: false, found: [], t: 0, state: "", why: "" };
+  const css = getComputedStyle(document.documentElement);
+  const color = css.getPropertyValue("--primary").trim() || "#29d4ff";
+  const font = css.getPropertyValue("--f-ui").trim() || HUD_FONT;
+  function paint() {
+    const r = canvas.getBoundingClientRect(), k = devicePixelRatio || 1;
+    const w = Math.round(r.width * k), h = Math.round(r.height * k);
+    if (canvas.width !== w || canvas.height !== h) Object.assign(canvas, { width: w, height: h });
+    const g = canvas.getContext("2d");
+    g.clearRect(0, 0, w, h);
+    const fresh = performance.now() - L.t < oldMs;
+    if (!L.on || !fresh || img.hidden || !img.naturalWidth || !L.found.length) return;
+    const fit = Math.min(w / img.naturalWidth, h / img.naturalHeight); // the picture's place (object-fit: contain)
+    const pw = img.naturalWidth * fit, ph = img.naturalHeight * fit, s = status();
+    g.save();
+    g.translate((w - pw) / 2, (h - ph) / 2);
+    drawLabels(g, pw, ph, L.found, {
+      front: frontIndex(L.found, s?.pan_deg), distanceMm: s?.distance_mm ?? null,
+      color, bg: "rgba(5, 8, 11, 0.85)", font,
+    });
+    g.restore();
+  }
+  function set(on) {
+    Object.assign(L, { on, found: [], t: 0, state: "", why: "" });
+    send({ type: "labels", on });
+    button.setAttribute("aria-pressed", String(on));
+    button.textContent = on ? "Labels on" : "Labels off";
+    if (!on) say("Labels off.");
+    paint();
+  }
+  button.onclick = () => set(!L.on);
+  setInterval(paint, 250); // old boxes go away when no new ones come
+  addEventListener("resize", paint);
+  return {
+    message(m) {
+      if (!L.on) return;
+      Object.assign(L, { found: m.found || [], t: performance.now() });
+      if (m.state !== L.state || m.why !== L.why) {
+        Object.assign(L, { state: m.state, why: m.why });
+        say(m.state === "loading" ? "Loading the object detector…" : m.state === "failed" ? `No labels: ${m.why}` : m.why || "Labels on.");
+      }
+      paint();
+    },
+    reconnect() { if (L.on) send({ type: "labels", on: true }); },
+  };
 }

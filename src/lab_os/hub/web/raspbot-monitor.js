@@ -1,3 +1,4 @@
+import { labelsSwitch } from "/web/object-labels.js";
 import { raspbotMotion, watchRaspbot } from "/web/raspbot-status.js";
 
 const $ = (id) => document.getElementById(id);
@@ -49,7 +50,14 @@ function show(status) {
   $("pan").textContent = live && status.pan_deg != null ? `${status.pan_deg}°` : unavailable;
   $("tilt").textContent = live && status.tilt_deg != null ? `${status.tilt_deg}°` : unavailable;
   $("distance").textContent = live && status.distance_mm != null ? `${status.distance_mm / 10} cm` : unavailable;
+  $("labels-btn").disabled = !(live && status.camera);
 }
 
-const link = watchRaspbot(show);
+// Labels (quick job 128): the brain finds the objects in the camera's picture; this page draws the boxes.
+let labels;
+const link = watchRaspbot(show, { onMessage: (m) => m.type === "labels" && labels?.message(m), onOpen: () => labels?.reconnect() });
+labels = labelsSwitch({
+  button: $("labels-btn"), canvas: $("labels"), img: image, send: link.send, status: () => latest,
+  say: (text) => { $("labels-msg").textContent = text; },
+});
 $("stop").onclick = () => link.stop(device);

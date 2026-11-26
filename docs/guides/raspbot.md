@@ -55,7 +55,7 @@ The status line gives the full file name. The brain saves the files in `recordin
 The brain needs `ffmpeg` to make the `.mp4` (`sudo apt install ffmpeg`). Without it, the recording stays an `.mjpeg`, which only VLC opens.
 
 ## Labels on the picture
-Press **Labels off** under the picture to put a box and a label on each object: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Press **Labels on** to remove them. A page that only watches can show labels too.
+On the Raspbot page or on **Raspbot Monitor**, press **Labels off** under the picture to put a box and a label on each object: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Press **Labels on** to remove them. A page that only watches can show labels too. Each page has its own button.
 
 The detector runs on the brain's computer, once for all pages. It looks for the words in `config/labels.yaml`, for example "blue cube" and "LEGO brick". Before the first use, and after you change the words, run `uv run lab-os labels build` on the brain's computer. It needs the internet and takes some minutes. Then start the brain again.
 
