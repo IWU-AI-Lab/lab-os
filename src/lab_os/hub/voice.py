@@ -139,6 +139,13 @@ def spoken_greeting(opening: str, hint: str, now: datetime | None = None) -> str
     return f"{hello or time_of_day(now or datetime.now())} {hint}".strip()
 
 
+def preview_text(persona: Persona, now: datetime | None = None) -> str:
+    """What the persona chooser's preview says (quick job 151): the time of day and the persona's
+    own greeting line, as its greeting on the hub when there's no news."""
+    line = persona.lines.get("greeting", "")
+    return f"{time_of_day(now or datetime.now())} {line}".strip()
+
+
 def greeting_file(folder: Path, setup: VoiceSetup, text: str, persona: str = "") -> Path:
     """Where this voice's recording of `text` is kept: the name is a hash of the persona, the
     voice and the words, so another persona, a new voice or a changed line makes a new file (a
@@ -331,13 +338,43 @@ class VoiceDesk:
     _standby_retry_at: float = 0.0
     _closing: set = field(default_factory=set)  # warm hearings being let go
 
-    def setup(self) -> VoiceSetup:
-        """The persona's voice setup, with the persona's own speaker for that service (quick job
-        100: J.A.R.V.I.S. a male voice, the Lab Assistant a female one)."""
-        persona = self.persona()
+    def setup(self, persona: Persona | None = None) -> VoiceSetup:
+        """The persona's voice setup (the active one, else `persona`), with the persona's own
+        speaker for that service (quick job 100: J.A.R.V.I.S. a male voice, the Lab Assistant a
+        female one)."""
+        persona = persona or self.persona()
         setup = pick_voice(persona.voice, self.voices())
         speaker = persona.speakers.get(setup.service)
         return dataclasses.replace(setup, speaker=speaker) if speaker else setup
+
+    async def preview(self, persona: Persona, now: datetime | None = None) -> tuple[str, bytes]:
+        """The persona's greeting in its own voice, for the persona chooser (quick job 151): the
+        words and a WAV. From its recording when it said them before (offline, free), else spoken
+        now and saved. Raises VoiceError (or NoVoice) with a sentence for the page."""
+        text = preview_text(persona, now)
+        setup = self.setup(persona)  # NoVoice: the persona has none
+        folder = self.recordings()
+        saved = greeting_file(folder, setup, text, persona.id) if folder else None
+        if saved and saved.is_file():
+            return text, saved.read_bytes()
+        if self.internet() is False and not setup.local:
+            raise VoiceError("No internet, so no voice preview for now.")
+        if why := self.chat.paused():
+            raise VoiceError(why)
+        used: list[str] = []
+        wav = await speak_any(self.session(), setup, text, self.resting, used=used)
+        self.log_spend(setup, 0, wav_seconds(wav), "greeting")
+        log.info("voice: the %s preview, spoken by %s", persona.id, voice_words(setup, used))
+        # kept only when the first model spoke it: another can sound like another person (47)
+        if saved and used[:1] == list(setup.speak_models[:1]):
+            try:
+                saved.parent.mkdir(parents=True, exist_ok=True)
+                part = saved.with_suffix(".part")
+                part.write_bytes(wav)
+                os.replace(part, saved)
+            except OSError as e:
+                log.warning("voice: couldn't save the %s preview (%s)", persona.id, e)
+        return text, wav
 
     def why_not(self) -> str | None:
         """Why there's no voice right now (a sentence), or None."""

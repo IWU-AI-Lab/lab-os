@@ -42,6 +42,9 @@ POST /api/venue          {"to": "visitors" | "normal"}: visitor mode on or off (
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
 GET /api/greeting        "Good evening." + one line of real news, else the persona's line
+GET /api/personas        the persona chooser (quick job 151): every persona, its picture, its
+                         greeting, and which one is active
+GET /api/personas/{id}/preview  that persona's greeting in its own voice (a WAV; kept once spoken)
 POST /api/chat/start     start a fresh conversation with the greeting (the start press)
 GET /api/chat            the conversation so far and the chat's status
 POST /api/chat           {"text": "..."} → one turn, streamed as JSON lines (docs/dev/protocol.md)
@@ -89,9 +92,10 @@ from lab_os.ai.assistant import ASSISTANT_STATES, Assistant  # noqa: F401 (used 
 from lab_os.ai.chat import Conversation
 from lab_os.ai.history import ChatStore
 from lab_os.ai.languages import LANGUAGES, clean_language
+from lab_os.ai.speech import VoiceError
 from lab_os.ai.spend import SpendLog
 from lab_os.ai.tools import ChatTools
-from lab_os.ai.voices import VoiceSetup, load_voices
+from lab_os.ai.voices import NoVoice, VoiceSetup, load_voices
 from lab_os.devices import Registry, load_registry, users_of
 from lab_os.hub import card_reader, command_center, diagnostics, launch, tls, wake_clips
 from lab_os.hub.arm_desk import Actions, ArmDesk, locate_cube
@@ -121,8 +125,8 @@ from lab_os.hub.room import set_up as set_up_room
 from lab_os.hub.screens import ScreensDesk
 from lab_os.hub.system_tools import add_system_tools
 from lab_os.hub.visitors import VisitorDesk, robots_here, spoken_name
-from lab_os.hub.voice import VoiceDesk, voice_ws
-from lab_os.personas import Persona, current_persona
+from lab_os.hub.voice import VoiceDesk, preview_text, voice_ws
+from lab_os.personas import Persona, current_persona, load_persona, persona_ids
 from lab_os.quest_view import (
     AdbReverse,
     QuestView,
@@ -1565,6 +1569,36 @@ async def api_greeting(request: web.Request) -> web.Response:
     return web.json_response(await asyncio.to_thread(_greeting, request.app[BRAIN]))
 
 
+def _personas(brain: Brain) -> dict:
+    out = []
+    for pid in persona_ids():
+        try:
+            p = load_persona(pid)
+        except config.ConfigError as e:
+            log.warning("personas: %s", e)
+            continue
+        out.append(p.public() | {"greeting": preview_text(p)})
+    return {"active": brain.persona().id, "personas": out}
+
+
+async def api_personas(request: web.Request) -> web.Response:
+    return web.json_response(await asyncio.to_thread(_personas, request.app[BRAIN]))
+
+
+async def api_persona_preview(request: web.Request) -> web.Response:
+    """The persona's greeting in its own voice (quick job 151). 503 + a sentence when there's no
+    voice for it now."""
+    pid = request.match_info["id"]
+    if pid not in persona_ids():
+        raise web.HTTPNotFound(text=f"There's no persona called {pid!r}.")
+    try:
+        persona = await asyncio.to_thread(load_persona, pid)
+        text, wav = await request.app[BRAIN].voice.preview(persona)
+    except (NoVoice, VoiceError, config.ConfigError) as e:
+        return web.json_response({"ok": False, "message": str(e)}, status=503)
+    return web.Response(body=wav, content_type="audio/wav", headers={"Cache-Control": "no-store"})
+
+
 async def api_chat_start(request: web.Request) -> web.Response:
     """The start press: a fresh conversation whose first message is the greeting."""
     brain = request.app[BRAIN]
@@ -2047,6 +2081,8 @@ def create_brain_app(
     app.router.add_post("/api/venue", api_venue)
     app.router.add_get("/api/hub", api_hub)
     app.router.add_get("/api/greeting", api_greeting)
+    app.router.add_get("/api/personas", api_personas)
+    app.router.add_get("/api/personas/{id}/preview", api_persona_preview)
     app.router.add_post("/api/chat/start", api_chat_start)
     app.router.add_get("/api/chat", api_chat_get)
     app.router.add_post("/api/chat", api_chat_post)

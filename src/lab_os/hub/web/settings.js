@@ -7,6 +7,7 @@
 // Device" is kept by the brain under the device's name (the ?device= in the hub's address; /web/device.js).
 // After a save, the hub around this page (if any) re-reads the theme.
 import { deviceName, displayName, prefs, renameDevice, setPref } from "/web/device.js";
+import { currentLook, personaTable } from "./persona-table.js";
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -136,7 +137,8 @@ function said(r, ok, message) {
 function fieldRow(f, value, save, disabled) {
   let r = null;
   const ctl = control(f, value, async (v) => {
-    const res = await save(v);
+    r.saving = save(v);  // the persona table waits for it (quick job 151)
+    const res = await r.saving;
     said(r, res.ok, res.message);
     return res.ok;
   }, disabled);
@@ -461,6 +463,27 @@ function roomRow() {
   return r;
 }
 
+/* ---------- the persona chooser as a round table (quick job 151): full and maximal looks only ---------- */
+async function roundTable(r, readOnly) {
+  const look = currentLook();
+  if (look !== "full" && look !== "maximal") return;  // reduced and minimal: the plain row
+  const data = await fetch("/api/personas", { cache: "no-store" }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+  if (!data?.personas?.length) return;
+  // "Choose" presses the row's own button for that persona: one way to save, "✓ Saved" in the row
+  const choose = async (id) => {
+    const b = r.querySelector(`.seg button[data-v="${CSS.escape(id)}"]`), sel = r.querySelector("select");
+    r.saving = null;
+    if (b) b.click();
+    else if (sel) { sel.value = id; sel.dispatchEvent(new Event("change")); }
+    const res = await r.saving;
+    return !!res?.ok;
+  };
+  const t = personaTable({ personas: data.personas, active: data.active, look, choose, readOnly });
+  if (!t) return;
+  r.classList.add("has-table");
+  r.append(t);
+}
+
 /* ---------- start ---------- */
 let WAKE_PHRASE = "the wake word";  // the active persona's (quick job 90), for the hints
 async function start() {
@@ -532,6 +555,7 @@ async function start() {
       // its note "Applies when the brain restarts" has its place kept: the control doesn't move (quick job 82)
       if (f.applies === "restart") r.classList.add("may-restart");
       rows.append(r);
+      if (f.key === "place:persona") roundTable(r, !data.writable || !!f.locked);
     }
     // the assistant's languages are this device's own, but belong with the assistant (quick job 82)
     if (s.id === "assistant") rows.append(languageRow());

@@ -242,6 +242,12 @@ Quick job 150. Use a lab desktop that does not have lab-os.
 Moved from the demo run on 2026-11-25 (the builder). Before the demo, use Firefox on the laptop.
 - **M.6** Quick job 130. On the builder's laptop, open Chrome. Type `http://192.168.8.130:8080/?device=laptop`. If Chrome shows "This site can't be reached", do the steps in `docs/guides/plug-in.md` → "Open the hub on another computer". → which error code was under Chrome's message? (the code, or "none") Did the hub open? (yes / no: after which step)
 
+## PT. After the demo: the persona round table (10 min)
+Quick job 151, a first version. Use the desktop with sound on.
+- **PT.1** Open ⚙ → **This Device**. Set **Level of Detail** to **Full**. Open ⚙ → **Assistant**. Click the name of the persona that does not show **Active**. → did the table turn that persona to face you? (yes / no) Did you hear its greeting in its own voice? (yes / no: copy the line under the buttons)
+- **PT.2** Click **Choose** (the button under the greeting). Open the hub. → does the hub show the persona that you chose? (yes / no) Set **Level of Detail** to **Minimal**. → does ⚙ → **Assistant** → **Persona** show the plain buttons and no table? (yes / no)
+- **PT.3** Look at the table on the slowest screen (the Pi or a laptop) with **Full**. → does the turn look smooth? (yes / no) What do you want to change on the table? (a sentence)
+
 ## M8. After the demo: System Map (5 min)
 
 - **M8.1** Open **System Map** from the hub on the slowest lab screen. Drag the map to rotate it. Select an SO-101 and the Raspbot. Open the hub on a second screen. Close that hub. → Do both robots show their models? Does the second screen change to **Connected** and then **Disconnected**? Does the map rotate smoothly? (yes / no for each)
