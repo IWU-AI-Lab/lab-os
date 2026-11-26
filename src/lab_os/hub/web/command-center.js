@@ -7,9 +7,15 @@
 // workspace's layout: only the picture, kept by the brain, never a change to a device.
 //
 // Highlight and focus are different: a press highlights (Ctrl or Shift adds more), in the workspace and in
-// both lists; ⤢ focuses one device in a modal with its screens, actions, modules and settings. The actions
-// for the highlighted items show under the workspace: only the ones that apply to every item, with the
-// number of screens or devices they change. Real changes carry the cast mark; workspace-only ones are dashed.
+// the list on the left; ⤢ focuses one device in a modal with its screens, actions, modules and settings.
+// The inspector on the right (quick job 148) shows the highlighted items: one item's details, settings,
+// actions and modules; for several, only the actions that apply to every item, with the number of screens
+// or devices they change. Real changes carry the cast mark; workspace-only ones are dashed.
+//
+// The Pages list (quick job 148) has a tile for each page that can open on another screen. Drag a tile onto
+// a screen or a device (in the workspace or in the list on the left) to open it there, as Open on… does.
+// The drag is one "carrier" with four steps (start, move, drop, cancel) at screen coordinates: the mouse and
+// touch use it through pointer events, and a webcam hand can use it later (docs/plan/ideas.md → "Far future").
 //
 // The positions are plain 2D numbers in the workspace's own units, kept apart from the drawing, so a 3D
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
@@ -24,11 +30,20 @@ const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-ca
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
 const VIEW_ICON = {
   teleop: "i-hand", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
-  settings: "i-gear", pages: "i-link", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
+  hub: "i-hex", settings: "i-gear", pages: "i-link", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
   system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
 };
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
 const KIND_MODULES = { arm: ["teleop", "ai"], leader: ["teleop"], robot: ["raspbot"], camera: ["cameras"], headset: ["teleop"] };
+// the Pages list: its groups, in order (a page in none goes in "Other"), the pages that cannot open on
+// another screen, and the short names of the tiles (the full name is the tile's title)
+const PAGE_GROUPS = [
+  ["Robots", ["teleop", "monitor", "monitor-so101", "monitor-xarm", "ai", "training", "webcam", "raspbot"]],
+  ["Cameras", ["cameras"]],
+  ["The hub", ["hub", "settings", "wake-word", "project", "spend", "commits", "devices", "system", "chat"]],
+];
+const NOT_ELSEWHERE = new Set(["xr", "remote", "pages", "command"]);
+const SHORT = { hub: "The Hub", monitor: "Monitors", "monitor-so101": "SO-101", "monitor-xarm": "xArm", webcam: "Webcam", project: "Project", system: "Diagram", chat: "Conversation" };
 // "This device" settings the modal can change (the rest stay in ⚙ → This device on that device)
 const SETTINGS = [
   { key: "quality", label: "Level of detail", choices: [["", "Default"], ["maximal", "Maximal"], ["full", "Full"], ["reduced", "Reduced"], ["minimal", "Minimal"]] },
@@ -39,7 +54,7 @@ const SETTINGS = [
 const S = {
   hub: [], live: [], views: [], drive: new Set(),
   layout: { places: {}, hidden: [], groups: {} },
-  sel: new Set(), search: "", page: "", group: "",
+  sel: new Set(), search: "", pageSearch: "", page: "", group: "",
   view: { x: 40, y: 40, z: 1 }, fitted: false, drag: null, msg: "", msgBad: false, last: "",
 };
 
@@ -68,7 +83,7 @@ function saveLayout() {
 }
 function say(text, bad = false) {
   S.msg = text; S.msgBad = bad;
-  renderActs();
+  renderInspector(true);
 }
 
 // ---------- the items ----------
@@ -151,38 +166,164 @@ function under(s) {
   return `<div class="under"><b>${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ""}</b>${name}${res ? `<span class="res num">${res}</span>` : ""}</div>`;
 }
 
-// ---------- the lists ----------
+// ---------- the list on the left: each device, with the screens grouped under it ----------
+function eye(key) {
+  const off = isHidden(key);
+  return `<button class="iconbtn eye${off ? "" : " on"}" type="button" title="${off ? "Show in the workspace" : "Hide from the workspace"}">${ico(off ? "i-eye-off" : "i-eye")}</button>`;
+}
+function devRow(d) {
+  const r = document.createElement("div");
+  r.className = `row${S.sel.has(d.key) ? " sel" : ""}${isHidden(d.key) ? " off" : ""}`;
+  r.dataset.key = d.key;
+  const drive = d.kind === "hub" && mayDrive(d) ? ` ${ico("i-hand")}` : "";
+  r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${drive}</b>${eye(d.key)}`
+    + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`
+    + `<small>${esc(d.sub || KIND_WORD[d.kind])}</small>`;
+  return r;
+}
+function scrRow(s, under) {
+  // under its own device: "Screen 2" (or what it shows, when the device has one screen); elsewhere: its device too
+  const n = s.count > 1 ? `Screen ${s.n}` : "";
+  const own = s.group === `d:${s.device.name}`;
+  const name = own ? n || shows(s.w) : `${devTitle(s.device)}${n ? ` ${n}` : ""}`;
+  const r = document.createElement("div");
+  r.className = `row${under ? " scr" : ""}${S.sel.has(s.key) ? " sel" : ""}${isHidden(s.key) ? " off" : ""}`;
+  r.dataset.key = s.key;
+  r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span><b title="${esc(name)}">${esc(name)}</b>${eye(s.key)}`
+    + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button>`
+    + `<small>${esc(own && !n ? resolution(s.w) || "Screen" : shows(s.w))}</small>`;
+  return r;
+}
 function renderLists(devs, scr) {
-  const dl = $("#devices"), sl = $("#screens");
-  const shownDevs = devs.filter((d) => matches(devText(d)));
-  dl.innerHTML = shownDevs.length ? "" : `<div class="empty">${devs.length ? "No device matches the search." : "No device is connected."}</div>`;
-  for (const d of shownDevs) {
-    const r = document.createElement("div");
-    r.className = `row${S.sel.has(d.key) ? " sel" : ""}${isHidden(d.key) ? " off" : ""}`;
-    r.dataset.key = d.key;
-    const drive = d.kind === "hub" && mayDrive(d) ? ` ${ico("i-hand")}` : "";
-    r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${drive}</b>`
-      + `<button class="iconbtn eye${isHidden(d.key) ? "" : " on"}" type="button" title="${isHidden(d.key) ? "Show in the workspace" : "Hide from the workspace"}">${ico(isHidden(d.key) ? "i-eye-off" : "i-eye")}</button>`
-      + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`
-      + `<small>${esc(d.sub || KIND_WORD[d.kind])}</small>`;
-    dl.append(r);
+  const dl = $("#devices");
+  dl.innerHTML = "";
+  const lone = scr.filter((s) => s.group === s.key);
+  // the same order as the workspace: screens' devices, screens on their own, the other devices
+  const order = [...devs.filter((d) => d.kind === "hub"), ...lone, ...devs.filter((d) => d.kind !== "hub")];
+  for (const item of order) {
+    if (item.device) { if (matches(scrText(item))) dl.append(scrRow(item, false)); continue; }
+    const mine = scr.filter((s) => s.group === item.key && s.key !== s.group && matches(scrText(s)));
+    if (!mine.length && !matches(devText(item))) continue;
+    dl.append(devRow(item));
+    for (const s of mine) dl.append(scrRow(s, true));
   }
-  $("#dev-count").textContent = devs.length;
-  const shownScr = scr.filter((s) => matches(scrText(s)));
-  sl.innerHTML = shownScr.length ? "" : `<div class="empty">${scr.length ? "No screen matches the search." : "No screen has the hub open."}</div>`;
-  for (const s of shownScr) {
-    const r = document.createElement("div");
-    r.className = `row${S.sel.has(s.key) ? " sel" : ""}${isHidden(s.key) ? " off" : ""}`;
-    r.dataset.key = s.key;
-    const name = s.count > 1 ? ` Screen ${s.n}` : "";
-    r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span><b>${esc(devTitle(s.device))}${esc(name)}</b>`
-      + `<button class="iconbtn eye${isHidden(s.key) ? "" : " on"}" type="button" title="${isHidden(s.key) ? "Show in the workspace" : "Hide from the workspace"}">${ico(isHidden(s.key) ? "i-eye-off" : "i-eye")}</button>`
-      + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button>`
-      + `<small>${esc(shows(s.w))}</small>`;
-    sl.append(r);
-  }
-  $("#scr-count").textContent = scr.length;
+  if (!dl.children.length) dl.innerHTML = `<div class="empty">${devs.length ? "No device or screen matches the search." : "No device is connected."}</div>`;
+  $("#dev-count").textContent = `${plural(devs.length, "device")} · ${plural(scr.length, "screen")}`;
   $("#show-all").hidden = !S.layout.hidden.length;
+}
+
+// ---------- the Pages list ----------
+function pages() {
+  const views = [{ id: "hub", title: "The Hub" }, ...S.views].filter((v) => !NOT_ELSEWHERE.has(v.id));
+  const groups = PAGE_GROUPS.map(([name, ids]) => [name, ids.map((id) => views.find((v) => v.id === id)).filter(Boolean)]);
+  const known = new Set(PAGE_GROUPS.flatMap(([, ids]) => ids));
+  groups.push(["Other", views.filter((v) => !known.has(v.id))]);
+  return groups.filter(([, vs]) => vs.length);
+}
+function renderPages() {
+  const box = $("#pages"), want = S.pageSearch.trim().toLowerCase();
+  box.innerHTML = "";
+  for (const [name, vs] of pages()) {
+    const shown = vs.filter((v) => !want || `${v.title} ${SHORT[v.id] || ""} ${name}`.toLowerCase().includes(want));
+    if (!shown.length) continue;
+    box.insertAdjacentHTML("beforeend", `<div class="grp">${esc(name)}</div>`);
+    const tiles = document.createElement("div");
+    tiles.className = "tiles";
+    for (const v of shown) {
+      tiles.insertAdjacentHTML("beforeend", `<div class="tile${v.id === S.page ? " on" : ""}" tabindex="0" role="button" data-view="${esc(v.id)}"`
+        + ` title="${esc(v.title)}: drag it onto a screen or a device to open it there">${ico(VIEW_ICON[v.id] || "i-test")}<span>${esc(SHORT[v.id] || v.title)}</span></div>`);
+    }
+    box.append(tiles);
+  }
+  if (!box.children.length) box.innerHTML = `<div class="empty">No page matches the search.</div>`;
+}
+function choosePage(id) {
+  S.page = S.page === id ? "" : id;
+  renderPages();
+  renderInspector(true);
+}
+const SHUT_KEY = "lab-os-command-center-pages-shut";
+function shutPages(shut) {
+  $("#pages-card").classList.toggle("shut", shut);
+  $("#pages-shut").setAttribute("aria-expanded", String(!shut));
+  try { localStorage.setItem(SHUT_KEY, shut ? "1" : ""); } catch { /* private mode: not kept */ }
+}
+$("#pages-shut").addEventListener("click", () => shutPages(!$("#pages-card").classList.contains("shut")));
+$("#page-search").addEventListener("input", (e) => { S.pageSearch = e.target.value; renderPages(); });
+try { shutPages(!!localStorage.getItem(SHUT_KEY)); } catch { /* not kept */ }
+
+// ---------- drag a page onto a screen or a device: one carrier for every kind of pointer ----------
+// start(view, x, y) lifts a page, move(x, y) follows the pointer and marks the target under it, drop(x, y)
+// opens the page there (as Open on… does), cancel() puts it back. x and y are screen coordinates, so a
+// webcam hand (hover, close the hand, move, open the hand) can call the same steps later.
+function dropTargetAt(x, y) {
+  for (const el of document.elementsFromPoint(x, y)) {
+    const t = el.closest?.("#stage .shot, #stage .node, #devices .row");
+    if (t) return t;
+  }
+  return null;
+}
+const carry = {
+  view: "", ghost: null, over: null,
+  start(view, x, y) {
+    this.cancel();
+    this.view = view;
+    const v = pages().flatMap(([, vs]) => vs).find((p) => p.id === view);
+    this.ghost = document.createElement("div");
+    this.ghost.className = "tile ghost";
+    this.ghost.innerHTML = `${ico(VIEW_ICON[view] || "i-test")}<span>${esc(SHORT[view] || v?.title || view)}</span>`;
+    document.body.append(this.ghost);
+    this.move(x, y);
+  },
+  move(x, y) {
+    if (!this.view) return;
+    this.ghost.style.left = `${x + 8}px`; this.ghost.style.top = `${y + 8}px`;
+    const t = dropTargetAt(x, y);
+    if (t !== this.over) { this.over?.classList.remove("drop"); t?.classList.add("drop"); this.over = t; }
+  },
+  drop(x, y) {
+    const view = this.view, t = this.view ? dropTargetAt(x, y) : null;
+    this.cancel();
+    if (view && t) openPageOn(view, t.dataset.key);
+  },
+  cancel() {
+    this.over?.classList.remove("drop");
+    this.ghost?.remove();
+    this.view = ""; this.ghost = null; this.over = null;
+  },
+};
+// the mouse and touch: a press and a move of a few pixels lifts the page; a press alone chooses it
+let press = null;
+$("#pages").addEventListener("pointerdown", (e) => {
+  const tile = e.target.closest(".tile");
+  if (!tile || e.button !== 0) return;
+  press = { view: tile.dataset.view, sx: e.clientX, sy: e.clientY, id: e.pointerId, moved: false };
+  tile.setPointerCapture(e.pointerId);
+});
+$("#pages").addEventListener("pointermove", (e) => {
+  if (!press || e.pointerId !== press.id) return;
+  if (!press.moved && Math.hypot(e.clientX - press.sx, e.clientY - press.sy) < 6) return;
+  if (!press.moved) { press.moved = true; carry.start(press.view, e.clientX, e.clientY); } else carry.move(e.clientX, e.clientY);
+});
+$("#pages").addEventListener("pointerup", (e) => {
+  if (!press || e.pointerId !== press.id) return;
+  const p = press;
+  press = null;
+  if (p.moved) carry.drop(e.clientX, e.clientY);
+  else choosePage(p.view);
+});
+$("#pages").addEventListener("pointercancel", () => { press = null; carry.cancel(); });
+$("#pages").addEventListener("keydown", (e) => {
+  const tile = e.target.closest(".tile");
+  if (tile && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); choosePage(tile.dataset.view); }
+});
+// a page dropped on an item: on its screens (a device: the screens grouped under it)
+function openPageOn(view, key) {
+  const devs = devices(), scr = screens(devs);
+  const targets = screensOf(key, scr);
+  const name = key.startsWith("s:") ? "That screen" : devs.find((d) => d.key === key)?.title || "That device";
+  if (!targets.length) return say(`${name} has no screen with the hub open.`, true);
+  return view === "hub" ? backToHub(targets) : openOn(targets, view);
 }
 
 // ---------- the workspace ----------
@@ -378,16 +519,14 @@ $("#ws").addEventListener("click", (e) => {
   if (b.classList.contains("foc")) focus(node);
   else if (b.classList.contains("more")) openMenu(node, b);
 });
-for (const id of ["#devices", "#screens"]) {
-  $(id).addEventListener("click", (e) => {
-    const row = e.target.closest(".row");
-    if (!row) return;
-    const key = row.dataset.key;
-    if (e.target.closest(".eye")) return hide([key], !isHidden(key));
-    if (e.target.closest(".foc")) return focus(key.startsWith("s:") ? `d:${key.slice(2).split("#")[0]}` : key);
-    pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
-  });
-}
+$("#devices").addEventListener("click", (e) => {
+  const row = e.target.closest(".row");
+  if (!row) return;
+  const key = row.dataset.key;
+  if (e.target.closest(".eye")) return hide([key], !isHidden(key));
+  if (e.target.closest(".foc")) return focus(key.startsWith("s:") ? `d:${key.slice(2).split("#")[0]}` : key);
+  pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
+});
 $("#search").addEventListener("input", (e) => { S.search = e.target.value; render(true); });
 $("#fit").addEventListener("click", fit);
 $("#show-all").addEventListener("click", () => { S.layout.hidden = []; saveLayout(); render(true); });
@@ -413,7 +552,8 @@ function groupUnder(keys, target) {
 
 // ---------- real changes ----------
 async function openOn(targets, view) {
-  if (!view) return say("Choose a page first.", true);
+  if (!view) return say("Choose a page first: press it in Pages, or drag it onto a screen.", true);
+  if (view === "hub") return backToHub(targets);
   const said = [];
   for (const s of targets) {
     const r = await postJSON("/api/hub-devices/open", { module: view, device: s.device.name, window: s.w.id, from: "the Command Center" });
@@ -423,6 +563,7 @@ async function openOn(targets, view) {
   say(said.length ? said.join(" ") : `${viewTitle(view)} is open on ${plural(targets.length, "screen")}.`, !!said.length);
 }
 async function backToHub(targets) {
+  if (!targets.some((t) => t.w.showing)) return say(`${plural(targets.length, "screen")} already ${targets.length === 1 ? "shows" : "show"} the hub.`);
   const said = [];
   for (const s of targets.filter((t) => t.w.showing)) {
     const r = await postJSON("/api/hub-devices/close", { device: s.device.name, window: s.w.id });
@@ -452,7 +593,7 @@ function actionsFor(keys, devs, scr) {
   }
   if (allScreens && targets.length) {
     const one = targets.length === 1, n = plural(targets.length, "screen");
-    acts.push({ kind: "page", real: true, label: one ? "Open" : `Open on ${n}`, run: (view) => openOn(targets, view) });
+    acts.push({ kind: "page", real: true, label: one ? "Open" : `Open on ${n}`, title: "Open the chosen page there (or drag a page onto it)", run: (view) => openOn(targets, view) });
     const busy = targets.filter((t) => t.w.showing), m = plural(busy.length, "screen");
     if (busy.length) acts.push({ real: true, icon: "i-back", label: one ? "Back to the hub" : `Hub on ${m}`, title: `Close what ${m} show: back to the hub`, run: () => backToHub(busy) });
   }
@@ -469,9 +610,9 @@ function actionsFor(keys, devs, scr) {
   acts.push({ label: keys.length > 1 ? `Hide ${keys.length}` : "Hide", title: "Hide from the workspace (the device does not change)", run: () => hide(keys, true) });
   return acts;
 }
-function pageSelect(cls = "") {
-  const opts = S.views.filter((v) => v.id !== "command" && v.id !== "xr").map((v) => `<option value="${esc(v.id)}"${v.id === S.page ? " selected" : ""}>${esc(v.title)}</option>`);
-  return `<select class="${cls}" aria-label="Page"><option value="">Choose a page…</option>${opts.join("")}</select>`;
+function pageSelect() {
+  const opts = pages().flatMap(([, vs]) => vs).map((v) => `<option value="${esc(v.id)}"${v.id === S.page ? " selected" : ""}>${esc(v.title)}</option>`);
+  return `<select aria-label="Page"><option value="">Choose a page…</option>${opts.join("")}</select>`;
 }
 function groupSelect(devs) {
   const opts = devs.filter((d) => !isHidden(d.key)).map((d) => `<option value="${esc(d.key)}"${d.key === S.group ? " selected" : ""}>${esc(d.title)}</option>`);
@@ -484,7 +625,9 @@ function actButtons(box, acts, devs, after = () => {}) {
     if (a.kind === "page" || a.kind === "group") {
       wrap.innerHTML = a.kind === "page" ? pageSelect() : groupSelect(devs);
       const sel = wrap.querySelector("select");
-      sel.addEventListener("change", () => (a.kind === "page" ? (S.page = sel.value) : (S.group = sel.value)));
+      sel.addEventListener("change", () => {
+        if (a.kind === "page") { S.page = sel.value; renderPages(); } else S.group = sel.value;
+      });
     }
     const b = document.createElement("button");
     b.type = "button";
@@ -501,22 +644,79 @@ function actButtons(box, acts, devs, after = () => {}) {
     box.append(wrap);
   }
 }
-function renderActs() {
-  const box = $("#acts"), devs = devices(), scr = screens(devs);
-  const keys = [...S.sel].filter((k) => devs.some((d) => d.key === k) || scr.some((s) => s.key === k));
-  box.innerHTML = "";
-  if (!keys.length) {
-    box.innerHTML = `<span class="hint">Press an item to highlight it. Ctrl or Shift adds more. ⤢ opens one device.</span>`;
-  } else {
-    box.insertAdjacentHTML("beforeend", `<span class="count">${plural(keys.length, "item")}</span>`);
-    actButtons(box, actionsFor(keys, devs, scr), devs);
-    const clear = document.createElement("button");
-    clear.type = "button"; clear.className = "btn small virtual"; clear.textContent = "Clear";
-    clear.title = "Highlight nothing";
-    clear.addEventListener("click", () => { S.sel.clear(); S.msg = ""; render(true); });
-    box.append(clear);
+// ---------- the inspector: the highlighted items' details, settings, actions and modules ----------
+const factsHTML = (rows) => `<dl class="facts">${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+function deviceFacts(d) {
+  return [["Kind", KIND_WORD[d.kind]], ["What", d.what], ["Connected", d.live?.via || (d.kind === "hub" ? "The hub is open" : "")], ["Address", d.address || ""]];
+}
+function driveLine(d) {
+  if (d.kind !== "hub") return "";
+  if (d.here) return `<p class="hint">${ico("i-hand")} Drives a real arm: it is the brain's own computer.</p>`;
+  return `<p class="hint">${mayDrive(d) ? "May drive a real arm." : "Watches only: it may not drive a real arm."}</p>`;
+}
+// the modules that match a device: an arm's Monitor page is its kind's (quick job 147)
+function modulesOf(d) {
+  const monitor = d.kind === "arm" ? [String(d.live?.model || "").startsWith("xarm") ? "monitor-xarm" : "monitor-so101"] : [];
+  return [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page);
+}
+function moduleButtons(box, mods) {
+  for (const v of mods) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn small virtual";
+    b.innerHTML = `${ico(VIEW_ICON[v.id] || "i-test")}${esc(v.title)}`;
+    b.title = "Open it here, in the Command Center";
+    b.addEventListener("click", () => openModule(v));
+    box.append(b);
   }
-  if (S.msg) box.insertAdjacentHTML("beforeend", `<span class="msg${S.msgBad ? "" : " ok"}">${esc(S.msg)}</span>`);
+}
+let inspected = "";
+function renderInspector(force = false) {
+  const box = $("#insp > .in"), devs = devices(), scr = screens(devs);
+  const keys = [...S.sel].filter((k) => devs.some((d) => d.key === k) || scr.some((s) => s.key === k));
+  // a person typing or choosing in the inspector keeps it, until the highlight changes
+  const now = keys.join(" ");
+  if (!force && now === inspected && box.contains(document.activeElement) && document.activeElement.matches("input, select")) return;
+  inspected = now;
+  box.innerHTML = `<h2>${ico("i-test")}Inspector</h2>`;
+  const msg = S.msg ? `<p class="msg${S.msgBad ? "" : " ok"}">${esc(S.msg)}</p>` : "";
+  if (!keys.length) {
+    box.insertAdjacentHTML("beforeend", `<p class="hint">Press a device or a screen, in the list or the workspace, to see it here. Ctrl or Shift adds more. ⤢ opens one device. Drag a page onto a screen to open it there.</p>${msg}`);
+    return;
+  }
+  const part = (title, html = "") => {
+    const el = document.createElement("div");
+    el.innerHTML = `<h3>${title}</h3>${html}`;
+    box.append(el);
+    return el;
+  };
+  const acts = actionsFor(keys, devs, scr);
+  const one = keys.length === 1 ? keys[0] : "";
+  const d = one && devs.find((x) => x.key === one);
+  const s = one && scr.find((x) => x.key === one);
+  if (d) {
+    box.insertAdjacentHTML("beforeend", `<div class="who">${ico(KIND_ICON[d.kind])}<b title="${esc(d.title)}">${esc(d.title)}</b>`
+      + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button></div>`
+      + (d.sub ? `<p class="hint">${esc(d.sub)}</p>` : ""));
+    part("Details", factsHTML(deviceFacts(d)) + driveLine(d));
+  } else if (s) {
+    box.insertAdjacentHTML("beforeend", `<div class="who">${ico("i-screen")}<b>${esc(devTitle(s.device))}${s.count > 1 ? ` · Screen ${s.n}` : ""}</b>`
+      + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button></div>`);
+    part("Details", factsHTML([["Shows", shows(s.w)], ["From", s.w.showing && s.w.from ? s.w.from : ""], ["Resolution", resolution(s.w)], ["Device", s.device.name]]));
+  } else {
+    box.insertAdjacentHTML("beforeend", `<div class="who"><b class="count">${plural(keys.length, "item")}</b></div><p class="hint">Only the actions that apply to every item.</p>`);
+  }
+  const ab = part("Actions", `<div class="acts"></div>`).querySelector(".acts");
+  actButtons(ab, acts, devs);
+  const clear = document.createElement("button");
+  clear.type = "button"; clear.className = "btn small virtual"; clear.textContent = "Clear";
+  clear.title = "Highlight nothing";
+  clear.addEventListener("click", () => { S.sel.clear(); S.msg = ""; render(true); });
+  ab.append(clear);
+  if (msg) ab.insertAdjacentHTML("afterend", msg);
+  const mods = d ? modulesOf(d) : [];
+  if (mods.length) moduleButtons(part("Modules", `<div class="acts"></div>`).querySelector(".acts"), mods);
+  if (d && d.kind === "hub" && d.named) fillSettings(part("Settings", `<p class="hint">Reading…</p>`), d);
+  box.querySelector(".who .foc")?.addEventListener("click", () => focus(one));
 }
 
 // ---------- the ⋯ menu: one item's settings and actions, without highlighting it ----------
@@ -554,17 +754,13 @@ async function focus(key) {
   const veil = document.createElement("div");
   veil.className = "veil";
   const mine = scr.filter((s) => s.device.name === d.id && d.kind === "hub");
-  const facts = [["Kind", KIND_WORD[d.kind]], ["What", d.what], ["Connected", d.live?.via || (d.kind === "hub" ? "The hub is open" : "")], ["Address", d.address || ""]]
-    .filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
-  // an arm's Monitor page is its kind's (quick job 147): /monitor/xarm or /monitor/so101
-  const monitor = d.kind === "arm" ? [String(d.live?.model || "").startsWith("xarm") ? "monitor-xarm" : "monitor-so101"] : [];
-  const mods = [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page);
+  const mods = modulesOf(d);
   veil.innerHTML = `<div class="card modal" role="dialog" aria-label="${esc(d.title)}"><div class="in">
     <div class="top"><h2>${ico(KIND_ICON[d.kind])}${esc(d.title)}${d.sub ? ` <small class="hint">${esc(d.sub)}</small>` : ""}</h2>
       <button class="btn small" type="button" data-close>${ico("i-back")}Back</button></div>
     ${mine.length ? `<div><h3>${plural(mine.length, "screen")}</h3><div class="shots" id="f-shots"></div></div>` : ""}
     <div class="cols">
-      <div><h3>Facts</h3><dl class="facts">${facts}</dl></div>
+      <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}</div>
       <div id="f-actions"><h3>Actions</h3></div>
       ${mods.length ? `<div><h3>Modules</h3><div class="mods" id="f-mods"></div></div>` : ""}
       ${d.kind === "hub" && d.named ? `<div id="f-settings"><h3>Settings</h3><p class="hint">Reading…</p></div>` : ""}
@@ -584,19 +780,10 @@ async function focus(key) {
   const fa = veil.querySelector("#f-actions"), box = document.createElement("div");
   box.className = "mods";
   const acts = actionsFor([key], devs, scr).filter((a) => !(mine.length && (a.kind === "page" || a.icon === "i-back")));
-  if (d.kind === "hub" && d.here) fa.insertAdjacentHTML("beforeend", `<p class="hint">${ico("i-hand")} Drives a real arm: it is the brain's own computer.</p>`);
-  else if (d.kind === "hub") fa.insertAdjacentHTML("beforeend", `<p class="hint">${mayDrive(d) ? "May drive a real arm." : "Watches only: it may not drive a real arm."}</p>`);
+  fa.insertAdjacentHTML("beforeend", driveLine(d));
   actButtons(box, acts, devs, () => setTimeout(() => focused === key && focus(key), 300));
   fa.append(box);
-  const mb = veil.querySelector("#f-mods");
-  for (const v of mods) {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "btn small virtual";
-    b.innerHTML = `${ico(VIEW_ICON[v.id] || "i-test")}${esc(v.title)}`;
-    b.title = "Open it here, in the Command Center";
-    b.addEventListener("click", () => openModule(v));
-    mb.append(b);
-  }
+  if (mods.length) moduleButtons(veil.querySelector("#f-mods"), mods);
   if (d.kind === "hub" && d.named) fillSettings(veil.querySelector("#f-settings"), d);
 }
 async function fillSettings(box, d) {
@@ -632,7 +819,7 @@ function closeModule() { $("#module").hidden = true; $("#module-frame").src = "a
 $("#module-back").addEventListener("click", closeModule);
 addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (!$("#module").hidden) closeModule();
+  if (carry.view) { press = null; carry.cancel(); } else if (!$("#module").hidden) closeModule();
   else if (document.querySelector(".menu")) closeMenu();
   else if (document.querySelector(".veil")) closeFocus();
   else if (S.sel.size) { S.sel.clear(); render(true); }
@@ -647,7 +834,7 @@ function render(force = false) {
   for (const k of [...S.sel]) if (!devs.some((d) => d.key === k) && !scr.some((s) => s.key === k)) S.sel.delete(k);
   renderLists(devs, scr);
   if (!S.drag) renderWorkspace(devs, scr);
-  if (!document.querySelector(".menu")) renderActs();
+  if (!document.querySelector(".menu")) renderInspector(force);
   if (!S.fitted && $("#stage").children.length) { S.fitted = true; requestAnimationFrame(fit); }
 }
 async function refresh() {
@@ -663,6 +850,7 @@ async function start() {
   try {
     const [hub, cc] = await Promise.all([getJSON("/api/hub"), getJSON("/api/command-center")]);
     S.views = hub.views || [];
+    renderPages();
     S.layout = cc.layout || S.layout;
     S.drive = new Set(cc.drive_from || []);
   } catch (e) {

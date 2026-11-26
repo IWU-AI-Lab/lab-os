@@ -40,7 +40,8 @@ def test_layout_keeps_only_what_it_may(tmp_path):
 async def test_page_and_layout(aiohttp_client):
     client = await aiohttp_client(make_app())
     html = await (await client.get("/command-center")).text()
-    assert 'id="ws"' in html and 'id="devices"' in html and 'id="screens"' in html
+    for part in ("ws", "devices", "pages", "insp"):  # quick job 148: Pages and the inspector
+        assert f'id="{part}"' in html
     assert (await client.get("/hub/command-center.js")).status == 200
     hub = await (await client.get("/api/hub")).json()
     assert "/command-center" in {p["path"] for p in hub["pages"]}  # All Pages
@@ -116,3 +117,6 @@ def test_the_page_keeps_its_rules():
     assert 'b.className = `btn small${a.real ? "" : " virtual"}`' in js
     assert "/api/hub-devices/open" in js and "/api/hub-devices/close" in js
     assert 'data-k="display_name"' in js
+    # quick job 148: one drag carrier for every kind of pointer; a drop opens the page there
+    assert "const carry = {" in js and "start(view, x, y)" in js and "drop(x, y)" in js
+    assert "function openPageOn(view, key)" in js and "function renderInspector(" in js
