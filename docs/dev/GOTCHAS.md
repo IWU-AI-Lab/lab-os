@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — Each Raspbot page had its own camera stream over Wi-Fi
+**What:** The brain relayed `/api/raspbot/camera.mjpg` by opening a new connection to the Raspbot for each page. The detector and a recording opened more. The Raspbot's camera server sends each connection the whole picture stream (10 pictures a second), so the Raspbot's Wi-Fi carried it once per reader.
+**Fix:** `CameraShare` in `src/lab_os/hub/raspbot_page.py`: one connection per camera, opened with the first reader and closed with the last. The relay now sends its own MJPEG parts, one for each whole JPEG. Each reader gets the newest picture, so two pictures in one network read give one picture to the reader. A test camera must send whole JPEGs (`FF D8` … `FF D9`).
+
 ### 2026-11-26 — Building the labels model: a nested `uv run`, downloads in the current folder, no NMS in the export
 **What:** (1) `uv run --with ultralytics …` started from inside `uv run lab-os` put Ultralytics on top of lab-os's own `.venv` (uv reads `VIRTUAL_ENV`): its PyTorch and the new torchvision did not fit ("operator torchvision::nms does not exist"). (2) Ultralytics downloads the weights and the text model (MobileCLIP, 254 MB) into the current folder. (3) The exported YOLOE-26 ONNX gives the raw 8400 boxes (`end2end: False`), not the NMS-free output of YOLO26: overlapping boxes must be removed.
 **Fix:** (1) `lab-os labels build` runs `uv run --isolated --no-project` without `VIRTUAL_ENV` (`object_labels.build`). (2) The build runs in `models/labels/build/` (not in git). (3) `object_labels.decode` keeps the surest box of each overlapping group, across words (an object found as "cup" and "bowl" gets one label).

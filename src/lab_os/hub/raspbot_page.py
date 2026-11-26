@@ -5,6 +5,10 @@ GET /monitor/raspbot         read-only view of the camera, model and status, wit
 WS  /ws/raspbot              the page's buttons → lab_os.robots.raspbot.RaspbotDesk; status at 5 Hz
 GET /api/raspbot/camera.mjpg the Raspbot's camera, relayed (the page needs no route to the car)
 
+The brain keeps one connection to the camera (`CameraShare`), however many pages, recordings and
+labels use it: the Raspbot's Wi-Fi carries the picture once. Each reader gets the newest picture;
+a slow page skips pictures and never falls behind.
+
 Labels (quick job 128): a page sends {"type": "labels", "on": true}; the brain's detector
 (`lab_os.object_labels.LabelFeed`) then sends it {"type": "labels", "found": [...]} for each
 picture.
@@ -99,6 +103,69 @@ async def to_mp4(mjpeg: Path, frames: int, seconds: float) -> Path:
     return mp4
 
 
+class _Upstream:
+    """One connection to a camera stream, and its newest JPEG."""
+
+    def __init__(self, source: Callable[[str], AsyncIterator[bytes]], url: str) -> None:
+        self.jpeg, self.seq, self.readers = b"", 0, 0
+        self.error: BaseException | None = None
+        self.ended = False
+        self.cond = asyncio.Condition()
+        self.task = asyncio.create_task(self._read(source, url))
+
+    async def _read(self, source, url: str) -> None:
+        try:
+            async with contextlib.aclosing(source(url)) as frames:
+                async for jpeg in frames:
+                    async with self.cond:
+                        self.jpeg, self.seq = jpeg, self.seq + 1
+                        self.cond.notify_all()
+        except Exception as e:  # noqa: BLE001 (each reader gets it)
+            self.error = e
+        finally:
+            self.ended = True
+            async with self.cond:
+                self.cond.notify_all()
+
+
+class CameraShare:
+    """One connection to each camera stream, shared by every reader on the brain. It opens with
+    the first reader and closes when the last one leaves."""
+
+    def __init__(self, source: Callable[[str], AsyncIterator[bytes]] = mjpeg_frames) -> None:
+        self.source = source
+        self._ups: dict[str, _Upstream] = {}
+
+    def readers(self, url: str) -> int:
+        up = self._ups.get(url)
+        return up.readers if up and not up.ended else 0
+
+    async def frames(self, url: str) -> AsyncIterator[bytes]:
+        """The newest JPEG of the stream at `url`, each time a new one comes. Ends with the stream's
+        error (or at its end)."""
+        up = self._ups.get(url)
+        if up is None or up.ended:
+            up = self._ups[url] = _Upstream(self.source, url)
+        up.readers += 1
+        seen = 0
+        try:
+            while True:
+                async with up.cond:
+                    await up.cond.wait_for(lambda s=seen: up.seq != s or up.ended)
+                    if up.seq == seen:
+                        if up.error:
+                            raise up.error
+                        return
+                    seen, jpeg = up.seq, up.jpeg
+                yield jpeg
+        finally:
+            up.readers -= 1
+            if up.readers == 0:
+                up.task.cancel()
+                if self._ups.get(url) is up:
+                    del self._ups[url]
+
+
 class RaspbotCamera:
     """Pictures and recordings of the Raspbot's camera, saved on the brain's computer (quick job
     107). A picture is one JPEG. A recording collects the camera's JPEGs in an .mjpeg, and at its
@@ -108,7 +175,8 @@ class RaspbotCamera:
     def __init__(self, desk: RaspbotDesk, folder: Callable[[], Path] | None = None, frames=None):
         self.desk = desk
         self.folder = folder or (lambda: recordings_dir() / "raspbot")
-        self.frames = frames or mjpeg_frames  # url → async JPEGs (tests give their own)
+        self.share = CameraShare()
+        self.frames = frames or self.share.frames  # url → async JPEGs (tests give their own)
         self.convert = to_mp4  # (mjpeg, frames, seconds) → the saved file (tests give their own)
         self.recording: Path | None = None
         self.by = None  # the page that started the recording
@@ -130,8 +198,9 @@ class RaspbotCamera:
 
     async def stream(self) -> AsyncIterator[bytes]:
         """The camera's JPEGs, as they come. LookupError when there is no camera picture."""
-        async for jpeg in self.frames(self._url()):
-            yield jpeg
+        async with contextlib.aclosing(self.frames(self._url())) as frames:
+            async for jpeg in frames:
+                yield jpeg
 
     async def snapshot(self) -> bytes:
         """Read one JPEG from the same camera stream as the page."""
@@ -166,9 +235,10 @@ class RaspbotCamera:
     async def _record(self, url: str, path: Path) -> None:
         try:
             with path.open("wb") as f:
-                async for jpeg in self.frames(url):
-                    f.write(jpeg)
-                    self._count += 1
+                async with contextlib.aclosing(self.frames(url)) as frames:
+                    async for jpeg in frames:
+                        f.write(jpeg)
+                        self._count += 1
         except (aiohttp.ClientError, TimeoutError, OSError) as e:
             log.info("raspbot recording ended: %s", e)
         if self.recording == path:  # the camera stopped by itself: the recording ends and is saved
@@ -319,30 +389,30 @@ async def _save(cam: RaspbotCamera, page, kind: str, raw: dict) -> dict:
 
 
 async def raspbot_camera(request: web.Request) -> web.StreamResponse:
-    """The Raspbot's MJPEG picture, passed through as it comes."""
+    """The Raspbot's picture as MJPEG, from the brain's one connection to the camera."""
     bot = request.app[RASPBOT].bot
     if bot.is_fake or not bot.camera_port or not bot.connected:
         raise web.HTTPNotFound(text=NO_CAMERA)
     url = f"http://{bot.host}:{bot.camera_port}/camera.mjpg"
-    timeout = aiohttp.ClientTimeout(total=None, sock_connect=3, sock_read=5)
     resp = None
     try:
-        async with aiohttp.ClientSession(timeout=timeout) as session, session.get(url) as up:
-            resp = web.StreamResponse(
-                headers={
-                    "Content-Type": up.headers.get("Content-Type", "image/jpeg"),
-                    "Cache-Control": "no-store",
-                }
-            )
-            await resp.prepare(request)
-            async for chunk in up.content.iter_any():
-                await resp.write(chunk)
-            return resp
-    except (aiohttp.ClientError, TimeoutError, ConnectionResetError) as e:
+        async with contextlib.aclosing(request.app[CAMERA].frames(url)) as frames:
+            async for jpeg in frames:
+                if resp is None:
+                    resp = web.StreamResponse(
+                        headers={
+                            "Content-Type": "multipart/x-mixed-replace; boundary=frame",
+                            "Cache-Control": "no-store",
+                        }
+                    )
+                    await resp.prepare(request)
+                head = b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n"
+                await resp.write(head % len(jpeg) + jpeg + b"\r\n")
+    except (aiohttp.ClientError, TimeoutError, OSError) as e:  # OSError: the page left
         log.info("raspbot camera: %s", e)
-        if resp is not None:  # the picture was coming: it just ends
-            return resp
-        raise web.HTTPBadGateway(text="The Raspbot's camera does not answer.") from None
+    if resp is None:
+        raise web.HTTPBadGateway(text="The Raspbot's camera does not answer.")
+    return resp
 
 
 async def _desk_tasks(app: web.Application):

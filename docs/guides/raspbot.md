@@ -4,7 +4,7 @@ The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the
 
 ## How it works
 - A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor and servo library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
-- The brain connects to the program on port 8765. The program sends the camera's picture on port 8766. The brain passes the picture on to the page, so the page needs no route to the Raspbot.
+- The brain connects to the program on port 8765. The program sends the camera's picture on port 8766. The brain passes the picture on to the page, so the page needs no route to the Raspbot. The brain uses one connection to the camera for all pages, recordings and labels.
 - The Raspbot's address and the slider's speed when the brain starts are in `config/devices.yaml` → `raspbot1` (`host`, `speed`).
 - Without a Raspbot in `devices.yaml`, the page drives a fake Raspbot. The fake Raspbot has no camera.
 
@@ -54,6 +54,11 @@ The status line gives the full file name. The brain saves the files in `recordin
 
 The brain needs `ffmpeg` to make the `.mp4` (`sudo apt install ffmpeg`). Without it, the recording stays an `.mjpeg`, which only VLC opens.
 
+## Labels on the picture
+Press **Labels off** under the picture to put a box and a label on each object: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Press **Labels on** to remove them. A page that only watches can show labels too.
+
+The detector runs on the brain's computer, once for all pages. It looks for the words in `config/labels.yaml`, for example "blue cube" and "LEGO brick". Before the first use, and after you change the words, run `uv run lab-os labels build` on the brain's computer. It needs the internet and takes some minutes. Then start the brain again.
+
 ## Drive it from the Quest
 In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.
 - **Left stick:** push it to drive forward, back, sideways or diagonally.
@@ -62,7 +67,7 @@ In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera
 - **Head:** select **Head on** to turn head control off. Select **Head off** to turn it on again.
 - **Legacy:** select **Legacy off** to use the earlier controls. The left stick drives forward and back and turns the Raspbot. The right stick turns the camera. Select **Legacy on** to return to the default controls.
 - **Centre:** select **Centre** or press the right stick to centre the camera. If head control is on, the direction you look becomes the new centre.
-- **Labels:** select **Labels off** to put a box and a label on each object in the picture: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Select **Labels on** to remove them. Labels are off each time you open **Raspbot**. The detector runs on the brain's computer. It looks for the words in `config/labels.yaml`, for example "blue cube" and "LEGO brick". Before the first use, and after you change the words, run `uv run lab-os labels build` on the brain's computer. It needs the internet and takes some minutes. Then start the brain again.
+- **Labels:** select **Labels off** to put a box and a label on each object in the picture: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Select **Labels on** to remove them. Labels are off each time you open **Raspbot**. To set up the detector, see [Labels on the picture](#labels-on-the-picture).
 - **Window:** point at the picture or its controls. Hold the grip and move or turn your controller. Release the grip to leave the window in its new position.
 - **STOP** (or A / X) stops the car. Press **B**, **Y**, **Back** or **Exit** to close the module. The car stops when the module closes.
 

@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 WEIGHTS = "yoloe-26m-seg.pt"  # the segmentation weights; lab-os uses only the boxes
+IMGSZ = (480, 640)  # height, width: the Raspbot's 640 × 480 picture, without grey bars
 
 
 def main(words_json: str, out: str, build: str) -> int:
@@ -27,7 +28,7 @@ def main(words_json: str, out: str, build: str) -> int:
     os.chdir(build)  # Ultralytics downloads into the current folder
     model = YOLOE("yoloe-26m.yaml").load(WEIGHTS)  # boxes only: no mask head
     model.set_classes(words, model.get_text_pe(words))
-    made = model.export(format="onnx", imgsz=640, simplify=True)
+    made = model.export(format="onnx", imgsz=IMGSZ, simplify=True)
     shutil.move(made, target)
     return 0
 
