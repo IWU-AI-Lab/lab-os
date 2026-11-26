@@ -82,6 +82,7 @@ Stop LeLab and any training run first. Plug in `so101-white` and `so101-green` (
 ## R. The Raspbot (10 min)
 raspbot1 on the router's Wi-Fi, charged, on the floor with space around it. Steps: `docs/guides/raspbot.md`. Run `uv run lab-os raspbot deploy`, then `uv run lab-os serve`.
 - **R.3** Quick job 122. On the Quest, open the hub, **Enter VR**, then **Raspbot**. Press **PICTURE**, then **RECORD**. Wait 5 s, then press **END REC**. → did the status line give two file names? (yes / no) On the desktop, open the recording. → does it play 5 s of video? (yes / no)
+- **R.10** Quick job 125. Open **Raspbot** in VR, then in AR. Check that the window opens closer. Turn your head and move the right stick. Set **Head** to **Off** and repeat. → does only the camera turn, and does it ignore your head when **Head** is off? (yes / no) Point at the window. Hold the grip and move your controller. → do the picture and menus move together? (yes / no) Start and stop a recording in the headset. Start and stop one on the desktop Raspbot page. Take a picture on the desktop. → do both screens show a red dot and count the seconds? Does the desktop give both file names? (yes / no)
 
 ## L. The Newline (10 min)
 The Newline is a screen of the Pi that drives it (HDMI and the USB touch cable). On 2026-11-24, `arecord -l` on the Pi listed the Newline's microphone ("Newline Q Pro Elite", card 2), through the touch cable.

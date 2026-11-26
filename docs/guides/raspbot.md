@@ -42,14 +42,24 @@ The service works only at start. When the router's Wi-Fi goes away later, raspbo
 
 raspbot1 logs in by itself when it starts, so the program starts with it (a systemd user service). On a Raspbot that does not log in by itself, run `sudo loginctl enable-linger pi` once.
 
-## Drive it from the Quest (quick job 107)
+## Take a picture or record
+Use these buttons on the Raspbot page or in the headset.
+
+1. Press **Picture** to save one picture.
+2. Press **Record** to start a recording. The red dot and the time show while it records.
+3. Press **End rec** to stop the recording.
+
+The status line gives the full file name. The brain saves the files in `recordings/raspbot/`. Open the `.mjpeg` recording with VLC. Close the page that started the recording to end it.
+
+## Drive it from the Quest
 In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.
 - **Left stick:** push it to drive (forward, back, turn). Let go, and the car stops.
-- **Your head:** the camera's picture is a large view in front of you. Turn your head, and the camera turns the same way (left, right, up, down).
-- **Right stick:** turns the camera too, on top of your head.
-- **CENTRE** (or press the right stick): the direction you look at now becomes the camera's centre. When the module opens, the direction you look at is the centre.
-- **PICTURE** saves one picture. **RECORD** starts a recording, and **END REC** stops it. They are saved on the brain's computer in `recordings/raspbot/` (not in git). The status line under the buttons gives the file's full name. A recording is a `.mjpeg` file: open it with VLC.
-- **STOP** (or A / X) stops the car. **B** or **Y**, **Back** and **Exit** close the module. When the module closes, the car stops and a recording ends.
+- **Your head:** turn your head to turn the camera the same way. This control is on when you open **Raspbot**.
+- **Head:** select **Head on** to turn head control off. Select **Head off** to turn it on again.
+- **Right stick:** move it to turn the camera.
+- **Centre:** select **Centre** or press the right stick to centre the camera. If head control is on, the direction you look becomes the new centre.
+- **Window:** point at the picture or its controls. Hold the grip and move or turn your controller. Release the grip to leave the window in its new position.
+- **STOP** (or A / X) stops the car. Press **B**, **Y**, **Back** or **Exit** to close the module. The car stops when the module closes.
 
 The camera's mount has two servos: servo 1 turns left and right (0° to 180°, centre 90°), servo 2 up and down (0° to 110°, centre 25°). These are the numbers in Yahboom's own code. The program on the Raspbot keeps each servo inside these limits. If a servo turns the wrong way, change `PAN_SIGN` or `TILT_SIGN` in `robots/raspbot/lab_os_raspbot.py`, then run `uv run lab-os raspbot deploy`.
 

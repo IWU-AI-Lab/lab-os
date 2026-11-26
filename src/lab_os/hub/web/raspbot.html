@@ -11,6 +11,11 @@
     .view { position: relative; aspect-ratio: 4 / 3; max-height: calc(100vh - 9rem); width: 100%; margin: 0 auto; background: color-mix(in srgb, var(--bg) 85%, transparent); border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
     .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .view .why { position: relative; margin: 0; padding: 1rem 1.4rem; max-width: 26rem; text-align: center; font: var(--w-lines) 0.92rem/1.5 var(--f-lines); color: var(--text-dim); }
+    .media { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
+    .media .btn { min-height: 2.5rem; }
+    .tally { position: absolute; top: 0.6rem; left: 0.6rem; background: var(--bg); padding: 0.35rem 0.6rem; font: 0.9rem var(--f-digits); }
+    .tally::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background: var(--danger); margin-right: 0.5rem; }
+    #media-msg { overflow-wrap: anywhere; }
     /* the pad: hold a button to drive; it lights while the car moves that way */
     .pad { display: grid; grid-template-columns: repeat(3, minmax(4.2rem, 6rem)); grid-template-rows: repeat(3, minmax(4.2rem, 6rem)); gap: 0.6rem; justify-content: center; margin: 0.8rem 0 1rem; touch-action: none; user-select: none; -webkit-user-select: none; }
     .pad .btn { min-height: 0; padding: 0; width: 100%; height: 100%; touch-action: none; }
@@ -62,7 +67,16 @@
   <main class="bot">
     <section class="card"><div class="in">
       <h2><svg class="ico"><use href="/web/design/icons.svg#i-cam"/></svg>Camera</h2>
-      <div class="view"><p id="cam-why" class="why">No camera picture.</p><img id="cam" alt="The Raspbot's camera" hidden></div>
+      <div class="view">
+        <p id="cam-why" class="why">No camera picture.</p>
+        <img id="cam" alt="The Raspbot's camera" hidden>
+        <span id="tally" class="tally" aria-label="Recording time" hidden></span>
+      </div>
+      <div class="media">
+        <button id="picture" class="btn" type="button" disabled>Picture</button>
+        <button id="record" class="btn" type="button" disabled>Record</button>
+      </div>
+      <p id="media-msg" class="msg" aria-live="polite"></p>
     </div></section>
     <section class="card side"><div class="in">
       <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive</h2>
@@ -86,7 +100,7 @@
   const device = new URLSearchParams(location.search).get("device") || "";
   const WORDS = { forward: "Forward", back: "Back", left: "Turning left", right: "Turning right" };
   const KEYS = { ArrowUp: "forward", w: "forward", ArrowDown: "back", s: "back", ArrowLeft: "left", a: "left", ArrowRight: "right", d: "right" };
-  let ws = null, held = "", timer = null, last = {}, camOn = false, error = "", errorAt = 0;
+  let ws = null, held = "", timer = null, recording = false, camOn = false, error = "", errorAt = 0;
 
   function send(msg) { if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg)); }
   function hold(dir) {
@@ -109,6 +123,8 @@
     for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(ev, letGo);
   }
   $("#stop").onclick = stop;
+  $("#picture").onclick = () => send({ type: "picture" });
+  $("#record").onclick = () => send({ type: "record", on: !recording });
   let sliding = false;
   const speed = $("#speed");
   speed.addEventListener("input", () => {
@@ -138,8 +154,17 @@
   }
   $("#cam").onerror = () => { camOn = false; $("#cam").hidden = true; $("#cam-why").hidden = false; $("#cam-why").textContent = "The camera does not answer."; };
 
+  function showMedia(s) {
+    recording = !!s?.recording;
+    const canCapture = s?.may_drive && s.connected;
+    $("#picture").disabled = !(canCapture && s.camera);
+    $("#record").disabled = !(canCapture && (s.camera || recording));
+    $("#record").textContent = recording ? "End rec" : "Record";
+    $("#tally").hidden = !recording;
+    $("#tally").textContent = recording ? `${s.recording_seconds ?? 0} s` : "";
+  }
   function show(s) {
-    last = s;
+    showMedia(s);
     $("#name").textContent = s.name;
     const st = $("#state");
     st.textContent = s.fake ? "Fake" : s.connected ? "Connected" : "Not connected";
@@ -169,13 +194,20 @@
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
       if (m.type === "raspbot_status") show(m);
-      else if (m.type === "error") { error = m.message; errorAt = Date.now(); }
+      else if (m.type === "saved") {
+        $("#media-msg").textContent = m.what === "picture" ? `Picture saved: ${m.path}`
+          : m.on ? `Recording to ${m.path}`
+          : m.path ? `Recording saved: ${m.path}` : "No recording was on.";
+      } else if (m.type === "error") {
+        error = m.message; errorAt = Date.now();
+      }
     };
     ws.onclose = () => {
       clearInterval(timer); held = "";
       $("#state").textContent = "Brain not reachable"; $("#state").className = "pill bad";
       for (const b of document.querySelectorAll(".pad .btn")) b.disabled = true;
       camera(false);
+      showMedia(null);
       setTimeout(connect, 2000);
     };
   }

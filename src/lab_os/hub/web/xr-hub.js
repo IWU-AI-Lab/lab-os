@@ -404,7 +404,6 @@ function xrPointers(show, frame, r, now) {
   // 102), its beam drawn only while it is on one, so it isn't in the way (its trigger or pinch only grips while
   // the clutch is held)
   if (teleop) show.hub.module.view.frame(performance.now(), frame, ref);
-  if (on && !show.off && show.hub.module?.id === "raspbot") show.hub.module.view.input(frame, ref, now); // its sticks and your head
   for (const src of frame.session.inputSources) {
     const key = src.handedness;
     if (key !== "left" && key !== "right") continue;
@@ -416,6 +415,9 @@ function xrPointers(show, frame, r, now) {
     const b = !!src.gamepad?.buttons[5]?.pressed; // B (right) / Y (left)
     if (b && !backWas[key]) show.back(now, key);
     backWas[key] = b;
+  }
+  if (on && !show.off && show.hub.module?.id === "raspbot") {
+    show.hub.module.view.input(frame, ref, now, (key) => show.pointer.hitOf(key));
   }
 }
 
