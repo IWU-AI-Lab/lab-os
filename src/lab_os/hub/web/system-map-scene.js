@@ -507,6 +507,10 @@ export function createMap(canvas, labels, onSelect) {
     }
     if (closest) onSelect(closest.device.id);
   });
+  labels.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    canvas.dispatchEvent(new WheelEvent("wheel", event));
+  }, { passive: false });
   controls.addEventListener("change", render);
   new ResizeObserver(resize).observe(canvas);
   resize();
