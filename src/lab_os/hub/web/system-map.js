@@ -68,6 +68,10 @@ const configured = read("/api/devices")
   .then((rows) => new Map(rows.map((row) => [row.name, row.kind])))
   .catch(() => new Map());
 
+function showStatus(text) {
+  if (status.textContent !== text) status.textContent = text;
+}
+
 let last;
 async function refresh() {
   try {
@@ -81,9 +85,9 @@ async function refresh() {
       show(entries);
       last = latest;
     }
-    status.textContent = `${entries.filter((row) => row.connected).length} of ${entries.length} connected`;
+    showStatus(`${entries.filter((row) => row.connected).length} of ${entries.length} connected`);
   } catch {
-    status.textContent = last === undefined ? "Cannot read the device list." : "Cannot update the device list. Showing the last update.";
+    showStatus(last === undefined ? "Cannot read the device list." : "Cannot update the device list. Showing the last update.");
   } finally {
     setTimeout(refresh, 2000);
   }

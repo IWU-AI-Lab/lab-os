@@ -12,7 +12,7 @@ body.embedded .bar { display: none; }
 .map-controls button { pointer-events: auto; background-color: var(--surface); }
 .map-message { position: absolute; inset: 50% 0.65rem auto; transform: translateY(-50%); text-align: center; }
 .map-labels { position: absolute; inset: 0; pointer-events: none; }
-.map-label { position: absolute; transform: translate(-50%, -100%); 
+.map-label { position: absolute; transform: translate(-50%, -100%);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
   max-width: 10rem; color: var(--text); background: var(--bg); padding: 0.08rem 0.35rem; border-bottom: 1px solid var(--line); }
 .map-label.selected { z-index: 1; max-width: 65%; color: var(--hot); border-color: var(--primary); }
