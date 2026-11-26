@@ -292,7 +292,22 @@ def main(argv: list[str] | None = None) -> None:
     )
     ma.add_argument("arm", help="the arm's name, e.g. so101-green")
     ma.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
+    st = sub.add_parser(
+        "setup",
+        help="make this computer ready as the brain: checks each part, installs what needs no "
+        "sudo, and prints the sudo commands to paste (scripts/install.sh runs it; "
+        "docs/dev/dev-setup.md)",
+    )
+    st.add_argument(
+        "--no-so101",
+        action="store_true",
+        help="this computer drives no SO-101 arm: LeRobot is not needed",
+    )
     args = parser.parse_args(argv)
+    if args.command == "setup":
+        from lab_os import brain_setup
+
+        raise SystemExit(brain_setup.main(so101=not args.no_so101))
     if args.command == "measure-arm":
         from lab_os.robots import measure_arm
 

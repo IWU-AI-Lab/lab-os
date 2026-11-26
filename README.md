@@ -17,9 +17,8 @@ On a new Linux computer (the lab desktop or a laptop), run:
 git clone https://github.com/IWU-AI-Lab/lab-os.git
 cd lab-os
 ./scripts/install.sh
-cp .env.example .env     # then put the real keys in .env
 ```
-The script installs [uv](https://docs.astral.sh/uv/) if it is missing. It makes the project's own environment in `.venv/` (Python 3.12). It never changes conda.
+The script installs [uv](https://docs.astral.sh/uv/) if it is missing. It makes the project's own environment in `.venv/` (Python 3.12, with LeRobot for the SO-101 arms). It never changes conda and never runs `sudo`. Then it runs `uv run lab-os setup`: that checks each part the brain needs and says in one line what it found or did. At the end it prints the `sudo` commands to paste, and the other steps (for example the real AI keys in `.env`). Do them, then run `uv run lab-os setup` again. The list of parts is in `docs/dev/dev-setup.md` → "A new brain computer". On a computer that drives no SO-101 arm, run `./scripts/install.sh --no-so101` (about 5 GB less).
 
 ## Run
 ```bash

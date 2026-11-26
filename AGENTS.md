@@ -60,6 +60,7 @@ The green arms may be unplugged during lab-os testing. Don't assume they're ther
 ```bash
 uv sync                      # install / update the environment
 uv sync --extra so101        # same + LeRobot/PyTorch (~5 GB) for the SO-101s; plain `uv sync` removes them
+uv run lab-os setup          # check every part the brain needs; prints the sudo commands (./scripts/install.sh runs it)
 uv run pytest                # tests (no hardware needed)
 uv run ruff check --fix .    # lint
 uv run ruff format .         # format
