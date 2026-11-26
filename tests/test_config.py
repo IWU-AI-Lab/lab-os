@@ -1,7 +1,6 @@
 """The place's config folder (rule 9): --config, place files vs. shared files, .env, off limits."""
 
 import os
-import re
 from pathlib import Path
 
 import pytest
@@ -289,8 +288,8 @@ async def test_the_hub_title_is_the_place_name(aiohttp_client, home):
     app = create_brain_app(TeleopLoop(arm=arm, inputs=InputState()), load_venue())
     client = await aiohttp_client(app)
     assert (await (await client.get("/api/hub")).json())["title"] == "My lab"
-    js = (SRC / "hub" / "web" / "hub.js").read_text()
-    assert re.search(r"cfg\?\.title", js) and "hubCfg.title" not in js
+    page = (SRC / "hub" / "web" / "design.html").read_text()
+    assert 'S.title = hub?.title || "Hub"' in page and "hubCfg.title" not in page
 
 
 def test_one_to_one_speed_per_venue():

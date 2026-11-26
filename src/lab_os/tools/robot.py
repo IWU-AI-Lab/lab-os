@@ -43,7 +43,7 @@ import yaml
 from lab_os import config
 from lab_os.kinematics import IK_JOINTS, kinematics_for, on_table, solve_ik
 from lab_os.robots.base import JointLimit
-from lab_os.teleop.loop import Motion, TeleopLoop
+from lab_os.teleop.loop import MIN_JERK_PEAK, Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
 from lab_os.tools import pose_view as pv
 from lab_os.tools import table_map, tic_tac_toe
@@ -501,18 +501,19 @@ class RobotTools:
         ]
 
     async def _run(
-        self, path: list[dict], notes: list[str], aim: tuple[tuple, float] | None = None
+        self,
+        path: list[dict],
+        notes: list[str],
+        aim: tuple[tuple, float] | None = None,
+        smooth: bool = False,
     ) -> dict:
         """Follow `path`, then report where the arm really ended up. `aim` (move_to only) is
-        the gripper point (cm) and tool angle the move was aiming for."""
-        start = self.arm.read_joints()
-        motion = Motion(path=path, deg_per_s=self.limits.deg_per_s, hold_s=HOLD_S)
-        travel, prev = 0.0, start
-        for wp in path:
-            travel += max((abs(v - prev[j]) for j, v in wp.items()), default=0.0)
-            prev = prev | wp
+        the gripper point (cm) and tool angle the move was aiming for. `smooth`: start slowly,
+        speed up and slow down at the end (moves to a named pose, quick job 118)."""
+        motion = Motion(path=path, deg_per_s=self.limits.deg_per_s, hold_s=HOLD_S, smooth=smooth)
         speed = self.limits.deg_per_s * max(self.loop.speed_scale, 0.01)
         self.loop.start_motion(motion)
+        travel = motion.travel_deg * (MIN_JERK_PEAK if smooth else 1.0)  # smooth: takes longer
         try:
             await asyncio.wait_for(motion.done.wait(), travel / speed + 5.0)
         except TimeoutError:
@@ -635,7 +636,7 @@ class RobotTools:
         target = self._clip_to_limits(current, pose, notes)
         target = self._limit_change(current, target, notes)
         self._check_floor(current, self._line(current, target))
-        return await self._run([target], notes)
+        return await self._run([target], notes, smooth=True)
 
     async def move_to(
         self,

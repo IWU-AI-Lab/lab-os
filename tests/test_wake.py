@@ -381,8 +381,6 @@ def test_the_pages_have_the_wake_word():
     src = Path(__file__).resolve().parents[1] / "src" / "lab_os"
     design = (src / "hub/web/design.html").read_text()
     assert 'id="f-wake"' in design and "syncWake" in design and "silenceWatch" in design
-    assert 'id="f-wake"' in (src / "hub/web/index.html").read_text()
-    assert "syncWake" in (src / "hub/web/hub.js").read_text()
     assert '"wake word"' in (src / "hub/web/settings.js").read_text()
     js = (src / "web/voice.js").read_text()
     assert '"wake word": "wake_word"' in js and "silenceWatch } from" in js
@@ -390,10 +388,9 @@ def test_the_pages_have_the_wake_word():
     # snappier (2026-11-14): the sensitivity, the Quest's stalled microphone, the brain's "ended"
     assert "wakeSensitivity()" in js and "watchMic" in js and '"ended"' in js
     assert "wake_sensitivity" in (src / "hub/web/settings.js").read_text()
-    for page in ("hub/web/design.html", "hub/web/hub.js", "hub/web/xr/ask.js"):
+    for page in ("hub/web/design.html", "hub/web/xr/ask.js"):
         text = (src / page).read_text()
         assert '"ended"' in text and "WAKE_QUIET_MS" in text and "noiseFloor" in text, page
-    assert "voice.chime()" in (src / "hub/web/hub.js").read_text()
 
 
 async def test_a_screen_that_never_says_it_played_doesnt_block_the_wake_word(

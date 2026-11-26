@@ -1,5 +1,5 @@
 // The immersive hub (xr.html): the designed hub's startup in VR/AR, with three.js. Same look, motion,
-// timings and sounds as /design (design.html; numbers from /theme.json), around you instead of on a screen:
+// timings and sounds as the hub at / (design.html; numbers from /theme.json), around you instead of on a screen:
 //   ignite → the waiting core and its words over a still star field (xr/ignition.js); the trigger or a
 //            pinch starts it ("safe to start": it only opens the hub)
 //   unlock → ~1.35 s: the bolts pull back, the ring turns and opens, the core bursts (and its sounds)

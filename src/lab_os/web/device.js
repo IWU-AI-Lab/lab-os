@@ -84,7 +84,7 @@ async function screenInfo() {
 
 /**
  * The hub page's connection to the brain, for as long as the page is open (reconnects by itself).
- * h.look: "plain" | "design"; h.state(): {stage: "start"|"hub", showing: module id | null, from, from_window};
+ * h.state(): {stage: "start"|"hub", showing: module id | null, from, from_window};
  * h.onOpen(module, from, fromWindow): open that module here (sent from another device);
  * h.onClose(): close the module here ("bring it back" there); h.onDevices(list): the brain's list changed;
  * h.onLive(list): the live device list changed (quick job 109: every device seen, connected or not);
@@ -133,7 +133,7 @@ export function connectDevice(h) {
         try { sessionStorage.setItem("lab-os.window", wid); } catch { /* none */ }
         if (m.why_no_name) console.warn(`device: ${m.why_no_name}`);
         retry = 1000; up = true;
-        send({ type: "hello", look: h.look, ...h.state(), screen: await screenInfo() });
+        send({ type: "hello", ...h.state(), screen: await screenInfo() });
         list = m.devices || [];
         h.onLink?.(true);
         h.onDevices?.(list);
