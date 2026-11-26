@@ -155,13 +155,14 @@
     @keyframes scan { to { transform: rotate(360deg); } }
     .blip { position: absolute; width: .55rem; height: .55rem; border-radius: 50%; background: var(--hot); transform: translate(-50%, -50%); }
     #intro h2 { margin: 0; }
-    .cc-tabs { display: none; }
+    .cc-tabs, .side .multi { display: none; }
     #pages { padding-bottom: .7rem; }
     #pages-card > .in { max-height: 52vh; }
     .node.gone { min-width: 0; }
     .node.gone small { display: none; }
     @media (max-width: 1100px) {
       .page { grid-template-rows: auto auto minmax(0, 1fr); }
+      .side .multi { display: inline-flex; }
       .cc-tabs { display: flex; overflow-x: auto; }
       .cc-tabs button[aria-pressed="true"], #multi[aria-pressed="true"] { color: var(--hot); border-color: var(--c); }
       .cc { grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
@@ -196,7 +197,7 @@
   <main class="cc" data-panel="Workspace">
     <section class="left">
       <div class="card side" aria-label="Devices and screens"><div class="in">
-        <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><small id="dev-count" class="hint"></small></h2>
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><button type="button" class="btn small multi" aria-pressed="false">Select multiple</button><small id="dev-count" class="hint"></small></h2>
         <div class="list" id="devices"></div>
       </div></div>
       <div class="card" id="act-card" aria-label="Activity"><div class="in">

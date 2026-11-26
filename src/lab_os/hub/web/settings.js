@@ -615,7 +615,6 @@ function preview(e) {
   } else if (r.dataset.key === "quality") {
     const value = e.target.closest("[data-v]")?.dataset.v || screenGet().quality || "theme";
     const quality = value === "theme" ? theme.quality?.default || "full" : value;
-    sample.className = quality;
     sample.innerHTML = `<div class="${esc(quality)}">${screenPreview({}, 220)}</div>`;
     sample.append(show(quality));
   } else if (r.personas) {

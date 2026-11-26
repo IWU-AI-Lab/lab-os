@@ -424,8 +424,8 @@ function fit() {
     x1 = Math.max(x1, x + n.offsetWidth); y1 = Math.max(y1, y + n.offsetHeight);
   }
   const ws = $("#ws").getBoundingClientRect(), pad = 30;
-  // a few devices get large previews, many get small ones (quick job 149); centred both ways
-  const z = Math.min(1, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0));
+  // Keep previews at their native size when the workspace has room.
+  const z = Math.max(0.02, Math.min(1, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0)));
   S.view = { z, x: pad - x0 * z + Math.max(0, (ws.width - 2 * pad - (x1 - x0) * z) / 2), y: pad - y0 * z + Math.max(0, (ws.height - 2 * pad - (y1 - y0) * z) / 2) };
   applyView();
 }
@@ -441,9 +441,9 @@ new ResizeObserver(() => autoFit()).observe($("#ws"));
 
 // ---------- highlight, drag, pan, zoom ----------
 let multi = false;
-$("#multi").onclick = () => {
+for (const control of document.querySelectorAll("#multi, .multi")) control.onclick = () => {
   multi = !multi;
-  $("#multi").setAttribute("aria-pressed", String(multi));
+  for (const b of document.querySelectorAll("#multi, .multi")) b.setAttribute("aria-pressed", String(multi));
 };
 $(".cc-tabs").onclick = (event) => {
   const tab = event.target.closest("button");

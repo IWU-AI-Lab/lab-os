@@ -199,7 +199,6 @@ export function personaTable({ personas, active, look, choose, readOnly }) {
       const th = tag.offsetHeight, y = ((1 - tmp.y) / 2) * h;
       const top = Math.max(4, Math.min(h - th - 4, near ? y : y - th));
       tag.style.transform = `translate(-50%, 0) translate(${((tmp.x + 1) / 2) * w}px, ${top}px)`;
-      tag.style.opacity = "1";
       tag.setAttribute("aria-pressed", String(s.p.id === chosen));
       tag.classList.toggle("active", s.p.id === activeId);
     });

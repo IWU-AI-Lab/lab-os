@@ -137,6 +137,7 @@ function explain(t) {
 // ---------- the microphone: the hub's recorder, 16 kHz pieces of 50 ms ----------
 async function openMic() {
   if (mic) return mic;
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("Open the secure address or localhost to use the microphone.");
   const ctx = new AudioContext();
   await ctx.audioWorklet.addModule("/web/voice-worklet.js");
   const stream = await navigator.mediaDevices.getUserMedia({
