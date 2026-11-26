@@ -75,7 +75,7 @@ def test_another_place_draws_what_it_has():
         "m.systemSVG(m.systemFacts({devices: d.dv, here: 'desk'}))",
         dv=[{"name": "myarm", "kind": "arm", "linked": True}],
     )
-    assert "Myarm" in svg and "SO-101" not in svg and "LeLab" not in svg and "AI tools" not in svg
+    assert ">myarm<" in svg and "SO-101" not in svg and "LeLab" not in svg and "AI tools" not in svg
     assert "Not set up" in svg
 
 
@@ -88,10 +88,16 @@ def test_only_real_links_pulse():
 
 
 @needs_node
-def test_names_as_people_say_them():
-    names = ["desk", "quest-a", "so101-white", "xarm1", "fake-arm", "pi01"]
-    got = run("d.n.map(m.displayName)", n=names)
-    assert got == ["Desk", "Quest A", "SO-101 White", "xArm 1", "Fake Arm", "Pi 01"]
+def test_names_as_they_are_stored():
+    """Quick job 153: one name for one thing. The drawing showed "Rv Laptop" for "rv-laptop"; now a
+    device's stored name, or a screen's display name (its title in the brain's list)."""
+    hub = [{"name": "rv-laptop", "title": "RV laptop", "address": "10.0.0.5"}]
+    svg = run(
+        "m.systemSVG(m.systemFacts({devices: d.dv, hubDevices: d.h}))",
+        dv=[{"name": "so101-white", "kind": "so101"}],
+        h=hub,
+    )
+    assert ">RV laptop<" in svg and ">so101-white<" in svg and "SO-101 White" not in svg
 
 
 @needs_node

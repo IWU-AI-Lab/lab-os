@@ -36,8 +36,16 @@ export function labelText(f, distanceMm) {
 
 export const HUD_FONT = "'Chakra Petch', system-ui, sans-serif"; // the design's UI font (theme.yaml → fonts.family)
 
+/** "#rrggbb" and a see-through amount (0–1) → "rgba(…)". The colours: config/theme.yaml → labels. */
+export function seeThrough(hex, a) {
+  const n = parseInt(String(hex).replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+// the theme's numbers, used when a page passes none (config/theme.yaml → labels, colors.primary)
+const LOOK = { color: "#29d4ff", bg: seeThrough("#05080b", 0.85), border: seeThrough("#ffffff", 0.45) };
+
 /** Draw the outlines, corner brackets and labels on a canvas `w` × `h` that shows the picture. */
-export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = HUD_FONT, border = "rgba(255, 255, 255, 0.45)" } = {}) {
+export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = LOOK.color, bg = LOOK.bg, font = HUD_FONT, border = LOOK.border } = {}) {
   const size = Math.max(12, Math.round(h * 0.04)), pad = size * 0.4, line = Math.max(1.5, h / 320);
   g.save();
   g.font = `600 ${size}px ${font}`;
@@ -78,8 +86,14 @@ export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, colo
 export function labelsSwitch({ button, canvas, img, say, send, status, oldMs = 1000 }) {
   const L = { on: false, found: [], t: 0, state: "", why: "" };
   const css = getComputedStyle(document.documentElement);
-  const color = css.getPropertyValue("--primary").trim() || "#29d4ff";
+  const color = css.getPropertyValue("--primary").trim() || LOOK.color;
   const font = css.getPropertyValue("--f-ui").trim() || HUD_FONT;
+  let look = { bg: LOOK.bg, border: LOOK.border };
+  import("/web/theme.js").then(({ theme }) => {  // config/theme.yaml → labels
+    const t = theme.labels || {};
+    if (t.background) look.bg = seeThrough(t.background, t.background_opacity ?? 0.85);
+    if (t.border) look.border = seeThrough(t.border, t.border_opacity ?? 0.45);
+  }).catch(() => { /* the numbers above */ });
   function paint() {
     const r = canvas.getBoundingClientRect(), k = devicePixelRatio || 1;
     const w = Math.round(r.width * k), h = Math.round(r.height * k);
@@ -94,7 +108,7 @@ export function labelsSwitch({ button, canvas, img, say, send, status, oldMs = 1
     g.translate((w - pw) / 2, (h - ph) / 2);
     drawLabels(g, pw, ph, L.found, {
       front: frontIndex(L.found, s?.pan_deg), distanceMm: s?.distance_mm ?? null,
-      color, bg: "rgba(5, 8, 11, 0.85)", font,
+      color, bg: look.bg, border: look.border, font,
     });
     g.restore();
   }

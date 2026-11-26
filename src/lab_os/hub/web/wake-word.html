@@ -104,7 +104,7 @@ async function load() {
   info = await r.json();
   $("#here").hidden = info.here;
   word ||= info.words.some((w) => w.id === info.active) ? info.active : info.words[0].id;
-  $("#word").innerHTML = info.words.map((w) => `<option value="${esc(w.id)}"${w.id === word ? " selected" : ""}>${esc(w.phrase)}${w.id === info.active ? " (active)" : ""}</option>`).join("");
+  $("#word").innerHTML = info.words.map((w) => `<option value="${esc(w.id)}"${w.id === word ? " selected" : ""}>${esc(w.phrase.charAt(0).toUpperCase() + w.phrase.slice(1))}${w.id === info.active ? " (Active)" : ""}</option>`).join("");
   render();
 }
 const current = () => info.words.find((w) => w.id === word);
@@ -121,7 +121,7 @@ function render() {
   $("#train").disabled = busy || !ready || !info.here;
   for (const b of ["#rec-word", "#rec-other", "#clear"]) $(b).disabled = busy || !info.here;
   const t = w.trained;
-  $("#state").textContent = t ? "trained" : "none";
+  $("#state").textContent = t ? "Trained" : "None";
   $("#state").className = `pill ${t ? "on" : "off"}`;
   $("#result").innerHTML = t ? explain(t) : "";
 }

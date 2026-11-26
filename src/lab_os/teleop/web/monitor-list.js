@@ -84,10 +84,10 @@ function picture(kind, j) {
 }
 
 function stateWord(s) {
-  if (s.arm?.connected === false) return "unplugged (USB)";
-  if (s.frozen) return "frozen";
-  if (s.clutch) return "following";
-  return "holding";
+  if (s.arm?.connected === false) return "Unplugged (USB)";
+  if (s.frozen) return "Held still";
+  if (s.clutch) return "Following";
+  return "Holding";
 }
 
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -103,7 +103,7 @@ function draw(raw) {
     if (html === c.key) continue;
     c.key = html;
     c.arms.innerHTML = html;
-    c.count.textContent = arms.length ? `${arms.length} connected` : "none connected";
+    c.count.textContent = arms.length ? `${arms.length} connected` : "None connected";
   }
 }
 
@@ -115,6 +115,6 @@ link.on("status", (s) => {
   waiting = setTimeout(() => { waiting = null; last = performance.now(); draw(latest); }, wait);
 });
 const setConn = (text, cls) => { $("conn").textContent = text; $("conn").className = `pill ${cls}`; };
-link.on("open", () => setConn("connected", "on"));
-link.on("close", () => setConn("disconnected", "off"));
+link.on("open", () => setConn("Connected", "on"));
+link.on("close", () => setConn("Disconnected", "off"));
 $("stop").onclick = () => link.send({ type: "stop" });

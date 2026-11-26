@@ -40,7 +40,7 @@ export function wrap(g, text, maxW, lines = 99) {
 }
 const fmtDay = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short" }); };
 export const usd = (v, dec = 2) => `$${Number(v || 0).toFixed(dec)}`;
-const SPEND_HOW = "Estimated · this computer's brain only"; // the AI Spend callout (quick job 41)
+const SPEND_HOW = "Estimated, this computer's brain only"; // the AI Spend callout (quick job 41)
 const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], camera: ["i-cam", "Cameras"], pc: ["i-pc", "Computers"], pi: ["i-pi", "Raspberry Pis"] };
 const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
 export function devicesFrom(list) {

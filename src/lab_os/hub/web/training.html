@@ -81,7 +81,7 @@
   function show(c) {
     $("#lines").innerHTML = c.lines.map((l) => `<li class="${l.ok ? "ok" : "no"}">${icon(l.ok)}<span>${esc(l.text)}</span></li>`).join("");
     const st = $("#state");
-    st.textContent = c.running ? "running" : c.ok ? "ready" : "not safe";
+    st.textContent = c.running ? "Running" : c.ok ? "Ready" : "Not safe";
     st.className = `pill ${c.running ? "on" : c.ok ? "off" : "warn"}`;
     $("#start").disabled = !c.ok || c.running || !c.here;
     $("#open").hidden = !c.running;
@@ -109,7 +109,7 @@
   function showLr(c) {
     $("#lr-lines").innerHTML = c.lines.map((l) => `<li class="${l.ok ? "ok" : "no"}">${icon(l.ok)}<span>${esc(l.text)}</span></li>`).join("");
     const st = $("#lr-state");
-    st.textContent = c.running ? "running" : c.ok ? "ready" : "not safe";
+    st.textContent = c.running ? "Running" : c.ok ? "Ready" : "Not safe";
     st.className = `pill ${c.running ? "on" : c.ok ? "off" : "warn"}`;
     $("#lr-start").disabled = !c.ok || c.running || !c.here;
     $("#lr-stop").hidden = !c.running || !c.here;

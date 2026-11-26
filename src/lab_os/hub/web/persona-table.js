@@ -63,7 +63,7 @@ export function personaTable({ personas, active, look, choose, readOnly }) {
   const hear = box.querySelector(".hear"), pick = box.querySelector(".pick"), why = box.querySelector(".why");
 
   /* ---------- the scene ---------- */
-  const primary = col("primary", "#29d4ff"), hot = col("hot", "#e8fbff"), lineC = col("line", "#1d3a4a"), surface = col("surface", "#0b1620");
+  const primary = col("primary", "#29d4ff"), hot = col("hot", "#eafcff"), lineC = col("line", "#1f3d48"), surface = col("surface", "#0b161c");  // the theme's colours; the numbers only when it is missing
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, 2, 0.1, 50);
   camera.position.set(0, 3.2, 6.9);

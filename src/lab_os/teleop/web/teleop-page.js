@@ -7,6 +7,7 @@ import { initDesktop } from "./desktop-input.js";
 import { gate } from "./control-gate.js";
 import { initCams } from "./cams.js";
 import { deviceName } from "/web/device.js";
+import { held } from "/web/words.js";
 
 const $ = (id) => document.getElementById(id);
 const link = getLink("input");
@@ -14,35 +15,36 @@ const link = getLink("input");
 // Inside the hub the monitor has its own button, and a new tab would leave full screen.
 if (window.self !== window.top) $("monitor-link").hidden = true;
 
-function setPill(el, text, cls) {
+function setPill(el, text, cls, why = "") {
   el.textContent = text;
   el.className = `pill ${cls}`;
+  el.title = why;
 }
 
 link.on("open", () => {
-  setPill($("conn"), "connected", "on");
+  setPill($("conn"), "Connected", "on");
   link.send({ type: "hello", agent: navigator.userAgent, device: deviceName() });
 });
-link.on("close", () => setPill($("conn"), "disconnected", "off"));
+link.on("close", () => setPill($("conn"), "Disconnected", "off"));
 link.on("error", (m) => ($("xr-msg").textContent = m.message));
 $("stop").onclick = () => link.send({ type: "stop" });
 
 // Only one page drives at a time; the driver hands control over by leaving (Esc / exit XR).
 const CONTROL = {
-  you: ["this page", "on"],
-  other: ["another page (it must leave first)", "warn"],
-  free: ["free (start an input to take it)", "off"],
-  ai: ["the AI tools (until their move ends)", "warn"],
+  you: ["This page", "on"],
+  other: ["Another page (it must leave first)", "warn"],
+  free: ["Free (start an input to take it)", "off"],
+  ai: ["The AI tools (until their move ends)", "warn"],
 };
 link.on("status", (s) => {
   const [text, cls] = CONTROL[s.control] || ["—", "off"];
-  setPill($("control"), s.control === "other" && s.driver ? `the page on ${s.driver} (it must leave first)` : text, cls);
+  setPill($("control"), s.control === "other" && s.driver ? `The page on ${s.driver} (it must leave first)` : text, cls);
   // quick job 76: the buttons that would take control, grey while it can't be taken (not the one in use)
   gate(s, Object.entries(sourceButtons).filter(([k]) => k !== ui.active).map(([, b]) => b), $("control-why"));
-  if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
-  else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: release grip" : "frozen", "warn");
-  else if (s.clutch) setPill($("state"), "following (clutch)", "on");
-  else setPill($("state"), "holding", "off");
+  if (s.arm?.connected === false) setPill($("state"), "Arm disconnected (USB)", "warn");
+  else if (s.frozen) { const h = held(s.needs_release); setPill($("state"), h.text, "held", h.why); }
+  else if (s.clutch) setPill($("state"), "Following (clutch)", "on");
+  else setPill($("state"), "Holding", "off");
   const g = s.joints.gripper;
   const [lo, hi] = s.limits.gripper || [0, 1];
   $("gripper").textContent = g === undefined ? "—" : `${Math.round(((g - lo) / (hi - lo)) * 100)}% open`;
@@ -62,10 +64,10 @@ link.on("status", (s) => {
   $("two-arms-hint").hidden = !l;
   $("arm-label").textContent = l ? "Right arm" : "Arm";
   if (!l) return;
-  if (l.connected === false) setPill($("left-state"), "disconnected (USB)", "warn");
-  else if (l.frozen) setPill($("left-state"), l.needs_release ? "frozen: release grip" : "frozen", "warn");
-  else if (l.clutch) setPill($("left-state"), "following (clutch)", "on");
-  else setPill($("left-state"), "holding", "off");
+  if (l.connected === false) setPill($("left-state"), "Disconnected (USB)", "warn");
+  else if (l.frozen) { const h = held(l.needs_release); setPill($("left-state"), h.text, "held", h.why); }
+  else if (l.clutch) setPill($("left-state"), "Following (clutch)", "on");
+  else setPill($("left-state"), "Holding", "off");
 });
 // hand → arm: relative or 1:1 (the brain keeps it; 1:1 only for arms with kinematics)
 link.on("status", (s) => {
@@ -88,7 +90,7 @@ if ($("speed-set")) $("speed-set").oninput = (e) => link.send({ type: "set_speed
 
 // ---- Shared UI helpers for the input sources ---------------------------------------------
 function fmt(c) {
-  if (!c.pos) return "tracking lost";
+  if (!c.pos) return "Tracking lost";
   const n = (v) => (v >= 0 ? "+" : "") + v.toFixed(2);
   const b = Object.entries(c.buttons).filter(([, on]) => on).map(([k]) => k).join(",") || "-";
   return `pos ${c.pos.map(n).join(" ")}  grip ${c.grip.toFixed(2)}  trig ${c.trigger.toFixed(2)}  btn ${b}`;
@@ -123,7 +125,7 @@ const ui = {
     lastReadout = now;
     $("readout").textContent =
       (label ? `${label}\n` : "") +
-      (Object.entries(hands).map(([side, c]) => `${side.padEnd(5)} ${fmt(c)}`).join("\n") || "no controllers");
+      (Object.entries(hands).map(([side, c]) => `${side.padEnd(5)} ${fmt(c)}`).join("\n") || "No controllers");
   },
   message(text) {
     $("xr-msg").textContent = text;

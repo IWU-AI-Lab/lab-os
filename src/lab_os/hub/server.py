@@ -1418,7 +1418,10 @@ def live_entries(
                 "name": screen["title"],  # its display name, else its name or address
                 "kind": "screen",
                 "known": screen["named"],
-                "what": f"The hub is open in {n} window{'s' if n != 1 else ''}.",
+                "what": f"The hub is open in {n} window{'s' if n != 1 else ''}"
+                + (
+                    "." if screen["named"] else f", at {screen['address'] or 'an unknown address'}."
+                ),
                 "via": "network",
             }
         )
@@ -1448,9 +1451,10 @@ def _quest_of_link(registry: Registry, link: dict) -> dict | None:
     where = remote or "unknown address"
     return entry | {
         "id": f"quest:{remote or 'unknown'}",
-        "name": f"Quest at {where}",
+        "name": "Unnamed Quest",  # the address only in its card (quick job 153)
         "known": False,
-        "what": "A Quest with the teleop page open (no device name, not in devices.yaml).",
+        "what": f"A Quest with the teleop page open at {where} "
+        "(no device name, not in devices.yaml).",
     }
 
 

@@ -49,6 +49,9 @@ class Field:
     # a safety limit (bool): the page shows clearly when it's off, and it can't be switched off
     # in a public venue or one with `limits_locked: true`
     safety: bool = False
+    # the name the page shows for each choice (a module's title, as the hub's button says it;
+    # quick job 153: "Monitor So101" was made from the id)
+    titles: Callable[[], dict] | None = None
 
     @property
     def key(self) -> str:
@@ -105,6 +108,12 @@ def _modules() -> list[str]:
     from lab_os.hub.server import MODULES
 
     return list(MODULES)
+
+
+def _module_titles() -> dict[str, str]:
+    from lab_os.hub.server import MODULES
+
+    return {mid: title for mid, (title, _page) in MODULES.items()}
 
 
 # Grouped by what a setting affects, most-used first (quick job 38): the assistant, the lab (its hub
@@ -202,6 +211,7 @@ SECTIONS: list[Section] = [
                 "list",
                 "In this order, left and right of the core.",
                 _modules,
+                titles=_module_titles,
             ),
             Field("theme", "startup.style", "Startup", "choice", "", ("hyperspace", "assemble")),
             Field(
@@ -451,6 +461,7 @@ def read(venue: str | None = None) -> list[dict]:
                     "kind": f.kind,
                     "help": f.help,
                     "choices": f.options(),
+                    "titles": f.titles() if f.titles else {},
                     "min": f.min,
                     "max": f.max,
                     "step": f.step,

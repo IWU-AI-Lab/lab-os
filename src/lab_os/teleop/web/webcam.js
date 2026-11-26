@@ -8,6 +8,7 @@
 import { getLink } from "./link.js";
 import { gate } from "./control-gate.js";
 import { deviceName } from "/web/device.js";
+import { held } from "/web/words.js";
 import { FilesetResolver, HandLandmarker } from "/web/vendor/mediapipe/vision_bundle.mjs";
 import { WebcamHands, gripAmount, handAxes, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
 import { color } from "/web/theme.js";
@@ -27,7 +28,7 @@ const STATES = {
   following: ["Following your right hand", "on"],
   holding: ["Holding: pinch with your left hand (or hold Space) to move", "off"],
   "no hand": ["Holding: show your right hand", "off"],
-  frozen: ["Frozen: open your left pinch (and let go of Space), then pinch again", "warn"],
+  frozen: ["Held still: open your left pinch (and let go of Space), then pinch again", "held"],
 };
 
 let landmarker = null;
@@ -53,37 +54,38 @@ function stored(key) {
     return null;
   }
 }
-function setPill(el, text, cls) {
+function setPill(el, text, cls, why = "") {
   el.textContent = text;
   el.className = `pill ${cls}`;
+  el.title = why;
 }
 const say = (text) => ($("msg").textContent = text);
 
 // ---- the brain's status (same chips as the teleop page) ----------------------------------------
 const CONTROL = {
-  you: ["this page", "on"],
-  other: ["another page (it must leave first)", "warn"],
-  free: ["free", "off"],
-  ai: ["the AI tools (until their move ends)", "warn"],
+  you: ["This page", "on"],
+  other: ["Another page (it must leave first)", "warn"],
+  free: ["Free", "off"],
+  ai: ["The AI tools (until their move ends)", "warn"],
 };
 link.on("open", () => {
-  setPill($("conn"), "connected", "on");
+  setPill($("conn"), "Connected", "on");
   link.send({ type: "hello", agent: `webcam teleop; ${navigator.userAgent}`, device: deviceName() });
 });
-link.on("close", () => setPill($("conn"), "disconnected", "off"));
+link.on("close", () => setPill($("conn"), "Disconnected", "off"));
 link.on("error", (m) => say(m.message));
 let brain = null; // the brain's last status: its own freeze wins over the page's "following"
 link.on("status", (s) => {
   brain = s;
   const [text, cls] = CONTROL[s.control] || ["—", "off"];
-  setPill($("control"), s.control === "other" && s.driver ? `the page on ${s.driver} (it must leave first)` : text, cls);
+  setPill($("control"), s.control === "other" && s.driver ? `The page on ${s.driver} (it must leave first)` : text, cls);
   // quick job 76: Start is grey while control can't be taken (Stop, while running, always works)
   if (!running) gate(s, [$("start")], $("control-why"));
   else $("control-why").hidden = true;
-  if (s.arm?.connected === false) setPill($("state"), "arm disconnected (USB)", "warn");
-  else if (s.frozen) setPill($("state"), s.needs_release ? "frozen: let go of the clutch" : "frozen", "warn");
-  else if (s.clutch) setPill($("state"), "following (clutch)", "on");
-  else setPill($("state"), "holding", "off");
+  if (s.arm?.connected === false) setPill($("state"), "Arm disconnected (USB)", "warn");
+  else if (s.frozen) { const h = held(s.needs_release, "the clutch"); setPill($("state"), h.text, "held", h.why); }
+  else if (s.clutch) setPill($("state"), "Following (clutch)", "on");
+  else setPill($("state"), "Holding", "off");
   $("speed").textContent = `${Math.round(s.speed_scale * 100)}%`;
   const sp = $("speed-set");
   sp.disabled = false;
@@ -192,7 +194,7 @@ function stopControl(why = "") {
   $("start").textContent = "Start webcam control";
   $("stop-key").hidden = true;
   $("camera").disabled = false;
-  setPill($("hand-state"), "off", "off");
+  setPill($("hand-state"), "Off", "off");
   say(why);
 }
 $("start").onclick = () => (running ? stopControl() : startControl());
@@ -277,8 +279,8 @@ function show(out, seen) {
   else if (st === "following" && brain && brain.control !== "you") st = "holding";
   const [text, cls] = STATES[st];
   setPill($("hand-state"), text, cls);
-  if (out.state === "frozen" && hands.why) say(`Frozen because ${hands.why}.`);
-  else if ($("msg").textContent.startsWith("Frozen")) say("");
+  if (out.state === "frozen" && hands.why) say(`Held still because ${hands.why}.`);
+  else if ($("msg").textContent.startsWith("Held still")) say("");
   $("clutch").textContent = `${Math.round(out.clutch * 100)}%${space ? " (Space)" : ""}`;
   $("pinch").textContent = `${Math.round(out.trigger * 100)}%`;
   const r = seen.find((s) => s.side === "right" && s.pos);
@@ -286,7 +288,7 @@ function show(out, seen) {
   $("fps").textContent = `${Math.round(fps)}`;
   const c = out.msg.hands.right;
   const n = (v) => (v >= 0 ? "+" : "") + v.toFixed(2);
-  $("readout").textContent = `webcam · ${seen.length} hand(s) seen\nright ${c.pos ? `pos ${c.pos.map(n).join(" ")}` : "tracking lost"}  grip ${c.grip.toFixed(2)}  trig ${c.trigger.toFixed(2)}`;
+  $("readout").textContent = `Webcam, ${seen.length} hand(s) seen\nright ${c.pos ? `pos ${c.pos.map(n).join(" ")}` : "tracking lost"}  grip ${c.grip.toFixed(2)}  trig ${c.trigger.toFixed(2)}`;
 }
 
 // ---- keys: Space = clutch, X = STOP, ` = leave (as on the other pages, quick job 120) ------------

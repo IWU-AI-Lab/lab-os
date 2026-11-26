@@ -17,7 +17,7 @@ function choose(id) {
   name.textContent = device.name;
   const via = device.via === "network" ? "Network" : device.via;
   connection.textContent = device === brain ? "Runs lab-os."
-    : [device.connected ? "Connected to the brain" : "Disconnected", via, device.preview && screenTitle(device.preview)].filter(Boolean).join(" · ");
+    : [device.connected ? "Connected to the brain" : "Disconnected", via, device.preview && screenTitle(device.preview)].filter(Boolean).join(", ");
   for (const button of list.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.id === selected));
   }
@@ -103,7 +103,7 @@ function entriesWithScreens(rows, types, screens) {
     return windows.map(({ stage, screen, showing, from }, index) => ({
       ...device,
       id: index ? `${id}#${index + 1}` : id,
-      name: windows.length > 1 ? `${device.name} · Screen ${index + 1}` : device.name,
+      name: windows.length > 1 ? `${device.name}, screen ${index + 1}` : device.name,
       preview: { stage, screen: { width: screen?.width, height: screen?.height },
         showing: showing && { id: showing.id, title: showing.title }, from },
     }));

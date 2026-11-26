@@ -105,7 +105,8 @@
     #pages .grp { margin: 0.4rem 0 0.3rem; font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
     #pages .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem; }
     .tile { display: grid; justify-items: center; gap: 0.2rem; padding: 0.35rem 0.2rem 0.3rem; cursor: grab; user-select: none; touch-action: none;
-      border: 1px solid color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 6%, transparent); color: var(--text); }
+      border: 1px solid color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 6%, transparent); color: var(--text);
+      clip-path: polygon(0.45rem 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%, 0 0.45rem); }  /* the cut corner (quick job 153) */
     .tile:hover, .tile:focus-visible { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); outline: none; }
     .tile.on { border-color: var(--hot); box-shadow: inset 0 0 0 1px var(--hot); }
     .tile .ico { font-size: 1.1rem; color: var(--c); }

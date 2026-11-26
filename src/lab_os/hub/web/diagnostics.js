@@ -1,6 +1,7 @@
 // Diagnostics (quick job 135): a card for each device, made to fit its kind, from GET /api/diagnostics every
 // second. ?device=<words> shows one device: its id, name or display name, or words such as "the Raspbot" or
 // "white arm" (the assistant passes what the person said). Only reads; nothing here changes a device.
+import { cap, jointLabel } from "/web/words.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -43,7 +44,7 @@ function armPanel(p) {
   else if (p.health === "no_answer") lines.push(`<p class="what bad">The motors do not answer. Is their power on?</p>`);
   else if (p.health === "waiting") lines.push(`<p class="what">Reading the motors…</p>`);
   if (p.problem) lines.push(`<p class="what bad">${esc(p.problem)}</p>`);
-  const rows = p.motors.map((m) => `<tr class="${m.state}"><td>${esc(m.joint)}</td><td class="n">${num(m.position_deg, 1, "°")}</td>`
+  const rows = p.motors.map((m) => `<tr class="${m.state}"><td title="${esc(m.joint)}">${esc(jointLabel(m.joint))}</td><td class="n">${num(m.position_deg, 1, "°")}</td>`
     + `<td class="n ${m.state === "ok" ? "" : m.state}">${num(m.temp_c, 0, " °C")}</td><td class="n">${num(m.load_pct, 1, " %")}</td><td class="n">${num(m.volts, 1, " V")}</td>`
     + `<td class="${m.errors.length ? "bad" : ""}">${m.errors.length ? esc(m.errors.map((e) => e[0].toUpperCase() + e.slice(1)).join(", ")) : m.temp_c === null ? "—" : "None"}</td></tr>`).join("");
   const facts = `<dl class="stats">${stat("Model", esc(p.model || "—"))}${stat("Control", p.frozen ? "Holding still" : "Ready")}`
@@ -55,15 +56,15 @@ function robotPanel(p) {
   const pi = p.pi || {};
   const power = pi.power ? POWER[pi.power] || POWER["?"] : null;
   const link = p.connected
-    ? `<span class="ok">Connected</span>${p.round_trip_ms !== null && p.round_trip_ms !== undefined ? ` · ${num(p.round_trip_ms, 0, " ms")}` : ""}`
+    ? `<span class="ok">Connected</span>${p.round_trip_ms !== null && p.round_trip_ms !== undefined ? `, ${num(p.round_trip_ms, 0, " ms")}` : ""}`
     : `<span class="bad">Not connected</span>`;
-  const wifi = pi.wifi_dbm === undefined ? "—" : `${num(pi.wifi_dbm, 0, " dBm")}${pi.wifi_quality !== undefined ? ` · ${pi.wifi_quality}/70` : ""}`;
+  const wifi = pi.wifi_dbm === undefined ? "—" : `${num(pi.wifi_dbm, 0, " dBm")}${pi.wifi_quality !== undefined ? `, ${pi.wifi_quality}/70` : ""}`;
   return (p.message ? `<p class="what bad">${esc(p.message)}</p>` : "")
     + `<dl class="stats">${stat("Connection", link)}${stat("Address", esc(p.address || (p.fake ? "None (fake)" : "—")))}`
-    + stat("Power", power ? `<span class="${power[1]}">${power[0]}</span>${pi.input_v ? ` · ${num(pi.input_v, 2, " V")}` : ""}` : p.connected ? "Not reported (an older program)" : "—")
+    + stat("Power", power ? `<span class="${power[1]}">${power[0]}</span>${pi.input_v ? `, ${num(pi.input_v, 2, " V")}` : ""}` : p.connected ? "Not reported (an older program)" : "—")
     + stat("Temperature", pi.temp_c === undefined ? "—" : num(pi.temp_c, 1, " °C")) + stat("Wi-Fi", wifi)
     + stat("Distance", p.distance_mm === null || p.distance_mm === undefined ? "—" : num(p.distance_mm / 10, 1, " cm"))
-    + stat("Motion", esc(p.moving ? p.moving.replace(/-/g, " ") : "Still")) + stat("Control", esc({ free: "Free", you: "This page", other: "Another page" }[p.control] || p.control || "—"))
+    + stat("Motion", esc(p.moving ? cap(p.moving.replace(/-/g, " ")) : "Still")) + stat("Control", esc({ free: "Free", you: "This page", other: "Another page" }[p.control] || cap(p.control) || "—"))
     + stat("Camera", p.camera ? "Yes" : "No") + `</dl>`
     + (power ? `<p class="what">The board has no battery reading. A low battery shows as low power at the Pi.</p>` : "");
 }

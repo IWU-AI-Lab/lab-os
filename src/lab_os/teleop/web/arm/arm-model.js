@@ -20,6 +20,7 @@ const COLORS = {
   stick: color("arm3d.stick"),
   jaw: color("colors.accent"),
 };
+const HELD_RING = color("colors.frozen_text"); // the "held still" ring around the base
 
 export class ArmModel {
   /** @param {THREE.Object3D} object  @param {Record<string, {set(deg:number):void, lower:number, upper:number}>} joints */
@@ -64,9 +65,26 @@ export class ArmModel {
     }
   }
 
-  /** Tint the whole arm (e.g. red when frozen); null = normal colors. */
+  /** Tint the whole arm; null = normal colors. */
   setTint(hex) {
     for (const m of this._materials) if (m.emissive) m.emissive.setHex(hex ?? 0x000000);
+  }
+
+  /** Held still (the brain froze it): the body keeps its steel, and a muted rust ring lies on the floor
+   * around the base (docs/design/DESIGN.md → "Held"; quick job 153: a rust tint made the arm salmon pink). */
+  setHeld(on) {
+    if (!this._heldRing) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.075, 0.085, 48),
+        new THREE.MeshBasicMaterial({ color: HELD_RING, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }),
+      );
+      ring.rotation.x = -Math.PI / 2; // flat on the floor: the scenes are y-up
+      ring.position.y = 0.002;
+      ring.renderOrder = 1;
+      this._heldRing = ring;
+    }
+    if (on && !this._heldRing.parent) this.object.add(this._heldRing);
+    else if (!on && this._heldRing.parent) this.object.remove(this._heldRing);
   }
 }
 

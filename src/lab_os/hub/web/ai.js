@@ -2,6 +2,7 @@
 // robot-tool call as it happens (/api/ai-calls 1×/s). STOP goes over the same WebSocket as every page's.
 import { getLink } from "/static/link.js";
 import { drawRes } from "/web/screen.js";
+import { cap, jointLabel } from "/web/words.js";
 
 const $ = (s) => document.querySelector(s);
 const link = getLink("monitor");  // a watcher: it can only stop
@@ -24,8 +25,8 @@ let after = 0, count = 0, target = null;
 function args(a) {
   return Object.entries(a || {})
     .filter(([k, v]) => v !== null && v !== undefined && k !== "arm")
-    .map(([k, v]) => (typeof v === "object" ? Object.entries(v).map(([j, d]) => `${j} ${d}`).join(", ") : `${k.replace(/_cm$|_pct$/, "")} ${v}`))
-    .join(" · ");
+    .map(([k, v]) => (typeof v === "object" ? Object.entries(v).map(([j, d]) => `${jointLabel(j)} ${d}`).join(", ") : `${k.replace(/_cm$|_pct$/, "")} ${v}`))
+    .join(", ");
 }
 function summary(c) {
   const r = c.result;
@@ -35,11 +36,11 @@ function summary(c) {
   if (r.result && typeof r.result === "string") out.push(r.result);
   if (r.problem) out.push(r.problem);
   if (r.message) out.push(r.message);
-  if (Array.isArray(r.clipped) && r.clipped.length) out.push(`clipped: ${r.clipped.join("; ")}`);
+  if (Array.isArray(r.clipped) && r.clipped.length) out.push(`Clipped: ${r.clipped.join("; ")}`);
   const p = r.gripper_point_cm;
-  if (p) out.push(`gripper at ${p.x}, ${p.y}, ${p.z} cm`);
-  if (r.poses) out.push(Object.keys(r.poses).join(", "));
-  return out.join(" · ");
+  if (p) out.push(`Gripper at ${p.x}, ${p.y}, ${p.z} cm`);
+  if (r.poses) out.push(`Poses: ${Object.keys(r.poses).join(", ")}`);
+  return out.map((t) => cap(t)).join(". ");
 }
 function addCall(c) {
   count += 1;
@@ -48,7 +49,7 @@ function addCall(c) {
   li.className = `call ${c.outcome}`;
   const time = new Date(c.t * 1000).toLocaleTimeString([], { hour12: false });
   const a = args(c.args), s = summary(c);
-  li.innerHTML = `<span class="t">${time}</span><span class="tool">${esc(TOOL[c.tool] || c.tool)}</span><span class="o">${esc(c.outcome)}</span>` +
+  li.innerHTML = `<span class="t">${time}</span><span class="tool">${esc(TOOL[c.tool] || c.tool)}</span><span class="o">${esc(cap(c.outcome))}</span>` +
     (a ? `<code>${esc(a)}</code>` : "") + (s ? `<p>${esc(s)}</p>` : "");
   $("#calls").prepend(li);
   while ($("#calls").children.length > 60) $("#calls").lastElementChild.remove();
@@ -61,15 +62,15 @@ async function pollCalls() {
     $("#empty").hidden = count > 0;
     $("#n-calls").textContent = count ? `${count} this run` : "";
     if (d.mcp) {
-      setPill("#c-tools", `on, port ${new URL(d.mcp).port}`, "on");
+      setPill("#c-tools", `On, port ${new URL(d.mcp).port}`, "on");
       $("#add-cmd").textContent = `claude mcp add --transport http lab-os ${d.mcp}`;
-    } else setPill("#c-tools", "off", "off");
-    setPill("#c-motion", d.motion_allowed ? "allowed here" : "not allowed here", d.motion_allowed ? "on" : "warn");
-    const ctl = { ai: ["the AI, moving", "on"], teleop: ["teleop", "warn"], free: ["free", "off"] }[d.control] || [d.control, "off"];
+    } else setPill("#c-tools", "Off", "off");
+    setPill("#c-motion", d.motion_allowed ? "Allowed here" : "Not allowed here", d.motion_allowed ? "on" : "warn");
+    const ctl = { ai: ["The AI, moving", "on"], teleop: ["Teleop", "warn"], free: ["Free", "off"] }[d.control] || [cap(d.control), "off"];
     setPill("#c-control", ...ctl);
     document.body.classList.toggle("moving", d.control === "ai");
   } catch {
-    setPill("#c-tools", "brain not reachable", "bad");
+    setPill("#c-tools", "Brain not reachable", "bad");
   }
 }
 
@@ -81,15 +82,15 @@ async function pollArm() {
   } catch {
     arm = null;
   }
-  if (!arm) return setPill("#c-arm", "brain not reachable", "bad");
+  if (!arm) return setPill("#c-arm", "Brain not reachable", "bad");
   $("#arm-name").textContent = arm.name;
-  setPill("#c-arm", arm.connected ? "answering" : "disconnected", arm.connected ? "on" : "bad");
+  setPill("#c-arm", arm.connected ? "Answering" : "Disconnected", arm.connected ? "on" : "bad");
   const p = arm.gripper_point_cm;
   $("#gx").textContent = p ? p.x.toFixed(1) : "—";
   $("#gy").textContent = p ? p.y.toFixed(1) : "—";
   $("#gz").textContent = p ? p.z.toFixed(1) : "—";
   $("#gopen").textContent = arm.gripper_open_pct != null ? `${Math.round(arm.gripper_open_pct)}` : "—";
-  $("#side-note").textContent = arm.side_cm ? "seen from its side, cm" : "no side view for this arm model";
+  $("#side-note").textContent = arm.side_cm ? "Seen from its side, cm" : "No side view for this arm model";
 }
 
 /* ---------- the side view ---------- */
@@ -140,7 +141,7 @@ function draw() {
     const [tx, ty] = P(Math.min(far, R1 - 2), target.z);
     cx.strokeStyle = AMBER; cx.lineWidth = 1;
     cx.beginPath(); cx.arc(tx, ty, 7, 0, 2 * Math.PI); cx.moveTo(tx - 12, ty); cx.lineTo(tx + 12, ty); cx.moveTo(tx, ty - 12); cx.lineTo(tx, ty + 12); cx.stroke();
-    cx.fillStyle = AMBER; cx.font = `300 11px ${fLines}`; cx.textAlign = "right"; cx.fillText(out ? `last target: ${far.toFixed(0)} cm out, off this view` : "last target", tx - 4, ty + 24); cx.textAlign = "left";
+    cx.fillStyle = AMBER; cx.font = `300 11px ${fLines}`; cx.textAlign = "right"; cx.fillText(out ? `Last target: ${far.toFixed(0)} cm out, off this view` : "Last target", tx - 4, ty + 24); cx.textAlign = "left";
   }
   // the arm: a glowing line through the joints, a hexagon on each, the jaws at the tip
   cx.strokeStyle = C; cx.lineWidth = 3; cx.shadowColor = C; cx.shadowBlur = 10;
@@ -162,9 +163,9 @@ function draw() {
     cx.beginPath(); cx.moveTo(x + 7, y); cx.lineTo(lx - 30, ly); cx.lineTo(lx - 8, ly); cx.stroke();
     const isTip = p.name === "tip", deg = arm.joints?.[p.name];
     cx.fillStyle = DIM; cx.font = `300 12px ${fLines}`;
-    cx.fillText(isTip ? "gripper tip, cm" : p.name, lx, ly - 7);
+    cx.fillText(isTip ? "Gripper tip, cm" : jointLabel(p.name), lx, ly - 7);
     cx.fillStyle = HOT; cx.font = isTip ? `500 16px ${css("--f-ui")}` : `18px ${fDigits}`;
-    cx.fillText(isTip ? `${p.r.toFixed(1)} out · ${p.z.toFixed(1)} up` : `${deg >= 0 ? " " : "-"}${Math.abs(deg ?? 0).toFixed(1)}`, lx, ly + 15);
+    cx.fillText(isTip ? `${p.r.toFixed(1)} out, ${p.z.toFixed(1)} up` : `${deg >= 0 ? " " : "-"}${Math.abs(deg ?? 0).toFixed(1)}`, lx, ly + 15);
   });
 }
 

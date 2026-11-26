@@ -15,6 +15,7 @@
     .row:first-child { border-top: 0; }
     .row b { font: 500 0.98rem/1.25 var(--f-ui); color: var(--text); }
     .row .help { margin-top: 0.15rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
+    .row .help.path { margin-top: 0.05rem; font: 0.72rem/1.4 var(--f-mono); }
     .lead { margin: 0 0 0.8rem; font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); }
   </style>
 </head>
@@ -52,7 +53,7 @@ if (inHub) document.querySelector("#lead").textContent = "Each page opens here, 
 for (const p of hub?.pages || []) {
   const r = document.createElement("div");
   r.className = "row";
-  r.innerHTML = `<div><b>${esc(p.title)}</b><div class="help">${esc(p.path)} · ${esc(p.line)}</div></div><button type="button" class="btn small">Open</button>`;
+  r.innerHTML = `<div><b>${esc(p.title)}</b><div class="help">${esc(p.line)}</div><div class="help path">${esc(p.path)}</div></div><button type="button" class="btn small">Open</button>`;
   r.querySelector("button").addEventListener("click", () => {
     if (inHub && viewOf[p.path] && p.path !== "/pages") return parent.postMessage({ type: "lab-os-open-view", id: viewOf[p.path] }, location.origin);
     if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here

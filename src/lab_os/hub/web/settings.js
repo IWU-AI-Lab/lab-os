@@ -97,7 +97,7 @@ function control(f, value, onSave, disabled) {
       const rest = f.choices.filter((c) => !chosen.includes(c));
       wrap.innerHTML = `<div class="order">${[...chosen, ...rest].map((c) => {
         const i = chosen.indexOf(c);
-        return `<div><input type="checkbox" ${off} ${i >= 0 ? "checked" : ""} data-v="${esc(c)}"><span>${esc(show(c))}</span>` +
+        return `<div><input type="checkbox" ${off} ${i >= 0 ? "checked" : ""} data-v="${esc(c)}"><span>${esc(f.titles?.[c] || show(c))}</span>` +
           `<button type="button" ${off || i <= 0 ? "disabled" : ""} data-up="${esc(c)}" aria-label="Earlier" title="Earlier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>` +
           `<button type="button" ${off || i < 0 || i === chosen.length - 1 ? "disabled" : ""} data-down="${esc(c)}" aria-label="Later" title="Later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button></div>`;
       }).join("")}</div>`;

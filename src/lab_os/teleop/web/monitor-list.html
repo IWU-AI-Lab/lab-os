@@ -20,7 +20,7 @@
     .raspbot-preview .camera-direction { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; }
     .raspbot-preview .chassis { fill: none; stroke: var(--text-dim); stroke-width: 2; }
     .arm .floor { stroke: var(--line); stroke-width: 1.5; }
-    .arm.frozen .seg { stroke: var(--accent); }
+    .arm.frozen .seg { stroke: var(--frozen-text); }
     .arm .who { font: var(--w-lines) 0.8rem/1.3 var(--f-lines); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .none { margin: auto 0; font: var(--w-lines) 0.9rem/1.45 var(--f-lines); color: var(--text-dim); }
   </style>
@@ -37,7 +37,7 @@
     <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg><span>Monitor</span></div>
     <span class="place"></span>
     <div class="chips" aria-label="Status">
-      <span class="chip"><b>Brain</b><span id="conn" class="pill off">connecting</span></span>
+      <span class="chip"><b>Brain</b><span id="conn" class="pill off">Connecting</span></span>
     </div>
     <span class="grow"></span>
     <span class="clock"></span>

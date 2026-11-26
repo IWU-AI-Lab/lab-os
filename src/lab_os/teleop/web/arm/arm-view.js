@@ -16,8 +16,8 @@ export function createArmView(container) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a84, 2.2));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  scene.add(new THREE.HemisphereLight(color("arm3d.light_sky"), color("arm3d.light_ground"), 2.2));
+  const sun = new THREE.DirectionalLight(color("arm3d.sun"), 1.6);
   sun.position.set(0.6, 1.2, 0.8);
   scene.add(sun);
   // the floor grid: 0.6 m under one arm; with two arms a wider one under both (quick job 119), 5 cm cells

@@ -3,6 +3,7 @@ A fake OpenAI-style server stands in for the AI service: no internet, no keys.""
 
 import asyncio
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -116,8 +117,10 @@ def test_models_yaml_setups():
 
 def test_fallback_when_a_key_is_missing(monkeypatch):
     setups = load_setups()
-    with pytest.raises(NoSetup, match=r"add OPENAI_API_KEY or GEMINI_API_KEY to /.+/\.env, then"):
+    with pytest.raises(NoSetup, match=r"^Add an AI key to \.env, then restart\.$") as got:
         pick("main", setups)
+    # the key names and the file: in the tooltip, not on the screen (quick job 153)
+    assert re.search(r"add OPENAI_API_KEY or GEMINI_API_KEY to /.+/\.env, then", got.value.detail)
     monkeypatch.setenv("GEMINI_API_KEY", "g")
     assert pick("main", setups).name == "backup"
     monkeypatch.setenv("OPENAI_API_KEY", "o")
@@ -256,10 +259,12 @@ async def test_no_key_pauses_with_a_sentence(tmp_path):
     setup = Setup("main", "https://example.invalid/v1", "m", key_env="LAB_TEST_KEY_UNSET")
     conv = conversation(setup, tmp_path)
     events = await collect(conv, "hi")
+    # quick job 153: a short sentence for the screen; the key names and the file in the tooltip
     assert events == [
         {
             "type": "error",
-            "message": "The AI isn't set up here yet: add LAB_TEST_KEY_UNSET to "
+            "message": "Add an AI key to .env, then restart.",
+            "detail": "The AI isn't set up here yet: add LAB_TEST_KEY_UNSET to "
             f"{config.env_file()}, then restart.",
         }
     ]
@@ -475,7 +480,7 @@ def test_every_ai_spend_panel_says_estimated_and_this_brain_only():
     # quick job 41: the hub and the VR hub
     web = SRC / "hub" / "web"
     for page in ("design.html", "xr/panels.js"):
-        assert "Estimated · this computer's brain only" in (web / page).read_text(), page
+        assert "Estimated, this computer's brain only" in (web / page).read_text(), page
     assert "This month, estimated" in (web / "design.html").read_text()
     assert "This month, estimated" in (web / "xr" / "panels.js").read_text()
 

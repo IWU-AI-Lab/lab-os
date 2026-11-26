@@ -55,7 +55,12 @@ class Setup:
 
 
 class NoSetup(LookupError):
-    """No usable AI setup. The message is a full sentence for the screen."""
+    """No usable AI setup. The message is a short sentence for the screen (and for visitors);
+    `detail` names the keys and the file, for the tooltip and the log (quick job 153)."""
+
+    def __init__(self, message: str, detail: str = ""):
+        super().__init__(message)
+        self.detail = detail or message
 
 
 def load_setups(path: Path | None = None) -> dict[str, Setup]:
@@ -95,4 +100,9 @@ def pick(name: str, setups: dict[str, Setup] | None = None) -> Setup:
         tried.append(setup)
         current = setup.fallback
     keys = " or ".join(t.key_env for t in tried if t.key_env)
-    raise NoSetup(f"The AI isn't set up here yet: add {keys} to {config.env_file()}, then restart.")
+    env = config.env_file()  # the repo's own .env is at the top of the repo, not in config/
+    short = env.name if config.is_default() else f"{env.parent.name}/{env.name}"
+    raise NoSetup(
+        f"Add an AI key to {short}, then restart.",
+        f"The AI isn't set up here yet: add {keys} to {env}, then restart.",
+    )
