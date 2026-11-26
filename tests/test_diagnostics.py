@@ -70,9 +70,9 @@ def test_the_ways_in():
     """From the hub's device card, the Command Center's modules and by voice (pagesHere)."""
     hub = (SRC / "hub" / "web" / "design.html").read_text()
     assert "data-dx" in hub and 'S.pageArg = d.id.replace(/^screen:/, "")' in hub
-    assert "?device=${encodeURIComponent(arg)}" in hub
+    assert "?show=${encodeURIComponent(arg)}" in hub
     assert 'out.diagnostics = "Diagnostics' in hub and "showPage(ev.page, ev.device" in hub
     cc = (SRC / "hub" / "web" / "command-center.js").read_text()
-    assert '"diagnostics"' in cc and "?device=" in cc
+    assert '"diagnostics"' in cc and "?show=" in cc
     page = (SRC / "hub" / "web" / "diagnostics.js").read_text()
     assert "export function pick(devices, words)" in page

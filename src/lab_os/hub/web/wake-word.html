@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
-    main.wake { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; align-content: start; overflow: auto; min-height: 0; scrollbar-width: thin; }
+    main.wake { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-content: start; overflow: auto; min-height: 0; scrollbar-width: thin; }
     .card p { margin: 0 0 0.7rem; font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
     .card p b { color: var(--text); font-weight: 500; }
     .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0.6rem 0; }
@@ -24,6 +24,7 @@
     .tries li.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
     .result { font: var(--w-lines) 1rem/1.55 var(--f-lines); color: var(--text); }
     .btn.big { min-height: 3.2rem; padding-inline: 1.4rem; font-size: 1.05rem; }
+    @media (max-width: 640px) { main.wake { grid-template-columns: 1fr; } }
   </style>
 </head>
 <!--
@@ -60,7 +61,7 @@
       <div class="meter" id="meter-word"><i></i><b></b></div>
       <div class="row">
         <button type="button" class="btn primary big" id="rec-word">Record</button>
-        <span id="need-word" class="hint"></span>
+        <span id="need-word" class="hint"></span><span id="msg-word" role="status"></span>
       </div>
       <ul class="tries" id="tries" aria-label="The score of each try"></ul>
     </div></section>
@@ -71,7 +72,7 @@
       <div class="meter" id="meter-other"><i></i><b></b></div>
       <div class="row">
         <button type="button" class="btn big" id="rec-other">Record 10 s</button>
-        <span id="need-other" class="hint"></span>
+        <span id="need-other" class="hint"></span><span id="msg-other" role="status"></span>
       </div>
     </div></section>
 
@@ -112,9 +113,9 @@ const current = () => info.words.find((w) => w.id === word);
 function render() {
   const w = current();
   if (!w) return;
-  document.querySelectorAll(".phrase").forEach((e) => (e.textContent = w.phrase));
+  document.querySelectorAll(".phrase").forEach((e) => (e.textContent = w.phrase.charAt(0).toUpperCase() + w.phrase.slice(1)));
   $("#counts").textContent = `${w.word_clips} tries, ${w.other_s} s of other talk`;
-  $("#tone").textContent = `Try ${w.word_clips + 1}: say "${w.phrase}" ${TONES[w.word_clips % TONES.length]}.`;
+  $("#tone").textContent = `Try ${w.word_clips + 1}: say "${w.phrase.charAt(0).toUpperCase() + w.phrase.slice(1)}" ${TONES[w.word_clips % TONES.length]}.`;
   $("#need-word").textContent = w.word_clips >= info.need_word ? "Enough. More tones help." : `${info.need_word - w.word_clips} more for Train`;
   $("#need-other").textContent = w.other_s >= info.need_other_s ? "Enough." : `${Math.ceil(info.need_other_s - w.other_s)} s more for Train`;
   const ready = w.word_clips >= info.need_word && w.other_s >= info.need_other_s;
@@ -175,11 +176,11 @@ function record(seconds, meter) {
 async function take(kind) {
   if (busy) return;
   busy = true; render();
-  $("#msg").textContent = "";
+  $(`#msg-${kind}`).textContent = "";
   try {
     await openMic();
     await mic.ctx.resume();
-    $("#msg").textContent = kind === "word" ? "Listening: say the word now." : "Listening: talk now, without the word.";
+    $(`#msg-${kind}`).textContent = kind === "word" ? "Listening: say the word now." : "Listening: talk now, without the word.";
     const pcm = await record(kind === "word" ? WORD_S : OTHER_S, $(kind === "word" ? "#meter-word" : "#meter-other"));
     const r = await fetch(`/api/wake-word/${word}/clip?kind=${kind}`, { method: "POST", body: pcm.buffer });
     if (!r.ok) throw new Error(await r.text());
@@ -191,10 +192,10 @@ async function take(kind) {
       li.className = out.score < 0.1 ? "low" : out.score >= 0.5 ? "ok" : "";
       li.title = out.score < 0.1 ? "The word model hardly heard this try. Say it a little clearer." : "The word model's score for this try";
       $("#tries").append(li);
-      $("#msg").textContent = out.score < 0.1 ? `Kept. The score was ${out.score.toFixed(2)}: the word model hardly heard it. Try again a little clearer.` : `Kept (score ${out.score.toFixed(2)}).`;
-    } else $("#msg").textContent = "Kept.";
+      $(`#msg-${kind}`).textContent = out.score < 0.1 ? `Kept. The score was ${out.score.toFixed(2)}: the word model hardly heard it. Try again a little clearer.` : `Kept (score ${out.score.toFixed(2)}).`;
+    } else $(`#msg-${kind}`).textContent = "Kept.";
   } catch (e) {
-    $("#msg").textContent = e?.name === "NotAllowedError" ? "The browser blocks the microphone for this page." : `Not kept: ${e.message || e}`;
+    $(`#msg-${kind}`).textContent = e?.name === "NotAllowedError" ? "Allow the microphone in the browser’s site permissions. Then press Record again." : `Not kept: ${e.message || e}`;
   } finally {
     busy = false; render();
   }

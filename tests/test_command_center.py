@@ -225,4 +225,4 @@ async def test_the_opening_plays_and_can_be_skipped(aiohttp_client):
     js = (SRC / "hub" / "web" / "command-center.js").read_text()
     assert 'import { playIntro } from "/hub/command-center-intro.js"' in js
     html = await (await client.get("/command-center")).text()
-    assert "@property --hole" in html and "body.intro .page > *" in html
+    assert ".radar" in html and "q-minimal" in intro

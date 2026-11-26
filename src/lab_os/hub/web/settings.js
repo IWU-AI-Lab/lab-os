@@ -7,6 +7,8 @@
 // Device" is kept by the brain under the device's name (the ?device= in the hub's address; /web/device.js).
 // After a save, the hub around this page (if any) re-reads the theme.
 import { deviceName, displayName, prefs, renameDevice, setPref } from "/web/device.js";
+import { theme } from "/web/theme.js";
+import { screenPreview } from "./screen-preview.js";
 import { currentLook, personaTable } from "./persona-table.js";
 
 const $ = (s) => document.querySelector(s);
@@ -16,7 +18,8 @@ const ICONS = "/web/design/icons.svg";
 const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="${ICONS}#${id}"/></svg>`;
 
 /* ---------- words: Title Case for what the page shows (the values saved stay as they are) ---------- */
-const NAMES = { ai: "AI Control", design: "Designed Hub", plain: "Plain Hub", jarvis: "J.A.R.V.I.S.", "24h": "24-Hour", "12h": "12-Hour", "push-to-talk": "Push-to-Talk",
+function showQuality(q) { return q[0].toUpperCase() + q.slice(1); }
+const NAMES = { theme: `Theme (${showQuality(theme.quality?.default || "full")})`, ai: "AI Control", design: "Designed Hub", plain: "Plain Hub", jarvis: "J.A.R.V.I.S.", "24h": "24-Hour", "12h": "12-Hour", "push-to-talk": "Push-to-Talk",
   hey_jarvis: "Hey Jarvis", ok_computer: "OK Computer", tars: "TARS", hey_friday: "Hey Friday", none: "None" };  // the wake words (quick job 90)
 const SMALL = new Set(["a", "an", "and", "of", "the", "to", "on", "in", "for"]);
 function show(v) {
@@ -145,6 +148,7 @@ function fieldRow(f, value, save, disabled) {
   const unit = f.kind === "number" ? ctl.querySelector(".unit") : null;
   unit?.remove();
   r = row(f.label, f.help, ctl, f.unit || "");
+  r.dataset.key = f.key;
   return r;
 }
 
@@ -229,7 +233,7 @@ function btn(label, cls = "") {
 /* ---------- this device's names (quick job 132): the one people read, and the device name (its ID) ---------- */
 function displayNameRow() {
   const f = { key: "display_name", label: "Display Name", kind: "text",
-    help: NAME ? "The name that Open on…, the Devices panel and the assistant show, for example \"Windows desktop 3\"." : "Give this device a device name first (below)." };
+    help: NAME ? "The name that Open on…, the Devices panel and the assistant show, for example \"Windows desktop 3\"." : "Give this device a device name first." };
   return fieldRow(f, screenGet().display_name || "", (v) => screenSet("display_name", v.trim()), !NAME);
 }
 function deviceNameRow() {
@@ -466,9 +470,36 @@ function roomRow() {
 /* ---------- the persona chooser as a round table (quick job 151): full and maximal looks only ---------- */
 async function roundTable(r, readOnly) {
   const look = currentLook();
-  if (look !== "full" && look !== "maximal") return;  // reduced and minimal: the plain row
   const data = await fetch("/api/personas", { cache: "no-store" }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
   if (!data?.personas?.length) return;
+  r.personas = data.personas;
+  if (look !== "full" && look !== "maximal") {
+    const panel = document.createElement("div");
+    panel.className = "plain-preview";
+    panel.innerHTML = '<p></p><button type="button" class="btn">Hear It Again</button><span role="status"></span>';
+    r.append(panel);
+    const audio = new Audio();
+    let persona;
+    const select = (id, hear) => {
+      persona = data.personas.find((p) => p.id === id) || data.personas[0];
+      panel.querySelector("p").textContent = persona.greeting;
+      audio.pause();
+      panel.querySelector("span").textContent = "";
+      if (hear) play();
+    };
+    const play = async () => {
+      const status = panel.querySelector("span");
+      if (prefs().sound === false) { status.textContent = "Sound is off on this device."; return; }
+      audio.src = `/api/personas/${encodeURIComponent(persona.id)}/preview`;
+      try { await audio.play(); } catch (e) { if (e.name !== "AbortError") status.textContent = "Voice preview unavailable."; }
+    };
+    r.previewVoice = (id) => select(id, true);
+    panel.querySelector("button").onclick = play;
+    r.addEventListener("click", (e) => { if (e.target.dataset.v) select(e.target.dataset.v, true); });
+    r.addEventListener("change", (e) => { if (e.target.matches("select")) select(e.target.value, true); });
+    select(data.active, false);
+    return;
+  }
   // "Choose" presses the row's own button for that persona: one way to save, "✓ Saved" in the row
   const choose = async (id) => {
     const b = r.querySelector(`.seg button[data-v="${CSS.escape(id)}"]`), sel = r.querySelector("select");
@@ -509,7 +540,7 @@ async function start() {
   }
   // This Device: most used first, then what's for slow screens and other monitors
   const dev = group("device", "This Device", NAME ? `${displayName()}: every window of this device uses these` : "This browser only: add a device name to keep them under a name", { icon: "i-screen" });
-  dev.append(displayNameRow(), deviceNameRow());
+  dev.append(deviceNameRow(), displayNameRow());
   for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
   const voiceSlot = dev.appendChild(document.createElement("div"));
   voiceRows().then((rows) => voiceSlot.replaceWith(...rows), (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });
@@ -566,4 +597,44 @@ async function start() {
   }
   setRestart(data.restart_needed, data.restart_keys);
 }
+function preview(e) {
+  const r = e.target.closest(".row");
+  if (!r || !$("#preview").offsetWidth) return;
+  const title = r.querySelector("label").textContent;
+  $("#preview h2").textContent = title;
+  $("#preview-help").textContent = r.querySelector(".help")?.textContent || "";
+  const sample = $("#sample");
+  sample.replaceChildren();
+  sample.style.removeProperty("--c");
+  const color = r.querySelector('input[type="color"]');
+  if (color) {
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.backgroundColor = color.value;
+    sample.append(swatch, color.value);
+  } else if (r.dataset.key === "quality") {
+    const value = e.target.closest("[data-v]")?.dataset.v || screenGet().quality || "theme";
+    const quality = value === "theme" ? theme.quality?.default || "full" : value;
+    sample.className = quality;
+    sample.innerHTML = `<div class="${esc(quality)}">${screenPreview({}, 220)}</div>`;
+    sample.append(show(quality));
+  } else if (r.personas) {
+    const name = e.target.closest(".pname")?.textContent || r.querySelector(".pn")?.textContent;
+    const persona = r.personas.find((p) => p.display_name === name || p.id === (e.target.dataset.v || r.querySelector('[aria-pressed="true"][data-v]')?.dataset.v));
+    if (persona) {
+      sample.innerHTML = screenPreview({}, 180);
+      sample.style.setProperty("--c", `var(--${persona.picture?.color || "primary"})`);
+      sample.append(persona.display_name, " — ", persona.greeting);
+      const hear = btn("Hear It Again");
+      hear.onclick = () => {
+        const tag = [...r.querySelectorAll(".pname")].find((button) => button.textContent === persona.display_name);
+        if (tag && tag.getAttribute("aria-pressed") !== "true") tag.click();
+        else if (r.previewVoice) r.previewVoice(persona.id);
+        else r.querySelector(".hear")?.click();
+      };
+      sample.append(hear);
+    }
+  }
+}
+for (const event of ["pointerover", "focusin", "input", "click"]) $("#list").addEventListener(event, preview);
 start();

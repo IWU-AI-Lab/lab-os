@@ -147,35 +147,33 @@
     #module .top { display: flex; align-items: center; gap: 0.8rem; }
     #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
     #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
-    /* the opening (quick job 140; command-center-intro.js): over the page until the reveal */
-    @property --hole { syntax: "<length>"; inherits: false; initial-value: 0px; }
-    body.intro .page > *, body.intro #fs-btn { opacity: 0; }
-    #intro { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow: hidden; cursor: default; }
-    #intro .bg { position: absolute; inset: 0; background: var(--bg);
-      -webkit-mask: radial-gradient(circle at 50% 50%, transparent var(--hole), #000 calc(var(--hole) + 80px)); mask: radial-gradient(circle at 50% 50%, transparent var(--hole), #000 calc(var(--hole) + 80px)); }
-    #intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-    #intro .tv { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: var(--hot); box-shadow: 0 0 18px var(--c), 0 0 4px var(--hot); }
-    #intro .rig { position: absolute; left: 50%; top: 42%; width: min(46vh, 22rem); aspect-ratio: 1; translate: -50% -50%; color: var(--c); }
-    #intro .rig svg { width: 100%; height: 100%; overflow: visible; }
-    #intro .rig svg > * { transform-box: view-box; transform-origin: 0 0; }
-    #intro .rig circle:not(.core), #intro .rig .br, #intro .rig line { fill: none; stroke: currentColor; }
-    #intro .rig .br { stroke: var(--hot); stroke-width: 2.5; }
-    #intro .rig .ticks { stroke-width: 1; opacity: 0.8; }
-    #intro .rig .r1 { stroke-width: 3; }
-    #intro .rig .r2 { stroke-width: 2; }
-    #intro .rig .r3 circle { stroke-width: 1.5; }
-    #intro .rig .r3 path { fill: var(--hot); }
-    #intro .rig .flare { fill: var(--hot); filter: drop-shadow(0 0 6px var(--c)); }
-    #intro .ttl { position: absolute; top: calc(42% + min(23vh, 11rem) + 1.2rem); left: 0; right: 0; text-align: center;
-      font: 700 clamp(1.4rem, 3.2vw, 2.6rem)/1 var(--f-title); letter-spacing: 0.28em; color: var(--hot); text-shadow: 0 0 14px var(--c); }
-    #intro .ttl span { display: inline-block; min-width: 0.5em; }
-    #intro .rows { position: absolute; top: calc(42% + min(23vh, 11rem) + 4.4rem); left: 50%; translate: -50% 0; width: min(26rem, 80vw); display: grid; gap: 0.35rem; }
-    #intro .ln { display: grid; grid-template-columns: auto minmax(1rem, 1fr) auto; gap: 0.6rem; align-items: baseline;
-      font: 600 0.75rem/1.2 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
-    #intro .ln i { border-bottom: 1px dotted color-mix(in srgb, var(--c) 60%, transparent); transform-origin: 0 50%; }
-    #intro .ln b { font: 1rem/1 var(--f-digits); color: var(--c); letter-spacing: 0.06em; }
-    #intro .skip { position: absolute; bottom: 1.4rem; left: 0; right: 0; margin: 0; text-align: center; font: var(--w-lines) 0.8rem/1 var(--f-lines); color: var(--text-dim); opacity: 0.7; }
-    @media (max-width: 1100px) { .cc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(22rem, 1fr) auto; } .side .list { max-height: 12rem; } #pages-card, #act-card { max-height: none; } #activity { max-height: 10rem; } }
+    #intro { position: fixed; inset: 0; z-index: 60; display: grid; place-content: center;
+      justify-items: center; gap: .8rem; background: var(--bg); }
+    .radar { position: relative; width: min(45vmin, 16rem); aspect-ratio: 1; border: 1px solid var(--c); border-radius: 50%;
+      background: repeating-radial-gradient(circle, transparent 0 22%, var(--line) 23% 24%, transparent 25%); }
+    .radar::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(transparent 80%, var(--c)); animation: scan 2s linear forwards; }
+    @keyframes scan { to { transform: rotate(360deg); } }
+    .blip { position: absolute; width: .55rem; height: .55rem; border-radius: 50%; background: var(--hot); transform: translate(-50%, -50%); }
+    #intro h2 { margin: 0; }
+    .cc-tabs { display: none; }
+    #pages { padding-bottom: .7rem; }
+    #pages-card > .in { max-height: 52vh; }
+    .node.gone { min-width: 0; }
+    .node.gone small { display: none; }
+    @media (max-width: 1100px) {
+      .page { grid-template-rows: auto auto minmax(0, 1fr); }
+      .cc-tabs { display: flex; overflow-x: auto; }
+      .cc-tabs button[aria-pressed="true"], #multi[aria-pressed="true"] { color: var(--hot); border-color: var(--c); }
+      .cc { grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+      .cc > section { display: none; }
+      .cc[data-panel="Workspace"] .mid, .cc[data-panel="Devices"] .left,
+      .cc[data-panel="Inspector"] .right, .cc[data-panel="Pages"] .right { display: grid; }
+      .right { grid-template-rows: minmax(0,1fr); }
+      .cc[data-panel="Inspector"] #pages-card, .cc[data-panel="Pages"] #insp { display: none; }
+      #pages-card, #pages-card > .in { max-height: 100%; }
+      .tools { flex-wrap: wrap; }
+      .legend { display: none; }
+    }
   </style>
 </head>
 <!--
@@ -194,7 +192,8 @@
     <span class="grow"></span>
     <span class="clock"></span>
   </header>
-  <main class="cc">
+  <nav class="cc-tabs" aria-label="Command Center panels"><button type="button" class="btn small" aria-pressed="true">Workspace</button><button type="button" class="btn small" aria-pressed="false">Devices</button><button type="button" class="btn small" aria-pressed="false">Pages</button><button type="button" class="btn small" aria-pressed="false">Inspector</button></nav>
+  <main class="cc" data-panel="Workspace">
     <section class="left">
       <div class="card side" aria-label="Devices and screens"><div class="in">
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><small id="dev-count" class="hint"></small></h2>
@@ -208,6 +207,7 @@
     <section class="mid">
       <div class="tools">
         <input id="search" type="search" placeholder="Search devices and screens" aria-label="Search">
+        <button class="btn small virtual" id="multi" aria-pressed="false" type="button">Select multiple</button>
         <button class="btn small virtual" id="fit" type="button" title="Show every item in the workspace">Fit</button>
         <button class="btn small virtual" id="show-all" type="button" hidden>Show all</button>
         <button class="btn small" id="start-all" type="button" hidden title="Start the start screen on every device that shows it"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Start All</button>
@@ -232,7 +232,7 @@
 <div id="module" hidden>
   <div class="top"><b id="module-title"></b>
     <button class="btn small virtual" id="module-own" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-window"/></svg>Own window</button>
-    <button class="btn small" id="module-back" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-back"/></svg>Back</button>
+    <button class="btn small" id="module-back" type="button" aria-label="Close module">×</button>
   </div>
   <iframe id="module-frame" title="Module"></iframe>
 </div>

@@ -8,14 +8,10 @@
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
     #list { overflow-y: auto; max-width: 64rem; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-    .rows { border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent);
-      clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem); }
-    .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 0.8rem; align-items: center; padding: 0.7rem 0.8rem 0.7rem 1rem;
-      border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); min-height: 3.2rem; }
-    .row:first-child { border-top: 0; }
-    .row b { font: 500 0.98rem/1.25 var(--f-ui); color: var(--text); }
-    .row .help { margin-top: 0.15rem; font: var(--w-lines) 0.8rem/1.4 var(--f-lines); color: var(--text-dim); }
-    .row .help.path { margin-top: 0.05rem; font: 0.72rem/1.4 var(--f-mono); }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr)); gap: .5rem; }
+    .tile { display: grid; gap: .4rem; align-content: start; text-align: left; padding: .7rem; }
+    .tile small { font: var(--w-lines) .85rem/1.35 var(--f-lines); color: var(--text-dim); white-space: normal; text-transform: none; letter-spacing: normal; }
+    #search { width: min(100%, 25rem); }
     .lead { margin: 0 0 0.8rem; font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); }
   </style>
 </head>
@@ -35,11 +31,13 @@
   </header>
   <main id="list">
     <p class="lead" id="lead">Each page opens in a window of its own.</p>
+    <input type="search" id="search" aria-label="Search pages" placeholder="Search pages">
     <div class="rows" id="rows"></div>
   </main>
 </div>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module">
+import { PAGE_GROUPS } from "/hub/page-groups.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const rows = document.querySelector("#rows");
 const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
@@ -50,16 +48,39 @@ try { inHub = parent !== window && parent.location.origin === location.origin &&
 const viewOf = Object.fromEntries((hub?.views || []).filter((v) => v.page).map((v) => [v.page, v.id]));
 viewOf["/"] = "hub";
 if (inHub) document.querySelector("#lead").textContent = "Each page opens here, in the hub. Open on… moves it to a window of its own.";
-for (const p of hub?.pages || []) {
-  const r = document.createElement("div");
-  r.className = "row";
-  r.innerHTML = `<div><b>${esc(p.title)}</b><div class="help">${esc(p.line)}</div><div class="help path">${esc(p.path)}</div></div><button type="button" class="btn small">Open</button>`;
-  r.querySelector("button").addEventListener("click", () => {
-    if (inHub && viewOf[p.path] && p.path !== "/pages") return parent.postMessage({ type: "lab-os-open-view", id: viewOf[p.path] }, location.origin);
-    if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
-  });
-  rows.append(r);
+function renderPages() {
+  if (!hub?.pages?.length) return;
+  rows.replaceChildren();
+  const query = document.querySelector("#search").value.trim().toLowerCase();
+  const groups = new Map([...PAGE_GROUPS, ["Other", []]].map(([name]) => [name, []]));
+  for (const p of hub.pages) {
+    const name = PAGE_GROUPS.find(([, ids]) => ids.includes(viewOf[p.path]))?.[0] || "Other";
+    if (`${name} ${p.title} ${p.line} ${p.path}`.toLowerCase().includes(query)) groups.get(name).push(p);
+  }
+  for (const [name, pages] of groups) {
+    if (!pages.length) continue;
+    const title = document.createElement("h2");
+    title.textContent = name;
+    const tiles = document.createElement("div");
+    tiles.className = "tiles";
+    rows.append(title, tiles);
+    for (const p of pages) {
+      const r = document.createElement("button");
+      r.type = "button";
+      r.className = "btn tile";
+      r.setAttribute("aria-label", `Open ${p.title}`);
+      r.innerHTML = `<b>${esc(p.title)}</b><small>${esc(p.line)}</small>`;
+      r.addEventListener("click", () => {
+        if (inHub && viewOf[p.path] && p.path !== "/pages") return parent.postMessage({ type: "lab-os-open-view", id: viewOf[p.path] }, location.origin);
+        if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
+      });
+      tiles.append(r);
+    }
+  }
+  if (!rows.children.length) rows.textContent = "No page matches the search.";
 }
+document.querySelector("#search").addEventListener("input", renderPages);
+renderPages();
 </script>
 </body>
 </html>

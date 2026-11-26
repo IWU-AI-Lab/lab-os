@@ -1,5 +1,5 @@
 // Diagnostics (quick job 135): a card for each device, made to fit its kind, from GET /api/diagnostics every
-// second. ?device=<words> shows one device: its id, name or display name, or words such as "the Raspbot" or
+// second. ?show=<words> shows one device: its id, name or display name, or words such as "the Raspbot" or
 // "white arm" (the assistant passes what the person said). Only reads; nothing here changes a device.
 import { cap, jointLabel } from "/web/words.js";
 
@@ -95,14 +95,14 @@ function card(d, one) {
   const via = d.connected && d.via ? `<dl class="stats">${stat("Connected by", esc(d.via))}</dl>` : "";
   const tag = p.fake ? `<span class="tag">Fake</span>` : "";
   const state = d.connected ? `<span class="pill on">Connected</span>` : `<span class="pill off">Off</span>`;
-  const more = one ? "" : `<button class="btn small" type="button" data-one="${esc(d.id)}" title="Only this device">${ico("i-open")}</button>`;
+  const more = one ? "" : `<button class="btn small" type="button" data-one="${esc(d.id)}" aria-label="Show only ${esc(d.name)}">Show only</button>`;
   return `<section class="card dev${d.connected ? "" : " off"}" data-id="${esc(d.id)}"><div class="in">
     <div class="head">${ico(icon)}<b title="${esc(word)}">${esc(d.name)}</b>${tag}${state}${more}</div>${what}${body || via}</div></section>`;
 }
 
 // ---------- the page ----------
 const params = new URLSearchParams(location.search);
-let want = params.get("device") || "";
+let want = params.get("show") || "";
 let devices = [];
 function render() {
   const grid = $("#grid");
@@ -114,9 +114,9 @@ function render() {
   // keep a camera's picture element (it loads on its own timer); redraw the rest
   grid.innerHTML = shown.length ? shown.map((d) => card(d, !!one)).join("") : `<p class="what">The brain lists no device yet.</p>`;
   const on = devices.filter((d) => d.connected).length;
-  const problems = devices.filter((d) => d.connected && (d.bad || d.panel?.health === "no_answer" || d.panel?.motors?.some((m) => m.state === "bad") || d.panel?.pi?.power === "low")).length;
-  $("#sum").innerHTML = `<span class="chip"><b>Connected</b> ${on}</span><span class="chip"><b>Off</b> ${devices.length - on}</span>`
-    + `<span class="pill ${problems ? "bad" : "on"}">${problems ? `${problems} with a problem` : "No problem found"}</span>`;
+  const problems = shown.filter((d) => d.connected && (d.bad || d.panel?.health === "no_answer" || d.panel?.motors?.some((m) => m.state === "bad") || d.panel?.pi?.power === "low")).length;
+  $("#sum").innerHTML = `<span class="chip">Showing ${shown.length} of ${devices.length}</span><span class="chip"><b>Connected</b> ${on}</span><span class="chip"><b>Off</b> ${devices.length - on}</span>`
+    + `<span class="pill ${problems ? "bad" : "on"}">${problems ? `${problems} with a problem` : shown.some((d) => d.panel?.fake) ? "Includes simulated readings" : "No reported problems"}</span>`;
   for (const img of grid.querySelectorAll("img[data-cam]")) loadPicture(img);
 }
 let picTimer = 0;
@@ -145,12 +145,14 @@ $("#grid").addEventListener("click", (e) => {
   const b = e.target.closest("[data-one]");
   if (!b) return;
   want = b.dataset.one;
-  history.replaceState(null, "", `?device=${encodeURIComponent(want)}`);
+  params.set("show", want);
+  history.replaceState(null, "", `?${params}`);
   render();
 });
 $("#all").addEventListener("click", () => {
   want = "";
-  history.replaceState(null, "", location.pathname);
+  params.delete("show");
+  history.replaceState(null, "", location.pathname + (params.size ? `?${params}` : ""));
   render();
 });
 poll();

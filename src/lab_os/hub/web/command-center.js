@@ -24,6 +24,7 @@
 // The positions are plain 2D numbers in the workspace's own units, kept apart from the drawing, so a 3D
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
+import { PAGE_GROUPS } from "./page-groups.js";
 import { playIntro } from "/hub/command-center-intro.js";
 import { screenPreview, screenTitle as shows } from "/hub/screen-preview.js";
 
@@ -32,7 +33,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const ico = (id) => `<svg class="ico"><use href="/web/design/icons.svg#${id}"/></svg>`;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const POLL_MS = 1500;
-const SHOT_W = 200, GAP = 48, ROW_W = 1500;  // workspace units (px at zoom 1)
+const SHOT_W = 160, GAP = 24;  // workspace units (px at zoom 1)
 const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-cam", robot: "i-pi", headset: "i-headset", usb: "i-chip" };
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
 const VIEW_ICON = {
@@ -41,16 +42,11 @@ const VIEW_ICON = {
   system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
 };
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
-// (quick job 135: every device has Diagnostics, made to fit it: /diagnostics?device=<id>)
+// (quick job 135: every device has Diagnostics, made to fit it: /diagnostics?show=<id>)
 const KIND_MODULES = { hub: ["diagnostics"], arm: ["teleop", "ai", "diagnostics"], leader: ["teleop", "diagnostics"], robot: ["raspbot", "diagnostics"],
   camera: ["cameras", "diagnostics"], headset: ["teleop", "diagnostics"], usb: ["diagnostics"] };
 // the Pages list: its groups, in order (a page in none goes in "Other"), the pages that cannot open on
 // another screen, and the short names of the tiles (the full name is the tile's title)
-const PAGE_GROUPS = [
-  ["Robots", ["teleop", "monitor", "monitor-so101", "monitor-xarm", "ai", "training", "webcam", "raspbot"]],
-  ["Cameras", ["cameras"]],
-  ["The hub", ["hub", "settings", "wake-word", "diagnostics", "project", "spend", "commits", "devices", "system", "chat"]],
-];
 const NOT_ELSEWHERE = new Set(["xr", "remote", "pages", "command"]);
 // each page tile says the page's own title, as All Pages and the hub do (quick job 153: shorter names here
 // made "Monitors" and "SO-101" of "Monitor" and "SO-101 Monitor")
@@ -182,6 +178,7 @@ function eye(key) {
 function devRow(d) {
   const r = document.createElement("div");
   r.className = `row${S.sel.has(d.key) ? " sel" : ""}${isHidden(d.key) ? " off" : ""}${d.gone ? " gone" : ""}${lit(d) ? " lit" : ""}`;
+  r.tabIndex = 0;
   r.dataset.key = d.key;
   const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? ` ${ico("i-hand")}` : "";
   r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${drive}</b>${eye(d.key)}`
@@ -196,6 +193,7 @@ function scrRow(s, under) {
   const name = own ? n || shows(s.w) : `${devTitle(s.device)}${n ? ` ${n}` : ""}`;
   const r = document.createElement("div");
   r.className = `row${under ? " scr" : ""}${S.sel.has(s.key) ? " sel" : ""}${isHidden(s.key) ? " off" : ""}`;
+  r.tabIndex = 0;
   r.dataset.key = s.key;
   r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span><b title="${esc(name)}">${esc(name)}</b>${eye(s.key)}`
     + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button>`
@@ -335,18 +333,24 @@ function openPageOn(view, key) {
 
 // ---------- the workspace ----------
 function placeNew(els) {
-  // items without a place go in rows under the placed ones (measured, so they never overlap)
-  const placed = Object.values(S.layout.places);
-  const all = [...$("#stage").children].filter((n) => !els.includes(n));
-  let y = all.length ? Math.max(...all.map((n) => n.offsetTop + n.offsetHeight)) + GAP : placed.length ? Math.max(...placed.map((p) => p[1])) + 300 : 0;
-  let x = 0, rowH = 0;
-  for (const el of els) {
-    const w = el.offsetWidth, h = el.offsetHeight;
-    if (x && x + w > ROW_W) { x = 0; y += rowH + GAP; rowH = 0; }
-    S.layout.places[el.dataset.key] = [x, y];
+  const stage = $("#stage");
+  const active = [...stage.children].filter((el) => !el.classList.contains("gone"));
+  const placed = active.filter((el) => !els.includes(el));
+  const rowWidth = Math.max(340, $("#ws").clientWidth - 60);
+  let x = 0, y = placed.length ? Math.max(...placed.map((el) => el.offsetTop + el.offsetHeight)) + GAP : 0;
+  let height = 0;
+  function put(el) {
+    if (x && x + el.offsetWidth > rowWidth) { x = 0; y += height + GAP; height = 0; }
     el.style.left = `${x}px`; el.style.top = `${y}px`;
-    x += w + GAP; rowH = Math.max(rowH, h);
+    S.layout.places[el.dataset.key] = [x, y];
+    x += el.offsetWidth + GAP;
+    height = Math.max(height, el.offsetHeight);
   }
+  for (const el of active) if (els.includes(el)) put(el);
+  x = 0;
+  y = active.length ? Math.max(...active.map((el) => el.offsetTop + el.offsetHeight)) + GAP : 0;
+  height = 0;
+  for (const el of stage.querySelectorAll(".gone")) put(el);
   if (els.length) saveLayout();
 }
 // screens' devices first, then screens on their own, then the other devices, then the ones off now (the
@@ -363,8 +367,9 @@ function renderWorkspace(devs, scr) {
   stage.innerHTML = "";
   const fresh = [];
   const put = (el, key) => {
+    el.tabIndex = 0;
     const at = S.layout.places[key];
-    if (at) { el.style.left = `${at[0]}px`; el.style.top = `${at[1]}px`; } else fresh.push(el);
+    if (at && !(S.wasOff.has(key) && !el.classList.contains("gone"))) { el.style.left = `${at[0]}px`; el.style.top = `${at[1]}px`; } else fresh.push(el);
     stage.append(el);
   };
   for (const item of itemOrder(devs, lone)) {
@@ -401,6 +406,7 @@ function renderWorkspace(devs, scr) {
 function shotEl(s) {
   const el = document.createElement("div");
   el.className = `shot${S.sel.has(s.key) ? " sel" : ""}${matches(scrText(s)) ? "" : " dim"}`;
+  el.tabIndex = 0;
   el.dataset.key = s.key;
   el.innerHTML = screenPreview(s.w, SHOT_W) + under(s);
   return el;
@@ -410,7 +416,7 @@ function applyView() {
 }
 function fit() {
   const nodes = [...$("#stage").children];
-  if (!nodes.length) return;
+  if (!nodes.length || !$("#ws").clientWidth) return;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const n of nodes) {
     const x = n.offsetLeft, y = n.offsetTop;
@@ -419,7 +425,7 @@ function fit() {
   }
   const ws = $("#ws").getBoundingClientRect(), pad = 30;
   // a few devices get large previews, many get small ones (quick job 149); centred both ways
-  const z = Math.max(0.2, Math.min(2.6, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0)));
+  const z = Math.min(1, (ws.width - 2 * pad) / (x1 - x0), (ws.height - 2 * pad) / (y1 - y0));
   S.view = { z, x: pad - x0 * z + Math.max(0, (ws.width - 2 * pad - (x1 - x0) * z) / 2), y: pad - y0 * z + Math.max(0, (ws.height - 2 * pad - (y1 - y0) * z) / 2) };
   applyView();
 }
@@ -434,8 +440,21 @@ function autoFit(force = false) {
 new ResizeObserver(() => autoFit()).observe($("#ws"));
 
 // ---------- highlight, drag, pan, zoom ----------
+let multi = false;
+$("#multi").onclick = () => {
+  multi = !multi;
+  $("#multi").setAttribute("aria-pressed", String(multi));
+};
+$(".cc-tabs").onclick = (event) => {
+  const tab = event.target.closest("button");
+  if (!tab) return;
+  $(".cc").dataset.panel = tab.textContent;
+  for (const b of $(".cc-tabs").children) b.setAttribute("aria-pressed", String(b === tab));
+  if (tab.textContent === "Pages") shutPages(false);
+  render(true);
+};
 function pick(key, add) {
-  if (add) S.sel.has(key) ? S.sel.delete(key) : S.sel.add(key);
+  if (add || multi) S.sel.has(key) ? S.sel.delete(key) : S.sel.add(key);
   else if (S.sel.size === 1 && S.sel.has(key)) S.sel.clear();
   else S.sel = new Set([key]);
   S.msg = "";
@@ -552,8 +571,16 @@ $("#devices").addEventListener("click", (e) => {
   if (e.target.closest(".foc")) return focus(key.startsWith("s:") ? `d:${key.slice(2).split("#")[0]}` : key);
   pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
 });
+$(".cc").addEventListener("keydown", (e) => {
+  if (!e.target.matches("[data-key]") || !["Enter", " "].includes(e.key)) return;
+  e.preventDefault();
+  const selector = e.target.closest("#devices") ? "#devices" : "#stage";
+  const key = e.target.dataset.key;
+  pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
+  $(selector).querySelector(`[data-key="${CSS.escape(key)}"]`)?.focus();
+});
 $("#search").addEventListener("input", (e) => { S.search = e.target.value; render(true); });
-$("#fit").addEventListener("click", () => { S.autoFit = true; autoFit(true); });
+$("#fit").addEventListener("click", () => { placeNew([...$("#stage").children]); S.autoFit = true; autoFit(true); });
 $("#show-all").addEventListener("click", () => { S.layout.hidden = []; saveLayout(); render(true); });
 
 // ---------- workspace-only changes ----------
@@ -656,7 +683,7 @@ function actButtons(box, acts, devs, after = () => {}) {
   for (const a of acts) {
     const wrap = document.createElement("span");
     wrap.style.display = "contents";
-    if (a.kind === "page" || a.kind === "group") {
+    if ((a.kind === "page" && !box.closest("#insp")) || a.kind === "group") {
       wrap.innerHTML = a.kind === "page" ? pageSelect() : groupSelect(devs);
       const sel = wrap.querySelector("select");
       sel.addEventListener("change", () => {
@@ -671,7 +698,7 @@ function actButtons(box, acts, devs, after = () => {}) {
     b.addEventListener("click", () => {
       const sel = wrap.querySelector("select");
       if (a.kind === "group" && !sel.value) return say("Choose a device first.", true);
-      a.run(sel?.value);
+      a.run(sel?.value ?? S.page);
       after();
     });
     wrap.append(b);
@@ -693,7 +720,7 @@ function driveLine(d) {
 function modulesOf(d) {
   const monitor = d.kind === "arm" ? [String(d.live?.model || "").startsWith("xarm") ? "monitor-xarm" : "monitor-so101"] : [];
   return [...monitor, ...(KIND_MODULES[d.kind] || [])].map((id) => S.views.find((v) => v.id === id)).filter((v) => v?.page)
-    .map((v) => (v.id === "diagnostics" ? { ...v, page: `${v.page}?device=${encodeURIComponent(d.id)}` } : v));
+    .map((v) => (v.id === "diagnostics" ? { ...v, page: `${v.page}?show=${encodeURIComponent(d.id)}` } : v));
 }
 function moduleButtons(box, mods) {
   for (const v of mods) {
@@ -716,7 +743,7 @@ function renderInspector(force = false) {
   box.innerHTML = `<h2>${ico("i-test")}Inspector</h2>`;
   const msg = S.msg ? `<p class="msg${S.msgBad ? "" : " ok"}">${esc(S.msg)}</p>` : "";
   if (!keys.length) {
-    box.insertAdjacentHTML("beforeend", `<p class="hint">Press a device or a screen, in the list or the workspace, to see it here. Ctrl or Shift adds more. ⤢ opens one device. Drag a page onto a screen to open it there.</p>${msg}`);
+    box.insertAdjacentHTML("beforeend", `<p class="hint">Press a device or a screen, in the list or the workspace, to see it here. Select multiple, Ctrl or Shift adds more. ⤢ opens one device. Drag a page onto a screen to open it there.</p>${msg}`);
     return;
   }
   const part = (title, html = "") => {
@@ -793,9 +820,9 @@ async function focus(key) {
   const mods = modulesOf(d);
   veil.innerHTML = `<div class="card modal" role="dialog" aria-label="${esc(d.title)}"><div class="in">
     <div class="top"><h2>${ico(KIND_ICON[d.kind])}${esc(d.title)}${d.sub ? ` <small class="hint">${esc(d.sub)}</small>` : ""}</h2>
-      <button class="btn small" type="button" data-close>${ico("i-back")}Back</button></div>
-    ${mine.length ? `<div><h3>${plural(mine.length, "screen")}</h3><div class="shots" id="f-shots"></div></div>` : ""}
+      <button class="btn small" type="button" data-close aria-label="Close focus window">×</button></div>
     <div class="cols">
+    ${mine.length ? `<div><h3>${plural(mine.length, "screen")}</h3><div class="shots" id="f-shots"></div></div>` : ""}
       <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}</div>
       <div id="f-actions"><h3>Actions</h3></div>
       ${mods.length ? `<div><h3>Modules</h3><div class="mods" id="f-mods"></div></div>` : ""}
@@ -804,6 +831,14 @@ async function focus(key) {
   veil.addEventListener("pointerdown", (e) => { if (e.target === veil) closeFocus(); });
   veil.querySelector("[data-close]").addEventListener("click", closeFocus);
   document.body.append(veil);
+  veil.querySelector("[data-close]").focus();
+  veil.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const controls = [...veil.querySelectorAll("button:enabled, select:enabled, input:enabled")];
+    const first = controls[0], last = controls.at(-1);
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   const shots = veil.querySelector("#f-shots");
   for (const s of mine) {
     const el = document.createElement("div");
@@ -870,7 +905,7 @@ function render(force = false) {
   for (const k of [...S.sel]) if (!devs.some((d) => d.key === k) && !scr.some((s) => s.key === k)) S.sel.delete(k);
   renderLists(devs, scr);
   $("#start-all").hidden = !scr.some((s) => s.w.stage === "start");
-  if (!S.drag) renderWorkspace(devs, scr);
+  if (!S.drag && $("#ws").clientWidth) renderWorkspace(devs, scr);
   if (!document.querySelector(".menu")) renderInspector(force);
   if ($("#stage").children.length) requestAnimationFrame(() => autoFit());
   S.wasOff = new Set(devs.filter((d) => d.gone).map((d) => d.key));
@@ -900,22 +935,6 @@ async function refresh() {
     say(`The brain didn't answer (${e.message}). Trying again.`, true);
   }
 }
-// the opening (quick job 140): the real counts type out while it plays
-function introCounts() {
-  const devs = devices(), scr = screens(devs);
-  return [
-    ["Devices connected", devs.filter((d) => !d.gone).length],
-    ["Screens", scr.length],
-    ["Devices off now", devs.filter((d) => d.gone).length],
-    ["Events", S.events.length],
-  ];
-}
-playIntro({
-  counts: introCounts,
-  panels: [".left", ".mid", ".right", ".bar"].map((s) => $(s)).filter(Boolean),
-  items: () => [...document.querySelectorAll("#stage > .node, #devices > .row")],
-  flyTo: $(".bar .title .ico"),
-});
 async function start() {
   try {
     const [hub, cc] = await Promise.all([getJSON("/api/hub"), getJSON("/api/command-center")]);
@@ -927,6 +946,7 @@ async function start() {
     say(`The brain didn't answer (${e.message}).`, true);
   }
   await refresh();
+  playIntro([...$("#stage").children]);
   setInterval(() => { if (!S.drag) refresh(); }, POLL_MS);
 }
 start();

@@ -292,7 +292,7 @@ SECTIONS: list[Section] = [
                 "one_to_one_max_deg_per_s",
                 "Teleop 1:1 Top Joint Speed",
                 "choice",
-                "°/s. None: the servos' own top speed. Off: relative only.",
+                "Degrees per second. None: the servos' own top speed. Off: relative only.",
                 choices=("off", "90", "120", "180", "240", "none"),
                 applies="restart",
             ),
