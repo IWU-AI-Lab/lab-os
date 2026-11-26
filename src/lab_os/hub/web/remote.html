@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05080b">
+  <title>Remote</title>
+  <link rel="icon" href="data:,">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/web/design/kit.css">
+  <style>
+    html { font-size: clamp(14px, 4.2vw, 20px); }
+    .page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.9rem; height: 100dvh; padding: max(1rem, env(safe-area-inset-top)) 1.1rem max(1rem, env(safe-area-inset-bottom)); }
+    body:not(.embedded) .page { padding: max(1.2rem, env(safe-area-inset-top)) 1.3rem max(1.2rem, env(safe-area-inset-bottom)); }
+    .bar .clock, #win-btn { display: none !important; }
+    main.remote { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 0.9rem; min-height: 0; }
+    /* the conversation: the last question and its answer */
+    .talk .in { display: grid; align-content: start; gap: 0.6rem; }
+    .q { margin: 0; font: 600 1rem/1.4 var(--f-ui); color: var(--hot); }
+    .q:empty::before { content: "Hold Talk and ask, or type below."; color: var(--text-dim); font-weight: 500; }
+    .q, .a, .secure li { overflow-wrap: anywhere; }
+    .a { margin: 0; white-space: pre-wrap; font: var(--w-lines) 1rem/1.5 var(--f-lines); color: var(--text); }
+    .state { font: 600 0.7rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); min-height: 0.7rem; }
+    /* the way to get the microphone: shown only when this page isn't secure */
+    .secure ol { margin: 0.4rem 0 0; padding-left: 1.2rem; font: var(--w-lines) 0.9rem/1.5 var(--f-lines); }
+    .secure li { margin: 0.25rem 0; }
+    /* the controls at the bottom, in reach of a thumb */
+    .controls { display: grid; gap: 0.7rem; }
+    #talk { width: 100%; min-height: 5.2rem; font: 700 1.3rem/1 var(--f-title); letter-spacing: 0.2em; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    #talk.on { background: var(--primary); color: var(--bg); box-shadow: 0 0 24px color-mix(in srgb, var(--primary) 60%, transparent); }
+    .row { display: flex; gap: 0.6rem; align-items: center; }
+    .row input[type="text"] { flex: 1; min-width: 0; min-height: 3rem; font-size: 1rem; }
+    .wake { display: flex; align-items: center; gap: 0.6rem; font: var(--w-lines) 0.9rem/1.3 var(--f-lines); color: var(--text-dim); }
+    .wake.listening { color: var(--c); }
+  </style>
+</head>
+<!--
+  The phone's remote (quick job 124): a phone that opens the hub gets this page, not the whole
+  hub (`?hub=1` gives the hub). It is a microphone near the person: hold Talk (push-to-talk), or
+  turn on the wake word, or type in the ask line. The question goes to the brain's assistant, the
+  same conversation as on the hub. Name a screen for an action ("open the system diagram on the
+  Newline"): the page opens there. With no screen named, it opens on the brain's own computer
+  (lab_os/hub/screens.py). The answer shows here, and a spoken question gets a spoken answer here.
+  A phone's browser gives the microphone only to a secure page: the brain also serves the hub over
+  https (lab_os/hub/tls.py); this page says how when it is not secure.
+-->
+<body class="remote">
+<div class="page">
+  <header class="bar">
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-chat"/></svg><span>Remote</span></div>
+    <span class="place"></span>
+    <span class="grow"></span>
+    <span class="chip"><span id="brain" class="pill off">Connecting</span></span>
+    <span class="clock"></span>
+  </header>
+  <main class="remote">
+    <section id="secure" class="card secure" hidden><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-lock"/></svg>Get the microphone</h2>
+      <p class="hint">The browser gives the microphone only to a secure page. Typing works here.</p>
+      <ol>
+        <li>Open <a id="https-link" href="#">the secure address</a>.</li>
+        <li>On Android: if Chrome shows a warning, tap Advanced, then Proceed.</li>
+        <li>On an iPhone: first open <a id="ca-link" href="/lab-os-ca.crt">the lab&#39;s certificate</a> in Safari and tap Allow. Open Settings, then General → VPN &amp; Device Management, and install the profile. Then open General → About → Certificate Trust Settings and turn on lab-os.</li>
+      </ol>
+    </div></section>
+    <section class="card talk"><div class="in">
+      <span id="state" class="state" aria-live="polite"></span>
+      <p id="q" class="q"></p>
+      <p id="a" class="a" aria-live="polite"></p>
+      <p id="msg" class="msg" aria-live="polite"></p>
+    </div></section>
+  </main>
+  <footer class="controls">
+    <button id="talk" class="btn primary" type="button" hidden>TALK</button>
+    <label id="wake" class="wake" hidden><input id="wake-on" type="checkbox"><span id="wake-word">Wake word</span></label>
+    <form id="ask-form" class="row" autocomplete="off">
+      <input id="ask" type="text" placeholder="Ask, e.g. open the system diagram on the Newline" enterkeyhint="send" aria-label="Ask the assistant">
+      <button class="btn" type="submit">Send</button>
+    </form>
+  </footer>
+</div>
+<script type="module" src="/web/design/kit.js"></script>
+<script type="module" src="/hub/remote.js"></script>
+</body>
+</html>

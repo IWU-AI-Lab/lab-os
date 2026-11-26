@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — A phone gets no microphone over http, and an iPhone has no flag for it (quick job 124)
+**What:** a phone's browser gives the microphone only to a secure page. Android's Chrome has the "Insecure origins treated as secure" flag, but Safari on an iPhone has none. HTTPS with a certificate that no authority signed is half a fix: Chrome on Android accepts the warning for the page and its WebSockets, but Safari's WebSockets do not take the exception (`wss://` fails while the page loads), so the voice never connects. Also: headless Chrome lays a page out at least 500 px wide, so a 412 px screenshot is cut on the right (not a fault of the page).
+**Fix:** the brain makes its own small certificate authority once (`config/local/tls/`, not in git) and a certificate for this computer's names and addresses (800 days: an iPhone refuses a longer one), and serves the hub over HTTPS on port 8443 too (`--host 0.0.0.0`; `--https-port 0` turns it off). Android: accept the warning once. iPhone: install `http://<address>:8080/lab-os-ca.crt` as a profile and turn on its full trust once. A new address gets a new certificate from the same authority, so the phone keeps trusting it.
+
 ### 2026-11-25 — `/design` lost its `?device=` on the way to `/` (quick job 131)
 **What:** the old address `/design` now goes to `/`. The first redirect used `request.rel_url.with_path("/")`. In yarl, `with_path` also drops the query, so `/design?device=desk` went to `/` with no device name, and a Quest's `?flat=1` was lost.
 **Fix:** `with_path("/").with_query(request.query)` (`src/lab_os/hub/server.py` → `design_page`). A test checks that `/design?device=desk` goes to `/?device=desk`.
