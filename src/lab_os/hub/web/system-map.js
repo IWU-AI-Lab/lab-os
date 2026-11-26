@@ -137,11 +137,6 @@ canvas.addEventListener("webglcontextlost", fallback, { once: true });
 import("/hub/system-map-scene.js").then(({ createMap }) => {
   scene = createMap(canvas, document.querySelector(".map-labels"), choose);
   reset.addEventListener("click", scene.reset);
-  const hint = document.querySelector(".map-hint");
-  const used = () => hint.classList.add("used");
-  for (const type of ["pointerdown", "wheel", "keydown"]) {
-    canvas.addEventListener(type, used, { once: true, passive: true });
-  }
   scene.setDevices(devices);
   choose(selected);
   for (const element of mapChrome) element.hidden = false;

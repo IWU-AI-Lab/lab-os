@@ -26,11 +26,22 @@ body.embedded .bar { display: none; }
 .map-controls { position: absolute; inset: auto 0.65rem 0.65rem; display: flex; align-items: center;
   justify-content: space-between; gap: 0.6rem; pointer-events: none; }
 .map-controls p, .map-message { margin: 0; background: var(--bg); color: var(--text-dim); padding: 0.35rem 0.6rem; }
-/* The hint says how once, then gets out of the way after the first touch. */
-.map-hint { transition: opacity 0.6s cubic-bezier(0.7, 0, 0.84, 0); }
-.map-hint.used { opacity: 0; }
+/* The controls: one per line, small and quiet ("Zoom: Scroll" + the mouse with its wheel lit). */
+.map-controls { align-items: flex-end; }
+.map-hint { display: grid; gap: 0.05rem; margin: 0; padding: 0.3rem 0.5rem; opacity: 0.6;
+  font: 400 0.72rem / 1.45 var(--f-ui); color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg) 60%, transparent); transition: opacity 0.12s; }
+.map-hint > div { display: flex; align-items: center; gap: 0.3rem; }
+.map-hint dt { color: var(--text); }
+.map-hint dd { display: flex; align-items: center; gap: 0.25rem; margin: 0; }
+.map-hint .ctl { height: 1.45em; width: auto; fill: none; stroke: currentColor; stroke-width: 1.3;
+  stroke-linecap: round; stroke-linejoin: round; }
+.map-hint .ctl .lit { fill: var(--primary); stroke: none; }
+.map-hint .ctl .lit-line { stroke: var(--primary); }
+.map-hint kbd { font: 500 0.65rem / 1 var(--f-ui); color: var(--primary); padding: 0.1rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent); }
 .map-hint .coarse { display: none; }
-@media (pointer: coarse) { .map-hint .fine { display: none; } .map-hint .coarse { display: inline; } }
+@media (pointer: coarse) { .map-hint .fine { display: none; } .map-hint > .coarse { display: flex; } }
 .map-controls button { pointer-events: auto; background-color: var(--surface); }
 .map-message { position: absolute; inset: 50% 0.65rem auto; transform: translateY(-50%); text-align: center; }
 .map-labels { position: absolute; inset: 0; pointer-events: none; }
@@ -70,10 +81,3 @@ aside.card > .in.more { mask-image: linear-gradient(#000 calc(100% - 3rem), tran
 .map-view canvas:focus-visible { outline: 1px solid var(--primary); outline-offset: -2px; }
 .map-view canvas, .map-label { -webkit-tap-highlight-color: transparent; }
 .map-label:focus-visible { outline: 1px solid var(--hot); }
-.map-screen { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 0;
-  background: transparent; pointer-events: auto; cursor: pointer; }
-.map-screen .pv {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 18px color-mix(in srgb, var(--primary) 43%, transparent);
-  background: radial-gradient(ellipse at center, var(--surface), var(--bg));
-}

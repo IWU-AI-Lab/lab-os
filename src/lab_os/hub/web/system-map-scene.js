@@ -1,8 +1,11 @@
-// The System Map's 3D scene (quick job 152): the brain's core in the middle, the devices on tilted rings
-// around it, a trace from the core to each connected device.
+// The System Map's 3D scene (quick job 152): the brain's core in the middle, the devices spread around it
+// where they fit (a small force layout, no rings), a trace from the core to each connected device.
+// Devices with a 3D model turn on their bases. Screens show the page they have open on a picture that
+// always faces you; things in front of it hide it, as in a real room.
 //
 // Motion follows the hub's look (DESIGN.md → "Quality levels"):
-//   maximal / full  idle spin, turning core rings, breathing, pulses along live links, arrivals, flights
+//   maximal / full  idle spin, turning models and core rings, breathing, pulses along live links,
+//                   arrivals, devices gliding to new places, flights
 //   reduced         the same without the pulses
 //   minimal         nothing moves by itself; it draws only after an input or a change
 // Idle spin pauses while you use the map and starts again a few seconds after you let go.
@@ -18,12 +21,16 @@ import { loadRaspbotModel } from "/web/raspbot-model.js";
 import { drawRes } from "/web/screen.js";
 import { color, theme } from "/web/theme.js";
 import { currentLook } from "/hub/persona-table.js";
-import { screenPreview } from "/hub/screen-preview.js";
+import { previewAspect, previewIcon, screenTitle } from "/hub/screen-preview.js";
 
 const primary = color("colors.primary");
 const offline = color("colors.offline");
 const line = color("colors.line");
 const hot = color("colors.hot");
+const background = color("colors.background");
+const surface = color("colors.surface");
+const textColor = color("colors.text");
+const textDim = color("colors.text_dim");
 const motion = theme.motion || {};
 const ringTurns = motion.idle?.ring_turn_s || [25, 40, 70];
 const breatheS = theme.assistant?.idle?.breathe_s || 5;
@@ -31,6 +38,7 @@ const fireEvery = theme.network?.fire_every_s || [2, 6];
 const panelMs = motion.panel_ms || 600;
 const staggerMs = motion.stagger_ms || 60;
 const SPIN_S = ringTurns[ringTurns.length - 1];  // one turn of the whole map, in seconds
+const MODEL_TURN_S = ringTurns[0];               // one turn of a robot on its base, in seconds
 const SPIN_AFTER_MS = 5000;                      // idle spin starts again this long after the last input
 const IDLE_FRAME_MS = 33;                        // at most 30 frames per second while nothing is touched
 const arrive = (t) => 1 - (1 - t) ** 3;          // starts fast, settles slowly (motion.arrive)
@@ -47,7 +55,6 @@ const holo = new THREE.MeshStandardMaterial({
   color: color("colors.line"), emissive: primary, emissiveIntensity: 0.25, roughness: 0.55,
 });
 const lift = 0.79;
-const horizon = new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.14 });
 const shapes = {
   screen: new THREE.BoxGeometry(1.05, 0.66, 0.14),
   camera: new THREE.CylinderGeometry(0.31, 0.38, 0.65, 6).rotateX(Math.PI / 2),
@@ -182,34 +189,77 @@ function buildReticle() {
   return reticle;
 }
 
-// Pack devices into inclined orbits with alternating tilt and azimuth.
-const radiusOf = (ring) => 4.65 + ring * 3.75;
-function orbitRotation(ring) {
-  const inclination = [0.3, -0.39, 0.45][ring % 3];
-  return new THREE.Euler(inclination, 0, (ring % 2 ? 1 : -1) * 0.19, "YXZ");
+// A number in [0, 1) from a text, the same every time (so a device keeps its place and its turn).
+function seed(text) {
+  let h = 2166136261;
+  for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return (h >>> 0) / 4294967296;
 }
 
-function galaxy(devices) {
-  const result = [];
-  let capacity = 0;
-  let rings = 0;
-  while (capacity < devices.length) capacity += 8 + 6 * rings++;
-  let offset = 0;
-  for (let ring = 0; ring < rings; ring++) {
-    const slots = 8 + ring * 6;
-    const count = Math.round((devices.length - offset) * slots / capacity);
-    capacity -= slots;
-    const radius = radiusOf(ring);
-    const tilt = orbitRotation(ring);
-    const positions = devices.slice(offset, offset + count).map((device, i) => {
-      const angle = 2 * Math.PI * i / count + ring * 1.07 + 0.55;
-      const position = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-      return { device, position: position.applyEuler(tilt) };
+// Devices sit wherever they fit around the core: each starts where it was (a new one in its kind's
+// direction, so the same kinds stay near each other), devices closer than GAP push apart, a weak pull
+// keeps them near the core, and none comes closer to the core than CORE_GAP.
+const KINDS = ["arm", "robot", "camera", "headset", "screen"];
+const GAP = 4.1, CORE_GAP = 4.6;
+function place(devices, before) {
+  const sectors = KINDS.length + 1;
+  const spots = devices.map((device) => {
+    const was = before.get(device.id);
+    if (was) return was.clone();
+    const kind = KINDS.includes(device.kind) ? KINDS.indexOf(device.kind) : KINDS.length;
+    const angle = 2 * Math.PI * (kind + seed(device.id)) / sectors + 0.55;
+    const radius = CORE_GAP + 0.6 + seed(`${device.id}:r`) * Math.sqrt(devices.length) * 1.3;
+    return new THREE.Vector3(Math.cos(angle) * radius, (seed(`${device.id}:y`) - 0.5) * 1.4, Math.sin(angle) * radius);
+  });
+  const forces = spots.map(() => new THREE.Vector3());
+  const push = new THREE.Vector3();
+  for (let round = 0; round < 300; round++) {
+    for (const force of forces) force.set(0, 0, 0);
+    for (let i = 0; i < spots.length; i++) {
+      for (let j = i + 1; j < spots.length; j++) {
+        push.subVectors(spots[i], spots[j]);
+        const d = push.length() || 0.01;
+        if (d >= GAP) continue;
+        push.multiplyScalar((GAP - d) / d * 0.5);
+        forces[i].add(push);
+        forces[j].sub(push);
+      }
+    }
+    spots.forEach((spot, i) => {
+      const force = forces[i];
+      force.x -= spot.x * 0.02;
+      force.z -= spot.z * 0.02;
+      force.y -= spot.y * 0.12;
+      const r = Math.hypot(spot.x, spot.z) || 0.01;
+      if (r < CORE_GAP) {
+        force.x += spot.x / r * (CORE_GAP - r);
+        force.z += spot.z / r * (CORE_GAP - r);
+      }
+      spot.addScaledVector(force, 0.5);
     });
-    result.push({ radius, tilt, positions });
-    offset += count;
   }
-  return result;
+  return spots;
+}
+
+// The icons, drawn into a screen's picture (the same symbols as the pages, in the main color).
+let iconSheet;
+const hex = (value) => `#${value.toString(16).padStart(6, "0")}`;
+function iconImage(id) {
+  iconSheet ??= fetch("/web/design/icons.svg").then((r) => r.text())
+    .then((text) => new DOMParser().parseFromString(text, "image/svg+xml")).catch(() => null);
+  return iconSheet.then((sheet) => {
+    const symbol = sheet?.getElementById(id);
+    if (!symbol) return null;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol.getAttribute("viewBox")}" width="96" height="96"`
+      + ` fill="none" stroke="${hex(primary)}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
+      + `${symbol.innerHTML}</svg>`;
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    });
+  });
 }
 
 function starField() {
@@ -272,6 +322,8 @@ export function createMap(canvas, labels, onSelect) {
   let seen = new Set(), pulses = [], nextFire = 0, flight = null;
   let spin = 0, lastInput = -Infinity, holding = false, onScreen = true, introduced = false;
   let lookNow = "", lookRead = -Infinity;
+  let spots = new Map();               // where each device sits now (id → position)
+  const screenPictures = new Map();    // a screen's picture, kept while it shows the same page
   reticle.userData.from = 0;
 
   // What may move by itself on this screen (the hub's look, then the computer's reduced motion).
@@ -343,6 +395,17 @@ export function createMap(canvas, labels, onSelect) {
       glow.scale.setScalar(2.7 + breath * 0.4);
       centre.material.opacity = 0.42 + breath * 0.2;
       reticle.rotation.y = s * 2 * Math.PI / ringTurns[1];
+      for (const node of nodes.values()) {
+        if (node.spinner) node.spinner.rotation.y += dt * 2 * Math.PI / MODEL_TURN_S;
+      }
+    }
+    // Devices glide to their new places when others arrive or leave.
+    for (const node of nodes.values()) {
+      if (!node.moveStart) continue;
+      const k = arrive(Math.min(1, Math.max(0, (time - node.moveStart) / (panelMs * 1.6))));
+      node.group.position.lerpVectors(node.moveFrom, node.to, k);
+      if (node.trace) retrace(node);
+      if (k >= 1) node.moveStart = 0;
     }
     // The reticle closes in on the selected device.
     const r = Math.min(1, (time - reticle.userData.from) / panelMs);
@@ -356,7 +419,7 @@ export function createMap(canvas, labels, onSelect) {
 
   // Devices arrive one after another, outward from the centre; their traces draw themselves in.
   function arriving(time) {
-    for (const node of nodes.values()) if (node.born && time < node.born + panelMs) return true;
+    for (const node of nodes.values()) if (node.moveStart || (node.born && time < node.born + panelMs)) return true;
     return false;
   }
   function arrivals(time) {
@@ -366,7 +429,6 @@ export function createMap(canvas, labels, onSelect) {
       const k = arrive(t);
       node.group.scale.setScalar(0.001 + k * 0.999);
       node.label.style.opacity = String(k);
-      if (node.billboard) node.billboard.style.opacity = String(k);
       if (node.trace) node.trace.geometry.setDrawRange(0, Math.max(2, Math.ceil(k * TRACE_POINTS)));
       if (node.tip) node.tip.visible = t >= 1;
       if (t >= 1) node.born = 0;
@@ -439,33 +501,16 @@ export function createMap(canvas, labels, onSelect) {
     const rank = ({ node }) => (node.device.id === selected ? 0 : node.device.connected ? 1 : 2);
     list.sort((a, b) => rank(a) - rank(b) || a.depth - b.depth);
     for (const { node, depth } of list) {
-      const { device, label, billboard, group } = node;
+      const { device, label, group } = node;
       const inFront = depth > camera.near;
-      const pixelsPerUnit = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * depth);
       project.copy(group.position).project(camera);
       const x = (project.x + 1) * width / 2;
       const baseY = (1 - project.y) * height / 2;
       project.copy(group.position);
       project.y += node.height;
       project.project(camera);
-      let y = (1 - project.y) * height / 2 - 4;
+      const y = (1 - project.y) * height / 2 - 4;
       const priority = device.id === selected;
-      if (billboard) {
-        project.copy(group.position);
-        project.y += node.height - 0.46;
-        project.project(camera);
-        const scale = Math.min(1, Math.max(priority ? 0.58 : 0, pixelsPerUnit * 2.1 / 150));
-        const middle = (1 - project.y) * height / 2;
-        const bx = (project.x + 1) * width / 2;
-        billboard.hidden = !inFront || Math.abs(project.x) > 0.99 || Math.abs(project.y) > 0.96;
-        billboard.style.left = `${(project.x + 1) * 50}%`;
-        billboard.style.top = `${middle}px`;
-        billboard.style.transform = `translate(-50%, -50%) scale(${scale})`;
-        billboard.style.zIndex = priority ? "1150" : String(Math.max(0, Math.round(1000 - depth * 8)));
-        const half = (150 * scale) / 2, tall = (node.previewHeight * scale) / 2;
-        if (!billboard.hidden) placed.push({ x0: bx - half, x1: bx + half, y0: middle - tall, y1: middle + tall });
-        y = Math.min(y, middle - tall - 4);
-      }
       const half = Math.min(75, 5 + device.name.length * 3.6);
       const left = Math.max(half + 5, Math.min(width - half - 5, x));
       const inView = inFront && x > 0 && x < width && baseY > 0 && baseY < height && y > 26;
@@ -530,6 +575,90 @@ export function createMap(canvas, labels, onSelect) {
     flyTo(target, target.clone().addScaledVector(away, id ? 7 : 10));
   }
 
+  // A screen's picture: what its window shows, drawn once per page shown, on a sprite that always
+  // faces you. It is part of the scene, so a device in front of it hides it.
+  function screenPicture(preview) {
+    const key = JSON.stringify(preview);
+    if (screenPictures.has(key)) return screenPictures.get(key);
+    const aspect = previewAspect(preview);
+    const W = 320, H = Math.round(W * aspect), P = 18;  // P: room for the glow around the frame
+    const image = document.createElement("canvas");
+    image.width = W + 2 * P;
+    image.height = H + 2 * P;
+    const texture = new THREE.CanvasTexture(image);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const picture = { texture, aspect: image.height / image.width };
+    const paint = (icon) => {
+      const ctx = image.getContext("2d");
+      ctx.clearRect(0, 0, image.width, image.height);
+      ctx.save();
+      ctx.shadowColor = `${hex(primary)}88`;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = hex(background);
+      ctx.fillRect(P, P, W, H);
+      ctx.restore();
+      const fill = ctx.createRadialGradient(P + W / 2, P + H / 2, 0, P + W / 2, P + H / 2, W * 0.6);
+      fill.addColorStop(0, hex(surface));
+      fill.addColorStop(1, hex(background));
+      ctx.fillStyle = fill;
+      ctx.fillRect(P, P, W, H);
+      ctx.strokeStyle = hex(primary);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(P + 1.5, P + 1.5, W - 3, H - 3);
+      const cx = P + W / 2, cy = P + H * 0.44;
+      if (preview.showing) {
+        const size = H * 0.34;
+        if (icon) ctx.drawImage(icon, cx - size / 2, cy - size / 2, size, size);
+      } else if (preview.stage === "start") {
+        ctx.strokeStyle = `${hex(primary)}8c`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, W * 0.16 * Math.min(1, aspect / 0.5625), 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const r = W * 0.13 * Math.min(1, aspect / 0.5625);
+        ctx.save();
+        ctx.shadowColor = hex(primary);
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = hex(primary);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = `${hex(primary)}73`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const fit = (text, room) => {
+        let shown = text;
+        while (shown.length > 1 && ctx.measureText(shown).width > room) shown = `${shown.slice(0, -2)}…`;
+        return shown;
+      };
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = hex(textColor);
+      ctx.font = `500 ${Math.round(H * 0.12)}px "Chakra Petch", system-ui, sans-serif`;
+      ctx.fillText(fit(screenTitle(preview), W - 24), cx, P + H - H * 0.08);
+      if (preview.showing && preview.from) {
+        ctx.textAlign = "right";
+        ctx.fillStyle = hex(textDim);
+        ctx.font = `300 ${Math.round(H * 0.085)}px Inter, system-ui, sans-serif`;
+        ctx.fillText(fit(`From ${preview.from}`, W * 0.7), P + W - 10, P + H * 0.14);
+      }
+      texture.needsUpdate = true;
+      render();
+    };
+    paint(null);
+    // Again once the fonts and the icon are in (the first paint may use a fallback font).
+    Promise.all([preview.showing ? iconImage(previewIcon(preview)) : null, document.fonts?.ready])
+      .then(([icon]) => paint(icon));
+    screenPictures.set(key, picture);
+    return picture;
+  }
+
   function add(device, position) {
     const group = new THREE.Group();
     group.position.copy(position);
@@ -537,6 +666,7 @@ export function createMap(canvas, labels, onSelect) {
     const base = new THREE.Mesh(pad, device.connected ? litPad : dark);
     const wire = new THREE.LineSegments(outline, wires[device.connected ? "on" : "off"]);
     group.add(base, wire);
+    const node = { group, wire, device, height: device.kind === "brain" ? 1.95 : device.connected ? 1.75 : 0.98 };
     const key = Object.hasOwn(shapes, device.kind) ? device.kind : "usb";
     const simple = device.connected
       ? new THREE.Mesh(shapes[key], holo)
@@ -544,7 +674,19 @@ export function createMap(canvas, labels, onSelect) {
     if (device.kind !== "brain") {
       simple.add(new THREE.LineSegments(edges[key], wires[device.connected ? "on" : "off"]));
       simple.position.y = device.connected ? 1.16 : 0.49;
-      if (!device.preview) group.add(simple);
+      if (device.preview) {
+        const picture = screenPicture(device.preview);
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: picture.texture, transparent: true, depthWrite: false,
+        }));
+        const width = 2.2, tall = width * picture.aspect;
+        sprite.scale.set(width, tall, 1);
+        sprite.position.y = 0.62 + tall / 2;
+        group.add(sprite);
+        node.height = 0.62 + tall - 0.05;
+      } else {
+        group.add(simple);
+      }
       if (device.connected) {
         const projection = new THREE.Mesh(beam, beamMaterial);
         projection.position.y = 0.46;
@@ -561,37 +703,49 @@ export function createMap(canvas, labels, onSelect) {
     label.addEventListener("click", () => onSelect(device.id));
     label.addEventListener("dblclick", () => focus(device.id));
     labels.append(label);
-    const node = { group, wire, label, height: device.kind === "brain" ? 1.95 : device.connected ? 1.75 : 0.98, device };
+    node.label = label;
     nodes.set(device.id, node);
-    if (device.preview) {
-      const billboard = document.createElement("button");
-      billboard.type = "button";
-      billboard.tabIndex = -1;
-      billboard.className = "map-screen";
-      billboard.hidden = true;
-      billboard.innerHTML = screenPreview(device.preview, 150);
-      billboard.addEventListener("click", () => onSelect(device.id));
-      billboard.addEventListener("dblclick", () => focus(device.id));
-      node.billboard = billboard;
-      node.previewHeight = parseFloat(billboard.firstElementChild.style.height);
-      labels.append(billboard);
-    }
     const type = Object.hasOwn(modelTypes, device.model) ? modelTypes[device.model] : null;
     if (type) modelFor(type).then((object) => {
       if (!object || nodes.get(device.id) !== node) return;
-      const model = object.clone(true);
-      if (device.connected) model.position.y += lift;
+      // The model turns on its base: it sits in a pivot at the base's centre.
+      const pivot = new THREE.Group();
+      pivot.add(object.clone(true));
+      pivot.rotation.y = seed(device.id) * Math.PI * 2;
+      if (device.connected) {
+        pivot.position.y = lift;
+        node.spinner = pivot;
+      }
       group.remove(simple);
-      group.add(model);
+      group.add(pivot);
       node.height = 1.62 + (device.connected ? lift : 0);
       render();
     });
     return node;
   }
 
+  // The trace from the core to a device: up and over, then down to the device's base. Updated in place
+  // (the pulses ride the same curve) while the device glides to a new place.
+  function retrace(node) {
+    const position = node.group.position;
+    const direction = position.clone().setY(0).normalize();
+    const [first, second] = node.curve.curves;
+    first.v1.copy(direction).multiplyScalar(0.96);
+    first.v1.y += hub.position.y;
+    second.v2.copy(position).addScaledVector(direction, -0.7);
+    first.v2.copy(first.v1).lerp(second.v2, 0.57);
+    first.v2.y += 0.52 + 0.052 * Math.hypot(position.x, position.z);
+    second.v1.copy(first.v2);
+    node.curve.updateArcLengths();
+    node.trace.geometry.setFromPoints(node.curve.getSpacedPoints(TRACE_POINTS - 1));
+    node.trace.computeLineDistances();
+    node.tip.position.copy(second.v2);
+  }
+
   function setDevices(devices) {
     graph.traverse((child) => {
       if (child.isLine && !sharedLines.has(child.geometry)) child.geometry.dispose();
+      if (child.isSprite) child.material.dispose();
     });
     graph.clear();
     nodes.clear();
@@ -601,41 +755,40 @@ export function createMap(canvas, labels, onSelect) {
     const animate = moving();
     const fresh = [];
     const nextSeen = new Set();
+    const others = devices.slice(1);
+    const targets = place(others, spots);
     points = [new THREE.Vector3(0, 2.2, 0), new THREE.Vector3(2.2, 0, 0), new THREE.Vector3(-2.2, 0, 0)];
     edge = 2.2;
-    for (const { radius, tilt, positions } of galaxy(devices.slice(1))) {
-      edge = radius + 0.9;
-      const track = arc(radius, 0, Math.PI * 2, 0, horizon);
-      track.rotation.copy(tilt);
-      graph.add(track);
-      for (const { device, position } of positions) {
-        const node = add(device, position);
-        points.push(position.clone(), position.clone().setY(position.y + node.height + 0.5));
-        const key = `${device.id}:${device.connected}`;
-        nextSeen.add(key);
-        if (animate && !seen.has(key)) fresh.push(node);
-        if (!device.connected) continue;
-        const direction = position.clone().normalize();
-        const start = direction.clone().multiplyScalar(0.96);
-        start.y += hub.position.y;
-        const end = position.clone().addScaledVector(direction, -0.7);
-        const bend = start.clone().lerp(end, 0.57);
-        bend.y += 0.52 + 0.052 * radius;
-        const curve = new THREE.CurvePath();
-        curve.add(new THREE.LineCurve3(start, bend));
-        curve.add(new THREE.LineCurve3(bend, end));
-        const geometry = new THREE.BufferGeometry().setFromPoints(curve.getSpacedPoints(TRACE_POINTS - 1));
-        const tip = new THREE.Mesh(marker, point);
-        tip.position.copy(end);
-        const material = device.via?.includes("USB") ? links.usb : links.network;
-        const trace = new THREE.Line(geometry, material);
-        Object.assign(node, { trace, traceMaterial: material, tip, curve });
-        graph.add(trace, tip);
-        trace.computeLineDistances();
+    const nextSpots = new Map();
+    others.forEach((device, i) => {
+      const target = targets[i];
+      const was = spots.get(device.id);
+      const node = add(device, animate && was ? was : target);
+      node.to = target;
+      if (animate && was && was.distanceToSquared(target) > 0.0004) {
+        node.moveFrom = was.clone();
+        node.moveStart = now;
       }
-    }
+      nextSpots.set(device.id, target);
+      edge = Math.max(edge, Math.hypot(target.x, target.z) + 1.5);
+      points.push(target.clone(), target.clone().setY(target.y + node.height + 0.5));
+      const key = `${device.id}:${device.connected}`;
+      nextSeen.add(key);
+      if (animate && !seen.has(key)) fresh.push(node);
+      if (!device.connected) return;
+      const curve = new THREE.CurvePath();
+      curve.add(new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3()));
+      curve.add(new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3()));
+      const tip = new THREE.Mesh(marker, point);
+      const material = device.via?.includes("USB") ? links.usb : links.network;
+      const trace = new THREE.Line(new THREE.BufferGeometry(), material);
+      Object.assign(node, { trace, traceMaterial: material, tip, curve });
+      retrace(node);
+      graph.add(trace, tip);
+    });
+    spots = nextSpots;
     // New devices (and ones that changed state) arrive one after another, nearest first.
-    fresh.sort((a, b) => a.group.position.length() - b.group.position.length());
+    fresh.sort((a, b) => a.to.length() - b.to.length());
     fresh.forEach((node, i) => {
       node.born = now + i * staggerMs;
       node.group.scale.setScalar(0.001);

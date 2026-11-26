@@ -6,7 +6,6 @@
   <title>System Map</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
-  <link rel="stylesheet" href="/hub/screen-preview.css">
   <link rel="stylesheet" href="/hub/system-map.css">
   <script type="importmap">
     {"imports":{"three":"/web/vendor/three/three.module.js","three/examples/jsm/":"/web/vendor/three/examples/jsm/"}}
@@ -30,7 +29,17 @@
       </ul>
       <p class="map-message" role="status" hidden>The 3D view is unavailable. The device list shows each connection.</p>
       <div class="map-controls" hidden>
-        <p class="map-hint"><span class="fine">Drag to turn. Right-drag to move. Scroll to zoom. Double-click a device to go to it.</span><span class="coarse">Drag to turn. Two fingers move and zoom. Double-tap a device to go to it.</span></p>
+        <dl class="map-hint" aria-label="Controls">
+          <div class="fine"><dt>Turn:</dt><dd>Drag <svg class="ctl" viewBox="0 0 14 20" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="17" rx="5.5"/><path d="M7 1.5v6M1.5 7.5h11"/><path class="lit" d="M6.2 2.3A4.8 4.8 0 0 0 2.3 6.7h3.9z"/></svg></dd></div>
+          <div class="fine"><dt>Move:</dt><dd>Right-drag <svg class="ctl" viewBox="0 0 14 20" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="17" rx="5.5"/><path d="M7 1.5v6M1.5 7.5h11"/><path class="lit" d="M7.8 2.3a4.8 4.8 0 0 1 3.9 4.4H7.8z"/></svg></dd></div>
+          <div class="fine"><dt>Zoom:</dt><dd>Scroll <svg class="ctl" viewBox="0 0 14 20" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="17" rx="5.5"/><path d="M7 1.5v6M1.5 7.5h11"/><rect class="lit" x="5.9" y="3" width="2.2" height="3.6" rx="1.1"/></svg><svg class="ctl" viewBox="0 0 10 20" aria-hidden="true"><path class="lit-line" d="M5 2.5v15M2 5.5l3-3 3 3M2 14.5l3 3 3-3"/></svg></dd></div>
+          <div class="fine"><dt>Go to a device:</dt><dd>Double-click <svg class="ctl" viewBox="0 0 14 20" aria-hidden="true"><rect x="1.5" y="1.5" width="11" height="17" rx="5.5"/><path d="M7 1.5v6M1.5 7.5h11"/><path class="lit" d="M6.2 2.3A4.8 4.8 0 0 0 2.3 6.7h3.9z"/></svg></dd></div>
+          <div class="fine"><dt>Reset view:</dt><dd>Press <kbd>0</kbd></dd></div>
+          <div class="coarse"><dt>Turn:</dt><dd>Drag <svg class="ctl" viewBox="0 0 22 20" aria-hidden="true"><circle class="lit" cx="11" cy="10" r="3.4"/><path d="M11 2.5v2.4M11 15.1v2.4M3.5 10h2.4M16.1 10h2.4"/></svg></dd></div>
+          <div class="coarse"><dt>Move:</dt><dd>Two-finger drag <svg class="ctl" viewBox="0 0 22 20" aria-hidden="true"><circle class="lit" cx="7" cy="10" r="3"/><circle class="lit" cx="15" cy="10" r="3"/></svg></dd></div>
+          <div class="coarse"><dt>Zoom:</dt><dd>Pinch <svg class="ctl" viewBox="0 0 22 20" aria-hidden="true"><circle class="lit" cx="5.5" cy="13.5" r="2.6"/><circle class="lit" cx="16.5" cy="6.5" r="2.6"/><path d="M8.6 11.4l4.8-2.8"/></svg></dd></div>
+          <div class="coarse"><dt>Go to a device:</dt><dd>Double-tap <svg class="ctl" viewBox="0 0 22 20" aria-hidden="true"><circle class="lit" cx="11" cy="10" r="2.6"/><circle cx="11" cy="10" r="5.4"/><circle cx="11" cy="10" r="8.2"/></svg></dd></div>
+        </dl>
         <button class="btn small" type="button" id="reset-view">Reset view</button>
       </div>
     </section>
