@@ -43,7 +43,7 @@ import yaml
 from lab_os import config
 from lab_os.kinematics import IK_JOINTS, kinematics_for, on_table, solve_ik
 from lab_os.robots.base import JointLimit
-from lab_os.teleop.loop import MIN_JERK_PEAK, Motion, TeleopLoop
+from lab_os.teleop.loop import RAMP_S, Motion, TeleopLoop
 from lab_os.teleop.mapping import soft_bounds
 from lab_os.tools import pose_view as pv
 from lab_os.tools import table_map, tic_tac_toe
@@ -513,9 +513,9 @@ class RobotTools:
         motion = Motion(path=path, deg_per_s=self.limits.deg_per_s, hold_s=HOLD_S, smooth=smooth)
         speed = self.limits.deg_per_s * max(self.loop.speed_scale, 0.01)
         self.loop.start_motion(motion)
-        travel = motion.travel_deg * (MIN_JERK_PEAK if smooth else 1.0)  # smooth: takes longer
+        ramps = RAMP_S if smooth else 0.0  # a smooth move takes RAMP_S longer
         try:
-            await asyncio.wait_for(motion.done.wait(), travel / speed + 5.0)
+            await asyncio.wait_for(motion.done.wait(), motion.travel_deg / speed + ramps + 5.0)
         except TimeoutError:
             self.loop.stop()
             notes.append("took far longer than expected, so it was stopped")
@@ -626,7 +626,9 @@ class RobotTools:
         lo, hi = self._gripper_range()
         return await self._run([{"gripper": lo + (hi - lo) * pct / 100}], notes)
 
-    async def go_to_pose(self, name: str, arm: str | None = None) -> dict:
+    async def go_to_pose(self, name: str, arm: str | None = None, one_move: bool = False) -> dict:
+        """A named pose. `one_move`: all the way in one smooth move, without the per-call limit
+        (the hub's chat only, quick job 118; the AI tools and programs keep the limit)."""
         self._check_can_move(arm)
         if name not in self.poses:
             raise Refused(f"no pose called {name!r}; poses for this arm: {sorted(self.poses)}")
@@ -634,7 +636,8 @@ class RobotTools:
         notes: list[str] = []
         pose = {j: v for j, v in self.poses[name].items() if j in current}
         target = self._clip_to_limits(current, pose, notes)
-        target = self._limit_change(current, target, notes)
+        if not one_move:
+            target = self._limit_change(current, target, notes)
         self._check_floor(current, self._line(current, target))
         return await self._run([target], notes, smooth=True)
 

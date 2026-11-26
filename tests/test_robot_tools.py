@@ -267,6 +267,13 @@ async def test_go_to_pose_moves_smoothly(rig):
     assert [m.smooth for m in seen] == [True, False]
 
 
+async def test_go_to_pose_in_one_move(rig):
+    """The hub's chat: all the way at once (quick job 118). The AI tools keep the 30° steps."""
+    r = await rig.call("go_to_pose", name="home", one_move=True)
+    assert r["clipped"] == [] and r["result"] == "arrived"
+    assert r["joints_deg"]["shoulder_lift"] == -97.0
+
+
 # ---------- refusals: nothing moves, the message says why ----------
 
 
