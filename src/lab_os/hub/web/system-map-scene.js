@@ -204,7 +204,7 @@ function seed(text) {
 // the core's level, in the gaps between the groups. Then the clusters push apart where they overlap.
 const KINDS = ["arm", "robot", "camera", "headset", "screen"];
 const GAP = 3.6, CORE_GAP = 4.4;
-const LEVEL = 4.2;  // how far above or below the core the highest and lowest groups sit
+const LEVEL = 1.6;  // how far above or below the core the highest and lowest groups sit (the balls still overlap in height)
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 function place(devices) {
   const groups = new Map();
