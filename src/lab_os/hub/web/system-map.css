@@ -28,8 +28,8 @@ body.embedded .bar { display: none; }
 .map-controls p, .map-message { margin: 0; background: var(--bg); color: var(--text-dim); padding: 0.35rem 0.6rem; }
 /* The controls: one per line, small and quiet ("Zoom: Scroll" + the mouse with its wheel lit). */
 .map-controls { align-items: flex-end; }
-.map-hint { display: grid; gap: 0.05rem; margin: 0; padding: 0.3rem 0.5rem; opacity: 0.6;
-  font: 400 0.72rem / 1.45 var(--f-ui); color: var(--text-dim);
+.map-hint { display: grid; gap: 0.05rem; margin: 0; padding: 0.3rem 0.5rem; opacity: 1;
+  font: 400 0.9rem / 1.45 var(--f-ui); color: var(--text-dim);
   background: color-mix(in srgb, var(--bg) 60%, transparent); transition: opacity 0.12s; }
 .map-hint > div { display: flex; align-items: center; gap: 0.3rem; }
 .map-hint dt { color: var(--text); }
@@ -41,7 +41,7 @@ body.embedded .bar { display: none; }
 .map-hint kbd { font: 500 0.65rem / 1 var(--f-ui); color: var(--primary); padding: 0.1rem 0.3rem;
   border: 1px solid color-mix(in srgb, var(--primary) 60%, transparent); }
 .map-hint .coarse { display: none; }
-@media (pointer: coarse) { .map-hint .fine { display: none; } .map-hint > .coarse { display: flex; } }
+@media (any-pointer: coarse) { .map-hint .fine { display: none; } .map-hint > .coarse { display: flex; } }
 .map-controls button { pointer-events: auto; background-color: var(--surface); }
 .map-message { position: absolute; inset: 50% 0.65rem auto; transform: translateY(-50%); text-align: center; }
 .map-labels { position: absolute; inset: 0; pointer-events: none; }

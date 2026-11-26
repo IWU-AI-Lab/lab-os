@@ -1,5 +1,5 @@
 """Diagnostics for every device (quick job 135): one list with a panel for each device, made to fit
-its kind, for the Diagnostics page (`/diagnostics`; `?device=` shows one device).
+its kind, for the Diagnostics page (`/diagnostics`; `?show=` shows one device).
 
 - **An arm** the brain drives: each motor's position, temperature, load, voltage and error flags
   (the teleop loop reads the servos every few seconds; the fake arm has no motors to read).

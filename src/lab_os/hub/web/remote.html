@@ -17,7 +17,8 @@
     /* the conversation: the last question and its answer */
     .talk .in { display: grid; align-content: start; gap: 0.6rem; }
     .q { margin: 0; font: 600 1rem/1.4 var(--f-ui); color: var(--hot); }
-    .q:empty::before { content: "Hold Talk and ask, or type below."; color: var(--text-dim); font-weight: 500; }
+    .q:empty::before { content: "Type below."; color: var(--text-dim); font-weight: 500; }
+    body:has(#talk:not([hidden])) .q:empty::before { content: "Hold Talk and ask, or type below."; }
     .q, .a, .secure li { overflow-wrap: anywhere; }
     .a { margin: 0; white-space: pre-wrap; font: var(--w-lines) 1rem/1.5 var(--f-lines); color: var(--text); }
     .state { font: 600 0.7rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); min-height: 0.7rem; }
@@ -73,8 +74,8 @@
   <footer class="controls">
     <button id="talk" class="btn primary" type="button" hidden>TALK</button>
     <label id="wake" class="wake" hidden><input id="wake-on" type="checkbox"><span id="wake-word">Wake word</span></label>
-    <form id="ask-form" class="row" autocomplete="off">
-      <input id="ask" type="text" placeholder="Ask, e.g. open the system diagram on the Newline" enterkeyhint="send" aria-label="Ask the assistant">
+    <form inert id="ask-form" class="row" autocomplete="off">
+      <input id="ask" type="text" placeholder="Ask a question" enterkeyhint="send" aria-label="Ask the assistant">
       <button class="btn" type="submit">Send</button>
     </form>
   </footer>

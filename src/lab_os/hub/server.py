@@ -185,7 +185,7 @@ MODULES = {
 # quick job 133); "Open on…" moves it to a window of its own.
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
-    ("/teleop", "Teleop", "Drive the arm: the Quest, the desktop's keys or the joint sliders."),
+    ("/teleop", "Teleop", "Drive the arm with the Quest or the keyboard."),
     (
         "/monitor",
         "Monitor",
@@ -253,7 +253,7 @@ DEVICE_VIEWS = {
     "remote": ("Phone Remote", "/remote"),
     "xr": ("VR Hub", "/xr"),  # only on a headset's browser
     "command": ("Command Center", "/command-center"),  # quick job 134: the brain's own computer
-    "diagnostics": ("Diagnostics", "/diagnostics"),  # quick job 135: every device, or ?device=
+    "diagnostics": ("Diagnostics", "/diagnostics"),  # quick job 135: every device, or ?show=
 }
 
 DEFAULT_RESET_AFTER_S = 1800.0

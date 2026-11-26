@@ -261,3 +261,7 @@ Quick job 153. Use the 4K screen, a Pi touchscreen and the lab desktop.
 ## X2. After the demo: the hub, the start screen and the power menu (15 min)
 Quick job 154. Use the 4K screen, a Pi touchscreen, a phone and the lab desktop.
 - **X2.1** Open `docs/plan/ux-review.md`, part 2. Check each line on the hub, on Full and on Minimal. Tick the lines that are right. → Which lines are not right? (the line's first words and a sentence)
+
+## X4. Settings, All Pages and the other pages
+
+- **X4.1** Open [part 4 of the UX review](../plan/ux-review.md#4-settings-all-pages-the-command-center-and-the-other-pages-quick-job-156). Check each item on the specified screen. Which items still need work?

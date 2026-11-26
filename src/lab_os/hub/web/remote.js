@@ -45,6 +45,7 @@ async function ask(text) {
   voice.stopSpeaking();
   showError(null);
   say("Thinking", text, "");
+  let complete = false, failed = false;
   try {
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -60,22 +61,34 @@ async function ask(text) {
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop();
-      for (const line of lines) if (line.trim()) onAnswer(JSON.parse(line));
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const event = JSON.parse(line);
+        if (event.type === "error") failed = true;
+        if (event.type === "done") complete = true;
+        onAnswer(event);
+      }
     }
+    if (!complete && !failed) throw new Error("Incomplete answer");
   } catch (e) {
-    onAnswer({ type: "error", message: "The brain didn't answer, so the question was lost. Try again." });
+    failed = true;
+    onAnswer({ type: "error", message: "The brain didn't answer, please try again." });
     console.warn(`remote: chat failed (${e.message})`);
   }
   say("");
   S.asking = false;
+  return complete && !failed;
 }
-$("#ask-form").addEventListener("submit", (e) => {
+$("#ask-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const line = $("#ask");
-  ask(line.value);
+  const sent = line.value;
+  if (!await ask(sent) || line.value !== sent) return;
   line.value = "";
   line.blur(); // the phone's keyboard goes away, so the answer is in view
 });
+
+$("#ask-form").inert = false;
 
 /* ---------- voice: hold Talk, or the wake word ---------- */
 const voice = createVoice({
@@ -191,7 +204,7 @@ async function poll() {
   } catch {
     S.status = null;
   }
-  $("#brain").textContent = S.status ? "Connected" : "No brain";
+  $("#brain").textContent = S.status ? "Brain connected" : "No brain";
   $("#brain").className = `pill ${S.status ? "on" : "bad"}`;
   voice.setStatus(S.status?.voice || null);
   render();
