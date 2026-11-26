@@ -69,3 +69,9 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **Modules in the focus modal:** an arm: its kind's Monitor (SO-101 or xArm), Teleop, AI Control; raspbot1: Raspbot; a camera: Cameras; the Quest: Teleop. Each opens in the Command Center, with "Own window".
 - **Start (quick job 139):** **Start All** above the workspace starts every screen that shows the start screen; **Start** starts the highlighted ones. Each shows only while a screen waits on its start screen.
 - **Settings in the focus modal:** the display name, the level of detail, the way in to voice and the sound. The other "This device" settings stay in ⚙ on that device.
+
+## Built (quick job 148, 2026-11-26)
+- **The left list:** each device, with the screens grouped under it (as in the workspace). A screen on its own has its own row.
+- **The Pages list:** a tile for each page that can open on another screen, in three groups (Robots, Cameras, The hub; a new page goes in "Other"). "The Hub" closes what a screen shows. A press chooses the page for the inspector's **Open**; a drag onto a screen or a device opens it there. ⌃ folds the list; the page remembers it.
+- **The drag:** one carrier with four steps (start, move, drop, cancel) at screen coordinates. The mouse and touch use it through pointer events. A webcam hand can call the same steps later.
+- **The inspector:** in place of the actions under the workspace. One device: its details, actions, modules and settings. One screen: what it shows, its resolution and its actions. Several items: only the actions for all of them.

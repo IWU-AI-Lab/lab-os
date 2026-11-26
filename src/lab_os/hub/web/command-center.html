@@ -7,9 +7,10 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
-    /* the Command Center (quick job 134, docs/design/command-center.md): devices left, the workspace in
-       the centre, screens right. Highlight (a press) selects; focus (⤢) opens the modal. */
-    .cc { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr) minmax(13rem, 17rem); gap: 1rem; min-height: 0; }
+    /* the Command Center (quick job 134, docs/design/command-center.md): devices and their screens left,
+       the workspace in the centre, the Pages list and the inspector right (quick job 148). Highlight (a
+       press) selects; focus (⤢) opens the modal. */
+    .cc { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr) minmax(15rem, 19rem); gap: 1rem; min-height: 0; }
     .side { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
     .side > .in { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
     .list { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; margin: 0 -0.3rem 0 0; padding-right: 0.3rem; }
@@ -26,17 +27,21 @@
     .row .eye { grid-column: 3; grid-row: 1 / span 2; }
     .row .foc { grid-column: 4; grid-row: 1 / span 2; }
     .row small { grid-row: 2; }
+    .row.scr { padding-left: 1.6rem; }  /* a screen, under the device it is grouped under */
+    .row.scr .k { font-size: 0.95rem; }
+    .row.scr b { font-size: 0.84rem; }
+    .row.drop, .shot.drop .pv { outline: 1px solid var(--c); background: color-mix(in srgb, var(--c) 22%, transparent); }
     .iconbtn { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
     .iconbtn:hover, .iconbtn:focus-visible { color: var(--hot); outline: none; }
     .iconbtn.on { color: var(--c); }
     .empty { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); padding: 0.4rem; }
 
-    /* the centre: tools on top, the workspace, the actions for the selection under it */
-    .mid { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.6rem; min-height: 0; min-width: 0; }
+    /* the centre: tools on top, the workspace under them */
+    .mid { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0.6rem; min-height: 0; min-width: 0; }
     .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
-    .tools input[type="search"] { flex: 1 1 12rem; min-width: 10rem; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
+    .tools input[type="search"], #page-search { flex: 1 1 12rem; min-width: 10rem; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
       border: 1px solid var(--line); padding: 0.45rem 0.6rem; min-height: 2.3rem; }
-    .tools input[type="search"]:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
+    .tools input[type="search"]:focus-visible, #page-search:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
     .legend { display: inline-flex; gap: 1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
     .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
     .legend .v { display: inline-block; width: 1.1rem; height: 0.8rem; border: 1px dashed var(--text-dim); }
@@ -78,9 +83,35 @@
     .under span { display: block; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); }
     .under .res { font-size: 0.68rem; opacity: 0.8; }
 
-    /* the actions: a press changes the real device (the cast mark) or only this workspace (dashed) */
-    #acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; min-height: 2.6rem; }
-    #acts .count { font: 500 0.85rem/1 var(--f-ui); color: var(--hot); margin-right: 0.3rem; }
+    /* the right side: the Pages list on top (it collapses to its title), the inspector under it */
+    .right { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; min-height: 0; }
+    #pages-card { max-height: 52vh; }
+    #pages-card > .in { display: grid; grid-template-rows: auto auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
+    #pages-card.shut > .in { grid-template-rows: auto; padding-bottom: 0.2rem; }
+    #pages-card.shut #page-search, #pages-card.shut #pages { display: none; }
+    #pages-card.shut h2 { margin-bottom: 0; border-bottom: 0; }
+    #pages-card h2 .iconbtn { min-width: 1.6rem; min-height: 1.6rem; transition: transform 0.15s; }
+    #pages-card.shut h2 .iconbtn { transform: rotate(180deg); }
+    #page-search { width: 100%; margin-bottom: 0.5rem; }
+    #pages .grp { margin: 0.4rem 0 0.3rem; font: 600 0.62rem/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+    #pages .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.35rem; }
+    .tile { display: grid; justify-items: center; gap: 0.2rem; padding: 0.35rem 0.2rem 0.3rem; cursor: grab; user-select: none; touch-action: none;
+      border: 1px solid color-mix(in srgb, var(--c) 28%, transparent); background: color-mix(in srgb, var(--c) 6%, transparent); color: var(--text); }
+    .tile:hover, .tile:focus-visible { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); outline: none; }
+    .tile.on { border-color: var(--hot); box-shadow: inset 0 0 0 1px var(--hot); }
+    .tile .ico { font-size: 1.1rem; color: var(--c); }
+    .tile span { max-width: 100%; font: 500 0.72rem/1.15 var(--f-ui); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tile.ghost { position: fixed; z-index: 50; width: 5.5rem; pointer-events: none; opacity: 0.9; background: var(--surface); }
+    #insp > .in { display: grid; align-content: start; gap: 0.8rem; }
+    #insp h3 { margin: 0 0 0.4rem; font: 500 0.82rem/1.2 var(--f-ui); color: var(--c); }
+    #insp .who { display: flex; align-items: center; gap: 0.5rem; }
+    #insp .who b { flex: 1; font: 500 1rem/1.2 var(--f-ui); color: var(--hot); overflow: hidden; text-overflow: ellipsis; }
+    #insp .who .ico { color: var(--c); }
+    #insp dl.facts { margin: 0; }
+    #insp .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; }
+    #insp .acts select { flex: 1 1 100%; }
+    #insp .field { grid-template-columns: 7rem minmax(0, 1fr); }
+    #insp .count { font: 500 0.95rem/1.2 var(--f-ui); color: var(--hot); }
     .btn.virtual { background: none; box-shadow: none; outline: 1px dashed color-mix(in srgb, var(--c) 55%, transparent); outline-offset: -1px; clip-path: none; }
     .btn.virtual:hover:not(:disabled) { background: color-mix(in srgb, var(--c) 12%, transparent); }
     .msg.ok { color: var(--text-dim); }
@@ -106,12 +137,12 @@
     #module .top { display: flex; align-items: center; gap: 0.8rem; }
     #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
     #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
-    @media (max-width: 1100px) { .cc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(22rem, 1fr) auto; } .side .list { max-height: 12rem; } }
+    @media (max-width: 1100px) { .cc { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(22rem, 1fr) auto; } .side .list { max-height: 12rem; } #pages-card { max-height: none; } }
   </style>
 </head>
 <!--
   The Command Center (quick job 134; the spec: docs/design/command-center.md). It reads the brain's lists
-  (/api/hub-devices: the screens; /api/live-devices: every connected device) and changes real devices
+  (/api/hub-devices: the screens; /api/live-devices: every connected device; /api/hub: the pages) and changes real devices
   through the endpoints that exist (Open on…, back to the hub, each device's settings) and the teleop
   permission (/api/command-center/drive). The layout of the workspace is only a picture: it is kept by the
   brain (/api/command-center/layout) and never changes a device. Script: /hub/command-center.js.
@@ -125,8 +156,8 @@
     <span class="clock"></span>
   </header>
   <main class="cc">
-    <section class="card side" aria-label="Devices"><div class="in">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><small id="dev-count" class="num"></small></h2>
+    <section class="card side" aria-label="Devices and screens"><div class="in">
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><small id="dev-count" class="hint"></small></h2>
       <div class="list" id="devices"></div>
     </div></section>
     <section class="mid">
@@ -141,12 +172,16 @@
         </span>
       </div>
       <div id="ws" aria-label="Workspace"><div id="stage"></div></div>
-      <div id="acts"><span class="hint">Press an item to highlight it. Ctrl or Shift adds more. ⤢ opens one device.</span></div>
     </section>
-    <section class="card side" aria-label="Screens"><div class="in">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-screen"/></svg>Screens <span class="grow"></span><small id="scr-count" class="num"></small></h2>
-      <div class="list" id="screens"></div>
-    </div></section>
+    <section class="right">
+      <div class="card" id="pages-card" aria-label="Pages"><div class="in">
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-link"/></svg>Pages <span class="grow"></span>
+          <button class="iconbtn" id="pages-shut" type="button" title="Show or hide the pages" aria-expanded="true"><svg class="ico"><use href="/web/design/icons.svg#i-chev"/></svg></button></h2>
+        <input id="page-search" type="search" placeholder="Search pages" aria-label="Search pages">
+        <div class="list" id="pages"></div>
+      </div></div>
+      <div class="card" id="insp" aria-label="Inspector"><div class="in"></div></div>
+    </section>
   </main>
 </div>
 <div id="module" hidden>
