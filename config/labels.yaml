@@ -1,0 +1,111 @@
+# The words the Raspbot's labels look for (the LABELS button in the VR and AR Raspbot window).
+# The detector (YOLOE, src/lab_os/object_labels.py) finds any object that a word names, also
+# words outside the usual kinds: "blue cube", "LEGO brick". A short, plain name works best.
+# After a change, run `uv run lab-os labels build` on the brain's computer (it needs the internet
+# once), then start the brain again. Fewer words: fewer wrong labels.
+version: 1
+
+words:
+  # the lab's own things
+  - blue cube
+  - red cube
+  - green cube
+  - yellow cube
+  - LEGO brick
+  - robot arm
+  - robot car
+  - cardboard box
+  - cable
+  - screwdriver
+  - pliers
+  - roll of tape
+  - marker
+  - pen
+  - whiteboard
+  - computer monitor
+  - VR headset
+  - game controller
+  - trash can
+  - door
+  - shoe
+  # the 80 common kinds (COCO)
+  - person
+  - bicycle
+  - car
+  - motorcycle
+  - airplane
+  - bus
+  - train
+  - truck
+  - boat
+  - traffic light
+  - fire hydrant
+  - stop sign
+  - parking meter
+  - bench
+  - bird
+  - cat
+  - dog
+  - horse
+  - sheep
+  - cow
+  - elephant
+  - bear
+  - zebra
+  - giraffe
+  - backpack
+  - umbrella
+  - handbag
+  - tie
+  - suitcase
+  - frisbee
+  - skis
+  - snowboard
+  - sports ball
+  - kite
+  - baseball bat
+  - baseball glove
+  - skateboard
+  - surfboard
+  - tennis racket
+  - bottle
+  - wine glass
+  - cup
+  - fork
+  - knife
+  - spoon
+  - bowl
+  - banana
+  - apple
+  - sandwich
+  - orange
+  - broccoli
+  - carrot
+  - hot dog
+  - pizza
+  - donut
+  - cake
+  - chair
+  - couch
+  - potted plant
+  - bed
+  - table
+  - toilet
+  - tv
+  - laptop
+  - computer mouse
+  - remote control
+  - keyboard
+  - cell phone
+  - microwave
+  - oven
+  - toaster
+  - sink
+  - refrigerator
+  - book
+  - clock
+  - vase
+  - scissors
+  - teddy bear
+  - hair drier
+  - toothbrush

@@ -49,3 +49,5 @@ wandb/
 Thumbs.db
 *.swp
 .idea/
+# the labels model and its downloads, made by `lab-os labels build` (models/labels/README.md)
+/models/labels/build/

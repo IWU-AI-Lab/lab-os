@@ -10,10 +10,10 @@
 //     status line says where. STOP (or A / X) stops the car. B or Y closes the module, as do Back and Exit.
 //   - LABELS (quick job 128; off each time the window opens) puts a thin box around each object the camera sees,
 //     with its name and how sure the detector is; the object in front of the car also gets the ultrasonic
-//     distance (`/web/object-labels.js`: MediaPipe's object detector in a Web Worker).
+//     distance. The brain detects (lab_os/object_labels.py) and sends the boxes; `/web/object-labels.js` draws.
 import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, icon, rgba, spaced } from "./draw.js";
-import { ObjectLabels, drawLabels, frontIndex } from "/web/object-labels.js";
+import { drawLabels, frontIndex } from "/web/object-labels.js";
 
 const PX = 900;
 const DEAD = 0.15; // stick dead zone
@@ -23,6 +23,7 @@ const STICK_DEG_S = 60; // the right stick turns the camera this fast
 const LOOK_MAX = 90;
 const DIST = 1.2; // initial viewing distance, in metres
 const RAD = Math.PI / 180;
+const LABELS_OLD_MS = 1000; // boxes older than this are not drawn (the brain sends about 6 a second)
 const BAR = [
   { kind: "stop", label: "STOP", ico: "i-stop", danger: true },
   { kind: "rasp", op: "head", label: "HEAD", ico: "i-hand" },
@@ -86,13 +87,8 @@ export class RaspbotModule {
     this.centre = null; // the next head pose is the centre
     this.stick = { pan: 0, tilt: 0 };
     this.look = { ...this.stick };
+    this.labels = { on: false, found: [], t: -Infinity };
     this._connect();
-    this.labels = new ObjectLabels();
-    this.labels.onState = (state, why) => {
-      if (state === "loading") this._say("Loading the object detector…");
-      else if (state === "ready") this._say("Labels on.");
-      else if (state === "failed") this._say(`No labels: ${why}`, true);
-    };
     this.img = document.createElement("img");
     this.img.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
     this.img.onerror = () => { this.imgOk = false; this.retry = setTimeout(() => this._camera(), 3000); };
@@ -104,8 +100,6 @@ export class RaspbotModule {
     this.closed = true;
     clearTimeout(this.retry);
     if (this.ws) { this._send({ type: "release" }); this.ws.close(); this.ws = null; } // the car stops
-    this.labels?.close();
-    this.labels = null;
     if (this.img) { this.img.onload = this.img.onerror = null; this.img.removeAttribute("src"); this.img.remove(); this.img = null; }
   }
   _camera() { if (this.img) { this.imgOk = false; this.img.src = `/api/raspbot/camera.mjpg?t=${Date.now()}`; } }
@@ -114,6 +108,7 @@ export class RaspbotModule {
     this.sent = { look: null, lookT: 0, driveT: 0, driving: false };
     const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/raspbot`);
     ws.onmessage = (e) => this._message(JSON.parse(e.data));
+    ws.onopen = () => { if (this.labels.on) this._send({ type: "labels", on: true }); }; // after a reconnect
     ws.onclose = () => {
       if (this.ws !== ws || this.closed) return;
       this.status = null;
@@ -130,12 +125,25 @@ export class RaspbotModule {
       const hadCam = this.status?.camera;
       this.status = m;
       if (m.camera && !hadCam && !this.imgOk) this._camera();
-    } else if (m.type === "error") this._say(m.message, true);
+    } else if (m.type === "labels") this._labels(m);
+    else if (m.type === "error") this._say(m.message, true);
     else if (m.type === "saved") {
       if (m.what === "picture") this._say(`Picture saved: ${m.path}`);
       else if (m.on) this._say(`Recording to ${m.path}`);
       else this._say(m.path ? `Recording saved: ${m.path}` : "No recording was on.");
     }
+  }
+
+  /** The brain's labels: its detector's state, and the objects in the newest picture. */
+  _labels(m) {
+    if (!this.labels.on) return;
+    if (m.found?.length || m.state === "ready") Object.assign(this.labels, { found: m.found || [], t: performance.now() });
+    if (m.state === this.labels.state && m.why === this.labels.why) return;
+    Object.assign(this.labels, { state: m.state, why: m.why });
+    if (m.state === "loading") this._say("Loading the object detector…");
+    else if (m.state === "failed") this._say(`No labels: ${m.why}`, true);
+    else if (m.why) this._say(m.why, true);
+    else if (m.state === "ready") this._say("Labels on.");
   }
 
   /** A press on the bar (`what`: {kind: "rasp", op}). STOP goes through hub.js. */
@@ -159,9 +167,11 @@ export class RaspbotModule {
         "Left stick moves the car. Right stick turns the car.");
     } else if (what.op === "picture") this._send({ type: "picture" });
     else if (what.op === "record") this._send({ type: "record", on: !this.status?.recording });
-    else if (what.op === "labels" && this.labels) {
-      this.labels.setOn(!this.labels.on);
-      if (!this.labels.on) this._say("Labels off.");
+    else if (what.op === "labels") {
+      const on = !this.labels.on;
+      this.labels = { on, found: [], t: -Infinity };
+      if (!this._send({ type: "labels", on }) && on) this._say("Labels on, when the brain answers.");
+      else if (!on) this._say("Labels off.");
     }
   }
 
@@ -275,8 +285,7 @@ export class RaspbotModule {
     if (this.imgOk && this.img?.naturalWidth) {
       try {
         g.drawImage(this.img, 0, 0, w, h);
-        if (this.labels?.on) {
-          this.labels.feed(this.img, now);
+        if (this.labels.on && performance.now() - this.labels.t < LABELS_OLD_MS) {
           const found = this.labels.found, s = this.status;
           drawLabels(g, w, h, found, { front: frontIndex(found, s?.pan_deg), distanceMm: s?.distance_mm ?? null, color: C.primary, bg: rgba(C.bg, 0.85), font: FONT.lines });
         }
@@ -298,7 +307,7 @@ export class RaspbotModule {
       BAR.forEach((b, i) => {
         const x = i * bw + gap / 2, on = over === `${b.kind}${b.op || ""}`, lit = b.op === "record" && rec;
         const head = b.op === "head", legacy = b.op === "legacy", labels = b.op === "labels";
-        const active = lit || (head && this.headOn) || (legacy && this.legacy) || (labels && !!this.labels?.on);
+        const active = lit || (head && this.headOn) || (legacy && this.legacy) || (labels && this.labels.on);
         const col = b.danger || lit ? C.danger : C.primary, cut = h * 0.22, width = bw - gap;
         g.save(); g.translate(x, 0);
         g.beginPath(); g.moveTo(cut, 0); g.lineTo(width, 0); g.lineTo(width, h - cut); g.lineTo(width - cut, h); g.lineTo(0, h); g.lineTo(0, cut); g.closePath();
@@ -309,11 +318,11 @@ export class RaspbotModule {
         g.font = `700 ${h * 0.23}px ${FONT.ui}`; spaced(g, 0.1);
         g.fillStyle = on ? C.hot : C.text; g.textAlign = "left"; g.textBaseline = "middle";
         let label = lit ? "END REC" : b.label;
-        if (head || legacy || labels) label += (head ? this.headOn : legacy ? this.legacy : !!this.labels?.on) ? " ON" : " OFF";
+        if (head || legacy || labels) label += (head ? this.headOn : legacy ? this.legacy : this.labels.on) ? " ON" : " OFF";
         g.fillText(label, h * 0.72, h / 2, width - h * 0.8); spaced(g, 0);
         g.restore();
       });
-    }, `${over}|${rec}|${this.headOn}|${this.legacy}|${!!this.labels?.on}`);
+    }, `${over}|${rec}|${this.headOn}|${this.legacy}|${this.labels.on}`);
   }
   _paintTally() {
     this.tally.mesh.visible = !!this.status?.recording;

@@ -272,6 +272,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     rb.add_argument("action", choices=["deploy"])
     rb.add_argument("--to", default="raspbot1", help="the Raspbot's ssh name (default raspbot1)")
+    lb = sub.add_parser(
+        "labels",
+        help="build: make the Raspbot labels' model from the words in config/labels.yaml (needs "
+        "the internet once; docs/guides/raspbot.md)",
+    )
+    lb.add_argument("action", choices=["build"])
+    lb.add_argument("--config", help="the place's config folder (docs/dev/places.md)")
     us = sub.add_parser(
         "usb",
         help="list every USB device under its USB controller, with its lab-os name (Linux; "
@@ -301,6 +308,11 @@ def main(argv: list[str] | None = None) -> None:
         from lab_os.robots.raspbot import deploy
 
         raise SystemExit(deploy(args.to))
+    if args.command == "labels":
+        from lab_os.object_labels import build
+
+        use_config(args)
+        raise SystemExit(build())
     if args.command == "logs":
         return _logs(args)
     if args.command == "room":
