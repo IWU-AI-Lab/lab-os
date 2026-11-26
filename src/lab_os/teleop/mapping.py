@@ -32,6 +32,10 @@ Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
   has to clamp. At a limit the clutch "slips": moving the hand further does nothing, and moving it
   back moves the arm back immediately (no wind-up, no jump on the next grab).
 
+- IK, relative, `pivot_wrist` (the webcam page, quick job 120): the hand moves the wrist (the
+  wrist_flex joint), and a tilt of the hand turns the gripper about the wrist, so only wrist_flex
+  moves for a tilt. Without it the gripper point stays and the whole arm moves to tilt it.
+
 - IK only: the table. The gripper and the wrist stay `floor_m` above the base's bottom (z = 0;
   the venue's floor is from the table, so the cli adds the arm's `table_z_cm`); a
   target below that slips like a limit, and a step that would dip goes as far as it can (the arm
@@ -156,6 +160,14 @@ class ClutchMapper:
     absolute: bool = False
     _offset: Vec3 = (0.0, 0.0, 0.0)
     hand_gap_m: float | None = None
+    # pivot_wrist: the wrist point the hand moves, the wrist → gripper length in the arm's plane,
+    # and the arm's heading (rad, as in Kinematics.fk) with the wrist's direction from the pan axis
+    # at the grab, so the first step lands exactly where the arm is (no jump)
+    _anchor_wrist: Vec3 | None = None
+    _tool_len: float = 0.0
+    _pan_xy: tuple[float, float] = (0.0, 0.0)
+    _heading0: float = 0.0
+    _azimuth0: float = 0.0
 
     def reset(self, require_release: bool = True) -> None:
         """Drop the clutch (e.g. on connection loss). Requires a fresh grip press to move again."""
@@ -173,13 +185,15 @@ class ClutchMapper:
         arm_frame: bool = False,
         one_to_one_deg_per_s: float | None = None,
         relative_deg_per_s: float | None = None,
+        pivot_wrist: bool = False,
     ) -> dict[str, float] | None:
         """Return joint targets for this tick, or None when the arm should hold still.
         `arm_frame`: the controller's position is measured from the arm's base (1:1 possible).
         `one_to_one_deg_per_s`: a 1:1 grab's top joint speed (the venue's; inf = no cap) instead
         of `max_deg_per_s` × speed_scale, so the arm keeps up with the hand.
         `relative_deg_per_s`: the same for a relative grab (the loop's follow speed; None = the
-        old `max_deg_per_s` × speed_scale)."""
+        old `max_deg_per_s` × speed_scale).
+        `pivot_wrist`: a relative IK grab turns the gripper about the wrist (module docstring)."""
         cfg = self.config
         if controller is None or not controller.tracked:
             self.engaged = False  # tracking lost = clutch released
@@ -215,6 +229,9 @@ class ClutchMapper:
                 self._ik_seed = dict(arm_joints)
                 # like the limits: an arm already lower may stay there or come up, never go lower
                 self._floor = min(cfg.floor_m, self._lowest(arm_joints))
+                self._anchor_wrist = None
+                if pivot_wrist and not one_to_one:
+                    self._grab_wrist(arm_joints)
                 if one_to_one:
                     hand = self._hand_in_arm(controller.pos)
                     self._offset = tuple(t - h for t, h in zip(self._anchor_tip, hand, strict=True))
@@ -251,6 +268,40 @@ class ClutchMapper:
                 delta *= k  # all arm joints slowed together: they arrive at the same time
             self._commanded[joint] = self._commanded.get(joint, desired[joint]) + delta
         return {j: self._commanded[j] for j in desired}
+
+    def _grab_wrist(self, joints: dict[str, float]) -> None:
+        """pivot_wrist: remember the wrist point and the gripper's length from it, in the arm's
+        plane (the same plane as the tool angle). Arms without `frames` keep the gripper point."""
+        frames = getattr(self.kinematics, "frames", None)
+        if frames is None:
+            return
+        f = frames(joints)
+        pivot = getattr(self.kinematics, "pivot", "wrist_flex")
+        if pivot not in f or "shoulder_pan" not in f:
+            return
+        tip = f["tip"][0]
+        heading = -math.radians(joints.get("shoulder_pan", 0.0))  # +pan faces the arm's right
+        fwd = (math.cos(heading), math.sin(heading))
+        d = [t - p for t, p in zip(tip, f[pivot][0], strict=True)]
+        self._tool_len = math.hypot(d[0] * fwd[0] + d[1] * fwd[1], d[2])
+        ox, oy, oz = self._tool_offset(self._anchor_angle, heading)
+        self._anchor_wrist = (tip[0] - ox, tip[1] - oy, tip[2] - oz)
+        self._pan_xy = f["shoulder_pan"][0][:2]
+        self._heading0 = heading
+        self._azimuth0 = self._azimuth(self._anchor_wrist)
+
+    def _azimuth(self, p: Vec3) -> float:
+        return math.atan2(p[1] - self._pan_xy[1], p[0] - self._pan_xy[0])
+
+    def _tool_offset(self, angle: float, heading: float) -> Vec3:
+        """Wrist → gripper point for a tool angle (degrees) with the arm facing `heading` (rad)."""
+        a = math.radians(angle)
+        forward = self._tool_len * math.sin(a)
+        return (
+            forward * math.cos(heading),
+            forward * math.sin(heading),
+            self._tool_len * math.cos(a),
+        )
 
     def _above_floor(self, start: dict[str, float], end: dict[str, float]) -> dict[str, float]:
         """The furthest point from `start` toward `end` (in joint space) that stays above the
@@ -297,15 +348,22 @@ class ClutchMapper:
         """IK joints for the anchor gripper pose moved by the hand (relative), or for where the
         hand is plus the grab's offset (1:1)."""
         cfg, kin = self.config, self.kinematics
+        angle = self._anchor_angle - pitch  # nose up → the gripper tilts back/up
+        wrist = None
         if self.absolute:
             hand = self._hand_in_arm(pos)
             x, y, z = (h + o for h, o in zip(hand, self._offset, strict=True))
         else:
             s = cfg.tip_m_per_hand_m
-            move = (d * s for d in self._hand_in_arm(dpos))
-            x, y, z = (a + d for a, d in zip(self._anchor_tip, move, strict=True))
+            move = [d * s for d in self._hand_in_arm(dpos)]
+            if self._anchor_wrist is not None:  # pivot_wrist: the hand moves the wrist
+                wrist = tuple(a + d for a, d in zip(self._anchor_wrist, move, strict=True))
+                heading = self._heading0 + self._azimuth(wrist) - self._azimuth0
+                off = self._tool_offset(angle, heading)
+                x, y, z = (w + o for w, o in zip(wrist, off, strict=True))
+            else:
+                x, y, z = (a + d for a, d in zip(self._anchor_tip, move, strict=True))
         target = (x, y, max(z, self._floor))
-        angle = self._anchor_angle - pitch  # nose up → the gripper tilts back/up
         bounds = {j: JointLimit(*self._bounds[j]) for j in IK_JOINTS if j in self._bounds}
         q = solve_ik(kin, self._ik_seed, target, angle, bounds)
         if self._lowest(q) < self._floor - 0.001:
@@ -316,7 +374,12 @@ class ClutchMapper:
         # arm back straight away.
         miss = [r - t for r, t in zip(reached, (x, y, z), strict=True)]  # the floor slips too
         if not self.absolute and math.sqrt(sum(m * m for m in miss)) > cfg.slip_m:
-            self._anchor_tip = tuple(a + m for a, m in zip(self._anchor_tip, miss, strict=True))
+            if wrist is not None:
+                self._anchor_wrist = tuple(
+                    a + m for a, m in zip(self._anchor_wrist, miss, strict=True)
+                )
+            else:
+                self._anchor_tip = tuple(a + m for a, m in zip(self._anchor_tip, miss, strict=True))
         if abs(reached_angle - angle) > 1.0:
             self._anchor_angle += reached_angle - angle
         return {j: q[j] for j in IK_JOINTS}

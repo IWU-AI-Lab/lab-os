@@ -269,3 +269,44 @@ def test_joints_arrive_together():
     for p in path:
         assert abs(p[1] - tip0[1]) < 0.002  # never off to the side
         assert abs(p[2] - tip0[2]) < 0.006  # nor much up or down on the way
+
+
+def drive_pivot(c_end, ticks=200, pan=0.0):
+    """drive() for the SO-101 with pivot_wrist (the webcam page, quick job 120)."""
+    m = ClutchMapper(kinematics=SO101)
+    limits = so101_limits()
+    start = SO101_REACHING | {"shoulder_pan": pan}
+    joints = dict(start)
+    m.step(hand(), joints, 0.02, 1.0, limits, pivot_wrist=True)
+    first = m.step(hand(), joints, 0.02, 1.0, limits, pivot_wrist=True)
+    for _ in range(ticks):
+        joints = joints | (m.step(c_end, joints, 0.02, 1.0, limits, pivot_wrist=True) or {})
+    return start, first, joints
+
+
+@pytest.mark.parametrize("pan", [0.0, 30.0])
+def test_pivot_wrist_grab_does_not_jump(pan):
+    start, first, _ = drive_pivot(hand(), ticks=0, pan=pan)
+    for j in IK_JOINTS:
+        assert first[j] == pytest.approx(start[j], abs=0.05)
+
+
+@pytest.mark.parametrize("pan", [0.0, 30.0])
+def test_pivot_wrist_tilt_moves_only_the_wrist(pan):
+    """Quick job 120: a turn of the hand moved the whole arm on the webcam page. With pivot_wrist,
+    a tilt turns the gripper about the wrist: only wrist_flex moves."""
+    start, _, joints = drive_pivot(hand(pitch_deg=20.0), pan=pan)
+    assert joints["wrist_flex"] == pytest.approx(start["wrist_flex"] - 20.0, abs=0.5)
+    for j in ("shoulder_pan", "shoulder_lift", "elbow_flex"):
+        assert joints[j] == pytest.approx(start[j], abs=0.3), j
+    wrist0 = SO101.frames(start)["wrist_flex"][0]
+    assert math.dist(wrist0, SO101.frames(joints)["wrist_flex"][0]) < 0.002
+
+
+def test_pivot_wrist_hand_moves_the_wrist():
+    end = (HAND[0], HAND[1] + 0.03, HAND[2] - 0.03)  # up and forward
+    start, _, joints = drive_pivot(hand(end))
+    w0, w1 = SO101.frames(start)["wrist_flex"][0], SO101.frames(joints)["wrist_flex"][0]
+    assert w1[0] - w0[0] == pytest.approx(0.03, abs=0.002)
+    assert w1[2] - w0[2] == pytest.approx(0.03, abs=0.002)
+    assert SO101.fk(joints)[1] == pytest.approx(SO101.fk(start)[1], abs=1.0)  # tilt kept

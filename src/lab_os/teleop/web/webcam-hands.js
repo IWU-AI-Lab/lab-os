@@ -7,7 +7,8 @@
 // "right controller", in the room's frame (+x right, +y up, −z forward), relative mode only (no
 // "frame": "arm": the page doesn't know where the real arm is, so 1:1 isn't possible). The hand's
 // turn is sent too (quick job 88), so the brain maps it as the Quest's: tilt → wrist_flex,
-// roll → wrist_roll.
+// roll → wrist_roll. The message asks the brain to turn the gripper about the wrist ("pivot":
+// "wrist", quick job 120): a turn of the hand moves only the wrist, not the whole arm.
 //
 // Safety, on top of the brain's (the dead-man's 250 ms, the clutch, STOP, the limits):
 //   - The moving hand out of view (or a jump too big to be real) = tracking lost: the arm holds.
@@ -18,8 +19,7 @@
 
 // MediaPipe's 21 hand landmarks: the ones used here.
 const WRIST = 0, THUMB_TIP = 4, INDEX_MCP = 5, INDEX_TIP = 8, MIDDLE_MCP = 9, PINKY_MCP = 17;
-// Palm segments for the hand's distance: the palm is flat, so at least one of them faces the camera.
-const PALM = [[WRIST, INDEX_MCP], [WRIST, PINKY_MCP], [INDEX_MCP, PINKY_MCP], [WRIST, MIDDLE_MCP]];
+const FINGER_TIPS = [8, 12, 16, 20]; // index, middle, ring, little
 
 export const DIAG_FOV_DEG = 78; // the Logitech C615's diagonal field of view (most webcams: 70–90)
 // Pinch from MediaPipe's world landmarks (metres): tips 5 cm apart = 0, 2 cm (touching) = 1. The
@@ -29,9 +29,15 @@ export const PINCH_OPEN_M = 0.05;
 export const PINCH_SHUT_M = 0.02;
 export const GRIP_OFF = 0.4; // the brain's clutch lets go below this (mapping.py grip_off)
 export const JUMP_M = 0.12; // the wrist moving further than this between two frames isn't a real hand
-// The picture is only about 50 cm high at 60 cm from the camera, less than the arm's reach, so the
-// hand's moves count 1.5 times (quick job 88: the arm couldn't reach down to the table).
-export const REACH = 1.5;
+// How much the hand's moves count. Quick job 88 made it 1.5 (the arm couldn't reach the table); quick
+// job 120: much too sensitive, most of all toward and away (the least sure of the three). To go
+// further, grab again (the page says so).
+export const REACH = 0.8; // left/right and up/down
+export const REACH_DEPTH = 0.4; // toward and away from the camera
+// The gripper (quick job 120: it didn't stay closed with the hand closed). It closes above
+// GRIP_SHUT and stays fully closed until the hand opens below GRIP_OPEN; a fist counts as closed.
+export const GRIP_SHUT = 0.6;
+export const GRIP_OPEN = 0.25;
 export const STEADY_FRAMES = 5; // about 170 ms at 30 frames a second
 const REST = { buttons: { a: false, b: false, thumbstick: false }, thumbstick: [0, 0] };
 
@@ -44,6 +50,20 @@ export function pinchAmount(world) {
   return clamp01((PINCH_OPEN_M - d) / (PINCH_OPEN_M - PINCH_SHUT_M));
 }
 
+/**
+ * How closed the hand is, 0 (open) … 1 (a fist): the finger tips' distance from the wrist against
+ * the palm's length (wrist → middle knuckle). Open: about 2 palms; a fist: about 1.
+ */
+export function fistAmount(world) {
+  const palm = dist(world[WRIST], world[MIDDLE_MCP]);
+  if (!(palm > 1e-4)) return 0;
+  const reach = FINGER_TIPS.reduce((s, k) => s + dist(world[k], world[WRIST]), 0) / FINGER_TIPS.length / palm;
+  return clamp01((1.6 - reach) / (1.6 - 1.15));
+}
+
+/** The right hand's gripper amount: a pinch or a fist, whichever is more closed. */
+export const gripAmount = (world) => Math.max(pinchAmount(world), fistAmount(world));
+
 /** The camera's focal length in pixels, from its diagonal field of view. */
 export function focalPx(width, height, diagFovDeg = DIAG_FOV_DEG) {
   return Math.hypot(width, height) / 2 / Math.tan((diagFovDeg * Math.PI) / 360);
@@ -51,25 +71,54 @@ export function focalPx(width, height, diagFovDeg = DIAG_FOV_DEG) {
 
 /**
  * The wrist in metres, in the room's frame as the person sees it, for a camera that faces them.
- * Left/right and up/down come from where the wrist is in the picture; toward/away from the palm's
+ * Left/right and up/down come from where the wrist is in the picture; toward/away from the hand's
  * size in the picture against its real size (MediaPipe's world landmarks): rough, ±a few cm.
  * `image`: normalized landmarks (0..1 of the picture), `world`: metres; the picture is not mirrored.
+ *
+ * The distance: the hand's 3D shape (MediaPipe's world landmarks, in metres, with the camera's
+ * axes) is placed where the camera sees it, by least squares over all 21 landmarks (each landmark's
+ * picture point = the camera's projection of its 3D point; the unknowns are where the hand is).
+ * A turn of the hand turns its 3D shape the same way, so the wrist's distance stays (quick job 120:
+ * before, a few palm lines gave it, and a turn of the hand moved the arm).
  */
 export function wristPosition(image, world, width, height, { depth = true, diagFovDeg = DIAG_FOV_DEG } = {}) {
   const f = focalPx(width, height, diagFovDeg);
-  const px = (p) => ({ x: p.x * width, y: p.y * height });
-  // the least foreshortened palm segment: its real length over its length in the picture
-  let d = Infinity;
-  for (const [a, b] of PALM) {
-    const inPicture = dist(px(image[a]), px(image[b]));
-    if (inPicture > 1) d = Math.min(d, (f * dist(world[a], world[b])) / inPicture);
+  // Each landmark k (picture point u, v from the middle; 3D point X, Y, Z) gives two lines of
+  // f·Tx − u·Tz = u·Z − f·X and f·Ty − v·Tz = v·Z − f·Y, with T where the hand's 3D origin is.
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], b = [0, 0, 0];
+  const add = (row, rhs) => {
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) A[i][j] += row[i] * row[j];
+      b[i] += row[i] * rhs;
+    }
+  };
+  const n = Math.min(image.length, world.length);
+  for (let k = 0; k < n; k++) {
+    const u = image[k].x * width - width / 2, v = image[k].y * height - height / 2;
+    const { x, y, z } = world[k];
+    add([f, 0, -u], u * (z || 0) - f * x);
+    add([0, f, -v], v * (z || 0) - f * y);
   }
-  if (!Number.isFinite(d)) return null;
-  const z = depth ? d : 0.5; // depth off: a fixed half metre, so the hand moves in a flat plane
-  const w = px(image[WRIST]);
-  // The camera faces the person: their right is the picture's left, so x flips. Picture y grows down.
-  // Toward the camera (smaller d) is the person's forward (−z), so z = d works as it is.
-  return [(-(w.x - width / 2) / f) * z, (-(w.y - height / 2) / f) * z, z];
+  const T = solve3(A, b);
+  if (!T || !(T[2] > 0.05)) return null; // no sure answer (a hand drawn under a few pixels)
+  const wr = world[WRIST];
+  const cam = [T[0] + wr.x, T[1] + wr.y, T[2] + (wr.z || 0)]; // the wrist, x right, y down, z away
+  // The camera faces the person: their right is the picture's left, so x flips. Picture y grows
+  // down. Toward the camera (smaller z) is the person's forward (−z), so z works as it is. Depth
+  // off: a fixed half metre, so the hand moves in a flat plane.
+  const z = depth ? cam[2] : 0.5;
+  return [(-cam[0] / cam[2]) * z, (-cam[1] / cam[2]) * z, z];
+}
+
+/** Solve A·x = b for a 3×3 A (Cramer's rule); null when A is (nearly) singular. */
+function solve3(A, b) {
+  const det = (m) =>
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+    m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+    m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const d = det(A);
+  if (!(Math.abs(d) > 1e-9 * Math.abs(A[0][0] * A[1][1] * A[2][2]))) return null;
+  return [0, 1, 2].map((c) => det(A.map((row, i) => row.map((v, j) => (j === c ? b[i] : v)))) / d);
 }
 
 /**
@@ -181,13 +230,14 @@ export class WebcamHands {
     // Stronger smoothing than the 1€ defaults (quick job 88: the 3D arm shook with the hand still),
     // for about the same delay while it moves (~80 ms); toward/away (from the palm's size) is the
     // noisiest, so it gets the most (~110 ms). Checked with simulated noise, not yet on a real hand.
-    this.filters = [new OneEuro(0.3, 5, 0.2), new OneEuro(0.3, 5, 0.2), new OneEuro(0.2, 3, 0.2)];
+    this.filters = [new OneEuro(0.3, 5, 0.2), new OneEuro(0.3, 5, 0.2), new OneEuro(0.15, 2, 0.2)];
     this.turnFilters = Array.from({ length: 6 }, () => new OneEuro(0.3, 1, 0.2));
     this.pinchFilter = new OneEuro(3.0, 0.0);
     this.steady = { left: 0, right: 0 }; // frames in a row each side was seen
     this.last = null; // the moving hand's last position (filtered) and time
     this.held = false; // frozen until the clutch is let go
     this.trigger = 0;
+    this.shut = false; // the gripper is held closed (GRIP_SHUT … GRIP_OPEN)
     this.why = "";
   }
   _lost(why, clutch) {
@@ -203,7 +253,8 @@ export class WebcamHands {
   }
   /**
    * @param {{side: string, pos: number[]|null, pinch: number, axes?: object|null}[]} hands this
-   *   frame's hands (`axes`: handAxes(); without them the wrist's turn holds)
+   *   frame's hands (`pinch`: pinchAmount() for the left hand, gripAmount() for the right; `axes`:
+   *   handAxes(); without them the wrist's turn holds)
    * @param {number} t seconds
    * @param {boolean} space Space held (the keyboard clutch)
    * @returns {{msg: object, state: string, clutch: number, trigger: number}}
@@ -225,13 +276,16 @@ export class WebcamHands {
       if (this.last && t - this.last.t < 0.25 && Math.hypot(...raw.map((v, i) => v - this.last.raw[i])) > JUMP_M) {
         this._lost("the hand tracking jumped", clutch);
       } else {
-        pos = raw.map((v, i) => this.filters[i].filter(v, t) * REACH);
+        pos = raw.map((v, i) => this.filters[i].filter(v, t) * (i === 2 ? REACH_DEPTH : REACH));
         this.last = { raw, t };
         if (right.axes) {
           const v = [...right.axes.along, ...right.axes.across].map((x, i) => this.turnFilters[i].filter(x, t));
           quat = axesQuat({ along: v.slice(0, 3), across: v.slice(3) });
         }
-        this.trigger = clamp01(this.pinchFilter.filter(right.pinch, t));
+        const amount = clamp01(this.pinchFilter.filter(right.pinch, t));
+        if (amount >= GRIP_SHUT) this.shut = true;
+        else if (amount < GRIP_OPEN) this.shut = false;
+        this.trigger = this.shut ? 1 : amount;
       }
     }
     if (this.held && clutch < GRIP_OFF) {
@@ -243,7 +297,7 @@ export class WebcamHands {
     // no turn measured: a fixed one, so the wrist holds its angle
     const c = { pos, quat: pos ? quat || [0, 0, 0, 1] : null, trigger: this.trigger, grip, ...REST };
     return {
-      msg: { type: "xr_input", t: t * 1000, source: "webcam", hands: { right: c } },
+      msg: { type: "xr_input", t: t * 1000, source: "webcam", pivot: "wrist", hands: { right: c } },
       state,
       clutch,
       trigger: this.trigger,

@@ -4,6 +4,7 @@ tests are skipped without node): hand sides, pinch, the wrist's position, and th
 
 import asyncio
 import json
+import math
 import shutil
 import subprocess
 
@@ -141,6 +142,33 @@ def test_wrist_position():
     assert wrist(640, 360, 200, depth=False)[2] == 0.5  # depth off: a flat plane
 
 
+@needs_node
+@pytest.mark.parametrize(("roll", "tilt"), [(30, 0), (0, 40), (20, 50)])
+def test_a_turned_hand_keeps_its_distance(roll, tilt):
+    """Quick job 120: a turn of the wrist moved the whole arm. The hand drawn turned in a camera's
+    picture, 50 cm away: the wrist's distance and place stay (within 1 cm)."""
+    pos = run(
+        "const flat = (() => {"
+        + turned(0, 0)
+        + "return w; })(); const w = (() => {"
+        + turned(roll, tilt)
+        + "return w; })();"
+        + """
+const W = 1280, H = 720, f = m.focalPx(W, H), D = 0.5;
+// the wrist at the picture's middle, D away; each landmark seen through the camera
+const img = (pts) => pts.map((p) => ({x: (W / 2 + (f * p.x) / (D + p.z)) / W,
+                                       y: (H / 2 + (f * p.y) / (D + p.z)) / H}));
+const centred = (pts) => { const n = pts.length; const c = ['x', 'y', 'z'].map((k) =>
+  pts.reduce((s, p) => s + p[k], 0) / n); return pts.map((p) => ({x: p.x - c[0], y: p.y - c[1],
+  z: p.z - c[2]})); };
+const at = (pts) => m.wristPosition(img(pts), centred(pts), W, H);
+return [at(flat), at(w)];"""
+    )
+    flat, now = pos
+    assert flat[2] == pytest.approx(0.5, abs=0.01)
+    assert math.dist(flat, now) < 0.01
+
+
 STEP = """
 const h = new m.WebcamHands();
 const R = (x, pinch = 0) => ({side: "right", pos: [x, 0, 0.5], pinch});
@@ -227,20 +255,68 @@ return out;"""
 
 
 @needs_node
-def test_the_hands_moves_count_more_than_one_to_one():
-    """Quick job 88: the picture is smaller than the arm's reach, so a move counts REACH times."""
+def test_the_hands_moves_count_less_toward_the_camera():
+    """Quick job 120: much too sensitive, most of all toward and away. A move counts REACH times,
+    toward and away REACH_DEPTH times (less)."""
     out = run(
         STEP
         + """
 warm([R(0), L(0)], 0.0);
 go([R(0), L(1)], 0.0);
-for (let i = 1; i <= 60; i++) go([R(0.002 * i), L(1)], 0.033 * i);  // 12 cm in 2 s, then still
-for (let i = 61; i <= 150; i++) go([R(0.12), L(1)], 0.033 * i);
+const RZ = (x, z) => ({side: "right", pos: [x, 0, z], pinch: 0});
+for (let i = 1; i <= 60; i++) go([RZ(0.002 * i, 0.5 - 0.002 * i), L(1)], 0.033 * i);  // 12 cm
+for (let i = 61; i <= 150; i++) go([RZ(0.12, 0.38), L(1)], 0.033 * i);  // then still
 return out;"""
     )
-    reach = run("return m.REACH")
-    assert reach > 1
-    assert out[-1]["pos"][0] == pytest.approx(0.12 * reach, abs=0.003)
+    reach, depth = run("return [m.REACH, m.REACH_DEPTH]")
+    assert depth < reach < 1.5  # 1.5 before quick job 120
+    first, last = out[0]["pos"], out[-1]["pos"]
+    assert last[0] - first[0] == pytest.approx(0.12 * reach, abs=0.003)
+    assert first[2] - last[2] == pytest.approx(0.12 * depth, abs=0.003)
+
+
+@needs_node
+def test_the_message_turns_the_gripper_about_the_wrist():
+    out = run(STEP + "warm([R(0)], 0); return h.step([R(0)], 0, true).msg;")
+    assert out["pivot"] == "wrist"
+
+
+@needs_node
+def test_the_gripper_stays_closed_until_the_hand_opens():
+    """Quick job 120: the gripper didn't stay closed with the hand closed. Above GRIP_SHUT it closes
+    fully and stays closed until the amount falls under GRIP_OPEN, also while the hand is lost."""
+    out = run(
+        STEP
+        + """
+const trig = [];
+const at = (pinch, t, hand = true) => trig.push(h.step(hand ? [R(0, pinch)] : [], t, true).trigger);
+warm([R(0, 0)], 0);
+let t = 0;
+for (const p of [0, 0.7, 0.7, 0.7, 0.45, 0.45, 0.45, 0.45]) at(p, (t += 0.5));
+at(0, (t += 0.5), false);  // the hand leaves the picture for a moment
+for (let i = m.STEADY_FRAMES; i > 0; i--) h.step([R(0, 0.45)], (t += 0.03), true);
+at(0.45, (t += 0.5));
+for (const p of [0.1, 0.1, 0.1]) at(p, (t += 0.5));
+return trig;"""
+    )
+    assert out[0] < 0.1
+    assert all(v == 1 for v in out[2:10])  # closed, and it stays closed through a looser pinch
+    assert out[-1] < 0.25  # open again
+
+
+@needs_node
+def test_a_fist_closes_the_gripper():
+    hand_pts = (
+        "const w = Array.from({length: 21}, () => ({x: 0, y: 0, z: 0}));"
+        "w[9] = {x: 0, y: -0.09, z: 0}; w[4] = {x: -0.06, y: -0.05, z: 0};"
+        "const tips = (r) => {"
+        "  for (const k of [8, 12, 16, 20]) w[k] = {x: 0, y: -0.09 * r, z: 0}; };"
+    )
+    assert run(hand_pts + "tips(2); return m.gripAmount(w);") == 0  # fingers out
+    assert run(hand_pts + "tips(1); return m.gripAmount(w);") == 1  # a fist
+    assert (
+        run(hand_pts + "tips(2); w[8] = {x: -0.06, y: -0.06, z: 0}; return m.gripAmount(w);") == 1
+    )
 
 
 def turned(roll_deg=0.0, tilt_deg=0.0):
@@ -304,3 +380,11 @@ go([R(0)], 0.03);
 return out;"""
     )
     assert out[0]["quat"] != [0, 0, 0, 1] and out[1]["quat"] == [0, 0, 0, 1]
+
+
+def test_the_brain_reads_the_wrist_pivot():
+    from lab_os.teleop.messages import parse_frame
+
+    msg = {"type": "xr_input", "hands": {}}
+    assert parse_frame(msg | {"pivot": "wrist"}).pivot_wrist is True
+    assert parse_frame(msg).pivot_wrist is False

@@ -9,7 +9,7 @@ import { getLink } from "./link.js";
 import { gate } from "./control-gate.js";
 import { deviceName } from "/web/device.js";
 import { FilesetResolver, HandLandmarker } from "/web/vendor/mediapipe/vision_bundle.mjs";
-import { WebcamHands, handAxes, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
+import { WebcamHands, gripAmount, handAxes, pinchAmount, sidesOf, wristPosition } from "./webcam-hands.js";
 import { color } from "/web/theme.js";
 
 const $ = (id) => document.getElementById(id);
@@ -173,7 +173,7 @@ async function startControl() {
   $("start").disabled = false;
   $("start").dataset.busy = "";
   $("start").title = "";
-  $("start").textContent = "Stop webcam control (Esc)";
+  $("start").textContent = "Stop webcam control (` key)";
   $("stop-key").hidden = false;
   document.activeElement?.blur(); // Space on a focused button would click it
   say("");
@@ -223,7 +223,9 @@ function onFrame() {
     const seen = found.map((f, i) => ({
       side: sides[i],
       pos: wristPosition(f.image, f.world, w, h, { depth: $("depth").checked }),
-      pinch: pinchAmount(f.world),
+      // the left hand's pinch is the clutch; the right hand closes the gripper with a pinch or a
+      // fist (quick job 120)
+      pinch: sides[i] === "right" ? gripAmount(f.world) : pinchAmount(f.world),
       axes: handAxes(f.world), // the hand's turn → the wrist (quick job 88)
     }));
     const out = hands.step(seen, now / 1000, space);
@@ -287,7 +289,7 @@ function show(out, seen) {
   $("readout").textContent = `webcam · ${seen.length} hand(s) seen\nright ${c.pos ? `pos ${c.pos.map(n).join(" ")}` : "tracking lost"}  grip ${c.grip.toFixed(2)}  trig ${c.trigger.toFixed(2)}`;
 }
 
-// ---- keys: Space = clutch, X = STOP, Esc = leave -----------------------------------------------
+// ---- keys: Space = clutch, X = STOP, ` = leave (as on the other pages, quick job 120) ------------
 document.addEventListener("keydown", (e) => {
   if (!running) return;
   if (e.code === "Space") {
@@ -296,7 +298,8 @@ document.addEventListener("keydown", (e) => {
   } else if (e.code === "KeyX" && !e.repeat) {
     e.preventDefault();
     link.send({ type: "stop" });
-  } else if (e.code === "Escape") {
+  } else if (e.code === "Backquote") {
+    e.preventDefault();
     stopControl("Webcam control stopped. The arm holds.");
   }
 });
