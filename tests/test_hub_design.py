@@ -1,6 +1,7 @@
 """The designed hub (step 10, previewed at /design) and the facts it reads beyond the plain hub's:
 the arm's joints, the device list, the latest commits. No hardware, no internet."""
 
+import re
 from datetime import date
 from pathlib import Path
 
@@ -181,3 +182,7 @@ def test_a_card_swipe_starts_the_hub_its_own_way():
     assert "console" not in detector.replace('console.info("hub: a card swipe that', "")
     assert 'if ($("#ignite")) { startKey(e); return; }' in page
     assert "card() {" in page and "#ignite.card" in page and "CARD_MS" in page
+    # quick job 136: slow enough to follow, slower than a tap's unlock
+    card_ms = int(re.search(r"const CARD_MS = (\d+);", page)[1])
+    tap_ms = int(re.search(r"const UNLOCK_MS_TAP = (\d+);", page)[1])
+    assert card_ms >= 1500 and card_ms > tap_ms
