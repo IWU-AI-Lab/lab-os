@@ -24,6 +24,8 @@
 // The positions are plain 2D numbers in the workspace's own units, kept apart from the drawing, so a 3D
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
+import { playIntro } from "/hub/command-center-intro.js";
+
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ico = (id) => `<svg class="ico"><use href="/web/design/icons.svg#${id}"/></svg>`;
@@ -905,6 +907,22 @@ async function refresh() {
     say(`The brain didn't answer (${e.message}). Trying again.`, true);
   }
 }
+// the opening (quick job 140): the real counts type out while it plays
+function introCounts() {
+  const devs = devices(), scr = screens(devs);
+  return [
+    ["Devices connected", devs.filter((d) => !d.gone).length],
+    ["Screens", scr.length],
+    ["Devices off now", devs.filter((d) => d.gone).length],
+    ["Events", S.events.length],
+  ];
+}
+playIntro({
+  counts: introCounts,
+  panels: [".left", ".mid", ".right", ".bar"].map((s) => $(s)).filter(Boolean),
+  items: () => [...document.querySelectorAll("#stage > .node, #devices > .row")],
+  flyTo: $(".bar .title .ico"),
+});
 async function start() {
   try {
     const [hub, cc] = await Promise.all([getJSON("/api/hub"), getJSON("/api/command-center")]);
