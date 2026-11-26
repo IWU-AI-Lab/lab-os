@@ -256,6 +256,17 @@ async def test_go_to_pose_far_away_goes_part_of_the_way(rig):
     assert (j["shoulder_pan"], j["wrist_roll"], j["gripper"]) == (-2.2, 87.4, 16.5)
 
 
+async def test_go_to_pose_moves_smoothly(rig):
+    """Quick job 118: a move to a named pose starts slowly and slows down at the end."""
+    seen = []
+    rig.loop.start_motion = (lambda orig: lambda m: (seen.append(m), orig(m))[1])(
+        rig.loop.start_motion
+    )
+    await rig.call("go_to_pose", name="home")
+    await rig.call("move_joints", joints={"shoulder_pan": 5.0}, relative=True)
+    assert [m.smooth for m in seen] == [True, False]
+
+
 # ---------- refusals: nothing moves, the message says why ----------
 
 

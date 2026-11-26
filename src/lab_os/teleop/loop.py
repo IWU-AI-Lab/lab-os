@@ -49,6 +49,8 @@ log = logging.getLogger(__name__)
 # itself at its Max_Temperature_Limit (70 °C by default); this keeps well below it. A guess, not
 # measured: the logs (logs/servo-health/) will tell what 1:1 really does.
 HOT_C = 60.0
+# A minimum-jerk move's top speed is this many times its mean speed (smooth AI moves, Motion).
+MIN_JERK_PEAK = 1.875
 
 
 @dataclass
@@ -76,16 +78,51 @@ class Motion:
     path: list[dict[str, float]]
     deg_per_s: float = 60.0
     hold_s: float = 0.0  # after the last waypoint, keep sending it this long (servos catch up)
+    # smooth: start slowly, speed up, slow down at the end (a minimum-jerk profile over the whole
+    # path; quick job 118). The top speed stays at most deg_per_s × the speed scale. Off: the
+    # whole path at that speed, starting and stopping at once.
+    smooth: bool = False
     result: str | None = None  # "arrived" / "stopped" once finished
     done: asyncio.Event = field(default_factory=asyncio.Event)
     _index: int = 0
     _held_s: float = 0.0
     _commanded: dict[str, float] = field(default_factory=dict)
+    _travel: float = 0.0  # smooth: the path's length (the furthest joint's degrees, summed)
+    _phase: float = 0.0  # smooth: 0 → 1 along the profile
+    _done_deg: float = 0.0  # smooth: how far along the path the commands are
 
     def finish(self, result: str) -> None:
         if self.result is None:
             self.result = result
             self.done.set()
+
+    def start_from(self, joints: dict[str, float]) -> None:
+        """The arm's position when the move starts: the path's length is measured from it."""
+        self._commanded = dict(joints)
+        prev, self._travel = dict(joints), 0.0
+        for wp in self.path:
+            self._travel += max((abs(v - prev.get(j, v)) for j, v in wp.items()), default=0.0)
+            prev |= wp
+
+    @property
+    def travel_deg(self) -> float:
+        """The path's length from the start: the furthest joint's degrees, summed."""
+        return self._travel
+
+    def budget(self, top_deg_per_s: float, dt: float) -> float:
+        """How many degrees (of the furthest joint) the commands may advance in this tick."""
+        if not self.smooth:
+            return top_deg_per_s * dt
+        if self._travel <= 1e-9 or top_deg_per_s <= 0:
+            return math.inf if self._travel <= 1e-9 else 0.0
+        # minimum jerk: s(τ) = 10τ³ − 15τ⁴ + 6τ⁵ peaks at 1.875 × the mean speed; the phase moves
+        # so that the peak is the top speed now (the speed scale may change during the move)
+        self._phase = min(1.0, self._phase + dt * top_deg_per_s / (MIN_JERK_PEAK * self._travel))
+        t = self._phase
+        target = self._travel * t**3 * (10 - 15 * t + 6 * t * t)
+        if t >= 1.0:
+            return math.inf  # the end: whatever is left (rounding)
+        return max(target - self._done_deg, 0.0)
 
 
 @dataclass
@@ -154,7 +191,7 @@ class TeleopLoop:
             raise RuntimeError(f"{self.arm.name} is disconnected")
         if self.motion is not None:
             raise RuntimeError("another move is running")
-        motion._commanded = self.arm.read_joints()
+        motion.start_from(self.arm.read_joints())
         self.motion = motion
 
     def _freeze(self, why: str = "stopped") -> None:
@@ -346,7 +383,7 @@ class TeleopLoop:
 
     def _step_motion(self, dt: float) -> None:
         m = self.motion
-        budget = m.deg_per_s * min(max(self.speed_scale, 0.0), 1.0) * dt
+        budget = m.budget(m.deg_per_s * min(max(self.speed_scale, 0.0), 1.0), dt)
         while budget > 0 and m._index < len(m.path):
             target = m.path[m._index]
             remaining = {j: v - m._commanded[j] for j, v in target.items()}
@@ -355,10 +392,12 @@ class TeleopLoop:
                 m._commanded.update(target)
                 m._index += 1
                 budget -= far
+                m._done_deg += far
             else:
                 k = budget / far
                 for j, d in remaining.items():
                     m._commanded[j] += d * k
+                m._done_deg += budget
                 budget = 0.0
         if self.frozen:
             self.arm.resume()

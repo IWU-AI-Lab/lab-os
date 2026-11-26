@@ -349,3 +349,42 @@ def test_needs_release_clears_once_the_grip_is_let_go():
     assert loop.frozen and loop.status()["needs_release"]  # still held: let go first
     feed(loop, msg(grip=0.0), now=1.12)
     assert loop.frozen and not loop.status()["needs_release"]  # let go: grab again
+
+
+async def test_a_smooth_motion_starts_slowly_and_slows_down_at_the_end():
+    """Moves to a named pose (quick job 118): slow, faster, slow; never above the top speed."""
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    loop.speed_scale = 0.5  # top speed 30 °/s
+    start = loop.arm.read_joints()["shoulder_pan"]
+    m = Motion(path=[{"shoulder_pan": start + 60}], deg_per_s=60, smooth=True)
+    loop.start_motion(m)
+    assert m.travel_deg == 60
+    speeds, prev = [], start
+    for _ in range(400):
+        loop.step(0.0, 0.02)
+        now = loop.arm.read_joints()["shoulder_pan"]
+        speeds.append((now - prev) / 0.02)
+        prev = now
+        if m.result:
+            break
+    assert m.result == "arrived"
+    assert abs(loop.arm.read_joints()["shoulder_pan"] - (start + 60)) < 1e-6
+    moving = [s for s in speeds if s > 0]
+    assert max(moving) <= 30 + 1e-6
+    assert max(moving) > 28  # it reaches the top speed in the middle
+    assert moving[0] < 1 and moving[-1] < 1  # slow at the start and at the end
+    # about 1.875 × 60° / 30 °/s = 3.75 s
+    assert 3.6 <= len(moving) * 0.02 <= 3.9
+
+
+async def test_a_smooth_motion_of_nothing_arrives():
+    from lab_os.teleop.loop import Motion
+
+    loop, _ = make_loop()
+    here = loop.arm.read_joints()["shoulder_pan"]
+    m = Motion(path=[{"shoulder_pan": here}], smooth=True)
+    loop.start_motion(m)
+    loop.step(0.0, 0.02)
+    assert m.result == "arrived"
