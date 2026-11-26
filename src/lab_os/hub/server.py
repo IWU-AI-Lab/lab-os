@@ -1514,6 +1514,9 @@ async def api_hub(request: web.Request) -> web.Response:
             "reset_after_s": reset_after_s(theme, request.app[BRAIN].venue),
             "pages": [{"path": p, "title": t, "line": line} for p, t, line in PAGES],
             "views": [{"id": v, "title": t, "page": pg} for v, (t, pg) in DEVICE_VIEWS.items()],
+            "here": on_this_computer(
+                request
+            ),  # the brain's own computer (the Command Center's way in)
         }
     )
 

@@ -295,9 +295,10 @@ A connected arm also has `model`: its kind in `devices.yaml` (`so101`, `so101-le
 {"title": "AI Comp Lab",
  "modules": [{"id": "teleop", "title": "Teleop", "page": "/teleop"},
              {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
- "reset_after_s": 1800}
+ "reset_after_s": 1800,
+ "here": true}
 ```
-`title`: the place's name (`name` in `place.yaml`, `docs/dev/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
+`here` (quick job 140): the page is on the brain's own computer; the hub then shows the Command Center's way in. `title`: the place's name (`name` in `place.yaml`, `docs/dev/places.md`), shown top left and in the startup. `modules`: the theme's `hub.modules` in order, only those with a page. `reset_after_s`: the venue's value, else the theme's `hub.reset_after_s`.
 
 ### Greeting
 - `GET /api/greeting` → `{"hello": "Good evening.", "news": "Step 5, Typed chat, was finished today." | null, "source": "step" | "calendar" | "commits" | "persona", "text": "<hello + news, or hello + the persona's line>"}`.
@@ -395,6 +396,7 @@ Focus step 8 (`docs/archive/guides-2026-11-25/hub.md` → "Devices"). Every hub 
 The page `/command-center` (`src/lab_os/hub/command_center.py`, `src/lab_os/hub/web/command-center.js`). It reads `GET /api/hub-devices` and `GET /api/live-devices` every 1.5 s, and its Pages list from `GET /api/hub` → `views` (quick job 148), and changes the real devices with `POST /api/hub-devices/open` (`"from": "the Command Center"`), `/close`, `/start` (quick job 139) and `/<name>/settings`. Its own endpoints answer only to the brain's own computer (else `403 {"ok": false, "message"}`), and so does the page:
 - `GET /api/command-center` → `{"layout": {"places": {"d:desk": [x, y]}, "hidden": ["l:raspbot1"], "groups": {"s:desk#2": "d:pi03"}}, "drive_from": ["192.168.8.180"]}`. Item keys: `d:<device name>` (a device with the hub open), `l:<live device id>` (a device of the live list), `s:<device name>#<n>` (a screen: the device's window n, left to right). `groups`: a screen grouped under another device (or under itself: on its own). `drive_from`: the addresses that may drive a real arm now.
 - `POST /api/command-center/layout` `{"places", "hidden", "groups"}` → `{"ok": true, "layout"}`: the workspace's layout, kept in the place's `local/command-center.yaml`. It changes no device.
+- The opening (quick job 140) plays its sounds through the hub when it is in the hub's module frame: the page sends `postMessage({"type": "lab-os-sfx", "name": "lock", "arg": 1})` to the hub, which plays its own sound of that name (`tick`, `sweep`, `lock`, `shock`, `decode`, `title`, `land`) only for its module frame. On its own screen the page plays them itself.
 - `GET /api/command-center/activity` → `{"events": [{"t": 1764140000.0, "text": "pi7 opened Teleop (from desk)", "kind": "page"}]}`: the activity list (quick job 149), newest first, at most 50. `kind`: `device` (connected or disconnected), `page` (a screen opened the hub or a page, went back to the hub, or closed the hub), `stop`. Kept in the brain's memory only (the last 100).
 - `POST /api/command-center/drive` `{"addresses": ["192.168.8.50"], "allowed": true}` → `{"ok": true, "drive_from": [...]}`: those devices may (or may not) drive a real arm, at once and after a restart (`drive_from` in the place's `local/place.yaml`; a name there that stands for the address goes too). A Teleop or Raspbot page checks it when it connects.
 

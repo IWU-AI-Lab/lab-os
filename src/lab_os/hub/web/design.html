@@ -744,6 +744,27 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
 #restore-chat[hidden], #restore-line[hidden] { display: none; }
 #restore-line { align-self: flex-start; display: flex; align-items: center; gap: 0.5rem; font: 500 0.8rem/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.5rem 0.8rem; cursor: pointer; }
 #restore-line:hover, #restore-line:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
+/* the Command Center's way in (quick job 140): on the brain's own computer only, in the strip between the
+   title and the facts. Not a quiet tool: a labelled panel with a turning reticle and a light that passes */
+#cc-launch { position: relative; margin-right: auto; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; --cut: 0.6rem; }
+#cc-launch[hidden] { display: none; }
+#cc-launch .cut { background: color-mix(in srgb, var(--c) 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 30%, transparent); }
+#cc-launch .in { position: relative; display: flex; align-items: center; gap: 0.65rem; padding: 0.4rem 1.1rem 0.4rem 0.55rem; overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 80%, color-mix(in srgb, var(--c) 12%, transparent)); }
+#cc-launch svg { width: 1.9rem; height: 1.9rem; color: var(--c); overflow: visible; }
+#cc-launch .cc-ring { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-dasharray: 9 4 2 4; transform-origin: 0 0; animation: ccturn 9s linear infinite; }
+#cc-launch .cc-ring2 { fill: none; stroke: currentColor; stroke-width: 1; stroke-dasharray: 1 3; opacity: 0.7; transform-origin: 0 0; animation: ccturn 14s linear infinite reverse; }
+#cc-launch .cc-ico { fill: none; stroke: var(--hot); stroke-width: 1.6; stroke-linecap: round; }
+#cc-launch .name { font: 700 0.78rem/1 var(--f-title); letter-spacing: 0.2em; text-transform: uppercase; color: var(--hot); white-space: nowrap; }
+#cc-launch .in::after { content: ""; position: absolute; inset: 0 auto 0 -40%; width: 30%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--hot) 22%, transparent), transparent); animation: ccshine 7s ease-in-out infinite 2s; }
+#cc-launch:hover .cut, #cc-launch:focus-visible .cut { background: var(--c); }
+#cc-launch:hover .cc-ring, #cc-launch:focus-visible .cc-ring { animation-duration: 1.6s; }
+#cc-launch:focus-visible { outline: none; }
+#cc-launch.go .in { animation: ccgo 0.35s ease-out; }
+@keyframes ccturn { to { transform: rotate(360deg); } }
+@keyframes ccshine { 0%, 80% { left: -40%; } 100% { left: 110%; } }
+@keyframes ccgo { 40% { filter: brightness(2.4); } }
 /* the strip's quiet tools: back to the start screen, settings */
 .tools { display: flex; gap: 0.2rem; margin-left: -0.6rem; }
 .tool { display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; opacity: 0.7; }
@@ -905,6 +926,9 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 
   <header class="strip panel">
     <div class="brand" id="brand"></div>
+    <button id="cc-launch" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
+      <div class="cut"><div class="in"><svg viewBox="-16 -16 32 32" aria-hidden="true"><circle class="cc-ring" r="14"/><circle class="cc-ring2" r="10.5"/><use href="#i-target" x="-8" y="-8" width="16" height="16" class="cc-ico"/></svg><span class="name">Command Center</span></div></div>
+    </button>
     <div class="fact" id="f-venue" title="Venue"><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
     <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
     <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>checking</span></div>
@@ -2645,6 +2669,7 @@ function showPage(id) {
   if (id === "xr" && !$("#xr-btn").hidden) { location.href = "/xr"; return; }
   if (!S.booted || S.showing === id || (id === "hub" && !S.moduleOpen)) return;
   const target = id === "hub" ? null : id === "chat" ? $(".core") : id === "settings" ? $("#settings-btn") : id === "pages" ? $("#pages-btn")
+    : id === "command" && !$("#cc-launch").hidden ? $("#cc-launch")
     : document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`);
   if (id !== "hub" && !target) return;
   if (S.sleeping) wake();
@@ -3295,7 +3320,7 @@ function setViews(views) {
 // the button or callout that opens a view, or (none on this screen) a stand-in in the middle to unfold from
 function viewEl(id) {
   const el = document.querySelector(`#mods [data-module="${id}"]`) || document.querySelector(`.side .panel[data-detail="${id}"]`)
-    || (id === "system" ? $("#devsys") : null);
+    || (id === "system" ? $("#devsys") : id === "command" ? $("#cc-launch") : null);
   if (el && el.offsetParent) return el;
   const box = { left: innerWidth / 2 - 60, right: innerWidth / 2 + 60, top: innerHeight / 2 - 30, bottom: innerHeight / 2 + 30 };
   return { dataset: DETAILS[id] ? { detail: id } : { module: id }, getBoundingClientRect: () => box };
@@ -3320,6 +3345,7 @@ async function init() {
   if (hub?.reset_after_s) S.resetAfterMs = hub.reset_after_s * 1000;
   setModules(t?.hub?.modules, hub?.modules || []);
   setViews(hub?.views || []);
+  $("#cc-launch").hidden = !(hub?.here && S.page.command);  // the Command Center opens only on the brain's computer
   await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
 }
 // a setting changed (the settings page inside the hub, or another window): apply it without a reload
@@ -3604,6 +3630,21 @@ $("#pages-btn").addEventListener("click", async (e) => {
   if (!S.page.pages) await S.readyP;  // #skip can show the hub before its page map is ready
   if (!S.booted || S.moduleOpen || !S.page.pages) return;
   SFX.blip(); hideDevice(); openModule($("#pages-btn"));
+});
+// the Command Center's way in (quick job 140): a flash, then it unfolds from here and plays its opening
+$("#cc-launch").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!S.booted || S.moduleOpen || !S.page.command) return;
+  const b = $("#cc-launch");
+  b.classList.remove("go"); void b.offsetWidth; b.classList.add("go");
+  SFX.relock(); hideDevice(); openModule(b);
+});
+// the Command Center's opening plays its sounds through the hub, which has the press that unlocks sound
+const FRAME_SFX = new Set(["tick", "sweep", "lock", "shock", "decode", "title", "land"]);
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || e.data?.type !== "lab-os-sfx" || !FRAME_SFX.has(e.data.name)) return;
+  if (!$("#mod-slot iframe") || e.source !== $("#mod-slot iframe").contentWindow) return;
+  SFX[e.data.name](Number(e.data.arg) || 0);
 });
 // A view full screen on another monitor of this computer (HDMI/DP; device.js → openOnMonitor). The page then
 // asks for one click to go full screen (browsers' rule). A view with its own page opens that page; the hub's
