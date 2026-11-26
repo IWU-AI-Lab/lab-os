@@ -9,6 +9,7 @@ never edit it on the Raspbot.
                  {"drive": [left, right]} (-1.0 … 1.0), {"stop": true},
                  {"look": [pan, tilt]}: the camera's two servos, degrees from their centre
                  (pan + = left, tilt + = up), kept inside PAN_RANGE and TILT_RANGE (quick job 107)
+                 {"diagnostics": true}: read the ultrasonic distance in mm
     HTTP :8766   /camera.mjpg, the camera's picture (only when OpenCV and a camera are there)
 
 Safety on the car itself: the motors stop when no command came for WATCHDOG_S, when the brain's
@@ -59,12 +60,23 @@ class YahboomBoard:
         from Raspbot_Lib import Raspbot
 
         self._bot = Raspbot()
+        self._bot.Ctrl_Ulatist_Switch(1)
 
     def set_motor(self, motor: int, speed: int) -> None:
         self._bot.Ctrl_Muto(motor, speed)
 
     def set_servo(self, servo: int, angle: int) -> None:
         self._bot.Ctrl_Servo(servo, angle)
+
+    def distance_mm(self) -> int | None:
+        """Read the high and low bytes of Yahboom's ultrasonic distance."""
+        try:
+            high = self._bot.read_data_array(0x1B, 1)[0]
+            low = self._bot.read_data_array(0x1A, 1)[0]
+        except (OSError, IndexError, TypeError):
+            return None
+        distance = (high << 8) | low
+        return distance if 0 < distance < 0xFFFF else None
 
 
 class FakeBoard:
@@ -73,6 +85,7 @@ class FakeBoard:
     def __init__(self) -> None:
         self.speeds = {m: 0 for m in LEFT + RIGHT}
         self.servos = {}
+        self.distance = None
 
     def set_motor(self, motor: int, speed: int) -> None:
         if self.speeds.get(motor) != speed:
@@ -83,6 +96,9 @@ class FakeBoard:
         if self.servos.get(servo) != angle:
             log.info("servo %d: %d", servo, angle)
         self.servos[servo] = angle
+
+    def distance_mm(self) -> int | None:
+        return self.distance
 
 
 class Car:
@@ -134,6 +150,10 @@ class Car:
             self.board.set_servo(TILT_SERVO, b)
         return a, b
 
+    def diagnostics(self) -> dict:
+        with self._lock:
+            return {"distance_mm": self.board.distance_mm()}
+
     def handle(self, msg: dict) -> None:
         if "look" in msg:  # the camera only: the wheels keep what they do
             pan, tilt = msg["look"]
@@ -169,12 +189,27 @@ class CommandHandler(socketserver.StreamRequestHandler):
                     srv.current.shutdown(socket.SHUT_RDWR)
             srv.current = self.connection
         log.info("brain connected from %s", self.client_address[0])
-        hello = {"hello": socket.gethostname(), "camera_port": srv.camera_port}
+        hello = {
+            "hello": socket.gethostname(),
+            "camera_port": srv.camera_port,
+            "diagnostics": True,
+            "look_limits": [
+                sorted((angle - centre) * sign for angle in limits)
+                for centre, sign, limits in (
+                    (PAN_CENTRE, PAN_SIGN, PAN_RANGE),
+                    (TILT_CENTRE, TILT_SIGN, TILT_RANGE),
+                )
+            ],
+        }
         self.wfile.write((json.dumps(hello) + "\n").encode())
         try:
             for line in self.rfile:
                 try:
-                    srv.car.handle(json.loads(line))
+                    msg = json.loads(line)
+                    if msg == {"diagnostics": True}:
+                        self.wfile.write((json.dumps(srv.car.diagnostics()) + "\n").encode())
+                    else:
+                        srv.car.handle(msg)
                 except (ValueError, TypeError, KeyError):
                     srv.car.stop()  # a command not understood never keeps the car moving
         except OSError:

@@ -8,7 +8,8 @@ The Raspbot runs one small program, `robots/raspbot/lab_os_raspbot.py` (deployed
     {"look": [pan, tilt]}      the camera's pan-and-tilt servos, degrees from their centre
                                (pan + = left, tilt + = up); the Raspbot keeps their limits
 
-The Raspbot answers once, at connect: {"hello": "<hostname>", "camera_port": 8766 or 0}. It stops
+The Raspbot sends hello on connect. New versions advertise their servo limits and answer
+{"diagnostics": true} with the ultrasonic distance in mm (or null). The Raspbot stops
 the motors by itself when no command came for WATCHDOG_S, or when the connection drops, so a brain
 or network that hangs never leaves the car driving.
 
@@ -28,6 +29,9 @@ log = logging.getLogger(__name__)
 PORT = 8765  # the program on the Raspbot listens here
 WATCHDOG_S = 0.5  # the Raspbot stops its motors when no command came for this long
 RECONNECT_S = 3.0
+DIAGNOSTICS_S = 1.0
+LOOK_MAX = 90.0  # a look command may ask for at most 90 degrees from the centre
+LOOK_LIMITS = ((-90.0, 90.0), (-25.0, 85.0))  # factory mount, for older programs
 
 
 @dataclass
@@ -39,6 +43,8 @@ class FakeRaspbot:
     camera_port: int = 0
     sent: list = field(default_factory=list)
     looked: tuple = (0.0, 0.0)  # the camera's last look
+    distance_mm: int | None = None
+    look_limits = LOOK_LIMITS
 
     @property
     def is_fake(self) -> bool:
@@ -69,6 +75,8 @@ class TcpRaspbot:
         self.host = host
         self.port = port
         self.camera_port = 0
+        self.distance_mm: int | None = None
+        self.look_limits = LOOK_LIMITS
         self._writer: asyncio.StreamWriter | None = None
         self.said = ""  # why it isn't connected, for the page
 
@@ -83,35 +91,50 @@ class TcpRaspbot:
     async def run(self) -> None:
         """Keep the connection: connect, wait until it drops, try again every RECONNECT_S."""
         while True:
+            writer = None
             try:
                 reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port), timeout=RECONNECT_S
                 )
                 hello = json.loads(await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S))
                 self.camera_port = int(hello.get("camera_port") or 0)
+                self.look_limits = hello.get("look_limits", LOOK_LIMITS)
                 self._writer = writer
                 self.said = ""
                 log.info("%s connected (%s:%s)", self.name, self.host, self.port)
-                await reader.read()  # returns when the Raspbot closes the connection
+                if hello.get("diagnostics"):
+                    await self._read_diagnostics(reader)
+                else:
+                    await reader.read()  # older programs send nothing else
                 log.info("%s disconnected", self.name)
             except (OSError, TimeoutError, ValueError) as e:
                 self.said = f"{self.name} does not answer. Is it on, and is its program running?"
                 log.debug("%s: %s", self.name, e)
             finally:
-                if self._writer:
-                    self._writer.close()
+                if writer:
+                    writer.close()
                 self._writer = None
+                self.distance_mm = None
             await asyncio.sleep(RECONNECT_S)
+
+    async def _read_diagnostics(self, reader: asyncio.StreamReader) -> None:
+        while self.connected:
+            await self._send({"diagnostics": True})
+            line = await asyncio.wait_for(reader.readline(), timeout=RECONNECT_S)
+            if not line:
+                return
+            self.distance_mm = json.loads(line).get("distance_mm")
+            await asyncio.sleep(DIAGNOSTICS_S)
 
     async def _send(self, msg: dict) -> None:
         if not self.connected:
             return
+        writer = self._writer
         try:
-            self._writer.write((json.dumps(msg) + "\n").encode())
-            await asyncio.wait_for(self._writer.drain(), timeout=WATCHDOG_S)
+            writer.write((json.dumps(msg) + "\n").encode())
+            await asyncio.wait_for(writer.drain(), timeout=WATCHDOG_S)
         except (OSError, TimeoutError):  # the Raspbot's watchdog stops it; reconnect
-            self._writer.close()
-            self._writer = None
+            writer.close()
 
     async def drive(self, left: float, right: float) -> None:
         await self._send({"drive": [round(left, 3), round(right, 3)]})
@@ -131,7 +154,6 @@ DIRECTIONS = {
     "right": (0.6, -0.6),
 }
 TURN = 0.6  # a stick turns as slowly as the buttons: full sideways = "left" or "right"
-LOOK_MAX = 90.0  # degrees from the centre a look may ask; the Raspbot keeps each servo's own limits
 
 
 def stick_speeds(forward: float, turn: float) -> tuple[float, float]:
@@ -163,6 +185,7 @@ class RaspbotDesk:
         self.moving = ""  # the direction now, "" = stopped
         self._last_input = 0.0
         self._blocked: set = set()  # pages that held a button at STOP: they must let go first
+        self._look = (0.0, 0.0)
         self.stopped_by = ""  # the last STOP's page, for the status line
 
     def status(self, page=None) -> dict:
@@ -176,6 +199,7 @@ class RaspbotDesk:
             "control": control,
             "camera": bool(self.bot.camera_port),
             "speed": self.speed,
+            "distance_mm": self.bot.distance_mm if self.bot.connected else None,
         }
         if not self.bot.connected:
             msg["message"] = getattr(self.bot, "said", "") or f"{self.bot.name} is not connected."
@@ -201,7 +225,7 @@ class RaspbotDesk:
         self.moving = direction
         return ""
 
-    async def look(self, page, pan: float, tilt: float) -> str:
+    async def look(self, page, pan: float, tilt: float, *, relative: bool = False) -> str:
         """Turn the camera (degrees from its centre). Any page that may drive, while no other page
         has control. It never takes control, and the freeze is for the wheels only: the camera
         stays where it was looking. Returns "" when sent, else why not."""
@@ -211,8 +235,21 @@ class RaspbotDesk:
             return "Another page has control."
         if not self.bot.connected:
             return self.status()["message"]
-        lim = LOOK_MAX
-        await self.bot.look(max(-lim, min(float(pan), lim)), max(-lim, min(float(tilt), lim)))
+        if relative:
+            pan += self._look[0]
+            tilt += self._look[1]
+        limited = tuple(
+            max(low, min(float(value), high))
+            for value, (low, high) in zip((pan, tilt), self.bot.look_limits, strict=True)
+        )
+        if relative and limited == self._look:
+            return ""
+        self._look = limited
+        if relative:
+            await self.bot.look(*limited)
+        else:
+            # Keep the absolute commands that the VR page already sends.
+            await self.bot.look(*(max(-LOOK_MAX, min(float(v), LOOK_MAX)) for v in (pan, tilt)))
         return ""
 
     def set_speed(self, speed: float) -> float:

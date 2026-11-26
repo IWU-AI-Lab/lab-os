@@ -1,6 +1,6 @@
 # The Raspbot page
 
-The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold a button to drive: forward, back, turn left or turn right. Let go, and the car stops. The **Speed** slider sets the speed, from 0 % (the wheels do not turn) to 100 % (the top speed). The page also shows the Raspbot's camera. Quick job 72 (2026-11-23).
+The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold an arrow under **Drive** to move the Raspbot. Let go to stop. Hold an arrow under **Pan and Tilt** to turn the camera. The picture is between the controls on every screen. Use **Speed** to set the speed from 0 % to 100 % of the top speed. **Diagnostics** shows the connection, control, motion and ultrasonic distance. Deploy the current program to get the distance reading. The factory board has no documented battery reading.
 
 ## How it works
 - A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor and servo library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
