@@ -334,10 +334,10 @@ function iconRow() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
   linux.addEventListener("click", () => save(`lab-hub-${NAME}.desktop`,
-    `[Desktop Entry]\nType=Application\nName=Lab hub (${NAME})\nComment=The lab's hub on this device\nExec=sh -c "google-chrome --app=${url} --start-fullscreen || chromium --app=${url} --start-fullscreen || chromium-browser --app=${url} --start-fullscreen"\nIcon=applications-science\nCategories=Science;\n`,
+    `[Desktop Entry]\nType=Application\nName=Lab hub (${NAME})\nComment=The lab's hub on this device\nExec=sh -c "google-chrome --app=${url} --start-fullscreen --autoplay-policy=no-user-gesture-required || chromium --app=${url} --start-fullscreen --autoplay-policy=no-user-gesture-required || chromium-browser --app=${url} --start-fullscreen --autoplay-policy=no-user-gesture-required"\nIcon=applications-science\nCategories=Science;\n`,
     "application/x-desktop"));
   windows.addEventListener("click", () => save(`lab-hub-${NAME}.bat`,
-    `@echo off\r\nrem The lab's hub on this device (lab-os, docs/archive/guides-2026-11-25/hub.md -> Devices)\r\nstart "" chrome --app=${url} --start-fullscreen\r\n`,
+    `@echo off\r\nrem The lab's hub on this device (lab-os, docs/archive/guides-2026-11-25/hub.md -> Devices)\r\nstart "" chrome --app=${url} --start-fullscreen --autoplay-policy=no-user-gesture-required\r\n`,
     "application/octet-stream"));
   return r;
 }
