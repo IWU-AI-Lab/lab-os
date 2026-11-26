@@ -13,7 +13,7 @@
 //
 // Controls: drag to orbit; right-drag, Shift-drag or two fingers to pan; scroll or pinch to zoom (toward
 // the pointer); double-click a device to focus it. Keys: arrows orbit, Shift + arrows pan, + and - zoom,
-// F focuses the selected device, R or Home resets the view.
+// F focuses the selected device, V or Home resets the view.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
@@ -989,7 +989,9 @@ export function createMap(canvas, labels, onSelect) {
 
   canvas.addEventListener("keydown", (event) => {
     const { key, shiftKey } = event;
-    if (key === "r" || key === "R" || key === "Home") {
+    // Keys with Cmd, Ctrl or Alt belong to the browser (Cmd+R reloads, Cmd+F finds): the map leaves them.
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (key === "v" || key === "V" || key === "Home") {
       event.preventDefault();
       reset();
       return;
