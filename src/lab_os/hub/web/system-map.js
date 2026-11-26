@@ -1,3 +1,5 @@
+import { screenTitle } from "/hub/screen-preview.js";
+
 // The live list supplies the devices. The registry supplies model types for older saved entries.
 const brain = { id: "", name: "Brain", kind: "brain", connected: true };
 const list = document.querySelector("#map-devices");
@@ -15,7 +17,7 @@ function choose(id) {
   name.textContent = device.name;
   const via = device.via === "network" ? "Network" : device.via;
   connection.textContent = device === brain ? "Runs lab-os."
-    : [device.connected ? "Connected to the brain" : "Disconnected", via].filter(Boolean).join(" · ");
+    : [device.connected ? "Connected to the brain" : "Disconnected", via, device.preview && screenTitle(device.preview)].filter(Boolean).join(" · ");
   for (const button of list.querySelectorAll("button")) {
     button.setAttribute("aria-pressed", String(button.dataset.id === selected));
   }
@@ -34,14 +36,14 @@ function show(rows) {
     button.type = "button";
     button.className = "btn";
     button.dataset.id = device.id;
+    const dot = document.createElement("span");
+    dot.className = device.connected ? "pill on" : "pill off";
+    dot.setAttribute("aria-hidden", "true");
     const title = document.createElement("span");
     title.textContent = device.name;
-    button.append(title);
+    button.append(dot, title);
     if (device !== brain) {
-      const state = document.createElement("span");
-      state.className = device.connected ? "pill on" : "pill off";
-      state.textContent = device.connected ? "Connected" : "Disconnected";
-      button.append(state);
+      button.setAttribute("aria-label", `${device.name}, ${device.connected ? "Connected" : "Disconnected"}`);
     }
     li.append(button);
     return li;
@@ -73,14 +75,30 @@ function showStatus(text) {
   if (status.textContent !== text) status.textContent = text;
 }
 
+function entriesWithScreens(rows, types, screens) {
+  const windowsByDevice = new Map(screens.map(({ name, windows }) => [`screen:${name}`, windows]));
+  return rows.flatMap(({ id, name, kind, via, model, connected }) => {
+    const device = { id, name: name || id, kind: kind || "usb", via, connected, model: model || types.get(id) };
+    const windows = connected && kind === "screen" ? windowsByDevice.get(id) : null;
+    if (!windows?.length) return [device];
+    return windows.map(({ stage, screen, showing, from }, index) => ({
+      ...device,
+      id: index ? `${id}#${index + 1}` : id,
+      name: windows.length > 1 ? `${device.name} · Screen ${index + 1}` : device.name,
+      preview: { stage, screen: { width: screen?.width, height: screen?.height },
+        showing: showing && { id: showing.id, title: showing.title }, from },
+    }));
+  });
+}
+
 let last;
 async function refresh() {
   try {
     if (document.hidden) return;
-    const [rows, types] = await Promise.all([read("/api/live-devices"), configured]);
-    const entries = rows.map(({ id, name, kind, via, model, connected }) => ({
-      id, name: name || id, kind: kind || "usb", via, connected, model: model || types.get(id),
-    }));
+    const [rows, types, screens] = await Promise.all([
+      read("/api/live-devices"), configured, read("/api/hub-devices").catch(() => []),
+    ]);
+    const entries = entriesWithScreens(rows, types, screens);
     const latest = JSON.stringify(entries);
     if (latest !== last) {
       show(entries);

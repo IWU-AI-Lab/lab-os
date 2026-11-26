@@ -1,0 +1,8 @@
+.pv { position: relative; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+.pv .ring { width: 32%; aspect-ratio: 1; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); }
+.pv .core { width: 30%; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--c);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent), inset 0 0 0 0.35rem var(--bg), inset 0 0 0 0.5rem color-mix(in srgb, var(--c) 45%, transparent); }
+.pv .mod { display: grid; justify-items: center; gap: 0.3rem; color: var(--c); }
+.pv .mod .ico { font-size: 1.9rem; }
+.pv .say { position: absolute; left: 0.4rem; right: 0.4rem; bottom: 0.3rem; font: 500 0.72rem/1.2 var(--f-ui); color: var(--text); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv .from { position: absolute; top: 0.3rem; right: 0.4rem; font: var(--w-lines) 0.65rem/1 var(--f-lines); color: var(--text-dim); }
