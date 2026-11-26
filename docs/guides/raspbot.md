@@ -49,7 +49,9 @@ Use these buttons on the Raspbot page or in the headset.
 2. Press **Record** to start a recording. The red dot and the time show while it records.
 3. Press **End rec** to stop the recording.
 
-The status line gives the full file name. The brain saves the files in `recordings/raspbot/`. Open the `.mjpeg` recording with VLC. Close the page that started the recording to end it.
+The status line gives the full file name. The brain saves the files in `recordings/raspbot/`. A recording is an `.mp4` video: open it in Firefox or any video player. Close the page that started the recording to end it.
+
+The brain needs `ffmpeg` to make the `.mp4` (`sudo apt install ffmpeg`). Without it, the recording stays an `.mjpeg`, which only VLC opens.
 
 ## Drive it from the Quest
 In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.

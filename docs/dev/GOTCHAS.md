@@ -4,6 +4,12 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-25 — The Raspbot's recording saved, but no app played it (quick job 122)
+
+**What:** Lab check R.3 gave two file names, but the builder found no video. The recording was there (`recordings/raspbot/raspbot1_2026-11-24_18-14-38.mjpeg`, 65 pictures in 6 s). It was a raw `.mjpeg`: JPEGs one after another, with no times. The lab desktop has no app for it (only Firefox opens video files, and Firefox does not play `.mjpeg`). VLC would play it at 25 pictures per second, so 6 s became 2.6 s.
+
+**Fix:** at its end, the brain makes the recording an H.264 `.mp4` with ffmpeg, at the rate the pictures came (pictures ÷ seconds), and deletes the `.mjpeg`. Without ffmpeg, or when ffmpeg fails, the `.mjpeg` stays. A recording without pictures is deleted, and the page says so. The save no longer holds up the page's other messages, such as STOP. The old recording is converted to `raspbot1_2026-11-24_18-14-38.mp4` by hand.
+
 ### 2026-11-25 — The factory Raspbot V2 board has no documented battery reading (quick job 126)
 
 **What:** The Raspberry Pi health log measures the Pi's 5 V input. That value cannot give the battery voltage or charge. Yahboom documents the battery specifications and the ultrasonic registers, but gives no battery register.

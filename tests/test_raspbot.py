@@ -3,11 +3,14 @@
 import asyncio
 import importlib.util
 import json
+import shutil
 import socket
+import subprocess
 import threading
 import time
 from pathlib import Path
 
+import pytest
 from test_hub_server import SRC, make_app
 
 from lab_os.devices import Device, Registry
@@ -443,6 +446,13 @@ async def test_pictures_and_recordings_are_saved_here(aiohttp_client, tmp_path):
     app = make_app(raspbot=RaspbotDesk(bot))
     cam = app[CAMERA]
     cam.folder, cam.frames = (lambda: tmp_path), frames
+    converted = []
+
+    async def convert(mjpeg, count, seconds):
+        converted.append((count, seconds))
+        return mjpeg
+
+    cam.convert = convert
     client = await aiohttp_client(app)
     async with client.ws_connect("/ws/raspbot") as ws:
 
@@ -464,6 +474,7 @@ async def test_pictures_and_recordings_are_saved_here(aiohttp_client, tmp_path):
         await ws.send_json({"type": "record", "on": False})
         m = await answer()
         assert not m["on"] and Path(m["path"]).read_bytes().startswith(jpeg * 2)
+        assert converted and converted[0][0] >= 2 and converted[0][1] > 0
         assert cam.status()["recording"] == ""
         assert cam.status()["recording_seconds"] is None
         await ws.send_json({"type": "record", "on": True})
@@ -474,6 +485,58 @@ async def test_pictures_and_recordings_are_saved_here(aiohttp_client, tmp_path):
         await asyncio.sleep(0.01)
     assert cam.recording is None
     bot._writer = None
+
+
+async def test_a_recording_without_pictures_is_not_kept(tmp_path):
+    from lab_os.hub.raspbot_page import RaspbotCamera
+
+    async def frames(url):
+        await asyncio.Event().wait()
+        yield b""
+
+    bot = TcpRaspbot("raspbot1", "127.0.0.1", 9)
+    bot.camera_port = 8766
+    bot._writer = type("W", (), {"is_closing": lambda self: False})()
+    cam = RaspbotCamera(RaspbotDesk(bot), folder=lambda: tmp_path, frames=frames)
+    path = cam.start(page=None)
+    await asyncio.sleep(0.01)
+    with pytest.raises(LookupError, match="no pictures"):
+        await cam.stop()
+    assert not path.exists() and cam.recording is None
+    bot._writer = None
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+async def test_a_recording_becomes_an_mp4_at_its_real_rate(tmp_path):
+    """Quick job 122: the raw .mjpeg played in no app on the lab desktop; the .mp4 plays."""
+    import io
+
+    from PIL import Image
+
+    from lab_os.hub.raspbot_page import to_mp4
+
+    buf = io.BytesIO()
+    Image.new("RGB", (64, 48), (200, 30, 30)).save(buf, "JPEG")
+    mjpeg = tmp_path / "raspbot1_test.mjpeg"
+    mjpeg.write_bytes(buf.getvalue() * 20)
+    mp4 = await to_mp4(mjpeg, 20, 2.0)  # 20 pictures in 2 s → 10 per second, 2 s long
+    assert mp4.suffix == ".mp4" and mp4.stat().st_size > 0 and not mjpeg.exists()
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(mp4)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert abs(float(out.stdout) - 2.0) < 0.3
+
+
+async def test_without_ffmpeg_the_recording_stays_mjpeg(tmp_path, monkeypatch):
+    from lab_os.hub import raspbot_page
+
+    monkeypatch.setattr(raspbot_page.shutil, "which", lambda _name: None)
+    mjpeg = tmp_path / "r.mjpeg"
+    mjpeg.write_bytes(b"\xff\xd8x\xff\xd9")
+    assert await raspbot_page.to_mp4(mjpeg, 1, 1.0) == mjpeg and mjpeg.exists()
 
 
 async def test_the_fake_raspbot_has_no_camera_to_save(aiohttp_client):
