@@ -460,6 +460,7 @@ class TeleopLoop:
                 self.speed_scale,
                 self.arm.limits,
                 arm_frame=frame.arm_frame,
+                pivot_wrist=frame.pivot_wrist,
                 one_to_one_deg_per_s=self.one_to_one_cap()
                 if "one_to_one" in self.modes()
                 else None,

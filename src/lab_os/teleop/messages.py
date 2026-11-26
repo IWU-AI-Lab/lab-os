@@ -36,6 +36,10 @@ class XRFrame:
     # True when `pos` is measured from the 3D arm's base (turned with it): the page knows where the
     # arm is, so the 1:1 mode can put the gripper where the hand is. Else only differences count.
     arm_frame: bool = False
+    # True when a turn of the hand should turn the gripper about its wrist (the wrist stays where
+    # the hand puts it), not about the gripper point: the webcam page (quick job 120). Else the
+    # gripper point stays and the whole arm moves to tilt it, as with the Quest.
+    pivot_wrist: bool = False
 
 
 def _floats(value, n: int, what: str) -> tuple[float, ...]:
@@ -76,6 +80,7 @@ def parse_frame(raw: dict) -> XRFrame:
         t=float(raw.get("t", 0.0)),
         hands={side: parse_controller(c) for side, c in hands.items() if side in ("left", "right")},
         arm_frame=raw.get("frame") == "arm",
+        pivot_wrist=raw.get("pivot") == "wrist",
     )
 
 
