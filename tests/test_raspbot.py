@@ -40,12 +40,12 @@ async def test_one_page_drives_at_the_speed_cap():
     desk = RaspbotDesk(bot, speed=0.5)
     a, b = object(), object()
     assert await desk.press(a, "forward") == ""
-    assert bot.last == ("drive", 0.5, 0.5)
+    assert bot.last == ("drive", 0.5, 0.5, 0.5, 0.5)
     assert await desk.press(b, "back") == "Another page has control."
-    assert bot.last == ("drive", 0.5, 0.5)
+    assert bot.last == ("drive", 0.5, 0.5, 0.5, 0.5)
     assert desk.status(a)["control"] == "you" and desk.status(b)["control"] == "other"
     await desk.press(a, "left")
-    assert bot.last == ("drive", -0.3, 0.3)  # turns spin in place, slower
+    assert bot.last == ("drive", -0.3, -0.3, 0.3, 0.3)  # turns spin in place, slower
     await desk.release(a)
     assert bot.last == ("stop",) and desk.status(b)["control"] == "free"
     assert await desk.press(b, "back") == ""
@@ -138,12 +138,12 @@ async def test_brain_drives_the_onboard_program_and_a_drop_stops_it():
                 break
             await asyncio.sleep(0.02)
         assert bot.connected and RaspbotDesk(bot).status()["distance_mm"] == 325
-        await bot.drive(0.5, 0.5)
+        await bot.drive((0.5, -0.5, -0.5, 0.5))
         for _ in range(50):
             if board.speeds[0]:
                 break
             await asyncio.sleep(0.02)
-        assert board.speeds[0] == round(0.5 * mod.SPEED_CAP)
+        assert tuple(board.speeds.values()) == (60, -60, -60, 60)
         task.cancel()  # the brain goes away: its connection drops
         bot._writer.close()
         for _ in range(50):
@@ -164,7 +164,9 @@ def test_onboard_program_uses_only_the_standard_library_and_yahboom():
         for line in src.splitlines()
         if line.strip().startswith(("import ", "from ")) and not line.startswith("    #")
     }
-    allowed = "argparse contextlib json logging signal socket socketserver sys threading time http"
+    allowed = (
+        "argparse contextlib json logging math signal socket socketserver sys threading time http"
+    )
     assert imports <= {*allowed.split(), "cv2", "Raspbot_Lib"}, imports
 
 
@@ -180,12 +182,15 @@ async def test_the_page_drives_the_fake_raspbot(aiohttp_client):
     async with client.ws_connect("/ws/raspbot") as ws:
         status = await ws.receive_json()
         assert status["type"] == "raspbot_status" and status["may_drive"] and status["fake"]
-        await ws.send_str(json.dumps({"type": "drive", "dir": "forward"}))
-        for _ in range(50):
-            if bot.sent:
-                break
-            await asyncio.sleep(0.01)
-        assert bot.last[0] == "drive"
+        for command, label, wheels in (
+            ({"dir": "forward-left"}, "forward-left", (0, 0.5, 0.5, 0)),
+            ({"dir": "stick", "stick": [0, 1, 0]}, "stick", (0.5, -0.5, -0.5, 0.5)),
+        ):
+            await ws.send_json({"type": "drive", **command})
+            async with asyncio.timeout(2):
+                while (await ws.receive_json()).get("moving") != label:
+                    pass
+            assert bot.last == ("drive", *wheels)
         await ws.send_str(json.dumps({"type": "stop"}))
         for _ in range(50):
             if bot.last == ("stop",):
@@ -253,10 +258,10 @@ async def test_the_speed_slider_from_none_to_the_cap(aiohttp_client):
     page = object()
     assert desk.set_speed(1.5) == 1.0 and desk.set_speed(-1) == 0.0
     await desk.press(page, "forward")
-    assert bot.last == ("drive", 0.0, 0.0)  # none: the wheels don't turn
+    assert bot.last == ("drive", 0.0, 0.0, 0.0, 0.0)  # none: the wheels don't turn
     desk.set_speed(0.8)
     await desk.press(page, "forward")  # the held button's next repeat
-    assert bot.last == ("drive", 0.8, 0.8) and desk.status()["speed"] == 0.8
+    assert bot.last == ("drive", 0.8, 0.8, 0.8, 0.8) and desk.status()["speed"] == 0.8
 
     app = make_app()
     client = await aiohttp_client(app)
@@ -367,12 +372,12 @@ async def test_a_stick_drives_and_turns_slower():
     desk = RaspbotDesk(bot, speed=1.0)
     page = object()
     assert await desk.press(page, "stick", (1.0, 0.0)) == ""
-    assert bot.last == ("drive", 1.0, 1.0)
+    assert bot.last == ("drive", 1.0, 1.0, 1.0, 1.0)
     await desk.press(page, "stick", (0.0, 1.0))  # full right: spins like the "right" button
-    assert bot.last == ("drive", 0.6, -0.6)
+    assert bot.last == ("drive", 0.6, 0.6, -0.6, -0.6)
     await desk.press(page, "stick", (1.0, 1.0))  # never past the cap
-    assert bot.last == ("drive", 1.0, 0.25)
-    assert raspbot.stick_speeds(5, 0) == (1.0, 1.0)
+    assert bot.last == ("drive", 1.0, 1.0, 0.25, 0.25)
+    assert raspbot.wheel_speeds(5, 0, 0) == (1.0, 1.0, 1.0, 1.0)
 
 
 async def test_look_turns_the_camera_but_never_takes_control():
@@ -586,7 +591,7 @@ async def test_ai_approaches_object_and_reads_the_same_camera():
         async with asyncio.timeout(2):
             while not desk.moving:
                 await asyncio.sleep(0.01)
-        assert bot.last == ("drive", 0.25, 0.25)
+        assert bot.last == ("drive", 0.25, 0.25, 0.25, 0.25)
         assert await desk.press(object(), "forward") == "Another page has control."
         bot.distance_mm = 200
         out = await asyncio.wait_for(task, 2)
@@ -639,7 +644,7 @@ async def test_ai_drive_refuses_forward_without_distance_or_control():
     await desk.release(page)
     out = await _raspbot_tool(server, "raspbot_drive", direction="right", seconds=0.01)
     assert out["result"] == "done"
-    assert bot.sent[-2:] == [("drive", 0.15, -0.15), ("stop",)]
+    assert bot.sent[-2:] == [("drive", 0.15, 0.15, -0.15, -0.15), ("stop",)]
 
 
 def test_onboard_front_sensor_stops_both_drivers():
@@ -665,3 +670,43 @@ def test_onboard_front_sensor_stops_both_drivers():
     car.handle({"drive": [0.25, 0.25], "require_clear": True})
     assert car.diagnostics()["drive_stop"] == "sensor_unavailable"
     assert set(board.speeds.values()) == {0}
+
+
+async def test_manual_mecanum_motion_and_front_clearance():
+    bot = FakeRaspbot(distance_mm=200)
+    desk = RaspbotDesk(bot, speed=1.0)
+    page = object()
+    assert await desk.press(page, "strafe-left") == ""
+    assert bot.last == ("drive", -1, 1, 1, -1)
+    assert "obstacle" in await desk.press(page, "forward-right")
+    assert bot.last == ("stop",)
+    assert await desk.press(page, "back-left") == ""
+    assert bot.last == ("drive", -1, 0, 0, -1)
+    bot.distance_mm = 500
+    assert await desk.press(page, "stick", (1, 1, 1)) == ""
+    assert bot.last == ("drive", 1, 0.231, -0.231, 0.538)
+    bot.mecanum = False
+    assert "Deploy" in await desk.press(page, "strafe-right")
+    assert bot.last == ("stop",)
+    assert await desk.press(page, "stick", (0, 1)) == ""
+    assert bot.last == ("drive", 0.6, 0.6, -0.6, -0.6)
+
+
+def test_onboard_mecanum_checks_front_clearance_during_a_diagonal():
+    mod = onboard()
+    board = mod.FakeBoard()
+    car = mod.Car(board)
+    board.distance = 500
+    car.handle({"drive": [1, 0, 0, 1]})
+    assert tuple(board.speeds.values()) == (120, 0, 0, 120)
+
+    board.distance = 200
+    assert car.check_watchdog()
+    car.handle({"drive": [1, 0, 0, 1]})
+    assert set(board.speeds.values()) == {0}
+    car.handle({"drive": [1, -1, -1, 1]})
+    assert tuple(board.speeds.values()) == (120, -120, -120, 120)
+    assert not car.check_watchdog()
+    car.handle({"drive": [0, -1, -1, 0]})
+    assert tuple(board.speeds.values()) == (0, -120, -120, 0)
+    assert not car.check_watchdog()
