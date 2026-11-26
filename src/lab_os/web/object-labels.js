@@ -8,7 +8,7 @@
 //   frontIndex(found, panDeg)  which object the ultrasonic sensor measures, or -1
 //   labelsSwitch({button, canvas, img, say, send, status})   a page's Labels button (the Raspbot page, Monitor)
 //
-// The labels look like a HUD: corner brackets around each object, the design's UI font (Chakra Petch), the
+// The labels look like a HUD: corner brackets on a thin light outline around each object, the design's UI font (Chakra Petch), the
 // name in capitals, letters spaced out.
 
 export const FRONT_PAN_DEG = 15; // the ultrasonic sensor looks ahead: only with the camera this near the centre
@@ -36,8 +36,8 @@ export function labelText(f, distanceMm) {
 
 export const HUD_FONT = "'Chakra Petch', system-ui, sans-serif"; // the design's UI font (theme.yaml → fonts.family)
 
-/** Draw the corner brackets and labels on a canvas `w` × `h` that shows the picture. */
-export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = HUD_FONT } = {}) {
+/** Draw the outlines, corner brackets and labels on a canvas `w` × `h` that shows the picture. */
+export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, color = "#3ad0ff", bg = "rgba(4,10,14,0.85)", font = HUD_FONT, border = "rgba(255, 255, 255, 0.45)" } = {}) {
   const size = Math.max(12, Math.round(h * 0.04)), pad = size * 0.4, line = Math.max(1.5, h / 320);
   g.save();
   g.font = `600 ${size}px ${font}`;
@@ -46,6 +46,9 @@ export function drawLabels(g, w, h, found, { front = -1, distanceMm = null, colo
   g.textAlign = "left";
   found.forEach((f, i) => {
     const x = f.box.x * w, y = f.box.y * h, bw = f.box.w * w, bh = f.box.h * h;
+    g.strokeStyle = border; // a thin light outline of the whole object, so the box reads on any picture
+    g.lineWidth = Math.max(1, line * 0.6);
+    g.strokeRect(x, y, bw, bh);
     g.strokeStyle = color;
     g.lineWidth = line;
     g.lineCap = "square";
