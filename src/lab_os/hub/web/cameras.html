@@ -34,6 +34,10 @@
     .tally.late::before { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
     .tally.off { color: var(--offline); }
     .empty { margin: 0; font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
+    /* no camera (quick job 155): a card in the middle with the camera icon and Check Again */
+    #grid.none { align-content: center; justify-content: center; grid-template-columns: minmax(0, 32rem); height: 100%; }
+    .none-card .in { display: grid; justify-items: center; gap: 0.9rem; padding: 2rem 2rem 1.6rem; text-align: center; }
+    .none-card .big { font-size: 3.2rem; color: var(--c); }
   </style>
 </head>
 <!--
@@ -111,7 +115,13 @@ function render() {
   }).join("");
   const grid = $("#grid");
   grid.classList.toggle("one", shown.length === 1);
-  if (!cams.length) grid.innerHTML = `<p class="empty">There is no camera plugged in now. A camera shows here a few seconds after you plug it in.</p>`;
+  grid.classList.toggle("none", !cams.length);
+  if (!cams.length) {
+    grid.innerHTML = `<section class="card none-card"><div class="in"><svg class="ico big"><use href="/web/design/icons.svg#i-cam"/></svg>
+      <p class="empty">There is no camera plugged in now. A camera shows here a few seconds after you plug it in.</p>
+      <button type="button" class="btn" id="check-again">Check Again</button></div></section>`;
+    $("#check-again").onclick = load;
+  }
   else if (!shown.length) grid.innerHTML = `<p class="empty">Every camera is hidden on this device. Press a camera's name above to show it.</p>`;
   else {
     grid.innerHTML = shown.map((c) => `<section class="card cam" data-id="${esc(c.id)}"><div class="in">

@@ -20,7 +20,7 @@ const COLORS = {
   stick: color("arm3d.stick"),
   jaw: color("colors.accent"),
 };
-const HELD_RING = color("colors.frozen_text"); // the "held still" ring around the base
+const HELD_RING = color("colors.text_dim"); // the "held still" ring around the base (dim, quick job 155)
 
 export class ArmModel {
   /** @param {THREE.Object3D} object  @param {Record<string, {set(deg:number):void, lower:number, upper:number}>} joints */
@@ -65,12 +65,35 @@ export class ArmModel {
     }
   }
 
+  /** A line on each sharp edge (AR: the see-through arm stays readable over a bright room; quick job 155).
+   * Made once; `hex` null hides them. */
+  setEdges(hex, opacity = 0.9) {
+    if (!this._edges) {
+      this._edges = [];
+      const meshes = [];
+      this.object.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      for (const mesh of meshes) {
+        const lines = new THREE.LineSegments(
+          new THREE.EdgesGeometry(mesh.geometry, 30),
+          new THREE.LineBasicMaterial({ transparent: true, depthWrite: false }),
+        );
+        lines.renderOrder = 2;
+        mesh.add(lines);
+        this._edges.push(lines);
+      }
+    }
+    for (const lines of this._edges) {
+      lines.visible = hex != null;
+      if (hex != null) { lines.material.color.set(hex); lines.material.opacity = opacity; }
+    }
+  }
+
   /** Tint the whole arm; null = normal colors. */
   setTint(hex) {
     for (const m of this._materials) if (m.emissive) m.emissive.setHex(hex ?? 0x000000);
   }
 
-  /** Held still (the brain froze it): the body keeps its steel, and a muted rust ring lies on the floor
+  /** Held still (the brain froze it): the body keeps its steel, and a ring in the dim text colour lies on the floor
    * around the base (docs/design/DESIGN.md → "Held"; quick job 153: a rust tint made the arm salmon pink). */
   setHeld(on) {
     if (!this._heldRing) {

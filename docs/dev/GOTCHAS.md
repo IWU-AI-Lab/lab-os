@@ -4,6 +4,14 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-26 — `* { box-sizing: border-box }` does not reach `::before`
+**What:** The "Held still" pill's pause mark had its two bars far apart. `kit.css` sets `box-sizing: border-box` on `*`, but `*` does not match pseudo-elements. So the mark's `width` counted without its two borders, and the gap was the full width.
+**Fix:** The mark sets `box-sizing: content-box` and a small `width` (the gap) on purpose (quick job 155). A `::before` or `::after` that uses borders must set its own `box-sizing`.
+
+### 2026-11-26 — The test brain gave a 500 for the camera pictures in a new worktree
+**What:** A new `git worktree` with a plain `uv sync` has no `cv2` (it comes with the `so101` extra). The Cameras page then showed "500 Internal Server Error" in each picture. No camera was opened.
+**Fix:** None needed for a test of the page layout. Run `uv sync --extra so101` in the worktree to see the pictures.
+
 ### 2026-11-26 — PR #365 merged with a failed check
 **What:** `gh pr checks --watch` ends with exit code 0 also when a check fails, and `main` has no branch protection. So `gh pr merge` merged pull request #365 with 4 failed tests. The local run had looked green because its exit code was that of `tail`, not of `pytest`.
 **Fix:** PR #366 fixed the tests. Before you merge, read the result of `gh pr checks` (every line "pass"). Run `uv run pytest` without a pipe, or read its own exit code.

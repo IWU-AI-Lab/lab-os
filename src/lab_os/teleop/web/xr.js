@@ -148,25 +148,24 @@ function initOptions() {
 export async function initXR(link, ui) {
   initOptions();
   const vr = document.getElementById("enter"), ar = document.getElementById("enter-ar");
-  // Each button does what it says (the builder, 2026-11-21). Both always show, grey where this device
-  // can't do it, so a desktop sees all three choices (quick job 87).
-  const offer = (btn, ok, mode, why) => {
+  // Each button does what it says (the builder, 2026-11-21). A button this device can't use is hidden,
+  // and one dim line says so (quick job 155; quick job 87 showed them grey).
+  const none = document.getElementById("xr-none");
+  const offer = (btn, ok, mode) => {
     btn.dataset.unavailable = ok ? "" : "1";
     btn.disabled = !ok;
-    btn.title = ok ? "" : why;
+    btn.hidden = !ok;
     if (ok) btn.onclick = () => start(mode, link, ui);
   };
-  if (!navigator.xr) {
-    offer(ar, false, "", "WebXR is not available in this browser");
-    offer(vr, false, "", "WebXR is not available in this browser");
-    ui.message("No WebXR here. On the Quest, open http://localhost:8080 (docs/guides/quest-setup.md). On a desktop, use Desktop control, or the Immersive Web Emulator extension.");
-    return;
+  const hasXR = !!navigator.xr;
+  const hasAR = hasXR && (await navigator.xr.isSessionSupported("immersive-ar").catch(() => false));
+  const hasVR = hasXR && (await navigator.xr.isSessionSupported("immersive-vr").catch(() => false));
+  offer(ar, hasAR, "immersive-ar");
+  offer(vr, hasVR, "immersive-vr");
+  if (none) {
+    none.hidden = hasVR || hasAR;
+    none.title = hasXR ? "" : "On the Quest, open the hub and choose Teleop. On a desktop, the Immersive Web Emulator extension adds VR.";
   }
-  const hasAR = await navigator.xr.isSessionSupported("immersive-ar").catch(() => false);
-  const hasVR = await navigator.xr.isSessionSupported("immersive-vr").catch(() => false);
-  offer(ar, hasAR, "immersive-ar", "This device has no AR (passthrough)");
-  offer(vr, hasVR, "immersive-vr", "This device has no VR");
-  if (!hasVR && !hasAR) ui.message("No immersive XR on this device. Use Desktop control.");
 }
 
 let renderer = null; // one WebGL renderer for every session on this page

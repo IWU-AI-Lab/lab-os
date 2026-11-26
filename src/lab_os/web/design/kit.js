@@ -22,7 +22,7 @@ const font = theme.font || {};
 const VARS = {
   bg: colors.background, surface: colors.surface, line: colors.line, text: colors.text, "text-dim": colors.text_dim,
   primary: colors.primary, hot: colors.hot, accent: colors.accent, danger: colors.danger, offline: colors.offline,
-  ok: colors.ok, frozen: colors.frozen, "frozen-text": colors.frozen_text,
+  ok: colors.ok,
   "f-title": font.display, "f-ui": font.family, "f-lines": font.lines, "w-lines": font.lines_weight,
   "f-digits": font.digits, "f-mono": font.mono, arrive: theme.motion?.arrive,
 };
@@ -105,6 +105,7 @@ if (!embedded) {
   btn.type = "button";
   btn.className = "btn small";
   btn.innerHTML = `<svg class="ico"><use href="/web/design/icons.svg#i-open"/></svg>Full screen`;
+  btn.setAttribute("aria-label", "Full screen");
   const spot = document.querySelector(".bar .clock");
   if (spot) spot.before(btn); else document.body.append(btn);  // in the bar, out of the content's way
   // the choice for this page: "full" (the default) or "window"

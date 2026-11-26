@@ -1,6 +1,6 @@
 // What the headset's teleop status panel says (xr-scene.js draws it; quick job 37): the state and how
 // serious it is, the gripper's opening, the speed, and the hint. No imports, so tests run it with node.
-//   level: normal (cyan) | following (green) | warning (amber) | held (rust, pause icon) | offline (gray)
+//   level: normal (cyan) | following (green) | warning (amber) | held (dim, pause icon) | offline (gray)
 // Plain words, no dot separators (docs/design/DESIGN.md → "Don't").
 
 // Two arms at once (status.left_arm, preview 3): `left` is the left arm's {state, level}, and `state`

@@ -23,8 +23,6 @@
   --accent: #ff9a2e;
   --danger: #ff2436;
   --offline: #56636a;
-  --frozen: #7a1d00;
-  --frozen-text: #b8604a;
   --f-title: "Orbitron", system-ui, sans-serif;
   --f-ui: "Chakra Petch", system-ui, sans-serif;
   --f-lines: "Inter", system-ui, sans-serif;
@@ -286,9 +284,8 @@ body[data-layout="launcher"] .arm { display: none; }
 .j span { display: block; font: 0.95rem/1.2 var(--f-digits); color: var(--hot); white-space: pre; }
 .j i { display: block; height: 2px; background: var(--line); margin-top: 3px; position: relative; }
 .j i::after { content: ""; position: absolute; top: -1px; width: 4px; height: 4px; left: var(--p, 50%); background: var(--c); }
-body[data-alert="held"] .arm { --c: var(--frozen-text); }
-body[data-alert="held"] .arm .cut { background: color-mix(in srgb, var(--frozen) 90%, transparent); }
-body[data-alert="held"] .arm .j span { color: var(--frozen-text); }
+body[data-alert="held"] .arm { --c: var(--text-dim); }  /* held: the dim text colour (quick job 155) */
+body[data-alert="held"] .arm .j span { color: var(--text-dim); }
 
 /* launcher side panels: a value and an icon, not a sentence */
 .side { display: flex; flex-direction: column; gap: 1.9rem; align-self: center; min-width: 0; }

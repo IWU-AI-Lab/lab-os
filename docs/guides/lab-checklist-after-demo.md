@@ -257,3 +257,7 @@ Quick job 151, a first version. Use the desktop with sound on.
 ## X1. After the demo: the shared parts of the UX review (15 min)
 Quick job 153. Use the 4K screen, a Pi touchscreen and the lab desktop.
 - **X1.1** Open `docs/plan/ux-review.md`, part 1. Check each line on the pages. Tick the lines that are right. → Which lines are not right? (the line's first words and a sentence)
+
+## X2. After the demo: the robot pages of the UX review (20 min)
+Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the lab desktop.
+- **X2.1** Open `docs/plan/ux-review.md`, part 3. Check each line on the pages. Tick the lines that are right. → Which lines are not right? (the line's first words and a sentence)
