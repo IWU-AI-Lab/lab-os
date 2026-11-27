@@ -1018,6 +1018,8 @@ async def api_status(request: web.Request) -> web.Response:
     return web.json_response(
         {
             "venue": brain.venue.name,
+            # the hub hides the venue while it is the one the brain started with (quick job 154)
+            "venue_default": brain.venue.name == brain.started_in,
             "visitors": _visitors(brain.venue),  # visitor mode: the cards (quick job 35)
             "persona": brain.persona().public(),
             "internet": brain.internet.online if brain.internet else None,  # None = not known

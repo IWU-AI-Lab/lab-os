@@ -85,7 +85,7 @@ function fold(list, keep = MAX_ROWS) {
 }
 
 /** The drawing: an SVG string, 1600×900. opts.icons(id) → the symbol's inner markup (for a copy outside the hub). */
-export function systemSVG(f, { animate = true, icons = null } = {}) {
+export function systemSVG(f, { animate = true, icons = null, flat = false } = {}) {
   const out = [], defs = [], pulses = [];
   let pid = 0;
   const icon = (id, x, y, size = 26) => `<svg class="ico" x="${x - size / 2}" y="${y - size / 2}" width="${size}" height="${size}" viewBox="0 0 24 24"><use href="#${id}"/></svg>`;
@@ -203,11 +203,11 @@ export function systemSVG(f, { animate = true, icons = null } = {}) {
     out.push(`<text class="sub" x="${CX}" y="${y + 58}" text-anchor="middle">Every move, from a screen or an AI tool, goes through the safety layer</text>`);
     // the key to the lines
     const key = [["usb", "USB"], ["net", "Network"], ["mcp", "MCP"], ["web", "Internet"], ["turn", "Takes turns"]];
-    out.push(`<g class="key">${key.map(([k, t], i) => `<path class="ln ${k}" d="M${60 + i * 150} 60h40"/><text class="sub" x="${110 + i * 150}" y="65">${t}</text>`).join("")}</g>`);
+    out.push(`<g class="key">${key.map(([k, t], i) => `<path class="ln ${k}" d="M${60 + i * 200} 60h40"/><text class="sub" x="${110 + i * 200}" y="67">${t}</text>`).join("")}</g>`);
   }
 
   const symbols = icons ? [...used, "i-hex"].map((id) => icons(id)).filter(Boolean).join("") : "";
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="sysdiag" viewBox="0 0 ${W} ${H}" role="img" aria-label="System diagram: the brain in the middle, the screens on the left, the robots on the right">
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="sysdiag${flat ? " flat" : ""}" viewBox="0 0 ${W} ${H}" role="img" aria-label="System diagram: the brain in the middle, the screens on the left, the robots on the right">
 <style>${STYLE}</style>
 <defs>
   <pattern id="sd-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--accent, #ff9a2e)" stroke-opacity="0.55" stroke-width="2"/></pattern>
@@ -248,6 +248,9 @@ const STYLE = `
 .sysdiag .ln.usb { }
 .sysdiag .ln.turn { stroke: var(--sd-warm); stroke-dasharray: 4 5; }
 .sysdiag .key .ln { stroke: var(--sd-c); }
+.sysdiag .key .sub { font-size: 22px; }
+.sysdiag.flat .glow, .sysdiag.flat .node.live .hex, .sysdiag.flat .pulse { filter: none; }
+.sysdiag.flat .core .halo { fill: var(--sd-c); fill-opacity: 0.25; }
 .sysdiag .key .ln.turn { stroke: var(--sd-warm); }
 .sysdiag .pulse { fill: var(--sd-hot); filter: url(#sd-glow); }
 .sysdiag .frame { fill: none; stroke: var(--sd-c); stroke-width: 2; }
