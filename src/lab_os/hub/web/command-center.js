@@ -84,6 +84,9 @@ function saveLayout() {
 function say(text, bad = false) {
   S.msg = text; S.msgBad = bad;
   renderInspector(true);
+  // what went well goes after a few seconds; a problem stays until the next action (quick job 165: it stayed)
+  clearTimeout(S.msgTimer);
+  if (text && !bad) S.msgTimer = setTimeout(() => { if (S.msg === text) { S.msg = ""; renderInspector(true); } }, 6000);
 }
 
 // ---------- the items ----------
