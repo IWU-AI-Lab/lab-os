@@ -63,7 +63,7 @@ function show(raw) {
   document.body.classList.toggle("no-arm", !s);
   if (!s) { // no arm of this page's kind is connected
     setPill($("state"), "Not connected", "off");
-    $("joints-title").textContent = `No ${KINDS[KIND].robot} is connected`;
+    $("joints-title").textContent = "Joints"; // the card is hidden: the 3D view says it once
     $("right-name").textContent = "";
     $("left-chip").hidden = $("left-card").hidden = true;
     document.body.classList.remove("two-arms");

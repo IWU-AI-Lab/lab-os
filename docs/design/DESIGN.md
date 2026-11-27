@@ -20,7 +20,6 @@ Dark first. One main color carries almost everything; the warm colors are kept f
 | `accent` | amber `#ff9a2e` | Warning: busy, waiting. |
 | `danger` | aggressive red `#ff2436` | Critical: a person must act. Rare, so it hits hard. |
 | `offline` | neutral gray `#56636a` | Offline, disabled, not connected. |
-| `frozen` | muted rust `#7a1d00` | An arm holding still (dead-man stop). |
 | `ok` | green `#3ee07f` | Only for "engaged / following" in teleop. Not a decoration color. |
 
 About 90% cyan and dark, under 10% amber, red only when something is wrong.
@@ -29,7 +28,7 @@ About 90% cyan and dark, under 10% amber, red only when something is wrong.
 | Level | Looks like | Examples |
 |---|---|---|
 | Normal | cyan, glowing | running, connected, idle |
-| Held | muted rust, pause icon, no glow, no pulse: calm. The words say "Held still"; what to do is in the tooltip. A 3D arm keeps its steel and gets a rust ring at its base (quick job 153: a rust tint made it pink) | arm frozen because the clutch is released (the safety system working, not a problem) |
+| Held | the dim text colour (`text_dim`) and the pause icon, no glow, no pulse: calm, no colour of its own (quick job 155: a light rust looked like nothing else). The words say "Held still"; what to do is in the tooltip. A 3D arm keeps its steel and gets a dim ring at its base (quick job 153: a rust tint made it pink) | arm frozen because the clutch is released (the safety system working, not a problem) |
 | Offline | gray, dim, **no glow** | AI offline (no internet), robot not plugged in |
 | Warning | amber warning triangle, slow pulse | busy, waiting for the clutch, battery low |
 | Critical | red warning triangle, harsh: fast pulse (1.5 per second), a short shake when it starts, a red glow around the screen edge, an urgent sound | error, emergency stop, lost connection while moving |

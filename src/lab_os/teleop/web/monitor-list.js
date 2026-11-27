@@ -53,13 +53,13 @@ fetch("/api/hub").then((response) => response.ok ? response.json() : null).then(
   const motion = preview.querySelector(".who");
   watchRaspbot((status) => {
     const connected = !!status?.connected;
-    card.count.textContent = connected ? status.fake ? "Fake Raspbot" : "Connected" : "Not connected";
+    card.count.textContent = connected ? "1 connected" : "None connected"; // one form for every card (quick job 155)
     placeholder.hidden = connected;
     placeholder.textContent = "No Raspbot is connected to the brain.";
     preview.hidden = !connected;
     if (!connected) return;
     camera.setAttribute("transform", `rotate(${-(status.pan_deg ?? 0)} 80 49)`);
-    motion.textContent = raspbotMotion(status);
+    motion.textContent = status.fake ? `Fake Raspbot: ${raspbotMotion(status)}` : raspbotMotion(status);
   });
 }).catch(() => {});
 

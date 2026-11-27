@@ -137,7 +137,7 @@ def check(
     number = {os.path.realpath(by_id / p): _serial(p) for p in mine}  # /dev/ttyACM1 → serial
     saved = _saved_ports(home)
     if not saved:
-        c.add(False, f"LeLab has no saved ports in {home}: set them up in LeLab once by hand")
+        c.add(False, f"LeLab has no saved ports. Set them up in LeLab once by hand (in {home})")
     roles: dict[str, set[str]] = {"leader": set(), "follower": set()}
     for where, role, port in saved:
         serial = number.get(os.path.realpath(port))

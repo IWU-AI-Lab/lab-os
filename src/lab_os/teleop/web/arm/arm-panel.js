@@ -34,7 +34,7 @@ $("arm-panel").innerHTML = `
     <select id="arm-model" aria-label="3D model"></select>
   </div>
   <div class="arm3d-body">
-    <div id="arm-view"><span id="arm-held" class="arm-held" hidden title="Held still for safety. It moves again when an input takes it."><svg class="ico"><use href="/web/design/icons.svg#i-pause"/></svg>Held still</span></div>
+    <div id="arm-view"><span id="arm-held" class="arm-held" hidden title="Held still for safety. It moves again when an input takes it."><svg class="ico"><use href="/web/design/icons.svg#i-pause"/></svg>Held still</span><p id="arm-empty" class="arm-empty" hidden></p></div>
     <div class="arm-readout" aria-label="Joints"><div id="arm-joints" class="arm-joints"></div><div id="arm-cams" class="arm-cams" hidden></div></div>
   </div>
   <p id="arm-source" class="hint">Connecting…</p>
@@ -120,8 +120,11 @@ function render() {
   const [right, left] = arms;
   const two = twoArms();
   const none = KIND && !right.feed.status && right.feed.heard;
+  // no arm of this page's kind: one message, in the middle of the view (quick job 155: it said so three times)
+  $("arm-empty").hidden = !none;
+  $("arm-empty").textContent = none ? `No ${KINDS[KIND].robot} is connected to the brain.` : "";
   $("arm-source").textContent = none
-    ? `No ${KINDS[KIND].robot} is connected to the brain.`
+    ? ""
     : two
       ? `Right arm: ${sourceText(right)}. Left arm: ${sourceText(left)}.`
       : sourceText(right);

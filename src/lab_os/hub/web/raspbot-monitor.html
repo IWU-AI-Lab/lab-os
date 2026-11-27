@@ -21,9 +21,15 @@
     .camera-frame p { padding: 0.65rem; margin: 0; color: var(--text-dim); text-align: center; }
     .model { display: block; width: 100%; height: clamp(6rem, 25vh, 13rem); }
     dl.facts { grid-template-columns: minmax(0, 1fr) auto; column-gap: 0.55rem; }
-    .facts dt { letter-spacing: 0.06em; text-transform: uppercase; }
+    .facts dt { letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
     .facts dd { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    /* no camera picture (quick job 155): the camera card gets small, the status and the 3D model get the room */
+    .monitor-body.no-camera { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); }
+    .no-camera .camera-frame { aspect-ratio: auto; min-height: 9rem; height: 14rem; }
+    .no-camera .model { height: clamp(10rem, 42vh, 26rem); }
+    .no-camera dl.facts { grid-template-columns: minmax(0, auto) auto minmax(0, auto) auto; column-gap: 1.6rem; }
     @media (max-width: 560px) {
+      .monitor-body.no-camera { grid-template-columns: minmax(0, 1fr); }
       .monitor-body { grid-template-columns: minmax(0, 1fr); }
       .camera-frame { max-height: 38vh; }
     }

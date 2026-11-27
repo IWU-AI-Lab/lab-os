@@ -23,6 +23,7 @@ image.onerror = () => {
 };
 
 function showCamera(status) {
+  document.querySelector(".monitor-body").classList.toggle("no-camera", !(status?.connected && status.camera));
   if (status?.connected && status.camera) {
     if (!image.hasAttribute("src") && Date.now() >= retryAt) {
       image.src = `/api/raspbot/camera.mjpg?t=${Date.now()}`;

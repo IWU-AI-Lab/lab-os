@@ -41,7 +41,7 @@ The ball on each hand grows as you pinch. The left ball turns green when the pin
 **Put the 3D arm on the real arm:** hold the left grip and move. The see-through arm follows the controller and turns with it. Release the grip to leave it there. The Quest's browser keeps the position for next time. After that, the brain sends hand moves in the direction of the 3D arm: move your hand toward the front of the arm, and the gripper goes forward, from any side.
 
 **The status panel** (to the right of the arm, in the hub's design) shows:
-- the state, as a colored label: cyan Holding, green Following, amber No controller, rust Frozen (with a pause sign), gray Connecting;
+- the state, as a colored label: cyan Holding, green Following, amber No controller, dim Held still (with a pause sign), gray Connecting;
 - the gripper's opening and the speed;
 - how to drive.
 

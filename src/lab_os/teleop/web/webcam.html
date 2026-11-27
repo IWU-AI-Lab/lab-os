@@ -13,16 +13,31 @@
   </script>
   <style>
     /* the camera picture big, mirrored like a mirror (the hand drawing with it); the 3D arm under it */
-    .cam-view { display: grid; grid-template-rows: minmax(0, 1fr) minmax(14rem, 38%); gap: 1rem; min-height: 0; }
+    .cam-view { display: grid; grid-template-rows: minmax(0, 1fr) minmax(15rem, 40%); gap: 1rem; min-height: 0; }
+    /* all six joints fit in the 3D card: two a row (quick job 155: the gripper and the footer were cut off) */
+    .cam-view .arm3d-body { min-height: 0; grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem); }
+    .cam-view .arm-joints { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1rem; }
+    .cam-view .jrow:nth-child(2) { border-top: 0; }
+    /* the Pi's 800 × 480: the picture and the 3D arm side by side, the controls beside them */
+    @media (max-width: 1100px) and (orientation: landscape) {
+      .cam-view { grid-template-rows: minmax(0, 1fr); grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .cam-box { min-height: 0; }
+      .cam-view .arm3d-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+      .cam-view .arm-joints { column-gap: 0.6rem; }
+      .cam-view .jv { min-width: 0; font-size: 0.8rem; }
+    }
     .cam-box { position: relative; min-height: 16rem; background: #000; overflow: hidden;
       box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 55%, transparent); }
     .cam-box video, .cam-box canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transform: scaleX(-1); }
-    .cam-box canvas[data-state="frozen"] { box-shadow: inset 0 0 0 4px var(--frozen); }
+    .cam-box canvas[data-state="frozen"] { box-shadow: inset 0 0 0 4px var(--text-dim); }
     .cam-box canvas[data-state="following"] { box-shadow: inset 0 0 0 4px var(--ok); }
     .cam-box .empty { position: absolute; inset: 0; display: grid; place-items: center; padding: 2rem; text-align: center;
       font: var(--w-lines) 0.95rem/1.5 var(--f-lines); color: var(--text-dim); }
     .cam-box .empty[hidden] { display: none; }
-    @media (max-width: 900px), (orientation: portrait) { .cam-view { grid-template-rows: auto auto; } .cam-box { height: 50vh; } }
+    @media (max-width: 600px), (orientation: portrait) {
+      .cam-view { grid-template-rows: auto auto; } .cam-box { height: 50vh; }
+      .cam-view .arm3d-body { grid-template-columns: minmax(0, 1fr); }
+    }
   </style>
 </head>
 <!--
@@ -70,15 +85,17 @@
           <dt>Gripper</dt><dd id="pinch">—</dd>
           <dt>Hand distance</dt><dd id="dist">—</dd>
           <dt>Frames a second</dt><dd id="fps">—</dd>
-          <dt>Speed</dt><dd id="speed">—</dd>
         </dl>
-        <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled></label>
+        <!-- one Speed row: the slider and its value (quick job 155) -->
+        <label class="row">Speed <input id="speed-set" type="range" min="5" max="100" step="5" value="50" disabled> <span id="speed">—</span></label>
         <label class="row">Camera <select id="camera" disabled></select></label>
         <label class="row"><input id="depth" type="checkbox" checked> Move toward and away (rough, from your hand's size)</label>
         <label class="row"><input id="swap" type="checkbox"> Swap left and right hands</label>
+        <details class="how"><summary>How to drive</summary>
         <p class="hint">Put the camera in front of you, facing you. Your <b>right hand</b> moves the gripper. Tilt it to tilt the gripper, and turn it to turn the gripper. Hold a <b>left pinch</b> (or <b>Space</b>) to move: the clutch. A <b>right pinch</b> or a <b>fist</b> closes the gripper. It stays closed until you open your hand. Let go of the clutch and the arm holds still.</p>
         <p class="hint">The arm moves less than your hand, and toward and away from the camera it moves the least. To go further, let go of the clutch, move your hand back, and pinch again.</p>
-        <p class="hint">If your right hand leaves the picture, the arm stops and stays frozen. Let go of the clutch, then pinch again to continue. <b>X</b> = STOP. <b>`</b> (the key above Tab) = stop webcam control.</p>
+        <p class="hint">If your right hand leaves the picture, the arm stops and holds still. Let go of the clutch, then pinch again to continue. <b>X</b> = STOP. <b>`</b> (the key above Tab) = stop webcam control.</p>
+        </details>
       </div></section>
 
       <section class="card grow-card"><div class="in">

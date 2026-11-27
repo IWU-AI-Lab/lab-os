@@ -7,22 +7,25 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
-    #kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; align-content: start; overflow-y: auto; min-height: 0; scrollbar-width: thin; }
-    .kind { display: block; width: 100%; text-align: left; cursor: pointer; border: 0; color: inherit; font: inherit; }
+    /* the cards use the page's width and height, with large previews (quick job 155: a short row at the top) */
+    #kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); grid-auto-rows: minmax(15rem, 1fr);
+      gap: 1rem; align-content: start; overflow-y: auto; min-height: 0; scrollbar-width: thin; }
+    .kind { display: block; width: 100%; height: 100%; text-align: left; cursor: pointer; border: 0; color: inherit; font: inherit; }
+    .kind > .in { display: flex; flex-direction: column; }
     .kind:hover, .kind:focus-visible { --c: var(--hot); outline: none; }
     .kind h2 { justify-content: space-between; }
     .kind h2 small { font: var(--w-lines) 0.8rem var(--f-lines); color: var(--text-dim); }
-    .arms { display: flex; gap: 0.8rem; min-height: 9rem; }
+    .arms { flex: 1 1 auto; display: flex; gap: 0.8rem; min-height: 9rem; }
     .arm { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-    .arm svg { width: 100%; height: 8rem; display: block; }
+    .arm svg { width: 100%; flex: 1 1 auto; min-height: 8rem; display: block; }
     .arm .seg { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; fill: none; }
     .arm .dot { fill: var(--hot); }
     .raspbot-preview .camera-direction { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; }
     .raspbot-preview .chassis { fill: none; stroke: var(--text-dim); stroke-width: 2; }
     .arm .floor { stroke: var(--line); stroke-width: 1.5; }
-    .arm.frozen .seg { stroke: var(--frozen-text); }
-    .arm .who { font: var(--w-lines) 0.8rem/1.3 var(--f-lines); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .none { margin: auto 0; font: var(--w-lines) 0.9rem/1.45 var(--f-lines); color: var(--text-dim); }
+    .arm.frozen .seg { stroke: var(--text-dim); }
+    .arm .who { font: var(--w-lines) 0.9rem/1.3 var(--f-lines); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+    .none { margin: auto; font: var(--w-lines) 0.95rem/1.45 var(--f-lines); color: var(--text-dim); text-align: center; }
   </style>
 </head>
 <!--

@@ -15,7 +15,7 @@ def _colors(node, path=""):
 
 def test_theme_has_starter_tokens():
     t = load_theme()
-    for key in ("background", "text", "primary", "accent", "ok", "frozen"):
+    for key in ("background", "text", "primary", "accent", "ok", "text_dim"):
         assert key in t["colors"], key
     assert t["font"]["family"]
     assert t["font"]["base_size_px"] > 0

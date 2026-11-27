@@ -270,7 +270,7 @@ export class ArmHologram {
       : two ? (s ? `Control: ${who}` : "Connecting to the brain") : `${s?.arm?.name || "Arm"}: ${armWord(s)}${who ? `   Control: ${who}` : ""}`;
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
-      g.fillStyle = !two && s?.frozen ? C.frozenText : C.dim;
+      g.fillStyle = !two && s?.frozen ? C.dim : C.dim;
       g.fillText(line, w / 2, h / 2);
     }, line);
     if (this.log) this._paintLog();
@@ -370,7 +370,7 @@ class HoloArm {
     if (s?.arm?.model && s.arm.model !== this.kind) this.load(); // the left arm came, or another arm
     if (this.arm && s?.joints) this.arm.setJoints(s.joints);
     if (this.arm) this.arm.setTint(null);
-    if (this.arm) this.arm.setHeld(!!s?.frozen); // held still: a rust ring at the base (quick job 153)
+    if (this.arm) this.arm.setHeld(!!s?.frozen); // held still: a dim ring at the base (quick jobs 153, 155)
     this.turn.rotation.y += dt * 0.12;
     this.grid.userData.step(now);
     // the callouts: from the joint, out to a side (two arms: the outer side, so they never meet)
@@ -414,7 +414,7 @@ class HoloArm {
       const x0 = (w - aw - bw) / 2;
       g.textAlign = "left";
       g.font = `600 ${h * 0.36}px ${FONT.ui}`; spaced(g, 0.18); g.fillStyle = C.primary; g.fillText(a, x0, h / 2);
-      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.frozenText : C.dim; g.fillText(b, x0 + aw, h / 2);
+      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.dim : C.dim; g.fillText(b, x0 + aw, h / 2);
     }, `${name}|${word}`);
   }
 }
