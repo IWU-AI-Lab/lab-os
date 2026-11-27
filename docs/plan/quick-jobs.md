@@ -12,10 +12,10 @@ Three coding sessions may run at the same time, one for each lane (the builder, 
 ### Lane 2: the robot pages, VR and AR
 
 ### Lane 3: the shared parts and the other pages
-- 160. **A black hole background** (the builder, 2026-11-26; a first version to iterate on). Part 6 of `docs/plan/ux-review.md`. Lab: add a step to the after-demo list.
 
 ### Backlog: do not start until the builder says
 The builder chooses when these start (2026-11-25). A session never takes a job from here by itself.
+- **A black hole background** (the builder, 2026-11-26; a first version to iterate on; moved from Lane 3, where it was numbered 160, on 2026-11-26). Part 6 of `docs/plan/ux-review.md`. Lab: add a step to the after-demo list.
 - **The camera pictures flicker on the Teleop page on slower devices.**
 - **Animations stutter the first few times on every device.**
 - **The arm cameras' pictures are low in resolution** on the Cameras page (all 4), and Quest view too (lab check T.4).
@@ -29,6 +29,7 @@ The builder chooses when these start (2026-11-25). A session never takes a job f
 - **A contributing guide and an architecture page** (the builder, 2026-11-25), simple and clear. The contributing guide: set up, branch and pull request, tests, the principles in a short list; `AGENTS.md` points to it. The architecture page: the parts (brain, hub, robot plug-ins, safety layer, AI tools), how a command goes from the Quest to the arm, where to add a robot.
 
 ## Done
+- 162. **Settings: the list in the middle, the preview always shown** (done 2026-11-26, PR #377) (the builder, 2026-11-26). The groups and the preview are columns of the same width, so the list is in the middle of the screen. The preview card shows on every screen wider than 900 px, and a setting's hint shows only there (before, under the setting too). Narrower screens keep the hint under the setting. Lab check X4.7.
 - 161. **Hub fixes after quick job 160** (done 2026-11-26, PR #376) (the builder, 2026-11-26). The core's bright arcs and dashes glide (they moved in steps). The light behind the docked core goes first when a page closes. All Pages fills the width. The Command Center: the sweep first, then the page fades in; a line joins each screen to its device, and the rows are compact. The Command Center button is under the strip, above the core; the visitor cards are bright modules. AI Spend goes and comes back at once with visitor mode. Teleop: X is a key on STOP, and a line under the control button says that ` leaves. Settings: ↺ for a changed setting, Reset Section… and Reset All to Default… (these two ask first). Lab checks X4.3 to X4.6, X7.2.
 - 160. **Hub fixes after quick jobs 154 to 159** (done 2026-11-26, PR #374) (the builder, 2026-11-26). The Command Center opens with one 1 s radar sweep over the whole page, with no Skip button. Select multiple shows when it is on. The parallax is gone (the corners and the network moved with the pointer). The line from the core goes to the ask box. All Pages: a styled search with an icon, icons on the groups and the pages, more room between the groups. The core flies home with no jump when a page closes. A page spans the whole module, under the docked core. The core is an armillary sphere: rings on gimbals with perspective, from the builder's references in `docs/design/references/`. Lab check X7.1.
 - 159. **A 3D core** (done 2026-11-26, PR #373) (the builder, 2026-11-26; a first version to iterate on). Part 6 of `docs/plan/ux-review.md`: more intentional and original, its shape shows listening, thinking and speaking; minimal keeps the still rings. Lab: add a step to the after-demo list.

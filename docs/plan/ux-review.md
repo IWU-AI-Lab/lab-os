@@ -114,7 +114,7 @@ How bad: **H** = text is lost, a control is too small to use, or a page misleads
 - [ ] (B) · O C G · **A black hole background** (quick job 160): `hub.background: network | black-hole`, on full and maximal only. A dark disc with a thin bright ring behind the core, the network's dots bent around it, dim, with the text still readable.
 
 ## The builder's choices (2026-11-26)
-1. **Settings on wide screens:** not two columns. The right side shows a live preview of what the pointed-at or changed setting does (a small hub for Level of Detail, the core and the voice for the persona, the colours for the theme) and its longer help. A setting with no good preview shows only its help. (Quick job 156.)
+1. **Settings on wide screens:** not two columns. The right side shows a live preview of what the pointed-at or changed setting does (a small hub for Level of Detail, the core and the voice for the persona, the colours for the theme) and its longer help. A setting with no good preview shows only its help. (Quick job 156.) Since quick job 162, the preview shows on every screen wider than 900 px, the groups and the preview are the same width (the list in the middle of the screen), and the help shows only in the preview there.
 2. **The module's Back button:** × at the top right, in place of ←. Also in the Command Center's focus window and in VR. (Quick jobs 154, 156, 157.)
 3. **The minimal core:** the rings, still, with a still look for each state. DESIGN.md changes from "a still circle". (Quick job 154.)
 4. **The Raspbot page on an upright phone:** keep the sideways controller, and show "Turn your phone" when the phone is upright. (Quick job 155.)
