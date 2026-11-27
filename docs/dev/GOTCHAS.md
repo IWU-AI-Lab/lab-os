@@ -31,6 +31,7 @@ The form now accepts input after the handler is ready. A failed answer keeps the
 ### 2026-11-26 — `git pull` stopped on untracked copies of the UX review files
 **What:** The review sessions wrote their files into the main folder, not committed. Another branch then added the same files to `main`, so `git pull` refused to overwrite the untracked copies.
 **Fix:** Compare each copy with `origin/main` (`git hash-object`). If all are the same, `git add` the folder, then `git pull --ff-only`. Nothing is deleted.
+It happened again the same day with the reference pictures of quick job 160. A rule in `AGENTS.md` ("When you commit files that the builder added to the main folder") now makes the committing session do these steps.
 
 ### 2026-11-26 — `test_one_screen_answers_at_once_warm_and_timed` fails now and then on GitHub
 **What:** On the CI run for pull request #357, it failed with `assert 10 == 9`: the turn's `connected` and `listening` times were 1 ms apart. That change touched only the System Map's JavaScript. A rerun passed.
