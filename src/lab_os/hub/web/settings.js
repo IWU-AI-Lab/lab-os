@@ -191,11 +191,11 @@ function syncResets() {
     cell.append(b);
   }
   for (const g of document.querySelectorAll("#list .group")) {
-    const b = g.querySelector(".greset > .btn");
-    if (b) b.hidden = !changedRows(g).length;
+    const b = g.querySelector(".reset-action");
+    b?.classList.toggle("unavailable", !changedRows(g).length);
   }
-  const all = $("#reset-all > .btn");
-  if (all) all.hidden = !changedRows().length;
+  const all = $("#reset-all .reset-action");
+  all?.classList.toggle("unavailable", !changedRows().length);
 }
 /** Settings back to their defaults: this device's (the brain keeps them under its name), then the brain's. */
 async function runResets(list) {
@@ -214,7 +214,7 @@ async function runResets(list) {
   } catch (e) {
     return { ok: false, message: `Not reset: ${e.message}` };
   }
-  await rebuild();
+  await start();
   return { ok: true };
 }
 /** A button that asks first, in its own place: the question, Cancel and the button that does it. */
@@ -232,17 +232,6 @@ function askFirst(holder, button, question, goLabel, run) {
   });
 }
 const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
-/** Draw the page again with what is saved now, at the same place in the list. */
-async function rebuild() {
-  const y = $("#list").scrollTop;
-  spy.disconnect();
-  document.querySelectorAll("#list > .group").forEach((g) => g.remove());
-  $("#nav-main").replaceChildren(); $("#reset-all").replaceChildren();
-  await start();
-  $("#list").scrollTop = y;
-  applySearch();
-}
-
 /* ---------- groups: a heading that folds the group, and a button in the sidebar ---------- */
 const FOLDED = "lab-os.settings.folded";
 let folded = {};
@@ -255,8 +244,7 @@ function group(id, title, note = "", { icon = "i-gear", risky = false } = {}) {
   g.innerHTML = `<div class="ghrow"><button class="ghead" type="button" aria-expanded="true"><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg><span class="gtitle">${esc(title)}</span>${note ? `<small>${esc(note)}</small>` : ""}</button><span class="greset"></span></div><div class="rows"></div>`;
   const head = g.querySelector(".ghead");
   // the section's reset (quick job 161): only while one of its settings is changed; asks first
-  const holder = g.querySelector(".greset"), reset = btn("Reset Section…");
-  reset.hidden = true;
+  const holder = g.querySelector(".greset"), reset = btn("Reset Section…", "reset-action unavailable");
   holder.append(reset);
   askFirst(holder, reset, () => `Reset ${plural(changedRows(g).length, "setting")} in ${title} to the default?`, "Reset",
     () => runResets(changedRows(g).map((r) => r.reset)));
@@ -300,8 +288,6 @@ function applySearch() {
   if ($("#no-hits").textContent !== say) $("#no-hits").textContent = say;  // (the observer below sees text changes)
 }
 $("#search").addEventListener("input", () => { applySearch(); $("#list").scrollTop = 0; });
-// rows that come later (the voice rows load on their own) are searched too
-new MutationObserver(() => words().length && applySearch()).observe($("#list"), { childList: true, subtree: true });
 
 // the sidebar lights the group at the top of the list
 const spy = new IntersectionObserver((seen) => {
@@ -379,9 +365,9 @@ function screensRow() {
 const VOICE = { key: "voice", label: "Talking to It", kind: "choice", choices: ["push-to-talk", "dictation"], def: "push-to-talk",
   help: "Push-to-Talk: hold the mic (or Space) and talk. Dictation: the words go into the ask line.",
   value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };
-async function voiceRows() {
+async function voiceRows(status) {
   const { screenCanHear } = await import("/web/voice.js");
-  const [can, status] = await Promise.all([screenCanHear(), fetch("/api/status", { cache: "no-store" }).then((r) => r.json()).catch(() => null)]);
+  const can = await screenCanHear();
   const wake = status?.voice?.wake;
   let f = can.ok ? VOICE : { ...VOICE, help: `Push-to-Talk only, and not here: ${String(can.why).replace(/\.+$/, "")}.` };
   if (can.ok && wake?.available) {
@@ -567,9 +553,8 @@ function roomRow() {
 }
 
 /* ---------- the persona chooser as a round table (quick job 151): full and maximal looks only ---------- */
-async function roundTable(r, readOnly) {
+function roundTable(r, readOnly, data) {
   const look = currentLook();
-  const data = await fetch("/api/personas", { cache: "no-store" }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
   if (!data?.personas?.length) return;
   r.personas = data.personas;
   if (look !== "full" && look !== "maximal") {
@@ -633,6 +618,25 @@ async function start() {
     $("#mode").className = `pill ${data.writable ? "on" : "warn"}`;
   }
   const m = data?.visitor_mode;
+  // Keep both lists visible until every row is ready. Replace them in one paint.
+  const [voice, shutdown, personas] = m?.on ? [] : await Promise.all([
+    voiceRows(st).catch((e) => { console.warn(`settings: no voice rows (${e.message})`); return []; }),
+    data?.sections.some((s) => s.risky) ? shutdownRow() : null,
+    data?.sections.some((s) => s.fields.some((f) => f.key === "place:persona"))
+      ? fetch("/api/personas", { cache: "no-store" }).then((x) => (x.ok ? x.json() : null)).catch(() => null) : null,
+  ]);
+  const list = $("#list"), y = list.scrollTop;
+  spy.disconnect();
+  list.querySelectorAll(":scope > .group").forEach((g) => g.remove());
+  $("#nav-main").replaceChildren();
+  $("#reset-all").replaceChildren();
+  draw(data, voice, shutdown, personas);
+  applySearch();
+  list.scrollTop = y;
+}
+
+function draw(data, voice, shutdown, personas) {
+  const m = data?.visitor_mode;
   if (m?.on) {  // visitor mode: nothing to change but the way out
     group("lab", "The Lab", "", { icon: "i-pin" }).append(visitorRow(m));
     return;
@@ -641,8 +645,7 @@ async function start() {
   const dev = group("device", "This Device", NAME ? `${displayName()}: every window of this device uses these` : "This browser only: add a device name to keep them under a name", { icon: "i-screen" });
   dev.append(deviceNameRow(), displayNameRow());
   for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false, devReset(f)));
-  const voiceSlot = dev.appendChild(document.createElement("div"));
-  voiceRows().then((rows) => { voiceSlot.replaceWith(...rows); syncResets(); }, (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });
+  dev.append(...voice);
   dev.append(fieldRow(FULL, FULL.value(), (v) => FULL.save(v), false, devReset(FULL)));
   sub(dev, "For Slow Screens and Other Monitors");
   for (const f of SLOW) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false, devReset(f)));
@@ -685,13 +688,13 @@ async function start() {
       // its note "Applies when the brain restarts" has its place kept: the control doesn't move (quick job 82)
       if (f.applies === "restart") r.classList.add("may-restart");
       rows.append(r);
-      if (f.key === "place:persona") roundTable(r, !data.writable || !!f.locked);
+      if (f.key === "place:persona") roundTable(r, !data.writable || !!f.locked, personas);
     }
     // the assistant's languages are this device's own, but belong with the assistant (quick job 82)
     if (s.id === "assistant") rows.append(languageRow());
     if (s.risky) {
       if (s.help) note(rows, s.help);
-      rows.append(await shutdownRow());
+      rows.append(shutdown);
     }
   }
   setRestart(data.restart_needed, data.restart_keys);
@@ -699,7 +702,7 @@ async function start() {
 }
 /** "Reset All to Default…" in the sidebar (quick job 161): every changed setting this page can change. */
 function allReset() {
-  const holder = $("#reset-all"), b = btn("Reset All to Default…");
+  const holder = $("#reset-all"), b = btn("Reset All to Default…", "reset-action");
   holder.replaceChildren(b);
   askFirst(holder, b, () => `Reset all ${plural(changedRows().length, "changed setting")} to the default? This device's settings and, on the brain's computer, the lab's.`,
     "Reset All", () => runResets(changedRows().map((r) => r.reset)));

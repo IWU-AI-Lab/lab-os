@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-27 — Settings moved on the first change and went blank during a reset
+The section reset button made the heading taller when it appeared. Its hidden state now keeps its space.
+The reset also cleared both lists before the settings arrived. The page now reads the settings before it replaces the lists.
+
 ### 2026-11-26 — `* { box-sizing: border-box }` does not reach `::before`
 **What:** The "Held still" pill's pause mark had its two bars far apart. `kit.css` sets `box-sizing: border-box` on `*`, but `*` does not match pseudo-elements. So the mark's `width` counted without its two borders, and the gap was the full width.
 **Fix:** The mark sets `box-sizing: content-box` and a small `width` (the gap) on purpose (quick job 155). A `::before` or `::after` that uses borders must set its own `box-sizing`.
