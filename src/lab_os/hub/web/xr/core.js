@@ -9,6 +9,9 @@ import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
 import { maximal, minimal } from "./look.js";
+import { Gyro } from "/web/core-gyro.js";
+
+const AX = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1), QZ = new THREE.Quaternion();
 // depth (quick job 158): the rings about 3 cm apart, so they part as your head moves; minimal keeps them flat
 const ringGap = () => (minimal() ? 0.004 : 0.026);
 const PX = 1024; // canvas pixels across the 264-unit orb
@@ -73,6 +76,8 @@ export class Core {
     this.igniteAt = 0;
     this.color = new THREE.Color(C.primary);
     this.rings = {};
+    // the 3D core (quick job 159): each ring tilted on its own turning axis, the persona's own set
+    this.gyro = new Gyro("");
     const size = 264 * unit;
     let z = 0;
     for (const id of ["bars", "cross", "ticks", "seg", "sat", "arcs", "tri", "thin"]) {
@@ -182,6 +187,7 @@ export class Core {
       this._paintHeart(); this._paintFlare();
     }
     const m = STATE_MULT[this.state] || STATE_MULT.idle;
+    if (!still) this.gyro.step(dt, this.state, this.loud);
     const dim = this.state === "offline" ? 0.45 : 1;
     this.spinBoost += (1 - this.spinBoost) * Math.min(1, dt * 1.3);
     this.scaleNow += (m.scale - this.scaleNow) * Math.min(1, dt * 4);
@@ -201,7 +207,11 @@ export class Core {
       }
       const hit = now - r.hitAt < 260 ? 2 : 1;
       const obj = r.p ? r.p.mesh : r.line;
-      obj.rotation.z = -((r.a + rot) * Math.PI) / 180;
+      const spin = -((r.a + rot) * Math.PI) / 180, gy = still ? null : this.gyro.of(id);
+      if (gy) { // tilted on its axis (in the core's plane), then turned about its own centre
+        AX.set(Math.cos(gy.phi), Math.sin(gy.phi), 0);
+        obj.quaternion.setFromAxisAngle(AX, gy.tilt).multiply(QZ.setFromAxisAngle(ZAX, spin));
+      } else obj.rotation.set(0, 0, spin);
       obj.scale.setScalar(sc * (SCALES[id] ? this.scaleNow : 1));
       obj.visible = op > 0.002;
       if (r.p) {
