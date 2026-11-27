@@ -274,6 +274,7 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 - **X4.4** Quick job 161. Open **Teleop** and click **Desktop control**. → Is X a key on the STOP button? Does the line under the button say that ` leaves? (yes / no for each)
 - **X4.5** Quick job 161. On the hub, open the **Command Center**. Then open **All Pages**. → Does the radar sweep first, and the page fade in at its end? Are the screens joined to their device by a line? Do the All Pages tiles fill the width? (yes / no for each)
 - **X4.6** Quick job 161. Look at the hub, start visitor mode, then exit it. → Is the **Command Center** button under the status bar, in the middle? Do the visitor cards show as bright modules beside the core? Does **AI Spend** go and come back at once? (yes / no for each)
+- **X4.7** Quick job 162. Open ⚙ on the lab desktop, then on a Pi touchscreen. Point to a setting. → Is the list in the middle of the screen? Does the hint show only in the card on the right? (yes / no for each)
 
 ## X6. After the demo: depth in the hub and in VR (10 min)
 Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.
