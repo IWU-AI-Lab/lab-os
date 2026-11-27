@@ -305,7 +305,9 @@ function starField() {
 }
 
 export function createMap(canvas, labels, onSelect) {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  // The hub core adds light and preserves destination alpha for AR. Give the map an opaque backdrop.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setClearColor(new THREE.Color(background).lerp(new THREE.Color(surface), 0.35), 1);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(41, 1, 0.1, 300);
   const controls = new OrbitControls(camera, canvas);

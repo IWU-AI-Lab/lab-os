@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-27 — The System Map core disappeared over empty space
+The VR hub core adds color and keeps the existing pixel opacity for AR. The transparent map canvas left bright pixels fully transparent.
+The map now draws an opaque background. To check the fix, view the core against empty space as well as over its base.
+
 ### 2026-11-27 — Settings moved on the first change and went blank during a reset
 The section reset button made the heading taller when it appeared. Its hidden state now keeps its space.
 The reset also cleared both lists before the settings arrived. The page now reads the settings before it replaces the lists.
