@@ -33,7 +33,8 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
 - A search, and a way to show or hide items in the workspace.
 - The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
-- The opening is a radar sweep that finds the devices one by one, different from the hub's startup, with every part centered and aligned (the builder, 2026-11-26).
+- The opening is one radar sweep, 1 s, over the whole page; each card shows when the sweep passes it. It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
+- **Select multiple** shows when it is on: the button fills and reads "Selecting multiple: On", and the workspace gets a dashed edge (quick job 160).
 - Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
 - Use the same names as Open on…. When display names exist (quick job 132), show both.
@@ -84,7 +85,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 140, 2026-11-26)
 - **The way in:** on the brain's own hub, a **Command Center** panel in the top strip, between the lab's name and the facts: a turning reticle and the name, with a light that passes now and then. Other screens do not show it. It opens the Command Center as a module that unfolds from it. "Open the Command Center" by voice unfolds from it too.
-- The radar opening in “Screen previews” replaces this opening in quick job 156. Minimal shows a short fade. Skip or any key ends the radar sweep.
+- The radar opening in “Screen previews” replaces this opening in quick job 156. Minimal shows a short fade. Quick job 160 replaced the radar sweep with the 1 s sweep above.
 
 ## Built (quick job 135, 2026-11-26)
 - **Diagnostics in the modules:** every device's modules (the focus window and the inspector) have **Diagnostics**: the Diagnostics page for that device only. The Pages list has Diagnostics too (all devices).

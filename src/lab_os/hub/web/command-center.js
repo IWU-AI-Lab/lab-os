@@ -24,7 +24,7 @@
 // The positions are plain 2D numbers in the workspace's own units, kept apart from the drawing, so a 3D
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
-import { PAGE_GROUPS } from "./page-groups.js";
+import { PAGE_GROUPS, VIEW_ICON } from "./page-groups.js";
 import { playIntro } from "/hub/command-center-intro.js";
 import { screenPreview, screenTitle as shows } from "/hub/screen-preview.js";
 
@@ -36,11 +36,6 @@ const POLL_MS = 1500;
 const SHOT_W = 160, GAP = 24;  // workspace units (px at zoom 1)
 const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-cam", robot: "i-pi", headset: "i-headset", usb: "i-chip" };
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
-const VIEW_ICON = {
-  teleop: "i-hand", diagnostics: "i-test", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
-  hub: "i-hex", settings: "i-gear", pages: "i-apps", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
-  system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
-};
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
 // (quick job 135: every device has Diagnostics, made to fit it: /diagnostics?show=<id>)
 const KIND_MODULES = { hub: ["diagnostics"], arm: ["teleop", "ai", "diagnostics"], leader: ["teleop", "diagnostics"], robot: ["raspbot", "diagnostics"],
@@ -451,7 +446,11 @@ new ResizeObserver(() => autoFit()).observe($("#ws"));
 let multi = false;
 for (const control of document.querySelectorAll("#multi, .multi")) control.onclick = () => {
   multi = !multi;
-  for (const b of document.querySelectorAll("#multi, .multi")) b.setAttribute("aria-pressed", String(multi));
+  for (const b of document.querySelectorAll("#multi, .multi")) {
+    b.setAttribute("aria-pressed", String(multi));
+    b.textContent = multi ? "Selecting multiple: On" : "Select multiple";
+  }
+  $("#ws").classList.toggle("multi-on", multi);
 };
 $(".cc-tabs").onclick = (event) => {
   const tab = event.target.closest("button");

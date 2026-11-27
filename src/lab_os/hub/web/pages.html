@@ -8,11 +8,22 @@
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
     #list { overflow-y: auto; max-width: 64rem; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr)); gap: .5rem; }
-    .tile { display: grid; gap: .4rem; align-content: start; text-align: left; padding: .7rem; }
+    /* the search: the Command Center's look, with a search icon (quick job 160) */
+    .find { position: relative; display: block; width: min(100%, 25rem); margin-bottom: 1.4rem; }
+    .find .ico { position: absolute; left: 0.65rem; top: 50%; translate: 0 -50%; font-size: 1rem; color: var(--c); pointer-events: none; }
+    #search { width: 100%; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
+      border: 1px solid var(--line); padding: 0.45rem 0.6rem 0.45rem 2.1rem; min-height: 2.3rem; }
+    #search::placeholder { color: var(--text-dim); }
+    #search:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
+    /* each group: its title with an icon, then its tiles, with room before the next group */
+    .rows h2 { margin: 0 0 0.7rem; }
+    .rows .tiles + h2 { margin-top: 1.8rem; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr)); gap: .6rem; }
+    .tile { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .3rem .65rem; align-content: start; text-align: left; padding: .7rem; }
+    .tile > .ico { grid-row: span 2; align-self: start; font-size: 1.3rem; color: var(--c); }
     .tile small { font: var(--w-lines) .85rem/1.35 var(--f-lines); color: var(--text-dim); white-space: normal; text-transform: none; letter-spacing: normal; }
-    #search { width: min(100%, 25rem); }
     .lead { margin: 0 0 0.8rem; font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); }
+    .none { font: var(--w-lines) 0.9rem/1.4 var(--f-lines); color: var(--text-dim); }
   </style>
 </head>
 <!--
@@ -31,13 +42,14 @@
   </header>
   <main id="list">
     <p class="lead" id="lead">Each page opens in a window of its own.</p>
-    <input type="search" id="search" aria-label="Search pages" placeholder="Search pages">
+    <label class="find"><svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#i-search"/></svg><input type="search" id="search" aria-label="Search pages" placeholder="Search pages"></label>
     <div class="rows" id="rows"></div>
   </main>
 </div>
 <script type="module" src="/web/design/kit.js"></script>
 <script type="module">
-import { PAGE_GROUPS } from "/hub/page-groups.js";
+import { GROUP_ICON, PAGE_GROUPS, VIEW_ICON } from "/hub/page-groups.js";
+const ico = (id) => `<svg class="ico" aria-hidden="true"><use href="/web/design/icons.svg#${id}"/></svg>`;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const rows = document.querySelector("#rows");
 const hub = await fetch("/api/hub", { cache: "no-store" }).then((r) => r.json()).catch(() => null);
@@ -60,7 +72,7 @@ function renderPages() {
   for (const [name, pages] of groups) {
     if (!pages.length) continue;
     const title = document.createElement("h2");
-    title.textContent = name;
+    title.innerHTML = `${ico(GROUP_ICON[name] || "i-apps")}${esc(name)}`;
     const tiles = document.createElement("div");
     tiles.className = "tiles";
     rows.append(title, tiles);
@@ -69,7 +81,7 @@ function renderPages() {
       r.type = "button";
       r.className = "btn tile";
       r.setAttribute("aria-label", `Open ${p.title}`);
-      r.innerHTML = `<b>${esc(p.title)}</b><small>${esc(p.line)}</small>`;
+      r.innerHTML = `${ico(VIEW_ICON[viewOf[p.path]] || "i-link")}<b>${esc(p.title)}</b><small>${esc(p.line)}</small>`;
       r.addEventListener("click", () => {
         if (inHub && viewOf[p.path] && p.path !== "/pages") return parent.postMessage({ type: "lab-os-open-view", id: viewOf[p.path] }, location.origin);
         if (!window.open(p.path, `lab-os-page-${p.path}`)) location.href = p.path;  // a blocked window: here
@@ -77,7 +89,7 @@ function renderPages() {
       tiles.append(r);
     }
   }
-  if (!rows.children.length) rows.textContent = "No page matches the search.";
+  if (!rows.children.length) rows.innerHTML = `<p class="none">No page matches the search.</p>`;
 }
 document.querySelector("#search").addEventListener("input", renderPages);
 renderPages();

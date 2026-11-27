@@ -269,11 +269,12 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 ## X4. Settings, All Pages and the other pages
 
 - **X4.1** Open [part 4 of the UX review](../plan/ux-review.md#4-settings-all-pages-the-command-center-and-the-other-pages-quick-job-156). Check each item on the specified screen. Which items still need work?
+- **X4.2** Open the **Command Center** on the lab desktop. Click **Select multiple**. Open **All Pages** and type in its search. → Does the page open with one short radar sweep (about 1 s, no Skip button)? Can you see that Select multiple is on? Do the search, the groups and the pages on All Pages have icons? (yes / no for each)
 
 ## X6. After the demo: depth in the hub and in VR (10 min)
 Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.
-- **X6.1** On the hub, move the mouse slowly from side to side. Open **Monitor**. → Do the panels' lines and the network move a little? Does the hub behind the page look out of focus? (yes / no for each) Open the VR hub on the Quest and move your head from side to side. → Does the core float in front of the panels? Do its rings part? (yes / no for each) What do you want to change? (a sentence)
+- **X6.1** On the hub, open **Monitor**. → Does the hub behind the page look out of focus? Does the page use the whole frame, with the core over its bottom-right corner? Close the page. Does the core fly home with no jump? (yes / no for each) Open the VR hub on the Quest. → Does the core float in front of the panels? (yes / no) What do you want to change? (a sentence)
 
 ## X7. After the demo: the 3D core (10 min)
-Quick job 159, a first version. Use the lab desktop on **Full**, then the Quest.
-- **X7.1** Look at the core on the hub. Hold the mic and talk, then let go. Open ⚙ → **Assistant** and choose the other persona. → Do the rings tilt like a gyroscope? Do they line up flat while you talk? Do they tilt further while it thinks? Does the other persona's core look different? (yes / no for each) Open the VR hub. → Do the rings tilt there too? (yes / no) What do you want to change? (a sentence)
+Quick jobs 159 and 160. Use the lab desktop on **Full**, then the Quest.
+- **X7.1** Look at the core on the hub. Hold the mic and talk, then let go. Open ⚙ → **Assistant** and choose the other persona. → Do the rings turn like an armillary sphere and cross through the middle? Do they line up flat while you talk? Do they turn faster while it thinks? Does the other persona's core look different? (yes / no for each) Open the VR hub. → Do the rings tilt there too? (yes / no) What do you want to change? (a sentence)
