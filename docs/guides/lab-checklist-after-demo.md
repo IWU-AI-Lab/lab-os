@@ -275,6 +275,7 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 - **X4.5** Quick job 161. On the hub, open the **Command Center**. Then open **All Pages**. → Does the radar sweep first, and the page fade in at its end? Are the screens joined to their device by a line? Do the All Pages tiles fill the width? (yes / no for each)
 - **X4.6** Quick job 161. Look at the hub, start visitor mode, then exit it. → Is the **Command Center** button under the status bar, in the middle? Do the visitor cards show as bright modules beside the core? Does **AI Spend** go and come back at once? (yes / no for each)
 - **X4.7** Quick job 162. Open ⚙ on the lab desktop, then on a Pi touchscreen. Point to a setting. → Is the list in the middle of the screen? Does the hint show only in the card on the right? (yes / no for each)
+- **X4.8** Quick job 163. Start the hub on the lab desktop. Open the **Command Center**. Open ⚙ and change a setting. → Does the Command Center button come in with the module buttons? Does the opening show a circular grid that fades with the sweep? Is **Safety Limits and Shut Down** in the sidebar's list, with "✓ Saved" beside the setting's name? (yes / no for each)
 
 ## X6. After the demo: depth in the hub and in VR (10 min)
 Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.

@@ -67,7 +67,7 @@ class Section:
     title: str
     fields: tuple[Field, ...]
     help: str = ""
-    risky: bool = False  # switching off or stopping: shown apart, at the bottom (quick job 38)
+    risky: bool = False  # switching off or stopping: the last group (quick jobs 38, 163)
 
 
 def _personas() -> list[str]:

@@ -33,7 +33,7 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
 - A search, and a way to show or hide items in the workspace.
 - The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
-- The opening is one radar sweep, 1 s, over the whole page. The sweep turns first; in its last 0.3 s the page fades in and the sweep fades out (quick job 161; quick job 160 showed each card as the sweep passed it). It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
+- The opening is one radar sweep, 1 s, over the whole page. The sweep turns first, over a circular grid (rings, spokes, degree ticks with their numbers, a reticle and blips that light as the sweep passes; quick job 163); in its last 0.3 s the page fades in and the sweep and the grid fade out (quick job 161; quick job 160 showed each card as the sweep passed it). It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
 - **Select multiple** shows when it is on: the button fills and reads "Selecting multiple: On", and the workspace gets a dashed edge (quick job 160).
 - Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
