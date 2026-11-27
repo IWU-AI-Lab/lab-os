@@ -121,7 +121,8 @@ function control(f, value, onSave, disabled) {
 function row(label, help, ctl, unit = "") {
   const r = document.createElement("div");
   r.className = "row";
-  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="rst"></div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
+  // "✓ Saved" beside the name (quick job 163; before, a column of its own at the right)
+  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label><span class="st" aria-live="polite"></span>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="rst"></div><div class="err" aria-live="polite"></div>`;
   if (ctl) r.querySelector(".ctl").append(ctl);
   return r;
 }
@@ -235,7 +236,7 @@ async function rebuild() {
   const y = $("#list").scrollTop;
   spy.disconnect();
   document.querySelectorAll("#list > .group").forEach((g) => g.remove());
-  $("#nav-main").replaceChildren(); $("#nav-risky").replaceChildren(); $("#reset-all").replaceChildren();
+  $("#nav-main").replaceChildren(); $("#reset-all").replaceChildren();
   await start();
   $("#list").scrollTop = y;
   applySearch();
@@ -267,7 +268,7 @@ function group(id, title, note = "", { icon = "i-gear", risky = false } = {}) {
   nav.dataset.g = id;
   nav.innerHTML = `${ico(icon)}<span>${esc(title)}</span>`;
   nav.addEventListener("click", () => { if (g.classList.contains("folded")) fold(false); g.scrollIntoView({ behavior: "smooth", block: "start" }); });
-  (risky ? $("#nav-risky") : $("#nav-main")).append(nav);
+  $("#nav-main").append(nav);  // the risky group last in the same list (quick job 163; before, apart at the bottom)
   $("#list").append(g);
   spy.observe(g);
   return g.querySelector(".rows");

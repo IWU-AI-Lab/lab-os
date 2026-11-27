@@ -778,7 +778,8 @@ body.q-minimal [data-state="speaking"] #orb { --c: var(--hot); }
 /* the Command Center's way in (quick job 140): on the brain's own computer only. Above the core, as the ask box is
    below it: at the top of the core's space, under the strip (quick job 161; before, in the strip, where a long fact
    pushed it off the middle). A note then shows under it. Not a quiet tool: a labelled panel with a turning
-   reticle and a light that passes */
+   reticle and a light that passes. A panel: it unfolds with the others at the startup (quick job 163; it showed
+   before them) */
 #cc-launch { position: absolute; top: 1%; left: 50%; transform: translateX(-50%); z-index: 2; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; --cut: 0.6rem; }
 #cc-launch[hidden] { display: none; }
 .core:has(#cc-launch:not([hidden])) #toast { top: calc(1% + 3.6rem); }
@@ -1067,7 +1068,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <g id="flare"><rect x="-160" y="-1.2" width="320" height="2.4" fill="url(#flareH)"/><rect x="-1" y="-70" width="2" height="140" fill="url(#flareV)"/></g>
     </svg>
     <span class="sr" id="state-word" aria-live="polite">Idle</span>
-    <button id="cc-launch" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
+    <button id="cc-launch" class="panel hold" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
       <div class="cut"><div class="in"><svg viewBox="-16 -16 32 32" aria-hidden="true"><circle class="cc-ring" r="14"/><circle class="cc-ring2" r="10.5"/><use href="#i-target" x="-8" y="-8" width="16" height="16" class="cc-ico"/></svg><span class="name">Command Center</span></div></div>
     </button>
     <div id="ask-btn" class="panel"><div class="cut"><div class="in">
