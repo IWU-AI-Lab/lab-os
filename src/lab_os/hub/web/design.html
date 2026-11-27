@@ -3967,20 +3967,13 @@ $("#pages-btn").addEventListener("click", async (e) => {
   if (!S.booted || S.moduleOpen || !S.page.pages) return;
   SFX.blip(); hideDevice(); openModule($("#pages-btn"));
 });
-// the Command Center's way in (quick job 140): a flash, then it unfolds from here and plays its opening
+// the Command Center's way in (quick job 140): a flash, then it unfolds from here (quick job 164: no opening)
 $("#cc-launch").addEventListener("click", (e) => {
   e.stopPropagation();
   if (!S.booted || S.moduleOpen || !S.page.command) return;
   const b = $("#cc-launch");
   b.classList.remove("go"); void b.offsetWidth; b.classList.add("go");
   SFX.relock(); hideDevice(); openModule(b);
-});
-// the Command Center's opening plays its sounds through the hub, which has the press that unlocks sound
-const FRAME_SFX = new Set(["tick", "sweep", "lock", "shock", "decode", "title", "land"]);
-addEventListener("message", (e) => {
-  if (e.origin !== location.origin || e.data?.type !== "lab-os-sfx" || !FRAME_SFX.has(e.data.name)) return;
-  if (!$("#mod-slot iframe") || e.source !== $("#mod-slot iframe").contentWindow) return;
-  SFX[e.data.name](Number(e.data.arg) || 0);
 });
 // A view full screen on another monitor of this computer (HDMI/DP; device.js → openOnMonitor). The page then
 // asks for one click to go full screen (browsers' rule). A view with its own page opens that page; the hub's

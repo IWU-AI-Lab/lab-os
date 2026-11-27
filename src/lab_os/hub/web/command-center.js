@@ -25,7 +25,6 @@
 // view of the lab can use the same layout later (the spec's "keep the design open to 3D").
 
 import { PAGE_GROUPS, VIEW_ICON } from "./page-groups.js";
-import { playIntro } from "/hub/command-center-intro.js";
 import { screenPreview, screenTitle as shows } from "/hub/screen-preview.js";
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -959,7 +958,6 @@ async function refresh() {
   }
 }
 async function start() {
-  playIntro();  // the sweep starts at once; the page fades in at its end (quick job 161)
   try {
     const [hub, cc] = await Promise.all([getJSON("/api/hub"), getJSON("/api/command-center")]);
     S.views = hub.views || [];
