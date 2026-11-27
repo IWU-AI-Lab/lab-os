@@ -403,6 +403,7 @@ async function poll(show) {
   if (st) show.facts.status = st; else if (show.facts.status) show.facts.status = { ...show.facts.status, assistant: { state: "offline" } };
   if (arm) show.facts.arm = arm;
   show.hub.facts.status = show.facts.status;
+  if (show.facts.status?.persona?.id) show.core.gyro.setPersona(show.facts.status.persona.id); // its own ring set (quick job 159)
   show.hub.ask.setStatus(show.facts.status);
 }
 
@@ -452,6 +453,7 @@ async function start(mode) {
   show.title.text = show.facts.title;
   await pollPanels(show);
   show.hub.facts.status = show.facts.status;
+  if (show.facts.status?.persona?.id) show.core.gyro.setPersona(show.facts.status.persona.id); // its own ring set (quick job 159)
   const link = getLink("monitor"); // a watcher's link: it drives nothing
   link.on("brain_off", (m) => show.turnOff(m));
   if (!show.facts.status) show.turnOff({ lost: true }); // entered VR or AR with no brain to answer

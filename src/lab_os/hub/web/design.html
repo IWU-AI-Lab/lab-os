@@ -1755,8 +1755,13 @@ const STATE_MULT = {
 };
 let scaleNow = 1, relockTarget = null;
 const barEls = [...document.querySelectorAll("#r-bars line")];
+// the 3D core (quick job 159): each ring tilted on its own turning axis, the persona's own set (/web/core-gyro.js)
+let GY = null;
+import("/web/core-gyro.js").then((m) => (GY = new m.Gyro(S.status?.persona?.id || ""))).catch((e) => console.warn(`hub: a flat core (${e.message})`));
 function stepOrb(dt, now) {
   const m = STATE_MULT[S.state];
+  GY?.step(dt, S.state, S.loud);
+  const gy = (k) => (GY ? GY.svg(k) : "");
   S.spinBoost += (1 - S.spinBoost) * Math.min(1, dt * 1.3);
   for (const k in rings) {
     const r = rings[k], target = r.v * m.m * (k === "arcs" && S.state === "thinking" ? 2 : 1) * S.spinBoost;
@@ -1769,10 +1774,9 @@ function stepOrb(dt, now) {
     if (Math.abs(diff) < 0.3) relockTarget = null;
   }
   scaleNow += (m.scale - scaleNow) * Math.min(1, dt * 4);
-  for (const k of ["ticks", "thin", "sat", "cross"]) rings[k].el.setAttribute("transform", `rotate(${rings[k].a})`);
-  rings.tri.el.setAttribute("transform", `rotate(${rings.tri.a}) scale(${scaleNow})`);
-  rings.seg.el.setAttribute("transform", `rotate(${rings.seg.a}) scale(${scaleNow})`);
-  rings.arcs.el.setAttribute("transform", `rotate(${rings.arcs.a}) scale(${scaleNow})`);
+  for (const k of ["ticks", "thin", "sat", "cross"]) rings[k].el.setAttribute("transform", `${gy(k)}rotate(${rings[k].a})`);
+  for (const k of ["tri", "seg", "arcs"]) rings[k].el.setAttribute("transform", `${gy(k)}rotate(${rings[k].a}) scale(${scaleNow})`);
+  $("#r-bars").setAttribute("transform", gy("bars"));
   // breathing / loudness
   let s = 1, op = 1;
   if (S.state === "speaking" && (VS.voiced || VS.greeting)) {
@@ -1823,6 +1827,7 @@ function stepOrbStill() {
   if (key === stillKey) return;
   stillKey = key;
   for (const k in rings) rings[k].el.removeAttribute("transform");
+  $("#r-bars").removeAttribute("transform");  // minimal: a flat core (quick job 159)
   const cd = $("#core-dot");
   cd.style.transform = ""; cd.style.opacity = S.state === "offline" ? 0.45 : 1;
   $("#ripple").setAttribute("d", "M46,0 A46,46 0 1 1 -46,0 A46,46 0 1 1 46,0Z");
@@ -3493,6 +3498,7 @@ function setQuality(q) {
   body.classList.remove("q-" + S.quality);
   S.quality = q;
   body.classList.add("q-" + q);
+  stillKey = "";  // minimal draws its still core again
   seedNetwork();
   if (q === "minimal") drawStillGrid();
   if (q !== "maximal") $("#verses").innerHTML = "";
@@ -3605,7 +3611,7 @@ async function pollStatus() {
   S.clockOffset = st.time_ms - Date.now();
   // the venue shows only while it isn't the place's default one (quick job 154: a lone "lab" with a pin)
   setFact("#f-venue", venueName(st.venue)); $("#f-venue").hidden = !!st.venue_default;
-  setFact("#f-persona", st.persona.display_name);
+  setFact("#f-persona", st.persona.display_name); GY?.setPersona(st.persona.id);
   renderTry(st.visitors);
   placeCC();
   const iv = $("#ign-venue"); if (iv) iv.textContent = placeLine(st);

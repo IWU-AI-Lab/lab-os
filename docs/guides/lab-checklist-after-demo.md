@@ -273,3 +273,7 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 ## X6. After the demo: depth in the hub and in VR (10 min)
 Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.
 - **X6.1** On the hub, move the mouse slowly from side to side. Open **Monitor**. → Do the panels' lines and the network move a little? Does the hub behind the page look out of focus? (yes / no for each) Open the VR hub on the Quest and move your head from side to side. → Does the core float in front of the panels? Do its rings part? (yes / no for each) What do you want to change? (a sentence)
+
+## X7. After the demo: the 3D core (10 min)
+Quick job 159, a first version. Use the lab desktop on **Full**, then the Quest.
+- **X7.1** Look at the core on the hub. Hold the mic and talk, then let go. Open ⚙ → **Assistant** and choose the other persona. → Do the rings tilt like a gyroscope? Do they line up flat while you talk? Do they tilt further while it thinks? Does the other persona's core look different? (yes / no for each) Open the VR hub. → Do the rings tilt there too? (yes / no) What do you want to change? (a sentence)
