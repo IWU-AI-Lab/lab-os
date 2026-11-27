@@ -13,8 +13,11 @@
 // Units: metres in the stage's space (you at the origin, -z ahead).
 import * as THREE from "three";
 import { C, GLOW, CanvasPlane, FONT, arrive, clamp, glowText, icon, rgba, spaced } from "./draw.js";
+import { minimal } from "./look.js";
+import { cutRect } from "./way.js";
 import { Ask } from "./ask.js";
 import { RaspbotModule } from "./raspbot.js";
+import { CamerasModule } from "./cameras.js";
 import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, TeleopModule, VR_MODULES } from "./modules.js";
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 import { SettingsPage } from "./settings.js";
@@ -175,6 +178,7 @@ export class HubView {
 
   /** The startup is over: everything flies to its place and the panels unfold out from the core. */
   arrive(now, instant = false) {
+    instant ||= minimal(); // minimal: no unfolding (quick job 157)
     this.group.visible = true;
     this.t0 = instant ? now - 5000 : now;
     this.mode = "hub";
@@ -232,6 +236,7 @@ export class HubView {
     if (w.kind === "set") { this.sfx.blip(); this.settings.press(w); return null; }
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
+    if (w.kind === "next-page") { this.page.nextPage(); this.sfx.blip(); return null; }
     if (w.kind === "tele" || w.kind === "rasp") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Teleop's options, the Raspbot's bar
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
@@ -292,7 +297,7 @@ export class HubView {
       this.module.scene = scene;
       this.scene.add(scene);
     } else {
-      view = this.views[id] ||= id === "raspbot" ? new RaspbotModule() : new ArmHologram(id);
+      view = this.views[id] ||= id === "raspbot" ? new RaspbotModule() : id === "cameras" ? new CamerasModule() : new ArmHologram(id);
       if (id === "raspbot") {
         view.group.add(this.tab.mesh);
         this.tab.mesh.position.set(0, 0.46, 0);
@@ -413,7 +418,7 @@ export class HubView {
     this.traces.step(dt, now, clamp((t - 450) / 800, 0, 1) * this._dim, this.core.state);
     // the details page: unfolds from its callout (0.6 s), closes back toward it quickly (0.25 s)
     if (this.page.mesh.visible) {
-      const k = this.pageClosing ? 1 - clamp((now - this.pageAt) / 250, 0, 1) : arrive((now - this.pageAt) / 600);
+      const k = this.pageClosing ? (minimal() ? 0 : 1 - clamp((now - this.pageAt) / 250, 0, 1)) : minimal() ? 1 : arrive((now - this.pageAt) / 600);
       const at = new THREE.Vector3(0, 0.02, -2.2);
       this.page.mesh.position.lerpVectors(this.pageFrom, at, k);
       this.page.mesh.scale.setScalar(Math.max(0.01, 0.2 + 0.8 * k));
@@ -423,7 +428,7 @@ export class HubView {
     }
     // Settings: the same unfolding, from ⚙
     if (this.settings.mesh.visible) {
-      const k = this.setClosing ? 1 - clamp((now - this.setAt) / 250, 0, 1) : arrive((now - this.setAt) / 600);
+      const k = this.setClosing ? (minimal() ? 0 : 1 - clamp((now - this.setAt) / 250, 0, 1)) : minimal() ? 1 : arrive((now - this.setAt) / 600);
       this.settings.mesh.position.lerpVectors(this.setFrom, new THREE.Vector3(0, 0.02, -2.2), k);
       this.settings.mesh.scale.setScalar(Math.max(0.01, 0.2 + 0.8 * k));
       this.settings.p.opacity = this.setClosing ? k : clamp(k * 1.6, 0, 1);
@@ -471,13 +476,17 @@ export class HubView {
   }
   paintGear(hover) {
     this.gear.paint((g, w, h) => {
-      if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(0, 0, w, h); g.strokeStyle = C.primary; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3); }
+      cutRect(g, 1.5, 1.5, w - 3, h - 3, h * 0.22); // cut corners (quick job 157)
+      if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
+      g.strokeStyle = hover ? C.primary : rgba(C.primary, 0.4); g.lineWidth = 3; g.stroke();
       icon(g, "i-gear", w / 2, h / 2, w * 0.5, hover ? C.hot : C.dim, 1.8);
     }, hover);
   }
   paintPower(hover) {
     this.power.paint((g, w, h) => {
-      if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(0, 0, w, h); g.strokeStyle = C.primary; g.lineWidth = 3; g.strokeRect(1.5, 1.5, w - 3, h - 3); }
+      cutRect(g, 1.5, 1.5, w - 3, h - 3, h * 0.22); // cut corners (quick job 157)
+      if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
+      g.strokeStyle = hover ? C.primary : rgba(C.primary, 0.4); g.lineWidth = 3; g.stroke();
       icon(g, "i-power", w / 2, h / 2, w * 0.5, hover ? C.hot : C.dim, 1.8);
     }, hover);
   }
@@ -574,7 +583,7 @@ export class Traces {
     this.group.visible = show > 0.01;
     this.mat.opacity = show; this.dotMat.opacity = show;
     // a pulse now and then; toward the core while it thinks, away while it speaks
-    if (now > this.next && this.paths.length && show > 0.5) {
+    if (now > this.next && this.paths.length && show > 0.5 && !minimal()) {
       const p = this.paths[Math.floor(Math.random() * this.paths.length)];
       const m = new THREE.Mesh(new THREE.CircleGeometry(0.006, 10), this.pulseMat);
       this.group.add(m);
