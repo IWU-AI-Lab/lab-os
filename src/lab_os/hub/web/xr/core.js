@@ -8,9 +8,7 @@
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
-
-const Q = theme.quality?.default || "full";
-const MAXIMAL = Q === "maximal";
+import { maximal, minimal } from "./look.js";
 const PX = 1024; // canvas pixels across the 264-unit orb
 const S = PX / 264;
 
@@ -77,9 +75,9 @@ export class Core {
     let z = 0;
     for (const id of ["bars", "cross", "ticks", "seg", "sat", "arcs", "tri", "thin"]) {
       const d = DRAW[id];
-      if (d.mx && !MAXIMAL) continue;
+      if (d.mx && !maximal()) continue;
       const p = new CanvasPlane(size, size, PX / size, { additive: true });
-      p.paint(ringCanvas(d.fn, d.glow));
+      p.paint(ringCanvas(d.fn, d.glow && !minimal())); // minimal: no glow
       p.mesh.position.z = z;
       z += 0.004;
       p.mesh.renderOrder = 20;
@@ -172,7 +170,10 @@ export class Core {
 
   step(dt, now) {
     const look = theme.assistant?.[this.state] || {};
-    const target = new THREE.Color(C[look.color] || C.primary);
+    // minimal (quick job 157): the rings stay still, and each state has a still look of its own:
+    // listening brighter, thinking the dotted ring bright and the arcs dim, speaking the hot colour
+    const still = minimal();
+    const target = new THREE.Color(still && this.state === "speaking" ? C.hot : C[look.color] || C.primary);
     if (!target.equals(this.color)) {
       this.color.lerp(target, Math.min(1, dt * 4));
       if (Math.abs(this.color.r - target.r) + Math.abs(this.color.g - target.g) + Math.abs(this.color.b - target.b) < 0.01) this.color.copy(target);
@@ -183,7 +184,7 @@ export class Core {
     this.spinBoost += (1 - this.spinBoost) * Math.min(1, dt * 1.3);
     this.scaleNow += (m.scale - this.scaleNow) * Math.min(1, dt * 4);
     for (const [id, r] of Object.entries(this.rings)) {
-      const tgt = r.v * m.m * (id === "arcs" && this.state === "thinking" ? 2 : 1) * this.spinBoost;
+      const tgt = still ? 0 : r.v * m.m * (id === "arcs" && this.state === "thinking" ? 2 : 1) * this.spinBoost;
       r.cur += (tgt - r.cur) * Math.min(1, dt * 1.5);
       r.a = (r.a + r.cur * dt) % 360;
       // the lock-on: opacity 0.35 s, scale 0.8 s and turn 1.1 s on the hub's "arrive" curve
@@ -203,7 +204,9 @@ export class Core {
       obj.visible = op > 0.002;
       if (r.p) {
         r.p.mat.color.copy(this.color).multiplyScalar(hit);
-        r.p.mat.opacity = r.op * op * dim;
+        const stateOp = !still ? 1 : this.state === "listening" ? 1.4
+          : this.state === "thinking" ? (id === "thin" ? 2.2 : id === "arcs" ? 0.35 : 1) : 1;
+        r.p.mat.opacity = Math.min(1, r.op * stateOp) * op * dim;
         if (r.sweepAt != null) { // the ticks and bars appear around the ring in 0.45 s
           const k = clamp((now - r.sweepAt) / 450, 0, 1);
           r.p.paint(ringCanvas((g) => (id === "ticks" ? drawTicks(g, k) : drawBars(g, k))), `sweep${Math.round(k * 40)}`);
@@ -219,13 +222,13 @@ export class Core {
         if (!this.nextSyl || now > this.nextSyl) { this.loudTarget = Math.random() < 0.15 ? 0 : rand(0.25, 1); this.nextSyl = now + rand(70, 160); }
         this.loud += ((this.loudTarget || 0) - this.loud) * Math.min(1, dt * 14);
       }
-      s = 1 + this.loud * 0.16;
+      s = still ? 1 : 1 + this.loud * 0.16;
     } else if (this.state === "listening" && this.micLevel != null) {
       this.loud += (Math.min(1, this.micLevel * 8) - this.loud) * Math.min(1, dt * 12);
-      s = 0.9 + this.loud * 0.12;
+      s = still ? 0.9 : 0.9 + this.loud * 0.12;
     } else {
       this.loud += (0 - this.loud) * Math.min(1, dt * 6);
-      if (m.breathe) s = 1 + 0.07 * Math.sin((now / 1000) * (TAU / m.breathe));
+      if (m.breathe && !still) s = 1 + 0.07 * Math.sin((now / 1000) * (TAU / m.breathe));
       if (this.state === "offline") s = 0.88;
     }
     // the ignition: the heart overshoots, then settles
@@ -244,12 +247,12 @@ export class Core {
     this.ripple.material.opacity = (R.onAt == null ? 0 : clamp((now - R.onAt) / 350, 0, 1)) * dim;
     // the flare (1.1 s): a quick bright streak that stretches and fades
     const fk = (now - this.flareAt) / 1100;
-    this.flare.opacity = fk >= 0 && fk < 1 ? Math.sin(Math.PI * Math.min(1, fk * 1.6)) * (1 - fk) * 1.4 : 0;
+    this.flare.opacity = !still && fk >= 0 && fk < 1 ? Math.sin(Math.PI * Math.min(1, fk * 1.6)) * (1 - fk) * 1.4 : 0;
     this.flare.mesh.scale.set(0.4 + 1.2 * arrive(fk), 1, 1);
     // rings of light
     for (const w of this.waves) {
       const k = (now - w.t0) / 700;
-      w.m.visible = k >= 0 && k < 1;
+      w.m.visible = !still && k >= 0 && k < 1;
       if (!w.m.visible) continue;
       w.m.scale.setScalar(w.r * (1 + 0.35 * (1 - Math.pow(1 - k, 2))));
       w.m.material.opacity = 0.9 * (1 - k);

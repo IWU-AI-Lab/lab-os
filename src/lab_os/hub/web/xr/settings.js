@@ -11,6 +11,7 @@
 import { prefs, setPref } from "/web/device.js";
 import { C, CanvasPlane, FONT, icon, rgba, spaced } from "./draw.js";
 import { wrap } from "./panels.js";
+import { cutRect } from "./way.js";
 
 const NAMES = { ai: "AI Control", design: "Designed Hub", plain: "Plain Hub", jarvis: "J.A.R.V.I.S.", "24h": "24-Hour", "12h": "12-Hour", "push-to-talk": "Push-to-Talk" };
 const SMALL = new Set(["a", "an", "and", "of", "the", "to", "on", "in", "for"]);
@@ -156,9 +157,14 @@ export class SettingsPage {
     icon(g, "i-gear", 5, 7, 4, C.primary, 1.5);
     spaced(g, 0.18); label("SETTINGS", 9, 7, 3.2, C.hot, "left", 700, FONT.title); spaced(g, 0);
     const bh = hv.kind === "back";
-    g.strokeStyle = bh ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 0.25; g.strokeRect(w - 14, 2.5, 11, 9);
-    if (bh) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(w - 14, 2.5, 11, 9); }
-    icon(g, "i-back", w - 8.5, 7, 6, bh ? C.hot : C.text, 1.6);
+    cutRect(g, w - 14, 2.5, 11, 9, 2); // cut corners (quick job 157)
+    if (bh) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
+    g.strokeStyle = bh ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 0.25; g.stroke();
+    { // × in place of ← (choice 2, quick job 157)
+      const cx = w - 8.5, cy = 7, r = 2.2;
+      g.strokeStyle = bh ? C.hot : C.text; g.lineWidth = 0.6; g.lineCap = "round";
+      g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke();
+    }
     // the groups, on the left
     const top = 16, navW = 44;
     this.groups.forEach((gr, i) => {

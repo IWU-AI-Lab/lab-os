@@ -85,7 +85,8 @@ async def test_the_trigger_presses_what_you_point_at(aiohttp_client):
 async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client):
     client = await aiohttp_client(make_app())
     hub = await (await client.get("/hub/xr-hub.js")).text()
-    for api in ("/api/project", "/api/spend", "/api/commits?days=30", "/api/devices"):
+    # the live device list, as the flat hub (quick job 157)
+    for api in ("/api/project", "/api/spend", "/api/commits?days=30", "/api/live-devices"):
         assert api in hub, api
     panels = await (await client.get("/hub/xr/panels.js")).text()
     for title in ("Current Project", "AI Spend", "Commits", "Devices"):
@@ -215,7 +216,11 @@ async def test_power_opens_a_menu_with_exit_on_every_page(aiohttp_client):
     assert "if (this.menu.mesh.visible) return this.closeMenu();" in hub  # B
     mods = await (await client.get("/hub/xr/modules.js")).text()
     assert "export class PowerMenu" in mods and '["exit", "i-headset", "Exit"]' in mods
-    assert '{ kind: "power" }' in mods.split("class ModuleTab", 1)[1].split("class ", 1)[0]
+    # quick job 157: the tab has the way out (⏻, EXIT, ×) from xr/way.js
+    tab = mods.split("class ModuleTab", 1)[1].split("class ", 1)[0]
+    assert "wayAt(" in tab and "drawWay(" in tab
+    way = await (await client.get("/hub/xr/way.js")).text()
+    assert '"power"' in way and '"exit"' in way and '"back"' in way
 
 
 QUEST_UA = (
@@ -392,7 +397,8 @@ async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client)
     graph = await _module_graph(client, "/hub/xr-hub.js")
     assert "/hub/xr/teleop-panel.js" in graph and "/hub/xr/teleop-options.js" in graph
     panel = graph["/hub/xr/teleop-panel.js"]
-    for kind in ('kind: "stop"', 'op: "options"', 'kind: "back"', 'kind: "exit"'):
+    # ⏻, EXIT, × (quick job 157)
+    for kind in ('kind: "stop"', 'op: "options"', "wayAt(", "drawWay("):
         assert kind in panel, kind
     mods = graph["/hub/xr/modules.js"]
     module = mods.split("export class TeleopModule", 1)[1].split("\n}\n", 1)[0]
@@ -403,7 +409,8 @@ async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client)
     assert 'this.tab.mesh.visible = inModule && this.module?.id !== "teleop"' in hub
     assert 'if (w.kind === "tele" || w.kind === "rasp")' in hub
     main = graph["/hub/xr-hub.js"]
-    assert 'this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop"' in main
+    # a module: the way out is on its tab
+    assert 'this.exit.mesh.visible = P === "hub" && !this.hub.module' in main
     assert 'teleop ? "on-hit" : true' in main
     assert 'show === "on-hit" ? !!found : show' in graph["/hub/xr/pointer.js"]
 
@@ -421,3 +428,20 @@ def test_two_arms_on_every_screen():
     assert 'class="in gauges" id="joints"' in page and 'class="in gauges" id="joints-left"' in page
     css = (SRC / "teleop/web/pages.css").read_text()
     assert "#joints .joint" not in css and ".gauges .joint" in css
+
+
+async def test_the_vr_hub_follows_the_devices_look(aiohttp_client):
+    """Quick job 157: the VR hub reads this headset's Level of Detail (not only the theme's
+    default), before the scene is made; in minimal the core is still, the network has no
+    pulses, the jump is skipped and panels appear at once. AR: no white flash, a stronger panel
+    fill."""
+    client = await aiohttp_client(make_app())
+    graph = await _module_graph(client, "/hub/xr-hub.js")
+    look = graph["/hub/xr/look.js"]
+    assert "/api/hub-devices/" in look and '"quality"' in look
+    main = graph["/hub/xr-hub.js"]
+    assert "await loadLook();" in main and 'this.phase === "ignite" && minimal()' in main
+    assert "if (!this.ar) this.sky.flash(now)" in main and "PASS.ar = ar" in main
+    assert "const tgt = still ? 0" in graph["/hub/xr/core.js"]
+    assert "minimal() ? 0 : show" in graph["/hub/xr/network.js"]
+    assert "theme.quality?.default" not in graph["/hub/xr/core.js"] + graph["/hub/xr/network.js"]

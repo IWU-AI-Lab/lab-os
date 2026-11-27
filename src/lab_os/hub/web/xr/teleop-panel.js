@@ -1,13 +1,14 @@
 // The hub's VR and AR Teleop: its buttons and options beside the status box (quick job 102, the builder:
 // "where I expect them", like ⚙ in the VR hub). Both hang in the teleop room, so they stay with the arm
 // where you look while you drive it:
-//   TeleopBar      under the status box, two rows of two: STOP, Options, Back (closes Teleop, back to the hub), Exit
-//                  (leaves VR or AR). The way out, in view and pressable with the right controller or the
+//   TeleopBar      under the status box: STOP and Options, then the way out as on every page of the hub in VR
+//                  (quick job 157): ⏻ (its menu), EXIT (leaves VR or AR) and × (closes Teleop, back to the hub). The way out, in view and pressable with the right controller or the
 //                  right hand (point, then trigger or pinch); B closes Teleop too.
 //   TeleopOptions  over the status box, opened by Options: the Teleop page's options for the headset
 //                  (xr/teleop-options.js says what each row shows and sends).
 // Drawn 200 units across, like Settings in VR (xr/settings.js).
 import { C, CanvasPlane, FONT, icon, rgba, spaced } from "./draw.js";
+import { drawWay, wayAt, wayWidth } from "./way.js";
 import { wrap } from "./panels.js";
 import { optionRows } from "./teleop-options.js";
 
@@ -21,8 +22,6 @@ function cutBox(g, w, h, c) {
 const BAR = [
   { kind: "stop", label: "STOP", ico: "i-stop", danger: true },
   { kind: "tele", op: "options", label: "OPTIONS", ico: "i-gear" },
-  { kind: "back", label: "BACK", ico: "i-back" },
-  { kind: "exit", label: "EXIT", ico: "i-headset" },
 ];
 const ROW_GAP = 0.06; // of the bar's height
 export class TeleopBar {
@@ -34,15 +33,20 @@ export class TeleopBar {
   }
   get mesh() { return this.p.mesh; }
   hit(u, v) {
-    const b = BAR[(v > 0.5 ? 0 : 2) + (u > 0.5 ? 1 : 0)];
+    if (v < 0.5) { // the way out, centred in the second row
+      const bh = (this.p.h * (1 - ROW_GAP)) / 2, x0 = (this.p.w - wayWidth(bh)) / 2;
+      return { kind: wayAt(u * this.p.w - x0, bh) || "tele-pad" };
+    }
+    const b = BAR[u > 0.5 ? 1 : 0];
     return b.op ? { kind: b.kind, op: b.op } : { kind: b.kind };
   }
   paint() {
     const over = this.hover ? `${this.hover.kind}${this.hover.op || ""}` : "";
     this.p.paint((g, w, h) => {
       const gap = h * ROW_GAP, bw = (w - gap) / 2, bh = (h - gap) / 2;
+      drawWay(g, (w - (wayWidth(this.p.h * (1 - ROW_GAP) / 2) / this.p.w) * w) / 2, bh + gap, bh, over);
       BAR.forEach((b, i) => {
-        const x = (i % 2) * (bw + gap), y = Math.floor(i / 2) * (bh + gap);
+        const x = (i % 2) * (bw + gap), y = 0;
         const on = over === `${b.kind}${b.op || ""}`, pressed = b.op === "options" && this.open;
         const col = b.danger ? C.danger : C.primary;
         g.save(); g.translate(x, y);

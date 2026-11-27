@@ -5,17 +5,19 @@
 //     teleop page instead): the teleop page's own session (TeleopSession, /static/xr.js: the arm on its
 //     table, its status box, controllers or hands, the same messages to the brain) inside the hub's
 //     session. STOP is A/X; the brain freezes the arm when input stops, and one page drives at a time.
-//     Under its status box: STOP, Options (the Teleop page's options), Back and Exit (xr/teleop-panel.js,
+//     Under its status box: STOP, Options (the Teleop page's options), then ⏻, EXIT and × (xr/teleop-panel.js,
 //     quick job 102), in place of the tab.
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
 //     brain's status); AI Control adds the robot-tool calls as they happen (/api/ai-calls). Both have STOP,
 //     like their pages (it works from any screen). With two arms, Monitor shows both, each on its own grid
 //     (quick job 119).
-//   - ModuleTab: the open module's title and Back, floating at the left.
+//   - ModuleTab: the open module's title with ⏻, EXIT and × (xr/way.js), floating at the left.
 //   - ExitButton: leaves VR or AR (quick job 78), under the hub on every page and on the off card.
 //   - RaspbotModule (xr/raspbot.js, quick job 107): drive raspbot1 with its camera as your eyes.
-// Training (LeLab on the desktop) has no VR version, so no button in VR.
+//   - CamerasModule (xr/cameras.js, quick job 157): every camera's picture, as the Cameras page.
+// The buttons are the flat hub's modules (`hub.modules`), less what VR cannot show (quick job 157):
+// Training (LeLab on the desktop) and System Map (a 3D page made for a screen) have no VR version.
 import * as THREE from "three";
 import { getArmFeed } from "/static/arm/arm-feed.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
@@ -24,12 +26,14 @@ import { getLink } from "/static/link.js";
 import { deviceName } from "/web/device.js";
 import { jointLabel } from "/web/words.js";
 import { C, GLOW, CanvasPlane, FONT, TAU, arrive, clamp, icon, rgba, spaced } from "./draw.js";
+import { minimal } from "./look.js";
+import { cutRect, drawWay, wayAt, wayWidth } from "./way.js";
 import { wrap } from "./panels.js";
 import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
 import { handChoiceAfter, optionMessage } from "./teleop-options.js";
 
 // Monitor: every arm; monitor-so101 / monitor-xarm: one kind's arms, as their pages (quick job 147)
-export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], "monitor-so101": ["SO-101 Monitor", "i-screen"], "monitor-xarm": ["xArm Monitor", "i-screen"], ai: ["AI Control", "i-chip"], raspbot: ["Raspbot", "i-cam"] };
+export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], "monitor-so101": ["SO-101 Monitor", "i-screen"], "monitor-xarm": ["xArm Monitor", "i-screen"], ai: ["AI Control", "i-chip"], cameras: ["Cameras", "i-cam"], raspbot: ["Raspbot", "i-cam"] };
 const PX = 900; // canvas pixels per metre
 
 /* ---------- the module button ---------- */
@@ -78,33 +82,35 @@ export class ModuleButton {
   }
 }
 
-/* ---------- the open module's title tab and Back ---------- */
+/* ---------- the way out: ⏻ (its menu), EXIT (leave VR or AR) and × (close what is open), in this order and
+   this look on every page (quick job 157: they were in different places on the hub and in Teleop):
+   under the core on the hub, a details page and Settings; on the tab of an open module; on Teleop's bar.
+   × in place of ← (choice 2). Cut corners, like every box of the hub. ---------- */
+/* ---------- the open module's title tab, with the way out at its right ---------- */
+const TAB_H = 0.14, TAB_W = 0.62 + wayWidth(TAB_H * 0.86);
 export class ModuleTab {
   constructor() {
-    this.p = new CanvasPlane(0.9, 0.14, PX);
+    this.p = new CanvasPlane(TAB_W, TAB_H, PX);
     this.p.mesh.userData.hit = this;
     this.title = ""; this.ico = ""; this.hover = null;
   }
   get mesh() { return this.p.mesh; }
-  hit(u) { return u > 1 - 0.16 / 0.9 ? { kind: "back" } : u > 1 - 0.31 / 0.9 ? { kind: "power" } : { kind: "tab" }; }
+  hit(u, v) {
+    const bh = TAB_H * 0.86, x0 = TAB_W - wayWidth(bh) - TAB_H * 0.07;
+    return v > 0.07 && v < 0.93 && { kind: wayAt(u * TAB_W - x0, bh) || "tab" } || { kind: "tab" };
+  }
   paint() {
-    const back = this.hover?.kind === "back", power = this.hover?.kind === "power";
+    const over = this.hover?.kind || "";
     this.p.paint((g, w, h) => {
-      g.fillStyle = rgba(C.bg, 0.85); g.fillRect(0, 0, w, h);
-      g.fillStyle = C.primary; g.fillRect(0, 0, 3, h * 0.5); g.fillRect(0, 0, h * 0.5, 3);
+      const c = h * 0.22;
+      cutRect(g, 0, 0, w, h, c); g.fillStyle = rgba(C.bg, 0.85); g.fill();
+      g.fillStyle = C.primary; g.fillRect(0, c, 3, h * 0.4); g.fillRect(c, 0, h * 0.4, 3);
       icon(g, this.ico, h * 0.42, h / 2, h * 0.42, C.primary, 1.6);
       g.font = `700 ${h * 0.3}px ${FONT.title}`; spaced(g, 0.18); g.fillStyle = C.hot; g.textBaseline = "middle"; g.textAlign = "left";
       g.fillText(this.title.toUpperCase(), h * 0.85, h / 2); spaced(g, 0);
-      const bw = h * 0.9, bx = w - bw - h * 0.05;
-      if (back) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(bx, h * 0.05, bw, h * 0.9); }
-      g.strokeStyle = back ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 2; g.strokeRect(bx, h * 0.05, bw, h * 0.9);
-      icon(g, "i-back", bx + bw / 2, h / 2, h * 0.55, back ? C.hot : C.text, 1.8);
-      // ⏻ beside Back: the menu with Exit (quick job 78, the builder: on every page of the hub in VR)
-      const px = bx - bw - h * 0.12;
-      if (power) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(px, h * 0.05, bw, h * 0.9); }
-      g.strokeStyle = power ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 2; g.strokeRect(px, h * 0.05, bw, h * 0.9);
-      icon(g, "i-power", px + bw / 2, h / 2, h * 0.5, power ? C.hot : C.text, 1.8);
-    }, `${this.title}|${back}|${power}`);
+      const bh = h * 0.86;
+      drawWay(g, w - (wayWidth(TAB_H * 0.86) / TAB_W) * w - h * 0.07, h * 0.07, bh, over);
+    }, `${this.title}|${over}`);
   }
 }
 
@@ -134,7 +140,7 @@ export class StopButton {
 export class PowerMenu {
   constructor() {
     this.items = [["start", "i-power", "Back to the start screen"], ["exit", "i-headset", "Exit"]];
-    this.p = new CanvasPlane(0.82, 0.1 + 0.11 * this.items.length, PX);
+    this.p = new CanvasPlane(0.56, 0.1 + 0.11 * this.items.length, PX); // 0.82 m before (quick job 157)
     this.p.mesh.userData.hit = this;
     this.p.mesh.renderOrder = 13;
     this.p.mat.depthTest = false; // in front of everything, like the way out
@@ -172,8 +178,33 @@ function cutPathBox(g, w, h) {
   g.strokeStyle = rgba(C.primary, 0.7); g.lineWidth = 3; g.stroke();
 }
 
-/* ---------- Exit (quick job 78): leaves VR or AR, back to the browser. On every page of the hub in
-   VR, and on the "lab-os is off" card ---------- */
+/* ---------- the way out under the core (the hub, a details page, Settings): ⏻, EXIT, and × while a page is
+   open (quick job 157) ---------- */
+export class WayOut {
+  constructor(h = 0.13) {
+    this.h = h; this.w = wayWidth(h);
+    this.p = new CanvasPlane(this.w, h, PX);
+    this.p.mesh.userData.hit = this;
+    this.p.mesh.renderOrder = 12;
+    this.p.mat.depthTest = false; // nothing may hide the way out
+    this.hover = null; this.close = false;
+  }
+  get mesh() { return this.p.mesh; }
+  hit(u) {
+    const x0 = this.close ? 0 : (this.w - wayWidth(this.h, false)) / 2;
+    return { kind: wayAt(u * this.w - x0, this.h, this.close) || "pad" };
+  }
+  paint() {
+    const over = this.hover?.kind || "", close = this.close;
+    this.p.paint((g, w, h) => {
+      // centred: without ×, the two buttons sit in the middle
+      const x = close ? 0 : (w - (wayWidth(this.h, false) / this.w) * w) / 2;
+      drawWay(g, x, 0, h, over, close);
+    }, `${over}|${close}`);
+  }
+}
+
+/* ---------- Exit (quick job 78): leaves VR or AR, back to the browser. On the "lab-os is off" card ---------- */
 export class ExitButton {
   constructor(w = 0.34, h = 0.12) {
     this.p = new CanvasPlane(w, h, PX);
@@ -251,7 +282,7 @@ export class ArmHologram {
   }
 
   step(dt, now, cameraPos, hits) {
-    const k = arrive((now - this.t0) / 700);
+    const k = minimal() ? 1 : arrive((now - this.t0) / 700); // minimal: no growing in (quick job 157)
     this.group.scale.setScalar(0.3 + 0.7 * k);
     // two arms: the left arm on your left, the right arm on your right, each on its own floor grid
     const two = this.units.length > 1 && !!this.units[1].feed.status;

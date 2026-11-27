@@ -26,7 +26,11 @@ export const GLOW = {
 };
 export const col = (name) => new THREE.Color(C[name] || name);
 /** "#rrggbb" + alpha → "rgba(…)". */
+// AR (quick job 157): over the real room, see-through panels and thin text washed out. While `PASS.ar` is
+// on, a panel's dark fill (background or surface) is nearly opaque.
+export const PASS = { ar: false };
 export function rgba(hex, a) {
+  if (PASS.ar && a >= 0.3 && a < 0.97 && (hex === C.bg || hex === C.surface)) a = 0.97;
   const h = hex.replace("#", "");
   return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
 }

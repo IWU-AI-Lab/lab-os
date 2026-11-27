@@ -25,15 +25,16 @@ import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { Checks, Greeting, Title } from "./xr/boottext.js";
 import { Core, RING_ORDER } from "./xr/core.js";
-import { C, arrive, clamp, loadFonts, loadIcons } from "./xr/draw.js";
+import { C, PASS, arrive, clamp, loadFonts, loadIcons } from "./xr/draw.js";
 import { Ignition } from "./xr/ignition.js";
 import { Network } from "./xr/network.js";
-import { ExitButton } from "./xr/modules.js";
+import { WayOut } from "./xr/modules.js";
 import { OffCard } from "./xr/off.js";
 import { Sfx } from "./xr/sfx.js";
 import { HubView } from "./xr/hub.js";
 import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
+import { loadLook, minimal } from "./xr/look.js";
 import { getLink } from "/static/link.js";
 import { deviceName } from "/web/device.js";
 
@@ -66,6 +67,7 @@ const LOST_MS = 3500, LOST_READS = 2;
 class Show {
   constructor(ar) {
     this.ar = ar;
+    PASS.ar = ar; // a stronger panel fill over the room (quick job 157)
     this.scene = new THREE.Scene();
     if (!ar) this.scene.background = BG;
     this.stage = new THREE.Group(); // you at its origin, -z ahead
@@ -90,8 +92,9 @@ class Show {
     this.hub.scene = this.scene; this.hub.ar = ar;
     this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh, this.hub.menu.mesh);
     this.pointer = new Pointer(this.scene);
-    // Exit (quick job 78): under the core and the ask line, on every page of the hub (a module too)
-    this.exit = new ExitButton(0.44, 0.15);
+    // the way out (quick job 157): ⏻, EXIT and × (while a page is open) under the core and the ask line, on
+    // the hub, a details page and Settings; an open module has the same buttons on its tab, Teleop on its bar
+    this.exit = new WayOut(0.13);
     this.exit.mesh.position.set(0, -1.22, -D + 0.1);
     this.exit.mesh.visible = false;
     this.stage.add(this.exit.mesh);
@@ -144,7 +147,15 @@ class Show {
       return;
     }
     this.sfx.unlockAudio();
-    if (this.phase === "ignite") {
+    if (this.phase === "ignite" && minimal()) {
+      // minimal (quick job 157): no unlock, no jump, no flash: the hub is there at once
+      this.hub.ask.greet();
+      this.placeAt(this.camera);
+      this.bootAt = now - T.brake;
+      this.phase = "boot";
+      this.finishBoot();
+      wait(1500).then(() => this.hub.ask.playGreeting()); // once the greeting has come
+    } else if (this.phase === "ignite") {
       this.ign.unlock(now); this.sfx.unlock();
       this.hub.ask.greet(); // the spoken greeting: asked for now, played as it's typed
       this.phase = "unlock";
@@ -188,7 +199,7 @@ class Show {
     this.phase = "boot";
     this.bootAt = now;
     this.skip = false;
-    this.sky.flash(now);
+    if (!this.ar) this.sky.flash(now); // AR: no white flash over the real room (quick job 157)
     this.sfx.arrive();
     this.core.group.visible = true;
     this.core.setRingsOn(false);
@@ -240,7 +251,7 @@ class Show {
     if (this.phase === "hub") return;
     this.skip = true;
     const now = clockNow();
-    if (this.phase === "jump") { this.sky.flash(now); this.bootAt = now - T.brake; }
+    if (this.phase === "jump") { if (!this.ar) this.sky.flash(now); this.bootAt = now - T.brake; }
     this.phase = "hub";
     this.hubAt = now;
     this.ign.group.visible = false;
@@ -257,6 +268,7 @@ class Show {
   }
 
   step(dt, now, camera) {
+    this.camera = camera;
     if (this.off) return this.off.follow(camera, dt, this.pointer.all().length > 0);
     if (this.wantPlace) { this.placeAt(camera); this.wantPlace = typeof this.wantPlace === "number" && this.wantPlace > 1 ? this.wantPlace - 1 : false; }
     let v = V_DRIFT, trail = 0.04, bright = 0.6, k = 0, tint = 0, starShow = 1, impact = false, arriveK = 0, coreScale = BOOT_SCALE;
@@ -277,7 +289,7 @@ class Show {
       bright = 0.7 + 0.5 * Math.pow(p, 1.2);
       tint = 0.15 * k;
       if (ms > T.ramp + T.hold) {
-        if (IMPACT && ms < T.ramp + T.hold + 80) impact = true;
+        if (IMPACT && !this.ar && ms < T.ramp + T.hold + 80) impact = true; // AR: no impact frame
         else this.boot(now);
       }
     } else if (P === "boot" || P === "hub") {
@@ -310,9 +322,10 @@ class Show {
     this.greet.step(now);
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
-    // in Teleop, Exit is on the bar under its status box (quick job 102), where you look while you drive
-    this.exit.mesh.visible = P === "hub" && this.hub.module?.id !== "teleop";
-    this.exit.hover = this.pointer.all().some((h) => h.what.kind === "exit");
+    // a module has the way out on its tab (Teleop on the bar under its status box, quick job 102)
+    this.exit.mesh.visible = P === "hub" && !this.hub.module;
+    this.exit.close = this.hub.mode === "details" || this.hub.mode === "settings";
+    this.exit.hover = this.pointer.all().find((h) => h.obj === this.exit.mesh)?.what || null;
     if (this.exit.mesh.visible) this.exit.paint();
     this.pointer.setTargets(P === "hub" ? [...this.hub.targets(), this.exit.mesh] : []);
     camera.getWorldPosition(this.hub.cameraPos ||= new THREE.Vector3());
@@ -373,7 +386,7 @@ async function loadFacts(show) {
   show.ign.place = st?.venue || "";
 }
 async function pollPanels(show) {
-  const [project, spend, commits, devices] = await Promise.all([getJSON("/api/project"), getJSON("/api/spend"), getJSON("/api/commits?days=30"), getJSON("/api/devices")]);
+  const [project, spend, commits, devices] = await Promise.all([getJSON("/api/project"), getJSON("/api/spend"), getJSON("/api/commits?days=30"), getJSON("/api/live-devices")]);
   Object.assign(show.hub.facts, { project, spend, commits, devices, title: show.facts.title });
 }
 async function poll(show) {
@@ -430,6 +443,7 @@ function makeRenderer(ar) {
   return renderer;
 }
 async function start(mode) {
+  await loadLook(); // this headset's Level of Detail, before the scene is made (quick job 157)
   const ar = mode === "immersive-ar" || params.has("passthrough"), show = new Show(ar); // ?preview&passthrough: the AR way, see-through (quick job 10)
   window.__xrShow = show; // for tests and the console
   window.__xrNow = clockNow;
@@ -526,7 +540,7 @@ async function start(mode) {
   session.addEventListener("end", () => {
     r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2);
     show.hub.closeModule(clockNow()); // Teleop open (Exit, or the headset taken off): the arm freezes
-    $("#msg").textContent = "Left VR. Press a button to go back in.";
+    $("#msg").textContent = `Left ${ar ? "AR" : "VR"}. Press a button to go back in.`;
   });
   r.setAnimationLoop(frame);
 }
@@ -536,9 +550,7 @@ async function init() {
   const device = params.get("device");
   $("#flat").href = `/?flat=1${device ? `&device=${encodeURIComponent(device)}` : ""}`; // the hub in the browser
   getJSON("/api/hub").then((h) => h?.title && ($("#place").textContent = h.title));
-  const preview = document.createElement("button");
-  preview.className = "btn"; preview.type = "button"; preview.textContent = "Preview on this screen";
-  preview.onclick = () => start("screen").catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
+  const preview = () => start("screen").catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
   const can = async (m) => !!navigator.xr && (await navigator.xr.isSessionSupported(m).catch(() => false));
   const [hasVR, hasAR] = await Promise.all([can("immersive-vr"), can("immersive-ar")]);
   vr.disabled = !hasVR;
@@ -548,14 +560,19 @@ async function init() {
   if (!hasVR && !hasAR && headset && !window.isSecureContext) {
     // over Wi-Fi the address isn't "secure", and the browser offers no VR there (GOTCHAS 2026-10-24)
     $("#msg").textContent = `VR needs a secure address. In the Quest's browser, open chrome://flags, find "Insecure origins treated as secure", add ${location.origin}, select Enabled, then Relaunch. Over a USB cable, http://localhost:8080 works as it is.`;
-  } else if (!hasVR && !hasAR) {
-    $(".actions").append(preview); // a computer: watch it here
-    $("#msg").textContent = "On a computer: watch it with Preview on this screen. In the Quest, open the hub's address in its browser.";
   }
   const go = (m) => () => start(m).catch((e) => ($("#msg").textContent = `Couldn't start: ${e.message}`));
   vr.onclick = go("immersive-vr");
   ar.onclick = go("immersive-ar");
-  if (params.has("preview")) preview.click();
+  if (!hasVR && !hasAR && !headset) {
+    // a computer (quick job 157): Preview is the main button, in the place of Enter VR ("No VR here" was on top)
+    vr.disabled = false;
+    vr.querySelector(".label").textContent = "Preview on this screen";
+    vr.querySelector("small").textContent = "The hub in VR, here. Drag to look around.";
+    vr.onclick = preview;
+    $("#msg").textContent = "In the Quest, open the hub's address in its browser to enter VR.";
+  }
+  if (params.has("preview")) preview();
   micButton();
 }
 // Talking in VR needs the microphone; a browser's question about it inside VR is easy to miss, so it's
