@@ -122,7 +122,8 @@ function row(label, help, ctl, unit = "") {
   const r = document.createElement("div");
   r.className = "row";
   // "✓ Saved" beside the name (quick job 163; before, a column of its own at the right)
-  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label><span class="st" aria-live="polite"></span>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="rst"></div><div class="err" aria-live="polite"></div>`;
+  // the reset at the left, as wide as the unit at the right (quick job 164)
+  r.innerHTML = `<div class="rst"></div><div class="lbl"><label>${esc(label)}</label><span class="st" aria-live="polite"></span>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="err" aria-live="polite"></div>`;
   if (ctl) r.querySelector(".ctl").append(ctl);
   return r;
 }
@@ -179,7 +180,7 @@ function syncResets() {
     if (cell.firstChild) continue;
     const b = document.createElement("button");
     b.type = "button"; b.className = "rst-b";
-    b.title = `Reset to the default (${r.reset.label})`;
+    b.title = "Reset";
     b.setAttribute("aria-label", `Reset ${r.querySelector(".lbl label").textContent} to the default (${r.reset.label})`);
     b.innerHTML = ico("i-undo");
     b.addEventListener("click", async () => {

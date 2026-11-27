@@ -301,12 +301,13 @@ def test_x_stop_is_shown_where_you_look():
         'button.textContent = "Desktop control on"' in start and '"desk-help").open = true' in start
     )
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
-    # quick job 161: X is a keycap on the STOP button (beside it, "X = STOP" read as "X
-    # leaves"), and the way out (`) is its own line under the button that starts the control
+    # quick job 161: X is on the STOP button, as "(X)" since quick job 164 (beside it, "X = STOP"
+    # read as "X leaves"); the way out (`) is its own line under the button that starts the control
     assert '["stop-x", "leave-key"]' in js
     for page in ("index.html", "webcam.html"):
         html = (web / page).read_text()
-        assert '<kbd id="stop-x" hidden aria-hidden="true">X</kbd></button>' in html, page
+        key = '<span id="stop-x" class="key" hidden aria-hidden="true">(X)</span></button>'
+        assert key in html, page
         assert '<p id="leave-key" class="leave-key" hidden>To leave ' in html, page
         assert "press <kbd>`</kbd>" in html, page
         start = html.index('id="desktop"' if page == "index.html" else 'id="start"')

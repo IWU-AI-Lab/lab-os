@@ -33,7 +33,7 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
 - A search, and a way to show or hide items in the workspace.
 - The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
-- The opening is one radar sweep, 1 s, over the whole page. The sweep turns first, over a circular grid (rings, spokes, degree ticks with their numbers, a reticle and blips that light as the sweep passes; quick job 163); in its last 0.3 s the page fades in and the sweep and the grid fade out (quick job 161; quick job 160 showed each card as the sweep passed it). It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
+- No opening animation (the builder, 2026-11-27, quick job 164: it was clunky): the page unfolds from the hub's button as every module does. The last opening (a 1 s radar sweep over a circular grid, quick jobs 160, 161 and 163) is in `docs/archive/command-center-opening-2026-11-27/`.
 - **Select multiple** shows when it is on: the button fills and reads "Selecting multiple: On", and the workspace gets a dashed edge (quick job 160).
 - Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
@@ -85,7 +85,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 140, 2026-11-26)
 - **The way in:** on the brain's own hub, a **Command Center** panel under the top strip, in the middle above the core, as the ask box is below it (quick job 161; before, in the strip, where a long fact pushed it off the middle): a turning reticle and the name, with a light that passes now and then. A note at the top of the core shows under it. Other screens do not show it. It opens the Command Center as a module that unfolds from it. "Open the Command Center" by voice unfolds from it too.
-- The radar opening in “Screen previews” replaces this opening in quick job 156. Minimal shows a short fade. Quick job 160 replaced the radar sweep with the 1 s sweep above.
+- The radar opening in “Screen previews” replaced this opening in quick job 156, quick job 160 replaced that with a 1 s sweep, and quick job 164 removed the opening.
 
 ## Built (quick job 135, 2026-11-26)
 - **Diagnostics in the modules:** every device's modules (the focus window and the inspector) have **Diagnostics**: the Diagnostics page for that device only. The Pages list has Diagnostics too (all devices).

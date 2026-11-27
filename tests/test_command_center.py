@@ -210,19 +210,14 @@ async def test_the_way_in_is_on_the_brains_hub_only(aiohttp_client, monkeypatch)
     assert 'id="cc-launch"' in hub and 'data-module="command"' in hub
     assert '$("#cc-launch").hidden = !(hub?.here && S.page.command)' in hub  # not on other screens
     assert 'id === "command" ? $("#cc-launch")' in hub  # it unfolds from there, also by voice
-    # the frame's opening plays its sounds through the hub, only from the module frame
-    assert 'e.data?.type !== "lab-os-sfx"' in hub and 'e.source !== $("#mod-slot iframe")' in hub
 
 
-async def test_the_opening_is_one_short_sweep(aiohttp_client):
+async def test_there_is_no_opening(aiohttp_client):
+    """Quick job 164: the builder removed the opening (it was clunky); it is in docs/archive/."""
     client = await aiohttp_client(make_app())
-    assert (await client.get("/hub/command-center-intro.js")).status == 200
-    intro = (SRC / "hub" / "web" / "command-center-intro.js").read_text()
-    assert "export function playIntro(" in intro
-    assert "const MS = 1000;" in intro  # quick job 160: 1 s over the whole page
-    assert "addEventListener" not in intro  # nothing to skip: it doesn't block the page
-    assert "prefers-reduced-motion: reduce" in intro
+    assert (await client.get("/hub/command-center-intro.js")).status == 404
     js = (SRC / "hub" / "web" / "command-center.js").read_text()
-    assert 'import { playIntro } from "/hub/command-center-intro.js"' in js
     html = await (await client.get("/command-center")).text()
-    assert "#intro .beam" in html and "q-minimal" in intro and "Skip" not in intro
+    assert "playIntro" not in js and "#intro" not in html and 'class="page wait"' not in html
+    hub = (SRC / "hub" / "web" / "design.html").read_text()
+    assert "lab-os-sfx" not in hub  # its sounds came through the hub

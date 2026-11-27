@@ -60,7 +60,7 @@ Run `uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop`. It 
 
 To leave, press **`** (backtick, above Tab) or **Esc**. The pointer is free again, the arm freezes, and another page can take control. In full screen in Chrome or Edge, Esc does only that, and the page stays full screen. To leave full screen, hold Esc.
 
-**X** is STOP in every mode. While desktop control is on, the STOP button shows the X key, and a line under **Desktop control** says that ` (the key above Tab) or Esc leaves. The key table on the page comes from the connected arm's joints.
+**X** is STOP in every mode. While desktop control is on, the STOP button shows "(X)", and a line under **Desktop control** says that ` (the key above Tab) or Esc leaves. The key table on the page comes from the connected arm's joints.
 
 | Mode | How | What it sends |
 |---|---|---|

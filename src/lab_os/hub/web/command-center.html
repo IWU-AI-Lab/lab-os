@@ -157,25 +157,6 @@
     #module .top { display: flex; align-items: center; gap: 0.8rem; }
     #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
     #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
-    .page.wait { opacity: 0; }  /* until the opening starts (quick job 161) */
-    #intro { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
-    /* the radar's circular grid (quick job 163): it fades out with the sweep */
-    #intro .grid { position: absolute; left: 50%; top: 50%; width: min(118vmin, 100vmax); height: min(118vmin, 100vmax); translate: -50% -50%; overflow: visible; }
-    #intro .grid .ring { fill: none; stroke: color-mix(in srgb, var(--c) 30%, transparent); stroke-width: 1; transform-origin: 0 0; animation: gridin 0.45s var(--arrive) both; }
-    #intro .grid .ring.dash { stroke-dasharray: 2 6; }
-    #intro .grid .ring.spin { stroke: color-mix(in srgb, var(--c) 45%, transparent); stroke-dasharray: 60 14 6 14; animation: gridin 0.45s var(--arrive) both, gridspin 1s linear; }
-    #intro .grid .spoke { stroke: color-mix(in srgb, var(--c) 16%, transparent); stroke-width: 1; }
-    #intro .grid .tick { stroke: color-mix(in srgb, var(--c) 55%, transparent); stroke-width: 1.2; }
-    #intro .grid text { fill: var(--text-dim); font: 12px var(--f-mono); text-anchor: middle; dominant-baseline: middle; }
-    #intro .grid .reticle { fill: none; stroke: var(--hot); stroke-width: 1.5; }
-    #intro .grid .blip { fill: var(--hot); opacity: 0; filter: drop-shadow(0 0 6px var(--c)); animation: blip 0.7s ease-out both; }
-    @keyframes gridin { from { opacity: 0; scale: 0.7; } }
-    @keyframes gridspin { to { rotate: -90deg; } }
-    @keyframes blip { 0% { opacity: 0; scale: 0.4; } 12% { opacity: 1; scale: 1.6; } 100% { opacity: 0.35; scale: 1; } }
-    #intro .beam { position: absolute; left: 50%; top: 50%; width: 300vmax; height: 300vmax; translate: -50% -50%;
-      background: conic-gradient(from -40deg, transparent 0 75%, color-mix(in srgb, var(--c) 28%, transparent) 99%, var(--hot) 100%);
-      animation: scan 1s linear forwards; }
-    @keyframes scan { from { rotate: 0deg; } to { rotate: 360deg; } }
     #multi[aria-pressed="true"], .side .multi[aria-pressed="true"] { color: var(--bg); background: var(--hot); border-color: var(--hot); }
     #ws.multi-on { outline: 1px dashed var(--hot); outline-offset: -1px; }
     .cc-tabs, .side .multi { display: none; }
@@ -211,7 +192,7 @@
   brain (/api/command-center/layout) and never changes a device. Script: /hub/command-center.js.
 -->
 <body class="settings">
-<div class="page wait">
+<div class="page">
   <header class="bar">
     <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-target"/></svg><span>Command Center</span></div>
     <span class="place"></span>
