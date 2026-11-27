@@ -261,10 +261,10 @@ export function initDesktop(link, ui) {
     stopKey(false);
   }
 
-  // "X = STOP" beside the STOP button, only while X works (quick job 19: say it where you look)
+  // the X key on the STOP button, and the way out under the Desktop control button, only while they work (quick
+  // job 19: say it where you look; quick job 161: "X = STOP" beside STOP read as "X leaves")
   function stopKey(on) {
-    const el = $("stop-key");
-    if (el) el.hidden = !on;
+    for (const id of ["stop-x", "leave-key"]) if ($(id)) $(id).hidden = !on;
   }
 
   function tick() {

@@ -403,6 +403,24 @@ def values(file: str, venue: str | None = None) -> dict:
     return config.load_yaml(file_name(file, venue), shared=file == "theme")
 
 
+def base_values(file: str, venue: str | None = None) -> dict:
+    """The file without this place's changes (its local/ copy): what "Reset to default" goes back
+    to (quick job 161)."""
+    name = file_name(file, venue)
+    local = file_path(file, venue)
+    out: dict = {}
+    for path in config.layers(name, shared=file == "theme"):
+        if path != local:
+            out = config.merge(out, config.read_yaml(path))
+    return out
+
+
+def local_values(file: str, venue: str | None = None) -> dict:
+    """Only this place's changes to the file (its local/ copy; {} when there is none)."""
+    path = file_path(file, venue)
+    return config.read_yaml(path) if path.is_file() else {}
+
+
 LOCAL_HEAD = (
     "# This place's own settings: the settings page writes the values that changed here, and they\n"
     "# win over {name} in the folder above. Not in git. Delete a line to go back to that value.\n"
@@ -433,26 +451,30 @@ def problems(venue: str | None = None) -> list[str]:
 
 def read(venue: str | None = None) -> list[dict]:
     """Every section with its fields' current values (what /api/settings sends)."""
-    cache: dict[str, Any] = {}
+    cache: dict[tuple[str, str], Any] = {}
+    readers = {"all": values, "base": base_values, "local": local_values}
 
-    def data(file: str):
-        if file not in cache:
+    def data(file: str, which: str = "all"):
+        if (file, which) not in cache:
             try:
-                cache[file] = values(file, venue)
+                cache[file, which] = readers[which](file, venue)
             except (OSError, yaml.YAMLError, config.ConfigError):
-                cache[file] = {}
-        return cache[file]
+                cache[file, which] = {}
+        return cache[file, which]
+
+    def shown(f: Field, value: Any) -> Any:
+        if value is None:
+            value = f.default
+        if f.safety:
+            value = value is not False and str(value).lower() not in ("off", "false", "no")
+        return value
 
     locked = limits_locked_why(data("venue"))
     out = []
     for s in SECTIONS:
         fields = []
         for f in s.fields:
-            value = _get(data(f.file), f.path)
-            if value is None:
-                value = f.default
-            if f.safety:
-                value = value is not False and str(value).lower() not in ("off", "false", "no")
+            value = shown(f, _get(data(f.file), f.path))
             fields.append(
                 {
                     "key": f.key,
@@ -468,6 +490,9 @@ def read(venue: str | None = None) -> list[dict]:
                     "unit": f.unit,
                     "applies": f.applies,
                     "value": value,
+                    # what "Reset to default" gives; changed: this place changed it (quick job 161)
+                    "default": shown(f, _get(data(f.file, "base"), f.path)),
+                    "changed": _get(data(f.file, "local"), f.path) is not None,
                     "safety": f.safety,
                     "locked": locked if f.safety else "",
                 }
@@ -536,6 +561,63 @@ def write(key: str, value: Any, venue: str | None = None) -> Any:
         if why:
             raise SettingError(f"{f.label} can't be switched off here: {why}.")
     return write_value(f.file, f.path, value, venue, flow=f.kind == "list")
+
+
+def reset(key: str, venue: str | None = None) -> Any:
+    """Take one setting back to its default: its line leaves the place's local/ copy, so the files
+    below it decide again (quick job 161). Returns the value the brain uses now."""
+    f = find(key)
+    remove_value(f.file, f.path, venue)
+    value = _get(values(f.file, venue), f.path)
+    if value is None:
+        value = f.default
+    if f.safety:
+        value = value is not False and str(value).lower() not in ("off", "false", "no")
+    return value
+
+
+def remove_value(file: str, dotted: str, venue: str | None = None) -> None:
+    """Remove the value at `dotted` from the place's local/ copy of `file` (and a section left
+    empty by it), keeping the file's comments. Nothing to do when it isn't there."""
+    values(file, venue)  # a layer that can't be read: ConfigError with the file and the line
+    path = file_path(file, venue)
+    if not path.is_file():
+        return
+    rt = YAML()
+    rt.preserve_quotes = True
+    rt.width = 4096
+    before = path.read_text()
+    try:
+        data = rt.load(before)
+    except Exception as e:
+        raise config.ConfigError(config.broken_yaml(path, e)) from None
+    *parents, last = dotted.split(".")
+    chain, node = [], data
+    for part in parents:
+        if not isinstance(node, dict) or not isinstance(node.get(part), dict):
+            return
+        chain.append((node, part))
+        node = node[part]
+    if not isinstance(node, dict) or last not in node:
+        return
+    del node[last]
+    for holder, part in reversed(chain):  # sections left empty go too
+        if holder[part]:
+            break
+        del holder[part]
+    out = io.StringIO()
+    if data:
+        rt.dump(data, out)
+    text = out.getvalue()
+    if not data:  # nothing left but the head comment
+        head = []
+        for line in before.splitlines():  # the file's head comment
+            if not line.startswith("#"):
+                break
+            head.append(line + "\n")
+        path.write_text("".join(head))
+        return
+    path.write_text(_keep_untouched_lines(before, text))
 
 
 def write_value(

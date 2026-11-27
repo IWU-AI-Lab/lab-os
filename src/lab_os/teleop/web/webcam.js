@@ -183,8 +183,8 @@ async function startControl() {
   $("start").disabled = false;
   $("start").dataset.busy = "";
   $("start").title = "";
-  $("start").textContent = "Stop webcam control (` key)";
-  $("stop-key").hidden = false;
+  $("start").textContent = "Stop webcam control";
+  $("leave-key").hidden = false; $("stop-x").hidden = false;  // the keys, while they work (quick job 161)
   document.activeElement?.blur(); // Space on a focused button would click it
   say("");
   nextFrame();
@@ -200,7 +200,7 @@ function stopControl(why = "") {
   $("cam-empty").hidden = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   $("start").textContent = "Start webcam control";
-  $("stop-key").hidden = true;
+  $("leave-key").hidden = true; $("stop-x").hidden = true;
   $("camera").disabled = false;
   setPill($("hand-state"), "Off", "off");
   say(why);

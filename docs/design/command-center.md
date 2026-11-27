@@ -33,7 +33,7 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - Below each preview: the device name (a little larger), the screen name, then the resolution (less prominent). The screen name is "Screen" and its number for now. Leave it out when the device has one screen.
 - A search, and a way to show or hide items in the workspace.
 - The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
-- The opening is one radar sweep, 1 s, over the whole page; each card shows when the sweep passes it. It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
+- The opening is one radar sweep, 1 s, over the whole page. The sweep turns first; in its last 0.3 s the page fades in and the sweep fades out (quick job 161; quick job 160 showed each card as the sweep passed it). It has no Skip button (the builder, 2026-11-26, quick job 160; before, a 2.5 s radar in the middle with a Skip button).
 - **Select multiple** shows when it is on: the button fills and reads "Selecting multiple: On", and the workspace gets a dashed edge (quick job 160).
 - Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
@@ -73,7 +73,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **Settings in the focus modal:** the display name, the level of detail, the way in to voice and the sound. The other "This device" settings stay in ⚙ on that device.
 
 ## Built (quick job 148, 2026-11-26)
-- **The left list:** each device, with the screens grouped under it (as in the workspace). A screen on its own has its own row.
+- **The left list:** each device, with the screens grouped under it (as in the workspace). A line joins the device's icon to each of its screens, and a screen under its device has one compact line ("Screen 2, Teleop"; quick job 161: before, a screen looked like one more device, indented). A screen on its own has its own row.
 - **The Pages list:** a tile for each page that can open on another screen, in three groups (Robots, Cameras, The hub; a new page goes in "Other"). "The Hub" closes what a screen shows. A press chooses the page for the inspector's **Open**; a drag onto a screen or a device opens it there. ⌃ folds the list; the page remembers it.
 - **The drag:** one carrier with four steps (start, move, drop, cancel) at screen coordinates. The mouse and touch use it through pointer events. A webcam hand can call the same steps later.
 - **The inspector:** in place of the actions under the workspace. One device: its details, actions, modules and settings. One screen: what it shows, its resolution and its actions. Several items: only the actions for all of them.
@@ -84,7 +84,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **The activity list:** under the device list, the newest event first, with its time. The brain keeps the last 100 events in memory: a device connected or disconnected, a screen opened the hub, a page, or went back to the hub, and STOP (the arms' pages and the Raspbot page).
 
 ## Built (quick job 140, 2026-11-26)
-- **The way in:** on the brain's own hub, a **Command Center** panel in the top strip, between the lab's name and the facts: a turning reticle and the name, with a light that passes now and then. Other screens do not show it. It opens the Command Center as a module that unfolds from it. "Open the Command Center" by voice unfolds from it too.
+- **The way in:** on the brain's own hub, a **Command Center** panel under the top strip, in the middle above the core, as the ask box is below it (quick job 161; before, in the strip, where a long fact pushed it off the middle): a turning reticle and the name, with a light that passes now and then. A note at the top of the core shows under it. Other screens do not show it. It opens the Command Center as a module that unfolds from it. "Open the Command Center" by voice unfolds from it too.
 - The radar opening in “Screen previews” replaces this opening in quick job 156. Minimal shows a short fade. Quick job 160 replaced the radar sweep with the 1 s sweep above.
 
 ## Built (quick job 135, 2026-11-26)
