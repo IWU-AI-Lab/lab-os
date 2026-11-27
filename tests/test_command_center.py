@@ -214,15 +214,15 @@ async def test_the_way_in_is_on_the_brains_hub_only(aiohttp_client, monkeypatch)
     assert 'e.data?.type !== "lab-os-sfx"' in hub and 'e.source !== $("#mod-slot iframe")' in hub
 
 
-async def test_the_opening_plays_and_can_be_skipped(aiohttp_client):
+async def test_the_opening_is_one_short_sweep(aiohttp_client):
     client = await aiohttp_client(make_app())
     assert (await client.get("/hub/command-center-intro.js")).status == 200
     intro = (SRC / "hub" / "web" / "command-center-intro.js").read_text()
     assert "export function playIntro(" in intro
-    assert 'addEventListener("pointerdown", skip, true)' in intro  # any press skips
-    assert 'addEventListener("keydown", skip, true)' in intro  # any key skips
+    assert "const MS = 1000;" in intro  # quick job 160: 1 s over the whole page
+    assert "addEventListener" not in intro  # nothing to skip: it doesn't block the page
     assert "prefers-reduced-motion: reduce" in intro
     js = (SRC / "hub" / "web" / "command-center.js").read_text()
     assert 'import { playIntro } from "/hub/command-center-intro.js"' in js
     html = await (await client.get("/command-center")).text()
-    assert ".radar" in html and "q-minimal" in intro
+    assert "#intro .beam" in html and "q-minimal" in intro and "Skip" not in intro

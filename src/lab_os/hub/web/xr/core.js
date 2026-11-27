@@ -2,8 +2,8 @@
 // the same radii, dashes, speeds, the state's color and brightness, breathing, the speaking ripple,
 // rings that lock on one by one at the startup (each from its own scale and turn, a flash and a ring
 // of light), the corner brackets closing in, and the core igniting with a lens flare.
-// Each ring is drawn once (Canvas 2D, white) on its own plane and tinted; the planes sit a few
-// millimetres apart, so in the headset the rings have a little depth.
+// Each ring is drawn once (Canvas 2D, white) on its own plane and tinted. Each plane turns on its own gimbal
+// (/web/core-gyro.js, the armillary sphere of quick job 160), so the rings cross through the middle in 3D.
 // Sizes are the hub's SVG units (viewBox -132…132); `unit` metres per unit.
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
@@ -11,18 +11,22 @@ import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
 import { maximal, minimal } from "./look.js";
 import { Gyro } from "/web/core-gyro.js";
 
-const AX = new THREE.Vector3(), ZAX = new THREE.Vector3(0, 0, 1), QZ = new THREE.Quaternion();
-// depth (quick job 158): the rings about 3 cm apart, so they part as your head moves; minimal keeps them flat
-const ringGap = () => (minimal() ? 0.004 : 0.026);
+// the arcs are uneven (the hub's ORB_ARCS): [start, length] in turns
+const ARCS = [[0, 0.19], [0.3, 0.09], [0.52, 0.27], [0.86, 0.05]];
+
+const ZAX = new THREE.Vector3(0, 0, 1), QZ = new THREE.Quaternion();
+// the planes a few millimetres apart (they share the middle: the gimbals give the depth since quick job 160;
+// quick job 158 had them 3 cm apart)
+const ringGap = () => 0.004;
 const PX = 1024; // canvas pixels across the 264-unit orb
 const S = PX / 264;
 
 // how each ring flies in (scale, turn in degrees) and its radius (for its ring of light): the hub's
-const RING_FROM = { thin: [0.35, -200], arcs: [1.9, 170], seg: [0.5, -120], sat: [1.7, 240], tri: [0.2, 180], ticks: [1.5, -90], cross: [2.3, 45], bars: [1.3, 0], ripple: [0.5, 0] };
-const RING_R = { thin: 58, arcs: 70, seg: 84, sat: 77, tri: 64, ticks: 101, cross: 127, bars: 120, ripple: 46 };
-export const RING_ORDER = ["thin", "arcs", "seg", "sat", "tri", "ticks", "cross", "bars", "ripple"];
+const RING_FROM = { thin: [0.35, -200], arcs: [1.9, 170], seg: [0.5, -120], sat: [1.7, 240], tri: [0.2, 180], band: [0.6, 150], ticks: [1.5, -90], merid: [1.4, -160], cross: [2.3, 45], bars: [1.3, 0], ripple: [0.5, 0] };
+const RING_R = { thin: 58, arcs: 70, seg: 84, sat: 77, tri: 64, band: 89, ticks: 101, merid: 110, cross: 127, bars: 120, ripple: 46 };
+export const RING_ORDER = ["thin", "arcs", "seg", "sat", "tri", "band", "ticks", "merid", "cross", "bars", "ripple"];
 // degrees per second (the hub's), and whether the state's scale (listening contracts) applies
-const SPIN = { ticks: 360 / 70, seg: -360 / 40, arcs: 360 / 25, thin: -360 / 55, sat: 360 / 12, tri: -360 / 90, cross: 360 / 160, bars: 0, ripple: 0 };
+const SPIN = { ticks: 360 / 70, seg: -360 / 40, arcs: 360 / 25, thin: -360 / 55, sat: 360 / 12, tri: -360 / 90, cross: 360 / 160, band: 360 / 150, merid: 0, bars: 0, ripple: 0 };
 const SCALES = { tri: 1, seg: 1, arcs: 1 };
 const STATE_MULT = {
   idle: { m: 1, scale: 1, breathe: 5 }, listening: { m: 0.5, scale: 0.9, breathe: 2 },
@@ -51,7 +55,16 @@ const DRAW = {
   ticks: { op: 0.5, fn: (g) => drawTicks(g) },
   seg: { op: 1, fn: (g) => circle(g, 84, 2, [30, 6, 4, 6]) },
   sat: { op: 0.75, mx: true, fn: (g) => { circle(g, 77, 0.8, [0.5, 3]); g.beginPath(); g.arc(77, 0, 2.2, 0, TAU); g.fill(); } },
-  arcs: { op: 1, glow: true, fn: (g) => { g.lineWidth = 4; for (let i = 0; i < 3; i++) { const a0 = (i / 3) * TAU; g.beginPath(); g.arc(0, 0, 70, a0, a0 + TAU * 0.19); g.stroke(); } } },
+  arcs: { op: 1, glow: true, fn: (g) => { g.lineWidth = 4; g.setLineDash([]); for (const [a0, len] of ARCS) { g.beginPath(); g.arc(0, 0, 70, a0 * TAU, (a0 + len) * TAU); g.stroke(); } } },
+  // the meridian: an open ring with a bright end; the band: two close rings joined by short bars, with a gap
+  merid: { op: 0.6, fn: (g) => {
+    g.lineWidth = 1.2; g.setLineDash([]); g.beginPath(); g.arc(0, 0, 110, 0.08 * TAU, 0.78 * TAU); g.stroke();
+    g.beginPath(); g.arc(Math.cos(0.78 * TAU) * 110, Math.sin(0.78 * TAU) * 110, 2.4, 0, TAU); g.fill();
+  } },
+  band: { op: 0.55, fn: (g) => {
+    circle(g, 87, 1); circle(g, 91, 1, [40, 4, 8, 4]); g.setLineDash([]);
+    for (let i = 0; i < 31; i++) radial(g, (i / 40) * TAU, 87, 91, 0.9);
+  } },
   tri: { op: 0.8, mx: true, fn: (g) => {
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * TAU + Math.PI / 6, p = (ang, r) => [Math.cos(ang) * r, Math.sin(ang) * r];
@@ -80,7 +93,7 @@ export class Core {
     this.gyro = new Gyro("");
     const size = 264 * unit;
     let z = 0;
-    for (const id of ["bars", "cross", "ticks", "seg", "sat", "arcs", "tri", "thin"]) {
+    for (const id of ["bars", "cross", "ticks", "merid", "band", "seg", "sat", "arcs", "tri", "thin"]) {
       const d = DRAW[id];
       if (d.mx && !maximal()) continue;
       const p = new CanvasPlane(size, size, PX / size, { additive: true });
@@ -207,11 +220,9 @@ export class Core {
       }
       const hit = now - r.hitAt < 260 ? 2 : 1;
       const obj = r.p ? r.p.mesh : r.line;
-      const spin = -((r.a + rot) * Math.PI) / 180, gy = still ? null : this.gyro.of(id);
-      if (gy) { // tilted on its axis (in the core's plane), then turned about its own centre
-        AX.set(Math.cos(gy.phi), Math.sin(gy.phi), 0);
-        obj.quaternion.setFromAxisAngle(AX, gy.tilt).multiply(QZ.setFromAxisAngle(ZAX, spin));
-      } else obj.rotation.set(0, 0, spin);
+      const spin = -((r.a + rot) * Math.PI) / 180, q = still ? null : this.gyro.quat(id);
+      if (q) obj.quaternion.set(q[0], q[1], q[2], q[3]).multiply(QZ.setFromAxisAngle(ZAX, spin)); // its gimbal, then its spin
+      else obj.rotation.set(0, 0, spin);
       obj.scale.setScalar(sc * (SCALES[id] ? this.scaleNow : 1));
       obj.visible = op > 0.002;
       if (r.p) {

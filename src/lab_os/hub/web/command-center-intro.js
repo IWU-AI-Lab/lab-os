@@ -1,5 +1,8 @@
-// One radar return for each card. Each return travels to the card it represents.
+// The Command Center's start (quick job 160): one radar sweep, 1 s, over the whole page. Each card shows
+// when the sweep passes it. The sweep does not block the page, so nothing needs to end it.
 import { prefs } from "/web/device.js";
+
+const MS = 1000;
 
 function sweepSound() {
   if (prefs().sound === false) return;
@@ -30,47 +33,18 @@ export function playIntro(cards) {
   sweepSound();
   const box = document.createElement("div");
   box.id = "intro";
-  box.innerHTML = '<h2>Command Center</h2><div class="radar"></div><button class="btn" type="button">Skip</button>';
+  box.setAttribute("aria-hidden", "true");
+  box.innerHTML = '<div class="beam"></div>';
   document.body.append(box);
-  const radar = box.querySelector(".radar");
-  const timers = [];
-  function finish() {
-    timers.forEach(clearTimeout);
-    box.remove();
-    removeEventListener("pointerdown", skip, true);
-    removeEventListener("keydown", skip, true);
+  const cx = innerWidth / 2, cy = innerHeight / 2;
+  for (const card of cards) {
+    const r = card.getBoundingClientRect();
+    // the sweep starts at the top (12 o'clock) and turns clockwise
+    const a = Math.atan2(r.left + r.width / 2 - cx, cy - r.top - r.height / 2);
+    const at = (((a / (2 * Math.PI)) + 1) % 1) * MS;
+    card.animate([{ opacity: 0 }, { opacity: 0, offset: Math.max(0.001, at / (at + 250)) }, { opacity: 1 }],
+      { duration: at + 250, easing: "ease-out" });
   }
-  function skip(event) {
-    event.preventDefault();
-    finish();
-  }
-  addEventListener("pointerdown", skip, true);
-  addEventListener("keydown", skip, true);
-  box.querySelector("button").onclick = finish;
-  const rect = radar.getBoundingClientRect();
-  cards.forEach((card, index) => {
-    const fraction = (index + 0.5) / cards.length;
-    const angle = 2 * Math.PI * fraction;
-    const radius = rect.width * (0.25 + (index % 3) * 0.08);
-    const x = rect.width / 2 + radius * Math.sin(angle);
-    const y = rect.height / 2 - radius * Math.cos(angle);
-    const dot = document.createElement("i");
-    dot.className = "blip";
-    dot.style.left = x + "px";
-    dot.style.top = y + "px";
-    dot.hidden = true;
-    radar.append(dot);
-    timers.push(setTimeout(() => { dot.hidden = false; }, fraction * 2000));
-    timers.push(setTimeout(() => {
-      const target = card.getBoundingClientRect();
-      const dx = target.left + target.width / 2 - rect.left - x;
-      const dy = target.top + target.height / 2 - rect.top - y;
-      dot.animate([{ translate: "0 0" }, { translate: `${dx}px ${dy}px` }], { duration: 400, fill: "forwards" });
-      card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
-    }, 2000));
-  });
-  timers.push(setTimeout(() => {
-    box.animate([{ backgroundColor: "var(--bg)" }, { backgroundColor: "transparent" }], { duration: 450, fill: "forwards" });
-  }, 2000));
-  timers.push(setTimeout(finish, 2500));
+  box.animate([{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: MS + 150 })
+    .finished.then(() => box.remove());
 }

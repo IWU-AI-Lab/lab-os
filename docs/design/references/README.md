@@ -8,4 +8,6 @@ Temporary. Collect images and links here for the JARVIS / cyberpunk interface fe
 
 | File / link | For | Source |
 |---|---|---|
-| | | |
+| `armillary_sphere.jpg` | The 3D core: rings that spin and turn on their own axes (quick job 160) | Stock render |
+| `jarvis_sphere1.jpeg` | The 3D core: a sphere of light, uneven arcs, a bright center | Film still |
+| `jarvis_sphere2.jpg` | The 3D core: depth, partial rings, asymmetry | Film still |
