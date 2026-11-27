@@ -430,6 +430,11 @@ export function createMap(canvas, labels, onSelect) {
       }
       orbLook = quality;
       orb = new Core(0.009, quality);
+      // In the map, sort the core with other transparent objects and let solid devices occlude it.
+      orb.group.traverse((part) => {
+        part.renderOrder = 0;
+        if (part.material) part.material.depthTest = true;
+      });
       orb.gyro.setPersona(persona);
       orb.setRingsOn(true);
       hub.add(orb.group);
