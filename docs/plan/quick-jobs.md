@@ -10,6 +10,7 @@ Three coding sessions may run at the same time, one for each lane (the builder, 
 ### Lane 1: the hub (since 2026-11-26; the Raspbot before, all done)
 
 ### Lane 2: the robot pages, VR and AR
+- 166. **The visual changes in VR and AR** (the builder, 2026-11-27). Quick jobs 153 to 165 changed many pages; check that each change that VR or AR also shows reached them (`hub/web/xr/`, `xr-hub.js`, `teleop/web/xr-scene.js`). Go through `docs/plan/ux-review.md` and the Done entries of quick jobs 153 to 165, one by one, and compare with the VR code: for example the power menu's look, Open on…, capital letters, the held colour, the 3D core and its states, the Command Center's previews, the persona, the start screen's words. Port what is missing, with the VR's own sizes. List in the pull request what was already there and what you added. Do not add VR features that the flat pages do not have. Lab: add one step to part T of the demo run (look at the VR hub, Teleop and Raspbot after the changes).
 
 ### Lane 3: the shared parts and the other pages
 
