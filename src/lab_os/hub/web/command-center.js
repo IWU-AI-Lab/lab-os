@@ -38,7 +38,7 @@ const KIND_ICON = { hub: "i-pc", arm: "i-arm", leader: "i-leader", camera: "i-ca
 const KIND_WORD = { hub: "Computer or screen", arm: "Arm", leader: "Leader arm", camera: "Camera", robot: "Robot", headset: "Headset", usb: "USB device" };
 const VIEW_ICON = {
   teleop: "i-hand", diagnostics: "i-test", monitor: "i-screen", "monitor-so101": "i-screen", "monitor-xarm": "i-screen", ai: "i-chip", training: "i-leader", cameras: "i-cam", webcam: "i-cam",
-  hub: "i-hex", settings: "i-gear", pages: "i-link", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
+  hub: "i-hex", settings: "i-gear", pages: "i-apps", project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net",
   system: "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user", remote: "i-touch", xr: "i-headset", command: "i-target",
 };
 // the modules that match a kind of device (examples from the spec; only views the brain has are shown)
@@ -904,6 +904,8 @@ function closeModule() { $("#module").hidden = true; $("#module-frame").src = "a
 $("#module-back").addEventListener("click", closeModule);
 addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  // the hub around this page closes the whole module unless this page closed something (quick job 154)
+  if (carry.view || !$("#module").hidden || document.querySelector(".menu, .veil") || S.sel.size) e.preventDefault();
   if (carry.view) { press = null; carry.cancel(); } else if (!$("#module").hidden) closeModule();
   else if (document.querySelector(".menu")) closeMenu();
   else if (document.querySelector(".veil")) closeFocus();

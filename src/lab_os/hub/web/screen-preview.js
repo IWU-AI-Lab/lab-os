@@ -2,7 +2,7 @@
 const icons = {
   teleop: "i-hand", diagnostics: "i-test", monitor: "i-screen", "monitor-so101": "i-screen",
   "monitor-xarm": "i-screen", "monitor-raspbot": "i-screen", ai: "i-chip", training: "i-leader",
-  cameras: "i-cam", webcam: "i-cam", hub: "i-hex", settings: "i-gear", pages: "i-link",
+  cameras: "i-cam", webcam: "i-cam", hub: "i-hex", settings: "i-gear", pages: "i-apps",
   project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net", system: "i-net",
   "system-map": "i-net", chat: "i-chat", raspbot: "i-pi", "wake-word": "i-user",
   remote: "i-touch", xr: "i-headset", command: "i-target",
