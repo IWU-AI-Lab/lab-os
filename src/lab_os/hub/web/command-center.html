@@ -44,9 +44,19 @@
     .row .eye { grid-column: 3; grid-row: 1 / span 2; }
     .row .foc { grid-column: 4; grid-row: 1 / span 2; }
     .row small { grid-row: 2; }
-    .row.scr { padding-left: 1.6rem; }  /* a screen, under the device it is grouped under */
+    /* a device and its screens (quick job 161): compact rows, and a line from the device's icon to each screen's,
+       so a screen reads as part of the device above it (before, it looked like one more device, indented) */
+    .row { padding: 0.3rem 0.4rem; position: relative; }
+    .dgrp { margin-bottom: 0.25rem; }
+    .dgrp > .row:first-child::after { content: ""; position: absolute; left: calc(0.4rem + 2px + 0.57rem); top: 1.75rem; bottom: 0; border-left: 1px solid color-mix(in srgb, var(--c) 45%, transparent); }
+    .row.scr { padding: 0.1rem 0.4rem 0.1rem 2.15rem; }
+    .row.scr::before { content: ""; position: absolute; left: calc(0.4rem + 2px + 0.57rem); top: 0; bottom: 0; width: 0.85rem;
+      border-left: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: linear-gradient(color-mix(in srgb, var(--c) 45%, transparent), color-mix(in srgb, var(--c) 45%, transparent)) 0 50% / 100% 1px no-repeat; }
+    .row.scr:last-child::before { bottom: 50%; background-position: 0 100%; }
     .row.scr .k { font-size: 0.95rem; }
     .row.scr b { font-size: 0.84rem; }
+    .row.scr .sub { font-weight: 400; color: var(--text-dim); }
+    .row.scr .iconbtn { min-height: 1.7rem; }
     .row.drop, .shot.drop .pv { outline: 1px solid var(--c); background: color-mix(in srgb, var(--c) 22%, transparent); }
     .iconbtn { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
     .iconbtn:hover, .iconbtn:focus-visible { color: var(--hot); outline: none; }
@@ -147,6 +157,7 @@
     #module .top { display: flex; align-items: center; gap: 0.8rem; }
     #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
     #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
+    .page.wait { opacity: 0; }  /* until the opening starts (quick job 161) */
     #intro { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
     #intro .beam { position: absolute; left: 50%; top: 50%; width: 300vmax; height: 300vmax; translate: -50% -50%;
       background: conic-gradient(from -40deg, transparent 0 75%, color-mix(in srgb, var(--c) 28%, transparent) 99%, var(--hot) 100%);
@@ -187,7 +198,7 @@
   brain (/api/command-center/layout) and never changes a device. Script: /hub/command-center.js.
 -->
 <body class="settings">
-<div class="page">
+<div class="page wait">
   <header class="bar">
     <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-target"/></svg><span>Command Center</span></div>
     <span class="place"></span>

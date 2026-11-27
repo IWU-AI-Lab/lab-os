@@ -38,16 +38,16 @@ async function screenSet(k, v) {
 }
 const LOCAL = [
   { key: "quality", label: "Level of Detail", help: "Maximal adds rings and verses; Minimal suits slow screens. Theme: the lab's default.",
-    kind: "choice", choices: ["theme", "maximal", "full", "reduced", "minimal"], value: () => screenGet().quality || "theme",
+    kind: "choice", choices: ["theme", "maximal", "full", "reduced", "minimal"], def: "theme", value: () => screenGet().quality || "theme",
     save: (v) => screenSet("quality", v === "theme" ? "" : v) },
-  { key: "sound", label: "Sound", help: "", kind: "bool", value: () => screenGet().sound !== false, save: (v) => screenSet("sound", v) },
+  { key: "sound", label: "Sound", help: "", kind: "bool", def: true, value: () => screenGet().sound !== false, save: (v) => screenSet("sound", v) },
 ];
-const FULL = { key: "full", label: "Full Screen on the Start Press", help: "Off for a laptop you work on.", kind: "bool", value: () => screenGet().full !== false, save: (v) => screenSet("full", v) };
+const FULL = { key: "full", label: "Full Screen on the Start Press", help: "Off for a laptop you work on.", kind: "bool", def: true, value: () => screenGet().full !== false, save: (v) => screenSet("full", v) };
 const SLOW = [
   { key: "res", label: "Drawing Resolution", help: "Lower is lighter and a little softer. Auto: the screen's own. ?res= in the address wins.",
-    kind: "choice", choices: ["auto", "1", "0.75", "0.5"], value: () => screenGet().res || "auto",
+    kind: "choice", choices: ["auto", "1", "0.75", "0.5"], def: "auto", value: () => screenGet().res || "auto",
     save: (v) => screenSet("res", v === "auto" ? "" : v) },
-  { key: "startup_video", label: "Startup as a Video", help: "A test for screens where the startup stutters: plays a recording of the jump.", kind: "bool", value: () => screenGet().startup_video === true, save: (v) => screenSet("startup_video", v ? true : "") },
+  { key: "startup_video", label: "Startup as a Video", help: "A test for screens where the startup stutters: plays a recording of the jump.", kind: "bool", def: false, value: () => screenGet().startup_video === true, save: (v) => screenSet("startup_video", v ? true : "") },
 ];
 
 /* ---------- the controls ---------- */
@@ -121,7 +121,7 @@ function control(f, value, onSave, disabled) {
 function row(label, help, ctl, unit = "") {
   const r = document.createElement("div");
   r.className = "row";
-  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
+  r.innerHTML = `<div class="lbl"><label>${esc(label)}</label>${help ? `<div class="help">${esc(help)}</div>` : ""}<div class="rs">Applies when the brain restarts</div></div><div class="ctl"></div><div class="unit">${esc(unit)}</div><div class="rst"></div><div class="st" aria-live="polite"></div><div class="err" aria-live="polite"></div>`;
   if (ctl) r.querySelector(".ctl").append(ctl);
   return r;
 }
@@ -136,20 +136,109 @@ function said(r, ok, message) {
   clearTimeout(flashTimer.get(st));
   flashTimer.set(st, setTimeout(() => st.classList.remove("on"), 2200));
 }
-/** A setting's row: its control, the unit moved to its own column, saving shown. */
-function fieldRow(f, value, save, disabled) {
+/** A setting's row: its control, the unit moved to its own column, saving shown. `reset`: how it goes
+ *  back to its default (quick job 161): { label: the default in words, keys: the brain's settings, prefs:
+ *  this device's, changed: this place or device changed it }. */
+function fieldRow(f, value, save, disabled, reset = null) {
   let r = null;
   const ctl = control(f, value, async (v) => {
     r.saving = save(v);  // the persona table waits for it (quick job 151)
     const res = await r.saving;
     said(r, res.ok, res.message);
+    if (res.ok && r.reset) { r.reset.changed = r.reset.prefs ? r.reset.prefs.some(isSet) : true; syncResets(); }
     return res.ok;
   }, disabled);
   const unit = f.kind === "number" ? ctl.querySelector(".unit") : null;
   unit?.remove();
   r = row(f.label, f.help, ctl, f.unit || "");
   r.dataset.key = f.key;
+  if (reset && !disabled) r.reset = reset;
   return r;
+}
+
+/* ---------- reset to default (quick job 161): a row's ↺ at once; a section's and all ask first ---------- */
+const isSet = (k) => { const v = screenGet()[k]; return v !== undefined && v !== null && v !== ""; };
+/** A value as the page says it, for "Reset to the default (…)". */
+function valueWords(f, v) {
+  if (f.kind === "bool") return v ? "On" : "Off";
+  if (f.kind === "range") return f.words ? f.words(v) : String(v);
+  if (f.kind === "list") return (v || []).map((c) => f.titles?.[c] || show(c)).join(", ") || "None";
+  if (v === "" || v == null) return "None";
+  if (f.kind === "number") return `${v}${f.unit ? ` ${f.unit}` : ""}`;
+  return f.kind === "choice" ? show(v) : String(v);
+}
+/** This device's setting: changed while the brain keeps a value for it under this device. */
+const devReset = (f, keys = [f.key]) => ({ label: valueWords(f, f.def), prefs: keys, changed: keys.some(isSet) });
+const changedRows = (root = document) => [...root.querySelectorAll("#list .rows > .row")].filter((r) => r.reset?.changed);
+/** The ↺ of each changed row, and the section's and the page's reset buttons only where they have work. */
+function syncResets() {
+  for (const r of document.querySelectorAll("#list .rows > .row")) {
+    const cell = r.querySelector(".rst"), on = !!r.reset?.changed;
+    if (!on) { cell.replaceChildren(); continue; }
+    if (cell.firstChild) continue;
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "rst-b";
+    b.title = `Reset to the default (${r.reset.label})`;
+    b.setAttribute("aria-label", `Reset ${r.querySelector(".lbl label").textContent} to the default (${r.reset.label})`);
+    b.innerHTML = ico("i-undo");
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      const res = await runResets([r.reset]);
+      if (!res.ok) { said(r, false, res.message); b.disabled = false; }
+    });
+    cell.append(b);
+  }
+  for (const g of document.querySelectorAll("#list .group")) {
+    const b = g.querySelector(".greset > .btn");
+    if (b) b.hidden = !changedRows(g).length;
+  }
+  const all = $("#reset-all > .btn");
+  if (all) all.hidden = !changedRows().length;
+}
+/** Settings back to their defaults: this device's (the brain keeps them under its name), then the brain's. */
+async function runResets(list) {
+  const keys = list.flatMap((x) => x.keys || []), devKeys = list.flatMap((x) => x.prefs || []);
+  try {
+    for (const k of devKeys) {
+      const res = await screenSet(k, "");
+      if (!res.ok) return res;
+    }
+    if (keys.length) {
+      const res = await fetch("/api/settings/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys }) });
+      const out = res.headers.get("Content-Type")?.includes("json") ? await res.json() : { ok: false, message: "Not reset: the brain had a problem. Its terminal has the details." };
+      if (!out.ok) return out;
+      tellHub();
+    }
+  } catch (e) {
+    return { ok: false, message: `Not reset: ${e.message}` };
+  }
+  await rebuild();
+  return { ok: true };
+}
+/** A button that asks first, in its own place: the question, Cancel and the button that does it. */
+function askFirst(holder, button, question, goLabel, run) {
+  button.addEventListener("click", () => {
+    const q = Object.assign(document.createElement("span"), { className: "ask", textContent: question() });
+    const cancel = btn("Cancel"), go = btn(goLabel, "go");
+    holder.replaceChildren(q, cancel, go);
+    cancel.addEventListener("click", () => holder.replaceChildren(button));
+    go.addEventListener("click", async () => {
+      cancel.disabled = go.disabled = true;
+      const res = await run();
+      if (!res.ok) { q.textContent = res.message; cancel.disabled = false; }
+    });
+  });
+}
+const plural = (n, one) => `${n} ${one}${n === 1 ? "" : "s"}`;
+/** Draw the page again with what is saved now, at the same place in the list. */
+async function rebuild() {
+  const y = $("#list").scrollTop;
+  spy.disconnect();
+  document.querySelectorAll("#list > .group").forEach((g) => g.remove());
+  $("#nav-main").replaceChildren(); $("#nav-risky").replaceChildren(); $("#reset-all").replaceChildren();
+  await start();
+  $("#list").scrollTop = y;
+  applySearch();
 }
 
 /* ---------- groups: a heading that folds the group, and a button in the sidebar ---------- */
@@ -161,8 +250,14 @@ function group(id, title, note = "", { icon = "i-gear", risky = false } = {}) {
   const g = document.createElement("section");
   g.className = `group${risky ? " risky" : ""}`;
   g.id = `g-${id}`;
-  g.innerHTML = `<button class="ghead" type="button" aria-expanded="true"><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg><span class="gtitle">${esc(title)}</span>${note ? `<small>${esc(note)}</small>` : ""}</button><div class="rows"></div>`;
+  g.innerHTML = `<div class="ghrow"><button class="ghead" type="button" aria-expanded="true"><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10l4 4 4-4"/></svg><span class="gtitle">${esc(title)}</span>${note ? `<small>${esc(note)}</small>` : ""}</button><span class="greset"></span></div><div class="rows"></div>`;
   const head = g.querySelector(".ghead");
+  // the section's reset (quick job 161): only while one of its settings is changed; asks first
+  const holder = g.querySelector(".greset"), reset = btn("Reset Section…");
+  reset.hidden = true;
+  holder.append(reset);
+  askFirst(holder, reset, () => `Reset ${plural(changedRows(g).length, "setting")} in ${title} to the default?`, "Reset",
+    () => runResets(changedRows(g).map((r) => r.reset)));
   const fold = (on) => { g.classList.toggle("folded", on); head.setAttribute("aria-expanded", String(!on)); folded[id] = on; keepFolded(); };
   if (folded[id]) fold(true);
   head.addEventListener("click", () => fold(!g.classList.contains("folded")));
@@ -279,7 +374,7 @@ function screensRow() {
 }
 
 /* ---------- the way in for voice (docs/archive/guides-2026-11-25/voice.md): what this screen can do ---------- */
-const VOICE = { key: "voice", label: "Talking to It", kind: "choice", choices: ["push-to-talk", "dictation"],
+const VOICE = { key: "voice", label: "Talking to It", kind: "choice", choices: ["push-to-talk", "dictation"], def: "push-to-talk",
   help: "Push-to-Talk: hold the mic (or Space) and talk. Dictation: the words go into the ask line.",
   value: () => screenGet().voice || "push-to-talk", save: (v) => screenSet("voice", v) };
 async function voiceRows() {
@@ -290,14 +385,14 @@ async function voiceRows() {
   if (can.ok && wake?.available) {
     f = { ...VOICE, choices: [...VOICE.choices, "wake word"], help: `${VOICE.help} Wake Word: say "${wake.phrase}" from anywhere in the room.` };
   } else if (can.ok && wake) f = { ...VOICE, help: `${VOICE.help} No wake word here: ${String(wake.why).replace(/\.+$/, "")}.` };
-  const rows = [fieldRow(f, can.ok ? f.value() : "push-to-talk", (v) => f.save(v), !can.ok)];
-  if (can.ok && wake?.available) rows.push(fieldRow(SENSITIVITY, SENSITIVITY.value(), (v) => SENSITIVITY.save(v), false));
+  const rows = [fieldRow(f, can.ok ? f.value() : "push-to-talk", (v) => f.save(v), !can.ok, devReset(f))];
+  if (can.ok && wake?.available) rows.push(fieldRow(SENSITIVITY, SENSITIVITY.value(), (v) => SENSITIVITY.save(v), false, devReset(SENSITIVITY)));
   return rows;
 }
 
 /* ---------- how readily this device hears the wake word (docs/archive/guides-2026-11-25/voice.md → "Sensitivity") ---------- */
 const SENS_WORDS = { 1: "Fewest false wakes", 3: "Quiet room", 5: "The default", 7: "Noisy room", 9: "Hears the most" };
-const SENSITIVITY = { key: "wake_sensitivity", label: "Wake Word Sensitivity", kind: "range", min: 1, max: 9,
+const SENSITIVITY = { key: "wake_sensitivity", label: "Wake Word Sensitivity", kind: "range", min: 1, max: 9, def: 5,
   help: "Higher for a noisy room or a weak microphone; lower if it wakes by itself.",
   words: (v) => `${v}${SENS_WORDS[v] ? `: ${SENS_WORDS[v]}` : ""}`,
   value: () => Number(screenGet().wake_sensitivity) || 5,
@@ -317,9 +412,11 @@ function languageRow() {
     line.append(control(f, LANG_NAMES[screenGet()[key] || ""] || "Any", async (v) => {
       const res = await screenSet(key, Object.keys(LANG_NAMES).find((k) => LANG_NAMES[k] === v) ?? "");
       said(r, res.ok, res.message);
+      if (res.ok) { r.reset.changed = r.reset.prefs.some(isSet); syncResets(); }
       return res.ok;
     }, false));
   }
+  r.reset = { label: "Any", prefs: ["hear_in", "answer_in"], changed: ["hear_in", "answer_in"].some(isSet) };
   return r;
 }
 
@@ -541,14 +638,14 @@ async function start() {
   // This Device: most used first, then what's for slow screens and other monitors
   const dev = group("device", "This Device", NAME ? `${displayName()}: every window of this device uses these` : "This browser only: add a device name to keep them under a name", { icon: "i-screen" });
   dev.append(deviceNameRow(), displayNameRow());
-  for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
+  for (const f of LOCAL) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false, devReset(f)));
   const voiceSlot = dev.appendChild(document.createElement("div"));
-  voiceRows().then((rows) => voiceSlot.replaceWith(...rows), (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });
-  dev.append(fieldRow(FULL, FULL.value(), (v) => FULL.save(v), false));
+  voiceRows().then((rows) => { voiceSlot.replaceWith(...rows); syncResets(); }, (e) => { console.warn(`settings: no voice rows (${e.message})`); voiceSlot.remove(); });
+  dev.append(fieldRow(FULL, FULL.value(), (v) => FULL.save(v), false, devReset(FULL)));
   sub(dev, "For Slow Screens and Other Monitors");
-  for (const f of SLOW) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false));
+  for (const f of SLOW) dev.append(fieldRow(f, f.value(), (v) => f.save(v), false, devReset(f)));
   dev.append(screensRow(), iconRow());
-  if (!data) { dev.append(languageRow()); return; }  // no Assistant group without the brain
+  if (!data) { dev.append(languageRow()); allReset(); return; }  // no Assistant group without the brain
   writableHere = !!data.writable;
   showProblems(data.problems);
   const ICON = { assistant: "i-chat", lab: "i-pin", robots: "i-hand", limits: "i-warn" };
@@ -580,7 +677,7 @@ async function start() {
         } catch (e) {
           return { ok: false, message: `Not saved: ${e.message}` };
         }
-      }, !data.writable || !!f.locked);
+      }, !data.writable || !!f.locked, { label: valueWords(f, f.default), keys: [f.key], changed: !!f.changed });
       markOff(f.value);
       r.dataset.key = f.key;
       // its note "Applies when the brain restarts" has its place kept: the control doesn't move (quick job 82)
@@ -596,6 +693,15 @@ async function start() {
     }
   }
   setRestart(data.restart_needed, data.restart_keys);
+  allReset();
+}
+/** "Reset All to Default…" in the sidebar (quick job 161): every changed setting this page can change. */
+function allReset() {
+  const holder = $("#reset-all"), b = btn("Reset All to Default…");
+  holder.replaceChildren(b);
+  askFirst(holder, b, () => `Reset all ${plural(changedRows().length, "changed setting")} to the default? This device's settings and, on the brain's computer, the lab's.`,
+    "Reset All", () => runResets(changedRows().map((r) => r.reset)));
+  syncResets();
 }
 function preview(e) {
   const r = e.target.closest(".row");

@@ -38,6 +38,7 @@ GET /api/devices         the place's devices (devices.yaml): kind, off limits, l
 GET /api/ai-calls?after=T  the robot tools' calls (after time T), the MCP address, motion allowed
 GET /api/settings        the settings (src/lab_os/settings.py) and their values
 POST /api/settings       {"key": "theme:clock", "value": "12h"}: change one (here only)
+POST /api/settings/reset {"keys": ["theme:clock", ...]}: back to their defaults (here only)
 POST /api/venue          {"to": "visitors" | "normal"}: visitor mode on or off (Settings; here only)
 GET /api/hub             the place's name (the title), the module buttons (hub.modules that have
                          a page) and the reset time
@@ -794,12 +795,7 @@ async def change_setting(app: web.Application, key: str, value, by: str = "") ->
         return 500, {"ok": False, "message": msg}
     field = settings.find(key)
     log.info("setting %s = %r (from %s)", key, value, by or "the settings page")
-    needed = brain.restart_needed
-    if field.applies == "restart":
-        if key in running and running[key] == value:
-            needed.pop(key, None)  # back to what the brain runs with: no restart for it
-        else:
-            needed[key] = field.label
+    needed = _note_restart(brain, field, value, running)
     return 200, {
         "ok": True,
         "key": key,
@@ -808,6 +804,59 @@ async def change_setting(app: web.Application, key: str, value, by: str = "") ->
         "restart_needed": list(needed.values()),
         "restart_keys": list(needed),
     }
+
+
+def _note_restart(brain: "Brain", field: settings.Field, value, running: dict) -> dict:
+    """Keep the list of changes that wait for a restart (Settings' bar) right after a change."""
+    needed = brain.restart_needed
+    if field.applies == "restart":
+        if field.key in running and running[field.key] == value:
+            needed.pop(field.key, None)  # back to what the brain runs with: no restart for it
+        else:
+            needed[field.key] = field.label
+    return needed
+
+
+async def api_settings_reset(request: web.Request) -> web.Response:
+    """Settings back to their defaults (quick job 161): one row's reset, a section's or all.
+    Only from the brain's computer, like a change."""
+    if not is_local(request):
+        raise web.HTTPForbidden(text="Settings change only on the brain's computer.")
+    try:
+        keys = [str(k) for k in (await request.json())["keys"]]
+    except (ValueError, KeyError, TypeError):
+        raise web.HTTPBadRequest(text='send {"keys": ["...", ...]}') from None
+    brain = request.app[BRAIN]
+    if brain.venue.visitors:
+        return web.json_response({"ok": False, "message": VISITORS_SETTINGS}, status=403)
+    venue = brain.venue.name
+    out: dict = {}
+    try:
+        running = await asyncio.to_thread(brain.running_values, venue)
+        for key in keys:
+            field = settings.find(key)
+            out[key] = await asyncio.to_thread(settings.reset, key, venue)
+            _note_restart(brain, field, out[key], running)
+            log.info("setting %s back to its default %r (from the settings page)", key, out[key])
+    except settings.SettingError as e:
+        return web.json_response({"ok": False, "message": str(e), "values": out}, status=400)
+    except config.ConfigError as e:
+        msg = f"Not reset. {e}"
+        return web.json_response({"ok": False, "message": msg, "values": out}, status=400)
+    except Exception as e:  # never a bare "500 Internal Server Error" (quick job 45)
+        log.exception("settings: couldn't reset %s", keys)
+        msg = f"Not reset: {e}. The brain's terminal has the details."
+        return web.json_response({"ok": False, "message": msg, "values": out}, status=500)
+    n = len(keys)
+    return web.json_response(
+        {
+            "ok": True,
+            "values": out,
+            "message": f"{n} setting{'s' if n != 1 else ''} back to the default.",
+            "restart_needed": list(brain.restart_needed.values()),
+            "restart_keys": list(brain.restart_needed),
+        }
+    )
 
 
 def switch_venue(app: web.Application, name: str | None) -> Venue:
@@ -2085,6 +2134,7 @@ def create_brain_app(
     app.router.add_get("/api/ai-calls", api_ai_calls)
     app.router.add_get("/api/settings", api_settings_get)
     app.router.add_post("/api/settings", api_settings_post)
+    app.router.add_post("/api/settings/reset", api_settings_reset)
     app.router.add_post("/api/venue", api_venue)
     app.router.add_get("/api/hub", api_hub)
     app.router.add_get("/api/greeting", api_greeting)

@@ -100,10 +100,11 @@ details.card[open] > summary::after { content: "−"; }
 details.card > .in { padding-top: 0.2rem; }
 #readout { color: var(--text-dim); }
 
-/* "X = STOP" beside STOP while desktop control is on (quick job 19): X only stops in desktop control */
-.stop-key { display: inline-flex; align-items: center; gap: 0.35rem; font: 600 0.85rem/1 var(--f-ui); color: var(--danger); white-space: nowrap; }
-.stop-key[hidden] { display: none; }
-.stop-key kbd { margin: 0; color: #fff; border-color: var(--danger); background: color-mix(in srgb, var(--danger) 30%, transparent); }
+/* the way out of keyboard control, under the button that started it, while that control is on (quick job 161:
+   "X = STOP" beside STOP read as "X leaves"; X is a key on STOP now) */
+.leave-key { margin: 0.5rem 0 0; font: 500 0.9rem/1.6 var(--f-ui); color: var(--text); }
+.leave-key[hidden] { display: none; }
+.leave-key kbd { margin: 0; }
 .keys .stop-row td { color: var(--danger); }
 .keys .stop-row kbd { color: #fff; border-color: var(--danger); }
 

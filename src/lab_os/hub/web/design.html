@@ -215,28 +215,18 @@ body:not(.q-maximal) #orb .mx, body:not(.q-maximal) #frame .mx { display: none; 
 #reply .a { font: 500 1rem/1.5 var(--f-ui); color: var(--text); text-shadow: 0 0 12px var(--bg), 0 0 4px var(--bg);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }  /* longer answers: tap for the whole conversation */
 #reply .a .code { font: 400 0.85em var(--f-mono); color: var(--c); }
-/* visitor mode (quick job 35): "try this" cards in a row above the core, under the strip (the calm space
-   there; the answer and the ask line stay free below). A card that asks something is a box to press
-   (brackets, like a module button); one that's only read is quieter */
-#try { position: absolute; top: calc(2.2rem + var(--edge-h) + 2vh); left: 50%; transform: translateX(-50%); z-index: 1; display: flex; gap: 1.6rem; width: max-content; max-width: 92%; }
-#try[hidden] { display: none; }
-.trycard { position: relative; display: flex; width: 16rem; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; }
-.trycard > .cut { flex: 1; }
-.trycard .in { display: grid; align-content: center; grid-template-columns: 1.6rem 1fr; align-items: center; gap: 0.15rem 0.7rem; padding: 0.75rem 1rem 0.75rem 0.8rem; }
-.trycard .ico { grid-row: span 2; width: 1.5rem; height: 1.5rem; color: var(--c); }
-.trycard b { font: 600 1.05rem/1.25 var(--f-ui); color: var(--text); }
-.trycard small { font: var(--w-lines) max(11px, 0.8rem)/1.3 var(--f-lines); color: var(--text-dim); }
-.trycard.read .cut { background: color-mix(in srgb, var(--line) 90%, transparent); }
-.trycard.read .ico { color: var(--text-dim); }
-button.trycard { cursor: pointer; }
-button.trycard:hover .cut, button.trycard:focus-visible .cut { background: color-mix(in srgb, var(--c) 80%, transparent); }
-button.trycard:hover b, button.trycard:focus-visible b { color: var(--hot); }
-button.trycard:focus-visible { outline: none; }
-body:is(.q-full, .q-maximal) button.trycard::before, body:is(.q-full, .q-maximal) button.trycard::after { content: ""; position: absolute; width: 0.7rem; height: 0.7rem; border: 1px solid color-mix(in srgb, var(--c) 70%, transparent); pointer-events: none; transition: inset 0.3s var(--arrive); }
-body:is(.q-full, .q-maximal) button.trycard::before { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
-body:is(.q-full, .q-maximal) button.trycard::after { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
-body:is(.q-full, .q-maximal) button.trycard:hover::before { top: -8px; right: -8px; }
-body:is(.q-full, .q-maximal) button.trycard:hover::after { bottom: -8px; left: -8px; }
+/* visitor mode (quick job 35): the "try this" cards are modules beside the core (quick job 161; before, a row
+   above the core). They stand out: a bright edge, a light inside and a "Try this" label. One that asks something
+   is a button; one that's only read is quieter. */
+.mod.try .cut { background: color-mix(in srgb, var(--hot) 70%, var(--c)); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent); }
+.mod.try .in { background: color-mix(in srgb, var(--surface) 78%, color-mix(in srgb, var(--c) 22%, transparent)); }
+.mod.try .txt { min-width: 0; display: grid; gap: 0.2rem; }
+.mod.try .tag { font: 700 max(11px, 0.66rem)/1 var(--f-title); letter-spacing: 0.18em; text-transform: uppercase; color: var(--hot); }
+.mod.try b { font: 600 1rem/1.25 var(--f-ui); color: var(--text); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.mod.try small { font: var(--w-lines) max(11px, 0.78rem)/1.3 var(--f-lines); color: var(--text-dim); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.mod.try.read { cursor: default; }
+.mod.try.read .cut { background: color-mix(in srgb, var(--c) 45%, transparent); box-shadow: none; }
+button.mod.try:hover b, button.mod.try:focus-visible b { color: var(--hot); }
 body[data-layout="panels"] #ask-btn { display: none; }
 /* what went wrong shows under the core, where the answer would be (quick job 154: it covered the core) */
 #errmsg { position: absolute; top: calc(50% + min(var(--orb), 100%) / 2 + 4.2rem); left: 50%; transform: translateX(-50%); width: min(92vw, 26rem); display: none; z-index: 2; }
@@ -593,7 +583,10 @@ body:is(.q-full, .q-maximal).folded #hub { filter: blur(3px); }
 body:is(.q-full, .q-maximal) #net { transition: opacity 0.7s; }
 body:is(.q-full, .q-maximal).folded #net { opacity: 0.45; }
 body:is(.q-full, .q-maximal) #orb-dock::before { content: ""; position: absolute; inset: -45%; z-index: -1; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 5%, transparent) 60%, transparent); }
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 5%, transparent) 60%, transparent);
+  opacity: 0; transition: opacity 0.15s; }
+/* the light goes first when a page closes, so it never trails the core over the hub (quick job 161) */
+body:is(.q-full, .q-maximal).folded #orb-dock::before { opacity: 1; transition: opacity 0.5s 0.3s; }
 body:is(.q-full, .q-maximal)[data-mod] #orb-dock { scale: 1.08; }
 /* minimal: a plain fill and a short fade, no blur and no scale (quick job 154) */
 body.q-minimal #hub { transition: opacity 0.15s; }
@@ -645,7 +638,7 @@ body.q-minimal.folded #hub { transform: none; filter: none; opacity: 0.08; }
 
 /* sleep */
 body.sleep #hub > *:not(.core) { opacity: 0.06; transition: opacity 2s; }
-body.sleep .mod, body.sleep #ask-btn { opacity: 0.06; transition: opacity 2s; }
+body.sleep .mod, body.sleep #ask-btn, body.sleep #cc-launch { opacity: 0.06; transition: opacity 2s; }
 body.sleep #toast, body.sleep #verses { opacity: 0; }
 body.sleep #frame { opacity: 0.3; }
 
@@ -751,11 +744,10 @@ body.q-minimal [data-state="speaking"] #orb { --c: var(--hot); }
     --orb: min(74vw, 40vh);
     height: auto; min-height: 100%;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto var(--orb) auto auto auto auto auto;
-    grid-template-areas: "strip strip" "core core" "mods mods" "try try" "chat chat" "left right" "log log";
+    grid-template-rows: auto var(--orb) auto auto auto auto;
+    grid-template-areas: "strip strip" "core core" "mods mods" "chat chat" "left right" "log log";
     padding: 1.4rem max(16px, env(safe-area-inset-left, 0px)) 1.4rem max(16px, env(safe-area-inset-right, 0px));
   }
-  #try { grid-area: try; position: static; transform: none; width: auto; max-width: none; flex-wrap: wrap; justify-content: center; gap: 1rem; }
   body[data-layout] #mods { grid-area: mods; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
   body[data-layout] .mcol { display: contents; }
   .mod { width: 6.4rem; }
@@ -783,11 +775,13 @@ body.q-minimal [data-state="speaking"] #orb { --c: var(--hot); }
 #restore-chat[hidden], #restore-line[hidden] { display: none; }
 #restore-line { align-self: flex-start; display: flex; align-items: center; gap: 0.5rem; font: 500 max(11px, 0.8rem)/1 var(--f-ui); color: var(--text-dim); background: none; border: 1px solid var(--line); padding: 0.5rem 0.8rem; cursor: pointer; }
 #restore-line:hover, #restore-line:focus-visible { color: var(--hot); border-color: var(--c); outline: none; }
-/* the Command Center's way in (quick job 140): on the brain's own computer only, in the strip between the
-   title and the facts. Not a quiet tool: a labelled panel with a turning reticle and a light that passes */
-#cc-launch { position: relative; margin-right: auto; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; --cut: 0.6rem; }
+/* the Command Center's way in (quick job 140): on the brain's own computer only. Above the core, as the ask box is
+   below it: at the top of the core's space, under the strip (quick job 161; before, in the strip, where a long fact
+   pushed it off the middle). A note then shows under it. Not a quiet tool: a labelled panel with a turning
+   reticle and a light that passes */
+#cc-launch { position: absolute; top: 1%; left: 50%; transform: translateX(-50%); z-index: 2; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; --cut: 0.6rem; }
 #cc-launch[hidden] { display: none; }
-#cc-launch.mid { position: absolute; left: 50%; top: 50%; translate: -50% -50%; margin: 0; }
+.core:has(#cc-launch:not([hidden])) #toast { top: calc(1% + 3.6rem); }
 #cc-launch .cut { background: color-mix(in srgb, var(--c) 60%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--c) 30%, transparent); }
 #cc-launch .in { position: relative; display: flex; align-items: center; gap: 0.65rem; padding: 0.4rem 1.1rem 0.4rem 0.55rem; overflow: hidden;
   background: color-mix(in srgb, var(--surface) 80%, color-mix(in srgb, var(--c) 12%, transparent)); }
@@ -934,7 +928,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 /* a phone held upright: the core with room for the ask line under it; the latest answer lies on a fill
    (it can cover the buttons for a moment); on a narrow phone the fact panels in one column */
 @media (orientation: portrait) {
-  body[data-layout] #hub { grid-template-rows: auto calc(var(--orb) + 9rem) auto auto auto auto auto; padding: 2.6rem max(26px, env(safe-area-inset-right, 0px)) 1.4rem max(26px, env(safe-area-inset-left, 0px)); }
+  body[data-layout] #hub { grid-template-rows: auto calc(var(--orb) + 12.5rem) auto auto auto auto; padding: 2.6rem max(26px, env(safe-area-inset-right, 0px)) 1.4rem max(26px, env(safe-area-inset-left, 0px)); }
   /* the strip in two rows (quick job 154: it took four): the title, the clock and the tools, then the facts */
   .strip { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 0.5rem 0.8rem; }
   .brand { grid-row: 1; grid-column: 1; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; letter-spacing: 0.1em; }
@@ -943,7 +937,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   .facts { grid-row: 2; grid-column: 1 / -1; display: flex; gap: 0.4rem 1rem; min-width: 0; overflow: hidden; }
   .facts .fact { min-width: 0; }
   .facts .fact span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #cc-launch { grid-row: 3; grid-column: 1 / -1; justify-self: center; margin: 0; }
   .side.left, .side.right { padding: 0; }
   #reply { z-index: 3; padding: 0.6rem 0.8rem; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); }
   #reply { transition: opacity 0.6s, visibility 0.6s; }
@@ -953,8 +946,8 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 @media (orientation: portrait) and (max-width: 559px) {
   body[data-layout] #hub {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto calc(var(--orb) + 9rem) auto auto auto auto auto auto;
-    grid-template-areas: "strip" "core" "mods" "try" "chat" "left" "right" "log";
+    grid-template-rows: auto calc(var(--orb) + 12.5rem) auto auto auto auto auto;
+    grid-template-areas: "strip" "core" "mods" "chat" "left" "right" "log";
   }
   .side { gap: 1.6rem; }
   /* "Open on…" as its icon only, so the page's title keeps its room */
@@ -1026,9 +1019,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 
   <header class="strip panel">
     <div class="brand" id="brand"></div>
-    <button id="cc-launch" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
-      <div class="cut"><div class="in"><svg viewBox="-16 -16 32 32" aria-hidden="true"><circle class="cc-ring" r="14"/><circle class="cc-ring2" r="10.5"/><use href="#i-target" x="-8" y="-8" width="16" height="16" class="cc-ico"/></svg><span class="name">Command Center</span></div></div>
-    </button>
     <div class="facts">
       <div class="fact" id="f-venue" title="Venue" hidden><svg class="ico"><use href="#i-pin"/></svg><span></span></div>
       <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
@@ -1049,8 +1039,6 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
 
   <!-- module buttons come from the module list (hub.modules); chat isn't one: it belongs to the core -->
   <nav id="mods" aria-label="Modules"><div class="mcol l"></div><div class="mcol r"></div></nav>
-  <!-- visitor mode (quick job 35): the venue's "try this" cards, above the core -->
-  <div id="try" hidden aria-label="Try this"></div>
 
   <section class="core alertable" data-state="idle" aria-label="Assistant: open the chat">
     <svg id="orb" viewBox="-132 -132 264 264" aria-hidden="true">
@@ -1079,6 +1067,9 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <g id="flare"><rect x="-160" y="-1.2" width="320" height="2.4" fill="url(#flareH)"/><rect x="-1" y="-70" width="2" height="140" fill="url(#flareV)"/></g>
     </svg>
     <span class="sr" id="state-word" aria-live="polite">Idle</span>
+    <button id="cc-launch" type="button" data-module="command" hidden title="Every device and screen in one workspace" aria-label="Open the Command Center">
+      <div class="cut"><div class="in"><svg viewBox="-16 -16 32 32" aria-hidden="true"><circle class="cc-ring" r="14"/><circle class="cc-ring2" r="10.5"/><use href="#i-target" x="-8" y="-8" width="16" height="16" class="cc-ico"/></svg><span class="name">Command Center</span></div></div>
+    </button>
     <div id="ask-btn" class="panel"><div class="cut"><div class="in">
       <svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>
       <form id="quick-form" autocomplete="off"><input id="quick" aria-label="Ask the assistant" placeholder="Ask anything" maxlength="2000"><button class="send-btn" type="submit" aria-label="Send" title="Send"><svg class="ico"><use href="#i-send"/></svg></button></form>
@@ -1710,13 +1701,23 @@ const ORB_ARCS = [[0, 0.19], [0.3, 0.09], [0.52, 0.27], [0.86, 0.05]];
 const ORB_PARTS = new Map();
 function part(g, p) { if (!ORB_PARTS.has(g.id)) ORB_PARTS.set(g.id, []); ORB_PARTS.get(g.id).push(p); return p; }
 function ringPts(r, a0 = 0, a1 = TAU) {
-  const n = Math.max(8, Math.round((96 * (a1 - a0)) / TAU)), pts = [];
+  const n = Math.max(1, Math.ceil((96 * (a1 - a0)) / TAU)), pts = [];
   for (let i = 0; i <= n; i++) { const a = a0 + ((a1 - a0) * i) / n; pts.push([Math.cos(a) * r, Math.sin(a) * r]); }
   return pts;
 }
-function orbPoly(g, pts, at) {
-  const back = el("path", { ...at, class: `${at.class || "ring"} back` }, g), front = el("path", at, g);
-  return part(g, { kind: "poly", front, back, pts });
+/* A ring's arc from a0 to a1 (radians), as runs of points. A dashed ring (stroke-dasharray) becomes one run for
+   each dash, so the dashes stay fixed to the ring as it turns (quick job 161: the SVG's own dashes slid in steps). */
+function orbArc(g, r, a0, a1, at) {
+  const { "stroke-dasharray": dash, ...rest } = at;
+  let runs = [ringPts(r, a0, a1)];
+  if (dash) {
+    const pat = dash.trim().split(/[\s,]+/).map(Number), end = a1 * r;
+    if (pat.length % 2) pat.push(...pat);
+    runs = [];
+    for (let s = a0 * r, i = 0; s < end; s += pat[i % pat.length], i++) if (i % 2 === 0) runs.push(ringPts(r, s / r, Math.min(end, s + pat[i % pat.length]) / r));
+  }
+  const back = el("path", { ...rest, class: `${rest.class || "ring"} back` }, g), front = el("path", rest, g);
+  return part(g, { kind: "poly", front, back, runs });
 }
 function orbLine(g, a, r1, r2, w) {
   const l = el("line", { stroke: "currentColor", "stroke-width": w }, g);
@@ -1741,12 +1742,21 @@ function projectRing(id, M, sc = 1) {
   const f = (n) => n.toFixed(1), dim = (z, r) => (z >= -0.5 ? 1 : Math.max(0.3, 1 + (0.7 * z) / r));
   for (const p of parts) {
     if (p.kind === "poly") {
-      let fd = "", bd = "", side = null, prev = P(...p.pts[0]);
-      for (let i = 1; i < p.pts.length; i++) {
-        const q = P(...p.pts[i]), near = prev[2] + q[2] >= -0.5;
-        if (near !== side) { const m = `M${f(prev[0])} ${f(prev[1])}`; if (near) fd += m; else bd += m; side = near; }
-        if (near) fd += `L${f(q[0])} ${f(q[1])}`; else bd += `L${f(q[0])} ${f(q[1])}`;
-        prev = q;
+      // the near and far halves split exactly where the ring crosses z = -0.5 (not at a point of the ring), so
+      // the bright half's ends glide (quick job 161)
+      let fd = "", bd = "";
+      for (const run of p.runs) {
+        let a = P(...run[0]), an = a[2] >= -0.5;
+        if (an) fd += `M${f(a[0])} ${f(a[1])}`; else bd += `M${f(a[0])} ${f(a[1])}`;
+        for (let i = 1; i < run.length; i++) {
+          const b = P(...run[i]), bn = b[2] >= -0.5, pb = `${f(b[0])} ${f(b[1])}`;
+          if (bn !== an) {
+            const t = (-0.5 - a[2]) / (b[2] - a[2]), m = `${f(a[0] + (b[0] - a[0]) * t)} ${f(a[1] + (b[1] - a[1]) * t)}`;
+            if (an) { fd += `L${m}`; bd += `M${m}`; } else { bd += `L${m}`; fd += `M${m}`; }
+          }
+          if (bn) fd += `L${pb}`; else bd += `L${pb}`;
+          a = b; an = bn;
+        }
       }
       p.front.setAttribute("d", fd || "M0 0"); p.back.setAttribute("d", bd || "M0 0");
     } else if (p.kind === "line") {
@@ -1781,13 +1791,13 @@ function projectRing(id, M, sc = 1) {
     for (const [r1, r2] of [[104, 114], [124, 130]]) el("line", { x1: Math.cos(a) * r1, y1: Math.sin(a) * r1, x2: Math.cos(a) * r2, y2: Math.sin(a) * r2, stroke: "currentColor", "stroke-width": 1 }, cross);
   }
   // the arcs are uneven (the references' asymmetry, quick job 160): [start, length] in turns
-  for (const [a0, len] of ORB_ARCS) orbPoly($("#r-arcs"), ringPts(70, a0 * TAU, (a0 + len) * TAU), { class: "ring", "stroke-width": 4 });
+  for (const [a0, len] of ORB_ARCS) orbArc($("#r-arcs"), 70, a0 * TAU, (a0 + len) * TAU, { class: "ring", "stroke-width": 4 });
   // the meridian: an open ring with a bright end (like the armillary's half rings)
-  orbPoly($("#r-merid"), ringPts(110, 0.08 * TAU, 0.78 * TAU), { class: "ring", "stroke-width": 1.2 });
+  orbArc($("#r-merid"), 110, 0.08 * TAU, 0.78 * TAU, { class: "ring", "stroke-width": 1.2 });
   orbDot($("#r-merid"), 110, 0.78 * TAU, 2.4);
   // the band: two close rings joined by short bars, with a gap (the armillary's wide band)
-  orbPoly($("#r-band"), ringPts(87), { class: "ring", "stroke-width": 1 });
-  orbPoly($("#r-band"), ringPts(91), { class: "ring", "stroke-width": 1, "stroke-dasharray": "40 4 8 4" });
+  orbArc($("#r-band"), 87, 0, TAU, { class: "ring", "stroke-width": 1 });
+  orbArc($("#r-band"), 91, 0, TAU, { class: "ring", "stroke-width": 1, "stroke-dasharray": "40 4 8 4" });
   for (let i = 0; i < 40; i++) if (i % 40 < 31) orbLine($("#r-band"), (i / 40) * TAU, 87, 91, 0.9);
   const tri = $("#r-tri");
   for (let i = 0; i < 3; i++) {
@@ -1800,7 +1810,7 @@ function projectRing(id, M, sc = 1) {
     for (const c of [...g.children]) {
       if (c.tagName === "circle" && c.classList.contains("ring")) {
         const at = Object.fromEntries([...c.attributes].filter((a) => a.name !== "r").map((a) => [a.name, a.value]));
-        orbPoly(g, ringPts(+c.getAttribute("r")), at); c.remove();
+        orbArc(g, +c.getAttribute("r"), 0, TAU, at); c.remove();
       } else if (c.tagName === "circle" && !c._part) {
         const cx = +c.getAttribute("cx") || 0, cy = +c.getAttribute("cy") || 0;
         c._part = { kind: "dot", el: c, x: cx, y: cy, r: +c.getAttribute("r") }; part(g, c._part);
@@ -1999,6 +2009,11 @@ function layoutTraces() {
     const ask = $("#ask-btn .in")?.getBoundingClientRect();
     if (n.classList.contains("log") && ask?.width && Math.abs(ax - c.x) < 1 && ask.left - hb.left < ax && ask.right - hb.left > ax && ask.top - hb.top < ay) {
       ay = ask.top - hb.top; d = `M ${sx} ${sy} V ${ay}`;
+    }
+    // the same above the core: the strip's trace ends at the Command Center button (quick job 161)
+    const cc = $("#cc-launch").hidden ? null : $("#cc-launch .in")?.getBoundingClientRect();
+    if (n.classList.contains("strip") && cc?.width && Math.abs(ax - c.x) < 1 && cc.left - hb.left < ax && cc.right - hb.left > ax && cc.bottom - hb.top > ay) {
+      ay = cc.bottom - hb.top; d = `M ${sx} ${sy} V ${ay}`;
     }
     const p = el("path", { d, class: "base" }, svg), len = p.getTotalLength();
     p.style.strokeDasharray = len; p.style.strokeDashoffset = S.booted ? 0 : len;
@@ -2799,6 +2814,7 @@ function renderMods() {
     b.addEventListener("click", () => { SFX.blip(); openModule(b); });
   });
   body.dataset.mods = S.modules.length;
+  renderTry(S.status?.visitors, true);  // the visitor cards go back in after the modules
 }
 // the core never disappears: while a module is open it flies to the dock (beside the chat, or small in the corner)
 let modFrom = null, orbHome = null;
@@ -2930,7 +2946,7 @@ $("#orb-dock").addEventListener("pointerdown", (e) => {
 for (const t of ["pointerup", "pointercancel"]) $("#orb-dock").addEventListener(t, (e) => { e.stopPropagation(); talkEnd(); });
 $("#orb-dock").addEventListener("contextmenu", (e) => e.preventDefault());
 $(".core").addEventListener("click", (e) => {
-  if (!S.booted || performance.now() < S.readyAt || e.target.closest("#toast, #errmsg, #ask-btn, #reply")) return;
+  if (!S.booted || performance.now() < S.readyAt || e.target.closest("#toast, #errmsg, #ask-btn, #reply, #cc-launch")) return;
   SFX.blip(); openChat();
 });
 $("#mod-back").addEventListener("click", closeModule);
@@ -3624,7 +3640,6 @@ async function init() {
   setModules(t?.hub?.modules, hub?.modules || []);
   setViews(hub?.views || []);
   $("#cc-launch").hidden = !(hub?.here && S.page.command);  // the Command Center opens only on the brain's computer
-  placeCC();
   await Promise.all([pollStatus(), pollArm(), refreshFacts(), loadChat()]);
 }
 // a setting changed (the settings page inside the hub, or another window): apply it without a reload
@@ -3649,18 +3664,6 @@ const venueName = (v) => { const s = String(v || "").replace(/[-_]+/g, " ").trim
 // the start screen's place line: the place's name with the pin, and the venue when it isn't the default one
 const placeLine = (st) => [S.title, st && !st.venue_default ? venueName(st.venue) : ""].filter(Boolean).join(", ");
 // the Command Center's button in the middle of the strip (the builder, 2026-11-26), where it fits; else in line
-function placeCC() {
-  const b = $("#cc-launch");
-  if (b.hidden) return;
-  b.classList.remove("mid");
-  if (portrait()) return;
-  b.classList.add("mid");
-  const r = b.getBoundingClientRect(), brand = $("#brand").getBoundingClientRect();
-  const first = [...document.querySelectorAll(".strip .fact")].find((f) => !f.hidden && f.offsetWidth);
-  const right = first ? first.getBoundingClientRect().left : innerWidth;
-  if (r.left < brand.right + 24 || r.right > right - 24) b.classList.remove("mid");
-}
-addEventListener("resize", placeCC);
 let noteShown = null;
 function showNote(msg, detail = "") {  // a calm sentence at the top of the core (e.g. why the chat is paused)
   msg = msg || null;
@@ -3695,7 +3698,11 @@ async function pollStatus() {
   setFact("#f-venue", venueName(st.venue)); $("#f-venue").hidden = !!st.venue_default;
   setFact("#f-persona", st.persona.display_name); GY?.setPersona(st.persona.id);
   renderTry(st.visitors);
-  placeCC();
+  // visitor mode or the place changed (Settings, the Command Center, another screen's assistant): the AI Spend
+  // panel comes back or goes at once, not at the next minute's refresh (quick job 161)
+  const vk = `${st.venue}|${!!st.visitors}`;
+  if (S.venueKey && S.venueKey !== vk) refreshFacts();
+  S.venueKey = vk;
   const iv = $("#ign-venue"); if (iv) iv.textContent = placeLine(st);
   setFact("#f-net", st.internet === true ? "Online" : st.internet === false ? "Offline" : "Checking", st.internet !== true);
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
@@ -3717,21 +3724,25 @@ function shownState(a) {
   const talk = ["listening", "thinking", "speaking"].includes(a.state);
   return talk && (a.device || "") !== myName() ? "idle" : a.state;
 }
-// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it
-function renderTry(visitors) {
-  const box = $("#try"), cards = visitors?.cards || [], key = JSON.stringify(cards);
-  box.hidden = !cards.length;
-  if (box.dataset.key === key) return;
-  box.dataset.key = key;
-  box.innerHTML = cards.map((c, i) => {
-    const inner = `<div class="cut"><div class="in"><svg class="ico"><use href="#i-chat"/></svg><b>${esc(c.say)}</b>${c.line ? `<small>${esc(c.line)}</small>` : ""}</div></div>`;
-    return c.ask ? `<button class="trycard" type="button" data-i="${i}">${inner}</button>` : `<div class="trycard read">${inner}</div>`;
-  }).join("");
-  box.querySelectorAll("button.trycard").forEach((b) => b.addEventListener("click", (e) => {
-    e.stopPropagation(); S.lastInput = performance.now(); SFX.blip(); ask(cards[+b.dataset.i].ask, true);
-  }));
+// visitor mode (quick job 35): the venue's "try this" cards; tapping one asks it, like saying it. They are modules
+// beside the core (quick job 161), each in the shorter column, so the hub stays balanced.
+function renderTry(visitors, again = false) {
+  const cards = visitors?.cards || [], key = JSON.stringify(cards);
+  if (!again && S.tryKey === key) return;
+  S.tryKey = key;
+  document.querySelectorAll("#mods .try").forEach((n) => n.remove());
+  const l = $("#mods .l"), r = $("#mods .r");
+  cards.forEach((c, i) => {
+    const n = document.createElement(c.ask ? "button" : "div");
+    n.className = `mod panel try${c.ask ? "" : " read"}${S.booted ? "" : " hold"}`;
+    if (c.ask) n.type = "button";
+    n.innerHTML = `<div class="cut"><div class="in"><svg viewBox="-30 -30 60 60" aria-hidden="true"><g class="mring"></g><use href="#i-chat" x="-11" y="-11" width="22" height="22" class="mico"/></svg><div class="txt"><span class="tag">Try this</span><b>${esc(c.say)}</b>${c.line ? `<small>${esc(c.line)}</small>` : ""}</div></div></div>`;
+    (S.layout === "launcher" && r.children.length < l.children.length ? r : l).appendChild(n);
+    buildMring(n.querySelector(".mring"));
+    if (c.ask) n.addEventListener("click", (e) => { e.stopPropagation(); S.lastInput = performance.now(); SFX.blip(); ask(c.ask, true); });
+  });
+  requestAnimationFrame(() => { layoutTraces(); if (S.booted) showTraces(); });
 }
-$("#try").addEventListener("click", (e) => e.stopPropagation());  // not the core's "open the chat"
 let armBusy = false;
 async function pollArm() {
   if (armBusy) return;
@@ -4131,7 +4142,7 @@ addEventListener("resize", () => { resize(); if (S.booted) { drawFrame(); showTr
 resize();
 readColors();
 setMoney();
-document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); placeCC(); if (S.booted) { layoutTraces(); showTraces(); } });
+document.fonts && document.fonts.ready.then(() => { PAD = padChar(); setMoney(); if (S.booted) { layoutTraces(); showTraces(); } });
 // the commits and the device names are drawn at the screen's real size (quick job 154)
 addEventListener("resize", () => { if (COMMITS.length) drawSpark(commitDays); renderDevices(); });
 // start: the theme and the brain's facts load while the start screen waits

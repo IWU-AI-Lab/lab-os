@@ -57,8 +57,7 @@
     </div>
     <span class="grow"></span>
     <span class="clock"></span>
-    <span id="stop-key" class="stop-key" hidden title="Webcam control is on: X on the keyboard freezes the arm"><kbd>X</kbd> = STOP</span>
-    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page; X on the keyboard)">STOP</button>
+    <button id="stop" class="stop" type="button" title="Freeze the arm (works from every page; X on the keyboard in webcam control)">STOP<kbd id="stop-x" hidden aria-hidden="true">X</kbd></button>
   </header>
 
   <main class="split">
@@ -76,6 +75,7 @@
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>Drive it</h2>
         <div class="sources">
           <button id="start" class="btn primary" type="button">Start webcam control</button>
+          <p id="leave-key" class="leave-key" hidden>To leave webcam control, press <kbd>`</kbd> (the key above Tab).</p>
         </div>
         <p id="msg" class="msg" aria-live="polite"></p>
         <p id="control-why" class="msg" aria-live="polite" hidden></p>

@@ -190,9 +190,13 @@ function scrRow(s, under) {
   r.className = `row${under ? " scr" : ""}${S.sel.has(s.key) ? " sel" : ""}${isHidden(s.key) ? " off" : ""}`;
   r.tabIndex = 0;
   r.dataset.key = s.key;
-  r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span><b title="${esc(name)}">${esc(name)}</b>${eye(s.key)}`
+  const sub = own && !n ? resolution(s.w) || "Screen" : shows(s.w);
+  // under its device: one line, "Screen 2, Teleop" (quick job 161: compact)
+  r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span>`
+    + (under ? `<b title="${esc(`${name}, ${sub}`)}">${esc(name)}<span class="sub">, ${esc(sub)}</span></b>` : `<b title="${esc(name)}">${esc(name)}</b>`)
+    + eye(s.key)
     + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button>`
-    + `<small>${esc(own && !n ? resolution(s.w) || "Screen" : shows(s.w))}</small>`;
+    + (under ? "" : `<small>${esc(sub)}</small>`);
   return r;
 }
 function renderLists(devs, scr) {
@@ -204,8 +208,12 @@ function renderLists(devs, scr) {
     if (item.device) { if (matches(scrText(item))) dl.append(scrRow(item, false)); continue; }
     const mine = scr.filter((s) => s.group === item.key && s.key !== s.group && matches(scrText(s)));
     if (!mine.length && !matches(devText(item))) continue;
-    dl.append(devRow(item));
-    for (const s of mine) dl.append(scrRow(s, true));
+    if (!mine.length) { dl.append(devRow(item)); continue; }
+    // a device and its screens in one group: a line joins the device to each screen (quick job 161)
+    const g = document.createElement("div");
+    g.className = "dgrp";
+    g.append(devRow(item), ...mine.map((s) => scrRow(s, true)));
+    dl.append(g);
   }
   if (!dl.children.length) dl.innerHTML = `<div class="empty">${devs.length ? "No device or screen matches the search." : "No device is connected."}</div>`;
   $("#dev-count").textContent = `${plural(devs.length, "device")}, ${plural(scr.length, "screen")}`;
@@ -951,6 +959,7 @@ async function refresh() {
   }
 }
 async function start() {
+  playIntro();  // the sweep starts at once; the page fades in at its end (quick job 161)
   try {
     const [hub, cc] = await Promise.all([getJSON("/api/hub"), getJSON("/api/command-center")]);
     S.views = hub.views || [];
@@ -961,7 +970,6 @@ async function start() {
     say(`The brain didn't answer (${e.message}).`, true);
   }
   await refresh();
-  playIntro([...$("#stage").children]);
   setInterval(() => { if (!S.drag) refresh(); }, POLL_MS);
 }
 start();

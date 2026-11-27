@@ -288,7 +288,7 @@ def test_teleop_3d_view_and_joints_in_their_own_boxes():
 
 
 def test_x_stop_is_shown_where_you_look():
-    """Quick job 19: while desktop control is on, "X = STOP" sits beside the STOP button, the X row
+    """Quick job 19: while desktop control is on, the X key shows on the STOP button, the X row
     is the key help's first row, and the key help opens (quick job 66: the on-button said it, too
     long; now "Desktop control on"). Hidden while X doesn't stop (it only works in desktop
     control), so the page never claims what isn't true."""
@@ -301,11 +301,19 @@ def test_x_stop_is_shown_where_you_look():
         'button.textContent = "Desktop control on"' in start and '"desk-help").open = true' in start
     )
     assert 'link.send({ type: "stop" }); // X = STOP in every mode' in js
-    for page in ("index.html",):
+    # quick job 161: X is a keycap on the STOP button (beside it, "X = STOP" read as "X
+    # leaves"), and the way out (`) is its own line under the button that starts the control
+    assert '["stop-x", "leave-key"]' in js
+    for page in ("index.html", "webcam.html"):
         html = (web / page).read_text()
-        key = html.index('id="stop-key"')
-        assert 'id="stop-key" class="stop-key" hidden' in html, page
-        assert abs(key - html.index('id="stop"')) < 400, page  # right beside STOP
+        assert '<kbd id="stop-x" hidden aria-hidden="true">X</kbd></button>' in html, page
+        assert '<p id="leave-key" class="leave-key" hidden>To leave ' in html, page
+        assert "press <kbd>`</kbd>" in html, page
+        start = html.index('id="desktop"' if page == "index.html" else 'id="start"')
+        # under the button that starts the control
+        assert 0 < html.index('id="leave-key"') - start < 200, page
+        if page == "webcam.html":
+            continue
         table = html.split('<table class="keys">', 1)[1]
         assert table.index("<kbd>X</kbd>") < table.index('id="desk-keys"'), page  # first row
         assert "<kbd>Esc</kbd>" in table, page

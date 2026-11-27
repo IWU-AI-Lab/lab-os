@@ -1,5 +1,6 @@
-// The Command Center's start (quick job 160): one radar sweep, 1 s, over the whole page. Each card shows
-// when the sweep passes it. The sweep does not block the page, so nothing needs to end it.
+// The Command Center's start (quick jobs 160, 161): one radar sweep, 1 s, over the whole page. The sweep turns
+// first; in its last 0.3 s the page fades in and the sweep fades out (before, each card showed as the sweep passed
+// it, so the scan and the page came at the same time). The sweep does not block the page, so nothing ends it.
 import { prefs } from "/web/device.js";
 
 const MS = 1000;
@@ -24,8 +25,11 @@ function sweepSound() {
   tone.start(); tone.stop(now + .8);
 }
 
-export function playIntro(cards) {
+const FADE = 300;  // the last part of the sweep: the page in, the sweep out
+
+export function playIntro() {
   const page = document.querySelector(".page");
+  page.classList.remove("wait");
   if (document.documentElement.classList.contains("q-minimal") || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     page.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
     return;
@@ -36,15 +40,9 @@ export function playIntro(cards) {
   box.setAttribute("aria-hidden", "true");
   box.innerHTML = '<div class="beam"></div>';
   document.body.append(box);
-  const cx = innerWidth / 2, cy = innerHeight / 2;
-  for (const card of cards) {
-    const r = card.getBoundingClientRect();
-    // the sweep starts at the top (12 o'clock) and turns clockwise
-    const a = Math.atan2(r.left + r.width / 2 - cx, cy - r.top - r.height / 2);
-    const at = (((a / (2 * Math.PI)) + 1) % 1) * MS;
-    card.animate([{ opacity: 0 }, { opacity: 0, offset: Math.max(0.001, at / (at + 250)) }, { opacity: 1 }],
-      { duration: at + 250, easing: "ease-out" });
-  }
-  box.animate([{ opacity: 1 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: MS + 150 })
+  const end = 1 - FADE / MS;
+  page.animate([{ opacity: 0, scale: 0.985 }, { opacity: 0, scale: 0.985, offset: end }, { opacity: 1, scale: 1 }],
+    { duration: MS, easing: "ease-out" });
+  box.animate([{ opacity: 1 }, { opacity: 1, offset: end }, { opacity: 0 }], { duration: MS })
     .finished.then(() => box.remove());
 }
