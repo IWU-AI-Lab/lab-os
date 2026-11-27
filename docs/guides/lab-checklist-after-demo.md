@@ -19,7 +19,7 @@ You need no ruler. Measure with these:
 ---
 
 ## V. The wake word and the greeting (15 min)
-**Done (2026-11-23):** V.1, V.2, V.3, V.15, V.16, V.17, V.19, V.20 and 0.2 to 0.5 passed. The wake words answered too rarely (V.21 to V.23), and the end of a question came too early (V.25, V.18): quick jobs 98 and 99. The settings value box moved (0.3): quick job 101. The brain logs only the wake words it heard, so the misses of V.5 are not in the log (quick job 99 adds them).
+**Done ([2026-11-23 checklist](https://github.com/IWU-AI-Lab/lab-os/blob/2d80940b8c4a38affb4aa811b71378bf0f09a8be/docs/guides/lab-checklist.md)):** V.1, V.2, V.3, V.15, V.16, V.17, V.19, V.20 and 0.2 to 0.5 passed. The wake words answered too rarely (V.21 to V.23), and the end of a question came too early (V.25, V.18): quick jobs 98 and 99. The settings value box moved (0.3): quick job 101. The brain logs only the wake words it heard, so the misses of V.5 are not in the log (quick job 99 adds them).
 **These steps need a microphone on the Newline's screen.** The Pi that drives the Newline (HDMI and the touch cable) has no microphone: the Newline's own microphone belongs to its Android, not to the Pi. Connect a USB microphone to that Pi first, or skip them.
 - **V.4** Open the hub on the Newline too (Open on…), with its sound on. Ask the desktop a question by voice. When the answer ends, say the wake word again. → did the desktop answer at once? (yes / no) If no, write the time.
 - **V.8** Quick job 58. Open the hub on the Newline too. Ask the Newline a question by voice. Look at the desktop's core while the Newline answers. → did the desktop's core stay still (not listening, thinking or speaking)? (yes / no)
@@ -76,7 +76,7 @@ Setup: `so101-white` connected, the brain running (part T's command without `--l
 - **D.3** Say `(wake word), the visitors have left`. → nothing to report.
 
 ## W. Teleop with a webcam (25 min)
-Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/archive/guides-2026-11-25/webcam-teleop.md`. W.3 to W.8 passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
+Preview 2: your bare hand in front of the Logitech C615 drives the arm. How it works: `docs/archive/guides-2026-11-25/webcam-teleop.md`. [The earlier steps W.3 to W.8](https://github.com/IWU-AI-Lab/lab-os/blob/dfd870a8dced2421ce48cbe439ca5b7d52143a27/docs/guides/lab-checklist.md) passed on the laptop (2026-11-21); W.3 to W.6 are new checks for the fixes. Do W.1 to W.6 and W.9 with no arm (the fake arm), then W.10 to W.15 with `so101-white`.
 
 Cables to plug in, on the lab desktop:
 - The C615: a free USB socket. If no socket is free, unplug the green set's two cameras (sockets 7 and 8). This part does not use them.
@@ -294,7 +294,7 @@ These steps were in `docs/guides/lab-checklist.md`. The builder cut the demo run
 ### From P. Plug in every USB device (15 min)
 Quick job 115. Do this part before every other part. Setup: no brain running. Follow `docs/guides/plug-in.md` → "The plan" and steps 1 and 2 of "The order". Put the card reader and the webcam on the Windows desktop.
 - **P.2** Unplug the white wrist camera. Run `uv run lab-os usb` again. Plug the camera in again. → which name went from the list? Is there a line that starts with `!`? (yes / no)
-- **P.5** Stop the brain (Ctrl+C). Unplug the USB cables of the two green arms. Start the brain as in P.3. → does the line that starts with "Plugged in" name only `so101-white`? (yes / no)
+- **P.5** Stop the brain (Ctrl+C). Unplug the USB cables of the two green arms. Start the brain as in [P.3 of the demo run](lab-checklist.md#p-plug-in-every-usb-device-15-min). → does the line that starts with "Plugged in" name only `so101-white`? (yes / no)
 
 ### From S. The start and the voice (10 min)
 Setup: no brain running, every hub window closed, the USB microphone in the desktop's front port. Quick jobs 110 and 111 add their steps here.
