@@ -2350,14 +2350,13 @@ function setAlert(a, msg = "") {
   clearInterval(critTimer);
   const word = { held: ["i-pause", "Held still"], critical: ["i-warn", "Stopped"], warning: ["i-warn", "Waiting"], none: [null, "Following"] }[a];
   $("#arm-word").innerHTML = (word[0] ? `<svg class="ico"><use href="#${word[0]}"/></svg>` : "") + word[1];
-  const toast = $("#toast");
-  if (a === "warning") { $("#toast-msg").textContent = msg; toast.classList.add("on"); SFX.warning(); }
+  S.alertMsg = a === "warning" || a === "critical" ? msg : "";
+  renderToast();
+  if (a === "warning") SFX.warning();
   else if (a === "critical") {
-    $("#toast-msg").textContent = msg;
-    toast.classList.add("on");
     if (S.quality !== "minimal") { body.classList.add("jolt"); setTimeout(() => body.classList.remove("jolt"), 450); }
     SFX.critical(); critTimer = setInterval(SFX.critical, 667);
-  } else toast.classList.remove("on");
+  }
   if (prev !== a) requestAnimationFrame(readColors);
 }
 
@@ -2612,7 +2611,16 @@ function cutTurn() {
 function endVoice() {
   freeText();
   VS.voiced = false; VS.turn = null; S.asking = false; S.voiceLoud = 0; micOn(false);
-  $("#reply .q").classList.remove("heard");
+  // a voice turn that ended with no question (quick job 165): "Listening…" goes at once, a sentence about it
+  // ("I didn't hear a question", "that's all") after a few seconds. Before, it stayed until the next answer,
+  // under the core and in the box beside the docked core (conversation mode on and off left it there).
+  const q = $("#reply .q");
+  if (q.classList.contains("heard")) {
+    clearTimeout(replyTimer);
+    if (/^Listening/.test(q.textContent)) $("#reply").classList.remove("on");
+    else replyTimer = setTimeout(() => $("#reply").classList.remove("on"), 5000);
+  }
+  q.classList.remove("heard");
   if (S.state === "listening" || S.state === "thinking" || S.state === "speaking") setState("idle");
   S.lastInput = performance.now();
 }
@@ -3665,18 +3673,25 @@ const venueName = (v) => { const s = String(v || "").replace(/[-_]+/g, " ").trim
 // the start screen's place line: the place's name with the pin, and the venue when it isn't the default one
 const placeLine = (st) => [S.title, st && !st.venue_default ? venueName(st.venue) : ""].filter(Boolean).join(", ");
 // the Command Center's button in the middle of the strip (the builder, 2026-11-26), where it fits; else in line
-let noteShown = null;
 function showNote(msg, detail = "") {  // a calm sentence at the top of the core (e.g. why the chat is paused)
   msg = msg || null;
-  if (msg === noteShown) return;
-  noteShown = msg;
-  if (msg) { $("#toast-msg").textContent = msg; $("#toast").title = detail || ""; }  // the keys and the file: in the tooltip
-  $("#toast").classList.toggle("on", !!msg);
+  if (msg === S.noteShown) return;
+  S.noteShown = msg; S.noteDetail = detail || "";  // the keys and the file: in the tooltip
+  renderToast();
+}
+/* One box at the top of the core for the arm's alert ("Stopped", "Waiting") and for a note ("AI paused"): the
+   alert while there is one, else the note (quick job 165: an alert that ended hid a note that was still true, and
+   a note that ended hid the alert). */
+function renderToast() {
+  const msg = S.alertMsg || S.noteShown, t = $("#toast");
+  if (msg) $("#toast-msg").textContent = msg;
+  t.title = S.alertMsg ? "" : S.noteDetail;
+  t.classList.toggle("on", !!msg);
 }
 // a question while the chat is paused: the note on top already says why, so it only nudges instead of a
 // second copy on the core (quick job 31)
 function onTop(msg) {
-  if (!msg || msg !== noteShown) return false;
+  if (!msg || msg !== S.noteShown) return false;
   const t = $("#toast");
   t.classList.remove("nudge"); void t.offsetWidth; t.classList.add("nudge");
   return true;

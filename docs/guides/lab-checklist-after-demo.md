@@ -277,6 +277,7 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 - **X4.7** Quick job 162. Open ⚙ on the lab desktop, then on a Pi touchscreen. Point to a setting. → Is the list in the middle of the screen? Does the hint show only in the card on the right? (yes / no for each)
 - **X4.8** Quick job 163. Start the hub on the lab desktop. Open the **Command Center**. Open ⚙ and change a setting. → Does the Command Center button come in with the module buttons? Is **Safety Limits and Shut Down** in the sidebar's list? Does "✓ Saved" show beside the setting's name? (yes / no for each)
 - **X4.9** Quick job 164. Open ⚙ on the lab desktop and change a setting. → Is ↺ in a circle at the left of the setting's name? Does it say "Reset" when you point to it? Are the left and right edges of the rows even? (yes / no for each)
+- **X4.10** Quick job 165. On the hub, press the conversation button, wait 3 s, then press it again. Do the same with **Monitor** open. → Does "Listening…" go under the core and in the box beside the small core? Did anything else stay on the screen after it should have gone? (yes / no, then a sentence)
 
 ## X6. After the demo: depth in the hub and in VR (10 min)
 Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.

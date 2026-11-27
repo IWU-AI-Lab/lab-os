@@ -238,6 +238,7 @@ export function initDesktop(link, ui) {
     select.disabled = true; // no switching modes mid-drive
     document.activeElement?.blur(); // a key on a focused button would click it again
     ui.setActive("desktop");
+    ui.message("");  // a refused try's message goes once it works (quick job 165: it stayed)
     $("desk-help").open = true; // the keys, while they're needed
     // short: the mode, X = STOP and the way out are in the key guide (Controls; quick job 66)
     button.textContent = "Desktop control on";
