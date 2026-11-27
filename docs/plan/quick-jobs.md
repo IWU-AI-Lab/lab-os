@@ -11,7 +11,6 @@ Three coding sessions may run at the same time, one for each lane (the builder, 
 - 159. **A 3D core** (the builder, 2026-11-26; a first version to iterate on). Part 6 of `docs/plan/ux-review.md`: more intentional and original, its shape shows listening, thinking and speaking; minimal keeps the still rings. Lab: add a step to the after-demo list.
 
 ### Lane 2: the robot pages, VR and AR
-- 157. **UX fixes: VR and AR** (the UI/UX review, 2026-11-26). Part 5 of `docs/plan/ux-review.md`, with choice 2 (× in place of ←). Lab: add one step to part R or T of the demo run if a demo moment changes, else to the after-demo list.
 
 ### Lane 3: the shared parts and the other pages
 - 160. **A black hole background** (the builder, 2026-11-26; a first version to iterate on). Part 6 of `docs/plan/ux-review.md`. Lab: add a step to the after-demo list.
@@ -32,6 +31,7 @@ The builder chooses when these start (2026-11-25). A session never takes a job f
 
 ## Done
 - 158. **Depth in the hub and in VR** (done 2026-11-26, PR #372) (the builder, 2026-11-26; a first version to iterate on). Part 6 of `docs/plan/ux-review.md`, with choice 6 (light, not shadow first). Lab: add a step to the after-demo list.
+- 157. **UX fixes: VR and AR** (done 2026-11-26, PR #371) (the UI/UX review, 2026-11-26). Part 5 of `docs/plan/ux-review.md`, with choice 2 (× in place of ←). Lab: add one step to part R or T of the demo run if a demo moment changes, else to the after-demo list. Built: lab step T.5.
 - 154. **UX fixes: the hub, the start screen and the power menu** (done 2026-11-26, PR #370) (the UI/UX review, 2026-11-26). Start after quick job 153 is in Done. Do every line of part 2 of `docs/plan/ux-review.md`, with the builder's choices there (× in place of ←; the minimal core keeps its rings). Tick nothing: the builder ticks the lines in the lab. Lab: add one step to the after-demo list that points to part 2.
 - 155. **UX fixes: the robot pages** (done 2026-11-26, PR #369) (the UI/UX review, 2026-11-26). Start after quick job 153 is in Done. Do every line of part 3 of `docs/plan/ux-review.md`, with choice 4 there (the Raspbot's sideways controller stays). Lab: add one step to the after-demo list that points to part 3. Built: lab step X2.
 - 156. **UX fixes for Settings, All Pages, the Command Center and the other pages** (done 2026-11-26, PR #368). Part 4 of the UX review. Lab check X4.1.

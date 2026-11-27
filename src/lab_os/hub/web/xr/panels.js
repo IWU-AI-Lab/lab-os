@@ -3,11 +3,12 @@
 // other end, the open mark (⤢) by the tab, and the content on a see-through fill with a cut corner.
 // Current Project (the step bar, Next ›› …), AI Spend (the month against the budget), Commits (bars per
 // day, 7d / 14d / 30d), Devices (a hive per kind, "List all"). Each reads the same real facts as the
-// screen (/api/project, /api/spend, /api/commits, /api/devices) and is hidden when they aren't there.
+// screen (/api/project, /api/spend, /api/commits, /api/live-devices) and is hidden when they aren't there.
 // Pointing: hit(u, v) → what's under the pointer (a control of the callout, a device, or the callout
 // itself, which opens its details page: DetailsPage below).
 // Units: drawn in "rem" like the CSS (R canvas pixels per rem), shown at `remM` metres per rem.
 import { C, CanvasPlane, FONT, TAU, clamp, icon, rgba, spaced } from "./draw.js";
+import { cutRect } from "./way.js";
 
 const R = 80; // canvas pixels per rem
 export const REM_M = 0.058; // metres per rem in VR (the panel ~0.8 m wide, readable at 2.4 m)
@@ -41,14 +42,18 @@ export function wrap(g, text, maxW, lines = 99) {
 const fmtDay = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { day: "numeric", month: "short" }); };
 export const usd = (v, dec = 2) => `$${Number(v || 0).toFixed(dec)}`;
 const SPEND_HOW = "Estimated, this computer's brain only"; // the AI Spend callout (quick job 41)
-const KINDS = { arm: ["i-arm", "Arms"], headset: ["i-headset", "Headsets"], camera: ["i-cam", "Cameras"], pc: ["i-pc", "Computers"], pi: ["i-pi", "Raspberry Pis"] };
-const KIND_OF = { so101: "arm", "so101-leader": "arm", xarm1s: "arm", fake: "arm", arm: "arm", camera: "camera", headset: "headset", quest: "headset", pc: "pc", pi: "pi" };
+// the live device list (/api/live-devices), as the flat hub shows it (quick job 157: VR read devices.yaml
+// and said "1 of 15 linked" where the flat hub said "1 of 6 connected"): the same list, kinds and words
+const KINDS = { arm: ["i-arm", "Arms"], robot: ["i-pi", "Robots"], camera: ["i-cam", "Cameras"], headset: ["i-headset", "Headsets"], pc: ["i-screen", "Screens"], usb: ["i-chip", "Other USB devices"] };
+const KIND_OF = { arm: "arm", robot: "robot", camera: "camera", headset: "headset", screen: "pc", usb: "usb" };
 export function devicesFrom(list) {
   return (list || []).map((d) => ({
-    name: d.name, kind: KIND_OF[d.kind] || "pc", brain: !!d.linked, on: d.linked ? true : undefined,
-    lock: d.off_limits ? "another project's (never opened)" : "", use: d.notes || d.kind, borrowed: !!d.borrowed,
+    name: d.name, kind: KIND_OF[d.kind] || "usb", brain: !!d.connected, on: !!d.connected, lock: "",
+    power: d.kind === "arm" ? d.power ?? null : undefined, use: d.what || d.kind,
   }));
 }
+/** An arm's motor power as the flat hub words it ("" for a device that has none). */
+const powerWord = (d) => (d.power === undefined ? "" : d.power === "on" ? "On" : d.power === "off" ? "Off" : d.power === "in use" ? "In use" : "Not known");
 
 function hexPath(g, x, y, r) {
   g.beginPath();
@@ -150,10 +155,18 @@ export class Callout {
     const d = this.data;
     g.textBaseline = "alphabetic";
     if (this.id === "project") {
-      g.font = `600 1.1px ${FONT.ui}`; g.fillStyle = C.text; g.textAlign = "left";
-      const lines = wrap(g, d?.focus || "", w, 2);
-      lines.forEach((l, i) => g.fillText(l, 0, 1.0 + i * 1.375));
-      let y = lines.length * 1.375 + 0.55;
+      // the project's title whole (quick job 157: it was cut with "…"): a smaller size, then a third line
+      let size = 1.1, lines;
+      for (size of [1.1, 0.95, 0.82]) {
+        g.font = `600 ${size}px ${FONT.ui}`;
+        lines = wrap(g, d?.focus || "", w);
+        if (lines.length <= 2) break;
+      }
+      lines = wrap(g, d?.focus || "", w, 3);
+      g.fillStyle = C.text; g.textAlign = "left";
+      const lh = size * 1.25;
+      lines.forEach((l, i) => g.fillText(l, 0, size * 0.9 + i * lh));
+      let y = lines.length * lh + 0.55;
       // the step bar: done, now (pulsing, part lit), later
       g.font = `${FONT.linesW} 0.78px ${FONT.lines}`;
       const label = `Step ${d?.step} of ${d?.of}`, lw = g.measureText(label).width, bw = w - lw - 0.8, n = d?.steps?.length || 1, gap = 3 / R, sw = (bw - gap * (n - 1)) / n;
@@ -234,7 +247,7 @@ export class Callout {
       g.textAlign = "left"; g.font = `600 0.85px ${FONT.ui}`; g.fillStyle = C.primary;
       g.fillText(String(conn), 0, 1.55);
       const cw = g.measureText(String(conn)).width;
-      g.font = `${FONT.linesW} 0.78px ${FONT.lines}`; g.fillStyle = C.dim; g.fillText(` of ${devs.length} linked`, cw, 1.55);
+      g.font = `${FONT.linesW} 0.78px ${FONT.lines}`; g.fillStyle = C.dim; g.fillText(` of ${devs.length} connected`, cw, 1.55);
       // "List all" / "Show map": a framed button, sized to its words
       g.font = `500 0.82px ${FONT.ui}`; spaced(g, 0.04);
       const label = this.open ? "Show map" : "List all", bw = g.measureText(label).width + 2.6, bh = 2.3, x = w - bw, hov = this.hover?.id === "list";
@@ -265,10 +278,10 @@ export class Callout {
         }
         return y;
       }
-      // the list: grouped by kind; columns Device, Power, Linked (statuses as words with a dot)
+      // the list: grouped by kind; columns Device, Connected, Motor power (as the flat hub's)
       g.font = `500 0.68px ${FONT.ui}`; g.fillStyle = C.dim; g.textAlign = "left";
-      const PW = w - 5.7, LK = w - 1.9; // the status columns
-      g.fillText("Device", 1.5, y); g.fillText("Power", PW, y); g.fillText("Linked", LK, y);
+      const LK = w - 7.2, PW = w - 3.2; // the status columns
+      g.fillText("Device", 1.5, y); g.fillText("Connected", LK, y); g.fillText("Motor power", PW, y);
       y += 0.3;
       for (const [kind, [ico, label]] of Object.entries(KINDS)) {
         const list = devs.filter((x) => x.kind === kind);
@@ -280,14 +293,12 @@ export class Callout {
           if (hov2) { g.fillStyle = rgba(C.primary, 0.12); g.fillRect(0, y + 0.1, w, 1.25); }
           icon(g, ico, 0.6, y + 0.72, 0.8, C.dim, 1.4);
           g.font = `0.88px ${FONT.ui}`; g.fillStyle = C.text;
-          g.fillText(wrap(g, dv.name, PW - 1.9, 1)[0], 1.5, y + 1.0);
+          g.fillText(wrap(g, dv.name, LK - 1.9, 1)[0], 1.5, y + 1.0);
           g.font = `${FONT.linesW} 0.72px ${FONT.lines}`;
           const st = (x, ok, yes, no) => { g.fillStyle = ok ? C.primary : C.offline; g.beginPath(); g.arc(x + 0.2, y + 0.72, 0.17, 0, TAU); ok ? g.fill() : (g.strokeStyle = C.offline, g.stroke()); g.fillText(ok ? yes : no, x + 0.6, y + 1.0); };
-          if (dv.lock) { g.fillStyle = C.dim; g.fillText("Locked", PW, y + 1.0); }
-          else {
-            if (dv.on === undefined) { g.fillStyle = C.offline; g.fillText("not known", PW, y + 1.0); } else st(PW, dv.on, "On", "Off");
-            st(LK, dv.brain, "Yes", "No");
-          }
+          st(LK, dv.on, "Yes", "No");
+          const pw = powerWord(dv);
+          if (pw) { g.fillStyle = pw === "On" ? C.primary : C.dim; g.fillText(pw, PW, y + 1.0); }
           this.regions.push({ kind: "device", id: `dev:${dv.name}`, dev: dv, x: 1.15, y: HEAD + 0.55 + y + 0.1, w, h: 1.25 });
           y += 1.3;
         }
@@ -312,7 +323,7 @@ export class DeviceCard {
     this.dev = dev;
     this.p.opacity = dev ? 1 : 0;
     if (!dev) return;
-    const [ico] = KINDS[dev.kind] || KINDS.pc, usb = dev.kind === "arm" || dev.kind === "camera";
+    const [ico] = KINDS[dev.kind] || KINDS.pc;
     this.p.paint((g, cw, chh) => {
       g.scale(R, R); const w = cw / R, h = chh / R;
       g.beginPath(); g.moveTo(0.7, 0); g.lineTo(w, 0); g.lineTo(w, h - 0.7); g.lineTo(w - 0.7, h); g.lineTo(0, h); g.lineTo(0, 0.7); g.closePath();
@@ -323,11 +334,9 @@ export class DeviceCard {
       g.font = `${FONT.linesW} 0.78px ${FONT.lines}`; g.fillStyle = C.text; g.textBaseline = "alphabetic";
       wrap(g, dev.use, w - 1.6, 3).forEach((l, i) => g.fillText(l, 0.8, 2.75 + i * 1.0));
       const row = (y, ok, text) => { g.fillStyle = ok ? C.primary : C.offline; g.beginPath(); g.arc(1.0, y - 0.25, 0.2, 0, TAU); ok ? g.fill() : (g.strokeStyle = C.offline, g.stroke()); g.fillStyle = ok ? C.text : C.dim; g.fillText(text, 1.5, y); };
-      if (dev.lock) { g.fillStyle = C.dim; g.fillText("Locked: the hub shows it but never opens its ports.", 0.8, h - 1.0); }
-      else {
-        row(h - 1.9, dev.on, dev.on === undefined ? "Power: not known until the roll call" : dev.on ? (usb ? "Plugged in" : "On the network") : usb ? "Not plugged in" : "Off, or not on the network");
-        row(h - 0.8, dev.brain, dev.brain ? "Linked to the brain" : "Not linked");
-      }
+      row(h - 1.9, dev.on, dev.on ? "Connected" : "Not connected");
+      const pw = powerWord(dev);
+      if (pw) row(h - 0.8, pw === "On", `Motor power: ${pw}`);
     }, dev.name);
   }
 }
@@ -345,11 +354,16 @@ export class DetailsPage {
   hit(u, v) {
     const x = u * this.w, y = (1 - v) * this.h;
     if (x > this.w - 0.16 && y < 0.16) return { kind: "back" };
+    // the devices page's rows come in pages (quick job 157): "Next page" at the bottom right
+    if (this.pages > 1 && x > this.w - 0.5 && y > this.h - 0.14) return { kind: "next-page" };
     return { kind: "page" };
   }
+  /** The devices page: the next page of rows (after the last, the first again). */
+  nextPage() { this.pageNo = ((this.pageNo || 0) + 1) % Math.max(1, this.pages || 1); this.p.key = null; }
   paint(id, facts, title, now) {
     this.id = id;
-    const key = JSON.stringify([id, facts[id], this.hover?.kind, Math.floor(now / 1000)]);
+    if (id !== this.id) this.pageNo = 0;
+    const key = JSON.stringify([id, facts[id], this.hover?.kind, this.pageNo, Math.floor(now / 1000)]);
     this.p.paint((g, cw, chh) => this._draw(g, cw, chh, id, facts, title), key);
   }
   _draw(g, cw, chh, id, f, title) {
@@ -364,9 +378,14 @@ export class DetailsPage {
     g.fillText(title.toUpperCase(), 9, 7); spaced(g, 0);
     icon(g, { project: "i-next", spend: "i-coin", commits: "i-commit", devices: "i-net" }[id], 5, 7, 4, C.primary, 1.5);
     const bh = this.hover?.kind === "back";
-    g.strokeStyle = bh ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 0.25; g.strokeRect(w - 14, 2.5, 11, 9);
-    if (bh) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(w - 14, 2.5, 11, 9); }
-    icon(g, "i-back", w - 8.5, 7, 6, bh ? C.hot : C.text, 1.6);
+    cutRect(g, w - 14, 2.5, 11, 9, 2); // cut corners (quick job 157)
+    if (bh) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
+    g.strokeStyle = bh ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 0.25; g.stroke();
+    { // × in place of ← (choice 2, quick job 157)
+      const cx = w - 8.5, cy = 7, r = 2.2;
+      g.strokeStyle = bh ? C.hot : C.text; g.lineWidth = 0.6; g.lineCap = "round";
+      g.beginPath(); g.moveTo(cx - r, cy - r); g.lineTo(cx + r, cy + r); g.moveTo(cx + r, cy - r); g.lineTo(cx - r, cy + r); g.stroke();
+    }
     const L = 9, top = 17, colW = (w - 2 * L - 10) / 2, R2 = L + colW + 10;
     const dline = (x, y, text, ww) => { g.font = `500 2.4px ${FONT.ui}`; g.fillStyle = C.primary; g.textBaseline = "alphabetic"; g.textAlign = "left"; g.fillText(text, x, y); g.fillStyle = rgba(C.primary, 0.55); g.fillRect(x, y + 1, ww, 0.15); };
     const para = (x, y, text, ww, size = 2.3, color = C.text) => { g.font = `${FONT.linesW} ${size}px ${FONT.lines}`; g.fillStyle = color; g.textAlign = "left"; const ls = wrap(g, text, ww); ls.forEach((l, i) => g.fillText(l, x, y + i * size * 1.45)); return y + ls.length * size * 1.45; };
@@ -438,27 +457,44 @@ export class DetailsPage {
       });
     } else if (id === "devices") {
       const devs = f.devices || [], cw2 = w - 2 * L;
-      dline(L, top, `${devs.filter((d) => d.brain).length} of ${devs.length} linked`, cw2);
-      const cols = [["", 3], ["Device", 30], ["Power", 16], ["Linked", 12], ["Use", cw2 - 61]];
+      dline(L, top, `${devs.filter((d) => d.on).length} of ${devs.length} connected`, cw2);
+      const cols = [["", 3], ["Device", 30], ["Connected", 16], ["Motor power", 16], ["What it is", cw2 - 65]];
       g.font = `500 2px ${FONT.ui}`; g.fillStyle = C.dim; g.textAlign = "left";
       let x = L; for (const [hd, cwid] of cols) { g.fillText(hd, x, top + 6); x += cwid; }
-      let y = top + 7;
-      const rowH = Math.min(4, (h - y - 6) / Math.max(1, devs.length + 4));
+      // fixed rows (quick job 157: they got smaller as devices connected); more rows than fit go on pages
+      const rowH = 4, y0 = top + 7, fit = Math.max(1, Math.floor((h - y0 - 8) / rowH));
+      const rows = [];
       for (const [kind, [ico, label]] of Object.entries(KINDS)) {
         const list = devs.filter((d) => d.kind === kind);
         if (!list.length) continue;
-        y += rowH; g.font = `500 1.9px ${FONT.ui}`; spaced(g, 0.08); g.fillStyle = C.dim; g.fillText(label, L, y); spaced(g, 0);
-        g.fillStyle = C.line; g.fillRect(L, y + 0.8, cw2, 0.12); y += 0.5;
-        for (const d of list) {
-          y += rowH;
-          icon(g, ico, L + 1.2, y - 0.8, 2.4, C.dim, 1.4);
-          g.font = `${rowH * 0.62}px ${FONT.ui}`; g.fillStyle = C.text; g.fillText(d.name, L + 3, y);
-          g.font = `${FONT.linesW} ${rowH * 0.55}px ${FONT.lines}`;
-          g.fillStyle = d.lock ? C.dim : d.on ? C.primary : C.offline;
-          g.fillText(d.lock ? "Locked" : d.on === undefined ? "not known" : d.on ? "● On" : "○ Off", L + 33, y);
-          g.fillStyle = d.brain ? C.primary : C.offline; g.fillText(d.lock ? "" : d.brain ? "● Yes" : "○ No", L + 49, y);
-          g.fillStyle = C.dim; g.fillText(wrap(g, d.use, cw2 - 62, 1)[0], L + 61, y);
+        rows.push({ head: label });
+        for (const d of list) rows.push({ d, ico });
+      }
+      this.pages = Math.max(1, Math.ceil(rows.length / fit));
+      this.pageNo = Math.min(this.pageNo || 0, this.pages - 1);
+      let y = y0;
+      for (const r of rows.slice(this.pageNo * fit, (this.pageNo + 1) * fit)) {
+        y += rowH;
+        if (r.head) {
+          g.font = `500 1.9px ${FONT.ui}`; spaced(g, 0.08); g.fillStyle = C.dim; g.fillText(r.head, L, y); spaced(g, 0);
+          g.fillStyle = C.line; g.fillRect(L, y + 0.8, cw2, 0.12);
+          continue;
         }
+        const d = r.d;
+        icon(g, r.ico, L + 1.2, y - 0.8, 2.4, C.dim, 1.4);
+        g.font = `${rowH * 0.62}px ${FONT.ui}`; g.fillStyle = C.text; g.fillText(wrap(g, d.name, 26, 1)[0], L + 3, y);
+        g.font = `${FONT.linesW} ${rowH * 0.55}px ${FONT.lines}`;
+        g.fillStyle = d.on ? C.primary : C.offline; g.fillText(d.on ? "● Yes" : "○ No", L + 33, y);
+        const pw = powerWord(d);
+        g.fillStyle = pw === "On" ? C.primary : C.dim; g.fillText(pw, L + 49, y);
+        g.fillStyle = C.dim; g.fillText(wrap(g, d.use, cw2 - 66, 1)[0], L + 65, y);
+      }
+      if (this.pages > 1) { // Next page, at the bottom right
+        const nh = this.hover?.kind === "next-page", bw = 40, bx = w - L - bw, by = h - 10;
+        g.strokeStyle = nh ? C.primary : rgba(C.primary, 0.5); g.lineWidth = 0.25; g.strokeRect(bx, by, bw, 7);
+        if (nh) { g.fillStyle = rgba(C.primary, 0.16); g.fillRect(bx, by, bw, 7); }
+        g.font = `500 2.2px ${FONT.ui}`; g.fillStyle = nh ? C.hot : C.text; g.textAlign = "center";
+        g.fillText(`Next page (${this.pageNo + 1} of ${this.pages})`, bx + bw / 2, by + 4.6); g.textAlign = "left";
       }
     }
   }

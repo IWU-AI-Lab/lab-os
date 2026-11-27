@@ -4,14 +4,15 @@
 // main color. Now and then a pulse runs along a few links; while the assistant thinks the pulses run
 // toward the core, while it speaks away from it (faster when it's louder), like the hub.
 import * as THREE from "three";
-import { theme } from "/web/theme.js";
 import { C, GLOW, clamp, dotTexture, rand } from "./draw.js";
+import { maximal, minimal } from "./look.js";
 
-const N = theme.quality?.default === "maximal" ? 200 : 150;
+let N = 150; // the dots: 200 on maximal (set when the network is made, after the device's look is known)
 const LINK = 2.6; // metres: dots closer than this are linked
 
 export class Network {
   constructor() {
+    N = maximal() ? 200 : 150;
     this.home = [];
     for (let i = 0; i < N; i++) {
       const d = new THREE.Vector3().randomDirection();
@@ -97,8 +98,8 @@ export class Network {
     this.dotMat.color.copy(c);
     this.dotMat.opacity = 0.9 * show;
     this.streaks.visible = arrive < 1;
-    if (arrive >= 1) this.group.rotation.y += dt * 0.01;
-    this._pulses(dt, show * (arrive >= 1 ? 1 : 0), state, loud);
+    if (arrive >= 1 && !minimal()) this.group.rotation.y += dt * 0.01; // minimal: still, no pulses
+    this._pulses(dt, minimal() ? 0 : show * (arrive >= 1 ? 1 : 0), state, loud);
   }
 
   _pulses(dt, show, state, loud) {
