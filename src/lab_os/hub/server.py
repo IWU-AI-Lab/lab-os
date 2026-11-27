@@ -1724,7 +1724,11 @@ async def api_hub_device_ws(request: web.Request) -> web.WebSocketResponse:
 
 async def api_hub_devices(request: web.Request) -> web.Response:
     devices = request.app[HUB_DEVICES]
-    return web.json_response({"devices": devices.listing(), "sent": devices.sent()})
+    listing = devices.listing()
+    own = {lk.device for lk in request.app[BRAIN].voice.links if lk.own}
+    for d in listing:  # the Quest's page keeps its own sound: no mute or solo (quick job 166)
+        d["own_sound"] = d["name"] in own
+    return web.json_response({"devices": listing, "sent": devices.sent()})
 
 
 async def _body(request: web.Request) -> dict:
@@ -2055,6 +2059,9 @@ def create_brain_app(
         recordings=lambda: config.recordings_dir() / "greetings",
         venue_wake=lambda: app[BRAIN].venue.wake_word_on,
         say=chat.take_say,
+        # mute, solo and the greeting's device (quick job 166)
+        sound_settings=lambda: app[HUB_DEVICES].settings.all(),
+        greeting_from=config.greeting_from,
     )
     app[BRAIN] = Brain(
         place,

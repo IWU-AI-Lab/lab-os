@@ -48,7 +48,6 @@ const NOT_ELSEWHERE = new Set(["xr", "remote", "pages", "command"]);
 const SETTINGS = [
   { key: "quality", label: "Level of detail", choices: [["", "Default"], ["maximal", "Maximal"], ["full", "Full"], ["reduced", "Reduced"], ["minimal", "Minimal"]] },
   { key: "voice", label: "Way in to voice", choices: [["", "Default"], ["push-to-talk", "Push-to-talk"], ["dictation", "Dictation"], ["wake word", "Wake word"]] },
-  { key: "sound", label: "Sound", choices: [["", "Default"], ["on", "On"], ["off", "Off"]] },
 ];
 
 const S = {
@@ -159,6 +158,62 @@ function hubOf(key, devs, scr) {
 }
 const mayDrive = (d) => d.here || (d.address && S.drive.has(d.address));
 
+// ---------- mute and solo (quick job 166), as on a mixing desk ----------
+// A speaker icon (only a label) with M and S, on each card and each row of the list. M (red): nothing plays on that
+// device. S (amber): answers and greetings from every microphone play only on the soloed devices, and the other
+// screens make no sound. Kept in each device's settings. The Quest keeps its own sound: no buttons.
+const hasSound = (d) => d.kind === "hub" && d.named && !d.gone && !d.hub?.own_sound;
+const soloed = () => S.hub.filter((h) => h.named && h.solo && h.sound !== false && !h.own_sound).map((h) => h.name);
+function soundButtons(d) {
+  if (!hasSound(d)) return "";
+  const h = d.hub, solo = soloed(), muted = h.sound === false, quiet = !muted && solo.length && !h.solo;
+  const mTitle = muted ? "Muted: nothing plays here. Press to unmute." : quiet ? "Quiet: another device is soloed. Press to mute." : "Mute: nothing plays here";
+  const sTitle = h.solo ? "Soloed: every answer and greeting plays here. Press to let go." : "Solo: every answer and greeting plays here, and only here (with the other soloed devices)";
+  return `<span class="sndg"><svg class="ico spk${muted || quiet ? " off" : ""}" aria-hidden="true"><use href="/web/design/icons.svg#i-speaker"/></svg>`
+    + `<button class="snd m${muted ? " on" : quiet ? " quiet" : ""}" type="button" data-snd="m" title="${mTitle}" aria-label="Mute" aria-pressed="${muted}">M</button>`
+    + `<button class="snd s${h.solo ? " on" : ""}" type="button" data-snd="s" title="${sTitle}" aria-label="Solo" aria-pressed="${!!h.solo}">S</button></span>`;
+}
+// the list's own buttons: mute or unmute every device, show or hide every item
+async function muteAll() {
+  const hubs = devices().filter(hasSound);
+  if (!hubs.length) return;
+  const all = hubs.every((d) => d.hub.sound === false);
+  const results = [];  // one after another: the brain writes one file for every device
+  for (const d of hubs) results.push(await postJSON(`/api/hub-devices/${encodeURIComponent(d.hub.name)}/settings`, { sound: all ? "" : false }));
+  const bad = results.find((r) => !r.ok);
+  await refresh();
+  say(bad ? bad.message : all ? `${plural(hubs.length, "device")} not muted.` : `${plural(hubs.length, "device")} muted.`, !!bad);
+  render(true);
+}
+function eyeAll() {
+  const devs = devices(), keys = [...devs.map((d) => d.key), ...screens(devs).map((s) => s.key)];
+  S.layout.hidden = S.layout.hidden.length ? [] : keys;
+  saveLayout();
+  render(true);
+}
+function renderListTools() {
+  const hubs = devices().filter(hasSound), muted = hubs.length && hubs.every((d) => d.hub.sound === false);
+  const m = $("#mute-all"), e = $("#eye-all"), hidden = S.layout.hidden.length > 0;
+  m.hidden = !hubs.length;
+  m.querySelector("span").textContent = muted ? "Unmute all" : "Mute all";
+  m.title = muted ? "Let every device play sound again" : "Mute every computer and screen (not the Quest)";
+  e.querySelector("span").textContent = hidden ? "Show all" : "Hide all";
+  e.querySelector("use").setAttribute("href", `/web/design/icons.svg#${hidden ? "i-eye" : "i-eye-off"}`);
+  e.title = hidden ? "Show every item in the workspace" : "Hide every item from the workspace (the devices do not change)";
+}
+async function toggleSound(key, which) {
+  const d = devices().find((x) => x.key === key);
+  if (!d || !hasSound(d)) return;
+  const h = d.hub, body = which === "m" ? { sound: h.sound === false ? "" : false } : { solo: h.solo ? "" : true };
+  const r = await postJSON(`/api/hub-devices/${encodeURIComponent(h.name)}/settings`, body);
+  if (!r.ok) return say(r.message, true);
+  h.sound = r.settings.sound; h.solo = r.settings.solo === true;  // at once; the next poll says the same
+  const name = d.title;
+  say(which === "m" ? (h.sound === false ? `${name} is muted.` : `${name} is not muted.`)
+    : h.solo ? `${name} is soloed: every answer and greeting plays there.` : `${name} is not soloed.`);
+  render(true);
+}
+
 // ---------- drawing: the preview of a screen ----------
 function under(s) {
   const d = s.device, title = devTitle(d), sub = d.named && d.display_name && d.display_name !== d.name ? d.name : "";
@@ -178,9 +233,10 @@ function devRow(d) {
   r.tabIndex = 0;
   r.dataset.key = d.key;
   const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? ` ${ico("i-hand")}` : "";
-  r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${drive}</b>${eye(d.key)}`
-    + (d.gone ? "" : `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`)
-    + `<small>${esc(d.sub || KIND_WORD[d.kind])}</small>`;
+  // one line (quick job 166): the device name after a display name; ⤢ is on the card in the workspace
+  r.title = KIND_WORD[d.kind];
+  r.innerHTML = `<span class="k">${ico(KIND_ICON[d.kind])}</span><b title="${esc(d.title)}">${esc(d.title)}${d.sub ? `<span class="sub"> ${esc(d.sub)}</span>` : ""}${drive}</b>`
+    + soundButtons(d) + eye(d.key);
   return r;
 }
 function scrRow(s, under) {
@@ -197,7 +253,6 @@ function scrRow(s, under) {
   r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span>`
     + (under ? `<b title="${esc(`${name}, ${sub}`)}">${esc(name)}<span class="sub">, ${esc(sub)}</span></b>` : `<b title="${esc(name)}">${esc(name)}</b>`)
     + eye(s.key)
-    + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button>`
     + (under ? "" : `<small>${esc(sub)}</small>`);
   return r;
 }
@@ -219,7 +274,7 @@ function renderLists(devs, scr) {
   }
   if (!dl.children.length) dl.innerHTML = `<div class="empty">${devs.length ? "No device or screen matches the search." : "No device is connected."}</div>`;
   $("#dev-count").textContent = `${plural(devs.length, "device")}, ${plural(scr.length, "screen")}`;
-  $("#show-all").hidden = !S.layout.hidden.length;
+  renderListTools();
 }
 
 // ---------- the Pages list ----------
@@ -402,6 +457,7 @@ function renderWorkspace(devs, scr) {
     const mine = scr.filter((s) => s.group === d.key && !isHidden(s.key));
     const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? `<span class="k" title="May drive a real arm">${ico("i-hand")}</span>` : "";
     el.innerHTML = `<div class="head"><span class="k">${ico(KIND_ICON[d.kind])}</span><b>${esc(d.title)}</b>${d.sub ? `<small>${esc(d.sub)}</small>` : ""}${drive}<span class="grow"></span>`
+      + soundButtons(d)
       + (d.gone ? "" : `<button class="iconbtn more" type="button" title="Settings and actions">⋯</button>`
         + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`) + `</div>`
       + (mine.length || d.gone ? "" : `<div class="what${d.bad ? " bad" : ""}">${esc(d.what || KIND_WORD[d.kind])}</div>`);
@@ -579,13 +635,15 @@ $("#ws").addEventListener("click", (e) => {
   const node = e.target.closest(".node")?.dataset.key || key;
   if (b.classList.contains("foc")) focus(node);
   else if (b.classList.contains("more")) openMenu(node, b);
+  else if (b.dataset.snd) toggleSound(node, b.dataset.snd);
 });
 $("#devices").addEventListener("click", (e) => {
   const row = e.target.closest(".row");
   if (!row) return;
   const key = row.dataset.key;
   if (e.target.closest(".eye")) return hide([key], !isHidden(key));
-  if (e.target.closest(".foc")) return focus(key.startsWith("s:") ? `d:${key.slice(2).split("#")[0]}` : key);
+  const snd = e.target.closest(".snd");
+  if (snd) return toggleSound(key, snd.dataset.snd);
   pick(key, e.ctrlKey || e.metaKey || e.shiftKey);
 });
 $(".cc").addEventListener("keydown", (e) => {
@@ -598,7 +656,8 @@ $(".cc").addEventListener("keydown", (e) => {
 });
 $("#search").addEventListener("input", (e) => { S.search = e.target.value; render(true); });
 $("#fit").addEventListener("click", () => { placeNew([...$("#stage").children]); S.autoFit = true; autoFit(true); });
-$("#show-all").addEventListener("click", () => { S.layout.hidden = []; saveLayout(); render(true); });
+$("#eye-all").addEventListener("click", eyeAll);
+$("#mute-all").addEventListener("click", muteAll);
 
 // ---------- workspace-only changes ----------
 function hide(keys, yes) {

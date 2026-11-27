@@ -402,6 +402,14 @@ async def voice_app(
     return app, conv, assistant
 
 
+def new_start(app) -> None:
+    """A start some time after the last one: the greeting may play again (quick job 166: once
+    for all the screens that start together)."""
+    from lab_os.hub.server import BRAIN
+
+    app[BRAIN].voice.last_greet = 0.0
+
+
 async def until(ws, kind, events, timeout=5.0):
     while True:
         msg = await asyncio.wait_for(ws.receive(), timeout)
@@ -424,6 +432,7 @@ async def test_push_to_talk_turn(aiohttp_client, aiohttp_server, key, tmp_path):
         "setup": "test",
         "where": "Test voice",
         "service": "gemini",
+        "solo": [],  # no device soloed (quick job 166)
     }
     ws = await client.ws_connect("/ws/voice")
     await ws.send_json({"type": "listen", "mode": "ask"})
@@ -602,6 +611,7 @@ async def test_the_second_start_plays_the_recording(aiohttp_client, aiohttp_serv
 
     async def start(opening, way="push_to_talk"):
         conv.clear(opening=opening)
+        new_start(app)
         ws = await client.ws_connect("/ws/voice")  # a new start: a new page connection
         await ws.send_json({"type": "greet", "way": way})
         events = []
@@ -654,6 +664,7 @@ async def test_a_saved_greeting_plays_while_voice_is_paused(
     await until(ws, "audio_end", [])
     await ws.close()
     conv.spend.budget_usd = 0.0  # voice paused (the budget): the recording still plays
+    new_start(app)
     ws = await client.ws_connect("/ws/voice")
     await ws.send_json({"type": "greet", "way": "push_to_talk"})
     end = await until(ws, "audio_end", [])
@@ -685,8 +696,10 @@ async def test_the_greeting_without_a_microphone_has_no_hint(
 
 def test_the_hubs_speak_the_greeting():
     design = (SRC / "hub/web/design.html").read_text()
-    assert "spokenGreeting" in design and "V.playHeld()" in design
-    assert "S.sound" in design.split("function spokenGreeting")[1][:200]  # this screen's sound
+    assert "spokenGreeting" in design and "V?.playHeld()" in design
+    # a muted screen asks too: the brain plays it on one device (quick job 166); not with ?sound=0
+    assert 'params.get("sound")' in design.split("function spokenGreeting")[1][:200]
+    assert "V?.hold()" in design  # a screen started from another one keeps its greeting
 
 
 async def test_the_greeting_hint_follows_the_way_in(aiohttp_client, aiohttp_server, key, tmp_path):
@@ -1151,6 +1164,7 @@ async def test_the_greeting_follows_the_persona(aiohttp_client, aiohttp_server, 
     said = []
     for p in (now["p"], Persona(id="lab", display_name="L", voice="test", wake_word="ok_computer")):
         now["p"] = p
+        new_start(app)
         ws = await client.ws_connect("/ws/voice")
         await ws.send_json({"type": "greet", "way": "wake_word"})
         events = []

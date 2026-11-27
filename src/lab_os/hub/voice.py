@@ -26,6 +26,13 @@ words); the question ends when the service hears a pause after it, when the turn
 a finished sentence (quick job 110, lab_os.ai.turn), or after the page's silence; the chat's and
 the voice's connections are opened while the person talks. Each turn's timing is logged
 ("voice timing …") and kept for `GET /api/voice/timings`.
+
+Where the sound plays (quick job 166): each device may be muted (`sound: false`) or soloed
+(`solo: true`) in its settings (the Command Center's M and S). With a soloed device there, every
+answer and greeting plays on the soloed devices, from any microphone (a phone's too); else an
+answer plays on the screen that asked, unless that screen is muted. One greeting for every start:
+the first device of `greeting_from` (⚙ → The Lab) that is there and not muted speaks it, else the
+screen that started. The Quest's own page keeps its own sound (`?own=1`): none of this changes it.
 """
 
 import asyncio
@@ -94,7 +101,7 @@ CONVERSE_END = (
 CONVERSE_NEXT_S = 0.3  # after the answer has played: the next question's listening starts
 PLAYING_HOLD_S = 3.0  # "still playing" from the page holds this much longer
 IGNORED_LOG_EVERY_S = 10.0  # a heard wake word that was ignored (a screen busy): logged this often
-GREET_EVERY_S = 10.0
+GREET_EVERY_S = 10.0  # one greeting for all the screens that start together (quick job 166)
 MAX_UTTERANCE_S = 60.0  # a mic held longer than this is stopped (a stuck key)
 WAKE_UTTERANCE_S = 20.0  # after the wake word: the longest question
 WAKE_WINDOW_S = 0.3  # several screens listen: wait this long for the others, best one answers
@@ -325,6 +332,11 @@ class VoiceDesk:
     venue_wake: Callable[[], bool] = lambda: True  # the venue allows the wake word
     # a typed turn's answer to speak (visitor mode's welcome, quick job 35), taken once; None = none
     say: Callable[[], str | None] = lambda: None
+    # each device's settings by device name (`sound: false` = muted, `solo: true`; quick job 166)
+    sound_settings: Callable[[], dict] = lambda: {}
+    # the devices that may speak the greeting, in order (`brain` = the brain's own computer)
+    greeting_from: Callable[[], list[str]] = lambda: ["newline", "brain"]
+    last_greet: float = 0.0
     wake_models: WakeModels = field(default_factory=WakeModels)
     turn_model: TurnModel = field(default_factory=TurnModel)  # a finished question? (quick job 110)
     timings: deque = field(default_factory=lambda: deque(maxlen=TIMINGS_KEPT))
@@ -417,7 +429,74 @@ class VoiceDesk:
         wake_why = self.wake_why_not()
         wake = {"available": wake_why is None, "why": wake_why, "phrase": self.wake_phrase()}
         out = {"available": why is None, "why": why, "why_detail": self.why_not(detail=True)}
-        return out | where | {"wake": wake}
+        # the soloed devices that are there: the other screens make no sound (quick job 166)
+        solo = sorted({lk.device for lk in self.soloed()})
+        return out | where | {"wake": wake, "solo": solo}
+
+    # ---------- where the sound plays: mute and solo, per device (quick job 166) ----------
+
+    def _sounds(self) -> dict:
+        try:
+            return self.sound_settings() or {}
+        except OSError:
+            return {}
+
+    def muted(self, link: "VoiceLink", sounds: dict | None = None) -> bool:
+        sounds = self._sounds() if sounds is None else sounds
+        return bool(link.device) and sounds.get(link.device, {}).get("sound") is False
+
+    @staticmethod
+    def one_per_device(links) -> list["VoiceLink"]:
+        """One page of each device, the one open longest: a device's monitors share its
+        speakers, so two of them would play the same words twice."""
+        seen, out = set(), []
+        for lk in sorted(links, key=lambda lk: lk.since):
+            key = lk.device or id(lk)
+            if key not in seen:
+                seen.add(key)
+                out.append(lk)
+        return out
+
+    def soloed(self) -> list["VoiceLink"]:
+        """The soloed devices that are there and not muted (one page each)."""
+        sounds = self._sounds()
+        solo = [
+            lk
+            for lk in self.links
+            if not lk.own
+            and lk.device
+            and sounds.get(lk.device, {}).get("solo") is True
+            and not self.muted(lk, sounds)
+        ]
+        return self.one_per_device(solo)
+
+    def outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
+        """Where `link`'s answer plays: the Quest's own page plays its own; else on the soloed
+        devices, when one is there; else on the screen that asked, unless it is muted."""
+        if link.own:
+            return [link]
+        return self.soloed() or ([] if self.muted(link) else [link])
+
+    def greeting_outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
+        """Where the greeting that `link` asked for plays: the soloed devices; else the first
+        device of `greeting_from` that is there and not muted; else `link`; else any screen."""
+        if link.own:
+            return [link]
+        if solo := self.soloed():
+            return solo
+        sounds = self._sounds()
+        free = [lk for lk in self.links if not lk.own and not self.muted(lk, sounds)]
+        try:
+            order = list(self.greeting_from())
+        except OSError:
+            order = []
+        for name in order:
+            there = [lk for lk in free if (lk.local if name == "brain" else lk.device == name)]
+            if there:
+                return self.one_per_device(there)[:1]
+        if link in free:
+            return [link]
+        return self.one_per_device(free)[:1]
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 
@@ -615,9 +694,14 @@ class VoiceDesk:
         link = sorted(links, key=lambda lk: (not lk.local, lk.device))[0]
         if link.task is not None and not link.task.done():
             return f"Error: {link.device or 'that screen'} is talking or listening now."
-        link.task = asyncio.get_running_loop().create_task(link._say(self.setup(), text))
-        log.info("voice: saying a sentence on %s (asked by a tool)", link.device or "a screen")
-        return f"Saying it on {link.device or 'the screen'}."
+        # a named device: there, unless it is muted; else where answers play (solo, mute)
+        outs = ([] if self.muted(link) else [link]) if device else self.outputs(link)
+        if not outs:
+            return f"Error: {link.device or 'that screen'} is muted, so nobody would hear it."
+        link.task = asyncio.get_running_loop().create_task(link._say(self.setup(), text, outs))
+        where = ", ".join(lk.device or "a screen" for lk in outs)
+        log.info("voice: saying a sentence on %s (asked by a tool)", where)
+        return f"Saying it on {where}."
 
     def keep_timing(self, timing: "TurnTiming") -> None:
         self.timings.append(timing.summary())
@@ -659,9 +743,19 @@ class Speaker:
     """Speaks an answer while it's still being written: text in with `add()`, WAVs out to the page
     in order. One request at a time, so at most a sentence waits for the service."""
 
-    def __init__(self, link: "VoiceLink", setup: VoiceSetup, split_first: bool = True):
-        """`split_first=False`: no hurry (the greeting): one request for all of it."""
+    def __init__(
+        self,
+        link: "VoiceLink",
+        setup: VoiceSetup,
+        split_first: bool = True,
+        outs: list["VoiceLink"] | None = None,
+    ):
+        """`split_first=False`: no hurry (the greeting): one request for all of it. `outs`: the
+        pages that play it (default: where the desk says, quick job 166; none: nothing is
+        spoken, so nothing is paid for)."""
         self.link, self.setup, self.split_first = link, setup, split_first
+        self.outs = link.desk.outputs(link) if outs is None else outs
+        link.elsewhere.clear()
         self.buf, self.said_chars, self.sent, self.seconds = "", 0, 0, 0.0
         self.closed = self.stopped = False
         self.cut = False  # a drafted prompt began: the rest is for the screen
@@ -670,7 +764,7 @@ class Speaker:
         self.task = asyncio.create_task(self._run())
 
     def add(self, text: str) -> None:
-        if self.cut or self.stopped:
+        if self.cut or self.stopped or not self.outs:
             return
         self.buf += text
         if "Prompt:" in self.buf:
@@ -722,7 +816,8 @@ class Speaker:
         self.seconds += wav_seconds(wav)
         if self.link.timing:
             self.link.timing.mark("first_audio")
-        self.link.send_audio(self.sent, text, wav)
+        for out in self.outs:
+            out.send_audio_for(self.link, self.sent, text, wav)
         self.sent += 1
 
 
@@ -730,10 +825,20 @@ class VoiceLink:
     """One page's voice connection."""
 
     def __init__(
-        self, desk: VoiceDesk, ws: web.WebSocketResponse, device: str = "", local: bool = False
+        self,
+        desk: VoiceDesk,
+        ws: web.WebSocketResponse,
+        device: str = "",
+        local: bool = False,
+        own: bool = False,
     ):
         self.desk, self.ws, self.device = desk, ws, device
         self.local = local  # the page runs on the brain's computer (visitor mode's tools)
+        self.own = own  # the Quest's page: its own sound, never muted, soloed or sent to
+        self.since = time.monotonic()
+        self.playing_for: VoiceLink | None = None  # another page's answer plays here (solo)
+        self.elsewhere: set[VoiceLink] = set()  # the pages that play this page's answer
+        self._waiting_elsewhere = False  # played here; the end waits for those pages
         self.hearing = None
         self._starting: asyncio.Task | None = None  # connecting to the service (audio waits)
         self.mode = "ask"
@@ -785,6 +890,24 @@ class VoiceLink:
             }
         )
 
+    def send_audio_for(self, asker: "VoiceLink", seq: int, text: str, wav: bytes) -> None:
+        """A piece of `asker`'s answer or greeting, played here (quick job 166: `asker` may be
+        another page, e.g. a phone, when this device is soloed or speaks the greeting)."""
+        if asker is not self:
+            if self.playing_for is not asker:
+                self.playing_for = asker
+                self.send({"type": "audio_begin"})  # more comes, until audio_end
+            asker.elsewhere.add(self)
+        self.send_audio(seq, text, wav)
+
+    def audio_end(self, outs: list["VoiceLink"], count: int, **extra) -> None:
+        """This page's answer or greeting is all sent: each page that played it is told, then
+        this one (`count` 0 when it played elsewhere)."""
+        for out in outs:
+            if out is not self:
+                out.send({"type": "audio_end", "count": count} | extra)
+        self.send({"type": "audio_end", "count": count if self in outs else 0} | extra)
+
     async def _write(self) -> None:
         while True:
             msg = await self._out.get()
@@ -818,6 +941,9 @@ class VoiceLink:
             self._stopping = False
         self.playing_until = 0.0
         self.timing = None
+        self.playing_for = None
+        self.elsewhere.clear()
+        self._waiting_elsewhere = False
         self.send({"type": "stopped"})
         log.info("voice: %s's answer stopped: %s", self.device or "a screen", why)
         return True
@@ -858,9 +984,10 @@ class VoiceLink:
             else:
                 await self.converse_off("you pressed the button")
         elif kind == "playing":
-            if self.timing and msg.get("seq") == 0:
-                self.timing.mark("playing")
-                self._timing_done()
+            src = self.playing_for or self  # another page's answer: its timing
+            if src.timing and msg.get("seq") == 0:
+                src.timing.mark("playing")
+                src._timing_done()
         elif kind == "wake_mic":  # the page's microphone stopped or came back (the Quest)
             why = msg.get("why") or "ok"
             log.info("voice: %s's microphone: %s", self.device or "a screen", why)
@@ -1282,14 +1409,17 @@ class VoiceLink:
                 speaker.close()
                 await speaker.task
                 self.desk.chat.take_say()  # a spoken welcome was just said: nothing left to say
-                self.send({"type": "audio_end", "count": speaker.sent})
+                self.audio_end(speaker.outs, speaker.sent)
                 self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
                 if speaker.sent:
                     log.info(
-                        "voice: answer on %s spoken by %s",
+                        "voice: answer on %s spoken by %s%s",
                         self.device or "a screen",
                         voice_words(setup, speaker.models),
+                        self._played_on(speaker.outs),
                     )
+                elif not speaker.outs:
+                    log.info("voice: answer on %s not spoken: muted", self.device or "a screen")
                 if speaker.sent:
                     self.desk.assistant.set("speaking", 0.5)
                 else:
@@ -1311,12 +1441,43 @@ class VoiceLink:
         self._settle()
         self._converse_next()  # conversation mode: nothing was asked, listen again
 
+    def _played_on(self, outs: list["VoiceLink"]) -> str:
+        others = [lk.device or "a screen" for lk in outs if lk is not self]
+        return f", played on {', '.join(others)}" if others else ""
+
+    def _still_elsewhere(self) -> list["VoiceLink"]:
+        return [lk for lk in self.elsewhere if lk in self.desk.links and lk.answering()]
+
+    def _played_done(self) -> None:
+        self._timing_done()  # (a page that never said "playing")
+        self._settle()
+        self._converse_next()
+
+    def _elsewhere_done(self) -> None:
+        """A page that played this page's answer is done (or its time is up)."""
+        if not self._waiting_elsewhere:
+            return
+        left = self._still_elsewhere()
+        if left:
+            until = max(lk.playing_until for lk in left) - time.monotonic()
+            asyncio.get_running_loop().call_later(max(0.1, until), self._elsewhere_done)
+            return
+        self._waiting_elsewhere = False
+        self.elsewhere.clear()
+        self._played_done()
+
     def played(self, msg: dict) -> None:
         if msg.get("done"):
-            self._timing_done()  # (a page that never said "playing")
             self.playing_until = 0.0
-            self._settle()
-            self._converse_next()
+            asker, self.playing_for = self.playing_for, None
+            if asker is not None and asker is not self:  # another page's answer ended here
+                asker.elsewhere.discard(self)
+                asker._elsewhere_done()
+            if self._still_elsewhere():  # this page's answer still plays on another screen
+                self._waiting_elsewhere = True
+                self._elsewhere_done()
+                return
+            self._played_done()
         elif not self.desk.chat.busy:
             self.playing_until = max(self.playing_until, time.monotonic() + PLAYING_HOLD_S)
             self.desk.assistant.set(
@@ -1326,33 +1487,51 @@ class VoiceLink:
     def greet(self, way: str) -> None:
         """The spoken greeting after the jump: the time of day and a hint how to talk, from its
         recording when this voice has said it before (no request, works offline), else spoken
-        now and saved."""
+        now and saved. One greeting for all the screens that start together, on one device
+        (quick job 166: `greeting_outputs`); the Quest's page keeps its own."""
         if self.task and not self.task.done():
             return  # a turn runs: it ends with its own audio_end
-        if time.monotonic() - self.last_greet < GREET_EVERY_S:
+        desk, now = self.desk, time.monotonic()
+        if now - (self.last_greet if self.own else desk.last_greet) < GREET_EVERY_S:
             self._greeted(0)
             return
         try:
-            setup = self.desk.setup()
+            setup = desk.setup()
         except NoVoice:
             self._greeted(0)
             return
-        hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=self.desk.wake_phrase())
-        text = spoken_greeting(self.desk.greeting(), hint)
-        folder = self.desk.recordings()
-        # the active persona's: its wake word in the hint, its own recording (quick job 84)
-        saved = greeting_file(folder, setup, text, self.desk.persona().id) if folder else None
-        if saved and saved.is_file():
-            self.last_greet = time.monotonic()
-            log.info("voice: the greeting, from its recording by %s", voice_words(setup, []))
-            self.send_audio(0, text, saved.read_bytes())
-            self._greeted(1)
-            return
-        if self.desk.why_not():
+        outs = desk.greeting_outputs(self)
+        if not outs:
+            log.info("voice: no greeting: every screen is muted")
             self._greeted(0)
             return
-        self.last_greet = time.monotonic()
-        self.task = asyncio.create_task(self._greet(setup, text, saved))
+        hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=desk.wake_phrase())
+        text = spoken_greeting(desk.greeting(), hint)
+        folder = desk.recordings()
+        # the active persona's: its wake word in the hint, its own recording (quick job 84)
+        saved = greeting_file(folder, setup, text, desk.persona().id) if folder else None
+        if saved and saved.is_file():
+            self._mark_greeted(now)
+            log.info(
+                "voice: the greeting, from its recording by %s%s",
+                voice_words(setup, []),
+                self._played_on(outs),
+            )
+            for out in outs:
+                out.send_audio_for(self, 0, text, saved.read_bytes())
+            self.audio_end(outs, 1, greeting=True)
+            return
+        if desk.why_not():
+            self._greeted(0)
+            return
+        self._mark_greeted(now)
+        self.task = asyncio.create_task(self._greet(setup, text, saved, outs))
+
+    def _mark_greeted(self, now: float) -> None:
+        if self.own:
+            self.last_greet = now
+        else:
+            self.desk.last_greet = now
 
     def say(self) -> None:
         """Speak the welcome a typed turn left waiting (visitor mode, typed on this screen): only
@@ -1363,12 +1542,12 @@ class VoiceLink:
             return
         self.task = asyncio.create_task(self._say(self.desk.setup(), text))
 
-    async def _say(self, setup: VoiceSetup, text: str) -> None:
-        speaker = Speaker(self, setup, split_first=False)
+    async def _say(self, setup: VoiceSetup, text: str, outs: list | None = None) -> None:
+        speaker = Speaker(self, setup, split_first=False, outs=outs)
         speaker.add(text)
         speaker.close()
         await speaker.task
-        self.send({"type": "audio_end", "count": speaker.sent})
+        self.audio_end(speaker.outs, speaker.sent)
         self.desk.log_spend(setup, 0, speaker.seconds, "spoken")
         if speaker.sent:
             self.desk.assistant.set("speaking", 0.5)
@@ -1378,7 +1557,9 @@ class VoiceLink:
     def _greeted(self, count: int) -> None:
         self.send({"type": "audio_end", "count": count, "greeting": True})
 
-    async def _greet(self, setup: VoiceSetup, text: str, saved: Path | None) -> None:
+    async def _greet(
+        self, setup: VoiceSetup, text: str, saved: Path | None, outs: list["VoiceLink"]
+    ) -> None:
         try:
             used: list[str] = []
             wav = await speak_any(self.desk.session(), setup, text, self.desk.resting, used=used)
@@ -1386,7 +1567,11 @@ class VoiceLink:
             self.send({"type": "voice_error", "message": str(e)})
             self._greeted(0)
             return
-        log.info("voice: the greeting, spoken now by %s", voice_words(setup, used))
+        log.info(
+            "voice: the greeting, spoken now by %s%s",
+            voice_words(setup, used),
+            self._played_on(outs),
+        )
         if saved and used[:1] != list(setup.speak_models[:1]):
             # another model spoke it (the first was over its limit): it can sound like another
             # person, so it isn't kept as this voice's recording (quick job 47)
@@ -1405,8 +1590,10 @@ class VoiceLink:
                 log.warning(
                     "voice: couldn't save the greeting (%s): it's spoken again next time", e
                 )
-        self.send_audio(0, text, wav)
-        self._greeted(1)
+        outs = [lk for lk in outs if lk in self.desk.links]  # a page that closed meanwhile
+        for out in outs:
+            out.send_audio_for(self, 0, text, wav)
+        self.audio_end(outs, 1, greeting=True)
         self.desk.log_spend(setup, 0, wav_seconds(wav), "greeting")
 
     async def close(self) -> None:
@@ -1421,7 +1608,8 @@ async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketRespon
     ws = web.WebSocketResponse(heartbeat=20, max_msg_size=4 * 1024 * 1024)
     await ws.prepare(request)
     device = re.sub(r"[^a-z0-9-]", "", request.query.get("device", "").lower())[:32]
-    link = VoiceLink(desk, ws, device, local=is_local(request))
+    own = request.query.get("own") == "1"  # the Quest's page: its own sound (quick job 166)
+    link = VoiceLink(desk, ws, device, local=is_local(request), own=own)
     desk.links.add(link)
     try:
         async for msg in ws:
