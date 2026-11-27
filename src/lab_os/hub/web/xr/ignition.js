@@ -1,7 +1,7 @@
 // The ignition screen in VR, like the designed hub's (#ignite): a small core with a slow dashed ring, a
 // dotted inner ring and eight bolts, floating where the jump's lines start and the real core lands; under
-// it how to start ("Pull the trigger or pinch to start" with their icons), "Safe to start…", and the
-// place and the clock. The unlock (unlock(), ~1.35 s, before the jump): a wind-up, the bolts pull back
+// it how to start ("Pull the trigger or pinch to start" with their icons), "Safe to start.", and the
+// place (with the pin) and the clock. The unlock (unlock(), ~1.35 s, before the jump): a wind-up, the bolts pull back
 // one by one, the ring turns and opens outward, the inner ring collapses, the core swells and bursts a
 // ring of light. Units: metres; `unit` metres per unit of the hub's ignition SVG (viewBox ±70).
 import * as THREE from "three";
@@ -73,7 +73,8 @@ export class Ignition {
       const ic = h * 0.15, gap = ic * 1.9, ids = screen ? ["i-mouse", "i-key"] : hasHands ? ["i-pad", "i-hand"] : ["i-pad"];
       ids.forEach((id, i) => icon(g, id, w / 2 + (i - (ids.length - 1) / 2) * gap, h * 0.42, ic, C.primary, 1.3));
       g.font = `${FONT.linesW} ${h * 0.095}px ${FONT.lines}`;
-      const text = "Safe to start. This only opens the hub; no robot moves.", tw = g.measureText(text).width, sh = h * 0.11;
+      // only these words, as the flat start screen (quick job 154)
+      const text = "Safe to start.", tw = g.measureText(text).width, sh = h * 0.11;
       const x0 = w / 2 - (tw + sh * 1.4) / 2;
       icon(g, "i-shield", x0 + sh / 2, h * 0.72, sh, C.primary, 1.4);
       g.textAlign = "left"; g.fillStyle = C.text;
@@ -85,6 +86,8 @@ export class Ignition {
       g.textBaseline = "middle"; g.textAlign = "right";
       g.font = `${FONT.linesW} ${h * 0.42}px ${FONT.lines}`; g.fillStyle = C.dim;
       g.fillText(this.place, w / 2 - h * 0.4, h / 2);
+      // the pin before the place's name, as the flat start screen (quick job 154)
+      if (this.place) icon(g, "i-pin", w / 2 - h * 0.4 - g.measureText(this.place).width - h * 0.4, h / 2, h * 0.45, C.primary, 1.4);
       g.textAlign = "left"; g.font = `${h * 0.45}px ${FONT.digits}`; g.fillStyle = C.primary;
       g.fillText(clock, w / 2 + h * 0.4, h / 2);
     }, `${this.place}|${clock}`);

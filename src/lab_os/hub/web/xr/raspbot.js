@@ -15,6 +15,7 @@ import * as THREE from "three";
 import { C, CanvasPlane, FONT, arrive, icon, rgba, spaced } from "./draw.js";
 import { drawLabels, frontIndex, seeThrough } from "/web/object-labels.js";
 import { theme } from "/web/theme.js";
+import { raspbotMotion } from "/web/raspbot-status.js";
 const LABELS = theme.labels || {}; // config/theme.yaml → labels
 
 const PX = 900;
@@ -347,9 +348,10 @@ export class RaspbotModule {
     else if (!s.connected) { text = s.message || `${s.name} is not connected.`; bad = true; }
     else if (!s.may_drive) { text = `View only: ${s.address || "this headset"} is not in drive_from.`; bad = true; }
     else {
-      const who = { free: "control: free", you: "control: you", other: "control: another page" }[s.control];
+      // the Raspbot page's words, with capital letters (quick jobs 53, 153): "Free", "You", "Another page"
+      const who = { free: "Free", you: "You", other: "Another page" }[s.control] || "Free";
       const pan = Math.round(this.look.pan), tilt = Math.round(this.look.tilt);
-      text = `${s.name}   ${s.moving ? "driving" : "stopped"}   ${who}   camera ${pan}°, ${tilt}°`;
+      text = `${s.name}: ${raspbotMotion(s)}. Control: ${who}. Camera ${pan}°, ${tilt}°.`;
     }
     this.line.paint((g, w, h) => {
       g.fillStyle = rgba(C.bg, 0.85); g.fillRect(0, 0, w, h);

@@ -22,6 +22,15 @@ import { ArmHologram, ModuleButton, ModuleTab, PowerMenu, TeleopModule, VR_MODUL
 import { Callout, DetailsPage, DeviceCard, REM_M, devicesFrom } from "./panels.js";
 import { SettingsPage } from "./settings.js";
 
+/** A venue's id as the flat hub shows it ("ai-comp-lab" → "Ai comp lab"; design.html's venueName). */
+/** The AI's strip words, as the flat hub's aiText(). */
+const aiText = (ai) => {
+  if (ai.paused) return "AI paused";
+  const name = ai.where ? `${ai.setup} (${ai.where})` : ai.setup;
+  return ai.connected === true ? `AI: ${name}` : ai.connected === false ? "AI not connected" : `AI: ${name}, checking`;
+};
+export const venueName = (v) => { const t = String(v || "").replace(/[-_]+/g, " ").trim(); return t && t[0].toUpperCase() + t.slice(1); };
+
 const R = 2.4; // the curve's radius = the core's distance
 const AZ_COL = 39; // degrees: the callout columns' centres (all of the hub fits the Quest's view)
 const DEG = Math.PI / 180;
@@ -219,6 +228,10 @@ export class HubView {
     p.x -= Math.sign(p.x) * Math.min(0.6, Math.abs(p.x)); // and toward the middle
     this.menu.mesh.position.copy(p);
     this.menu.mesh.rotation.set(0, Math.atan2(-p.x, -p.z), 0);
+    // the notch points at ⏻ (the flat hub's drop-down, quick job 154)
+    this.menu.mesh.updateMatrixWorld(true);
+    const b = new THREE.Vector3(); from.getWorldPosition(b); this.menu.mesh.worldToLocal(b);
+    this.menu.notch = clamp(b.x / this.menu.p.w + 0.5, 0, 1);
     this.menu.mesh.visible = true;
   }
   closeMenu() { this.menu.mesh.visible = false; this.menu.hover = null; }
@@ -452,10 +465,11 @@ export class HubView {
   paintStrip(now) {
     const st = this.facts.status, ai = st?.ai, clock = this.clock?.() || "";
     const items = [];
-    if (st?.venue) items.push(["i-pin", st.venue, true]);
+    // the venue only while it isn't the place's default one, as the flat strip (quick job 154)
+    if (st?.venue && !st.venue_default) items.push(["i-pin", venueName(st.venue), true]);
     if (st?.persona?.display_name) items.push(["i-user", st.persona.display_name, true]);
-    if (st) items.push(["i-globe", st.internet ? "online" : "offline", !!st.internet]);
-    if (ai) items.push(["i-chip", ai.paused ? "AI paused" : ai.connected ? `AI: ${ai.setup}` : "AI not connected", !!ai.connected && !ai.paused]);
+    if (st) items.push(["i-globe", st.internet === true ? "Online" : st.internet === false ? "Offline" : "Checking", st.internet === true]);
+    if (ai) items.push(["i-chip", aiText(ai), !!ai.connected && !ai.paused]);
     const wake = this.ask.wakeOn; // listening for the wake word: a small dot, separate from the core
     const key = JSON.stringify([items, clock, wake, wake && Math.floor(now / 250)]);
     this.strip.paint((g, w, h) => {
@@ -483,7 +497,7 @@ export class HubView {
       cutRect(g, 1.5, 1.5, w - 3, h - 3, h * 0.22); // cut corners (quick job 157)
       if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
       g.strokeStyle = hover ? C.primary : rgba(C.primary, 0.4); g.lineWidth = 3; g.stroke();
-      icon(g, "i-gear", w / 2, h / 2, w * 0.5, hover ? C.hot : C.dim, 1.8);
+      icon(g, "i-gear", w / 2, h / 2, w * 0.5, hover ? C.hot : C.text, 1.8); // the text colour (quick job 154)
     }, hover);
   }
   paintPower(hover) {
@@ -491,7 +505,7 @@ export class HubView {
       cutRect(g, 1.5, 1.5, w - 3, h - 3, h * 0.22); // cut corners (quick job 157)
       if (hover) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
       g.strokeStyle = hover ? C.primary : rgba(C.primary, 0.4); g.lineWidth = 3; g.stroke();
-      icon(g, "i-power", w / 2, h / 2, w * 0.5, hover ? C.hot : C.dim, 1.8);
+      icon(g, "i-power", w / 2, h / 2, w * 0.5, hover ? C.hot : C.text, 1.8); // the text colour (quick job 154)
     }, hover);
   }
   /** The typed log: real lines (the latest commits, the current step), one every ~9 s. */

@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-27 — A VR canvas keeps its old picture when its paint key does not change
+`CanvasPlane.paint(fn, key)` skips the drawing when `key` equals the last one. The VR ask line's key held only the question and the answer, so a new error note did not show while the question stayed the same (quick job 166).
+**Fix:** Put every value that the drawing shows in the key.
+
 ### 2026-11-27 — The System Map core showed through a screen in front of it
 The VR core draws its rings late. That order put the rings and the center over screen previews in the map.
 The map now sorts the core with the other objects by distance and checks its depth against solid devices.
