@@ -9,6 +9,8 @@ import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
 import { maximal, minimal } from "./look.js";
+// depth (quick job 158): the rings about 3 cm apart, so they part as your head moves; minimal keeps them flat
+const ringGap = () => (minimal() ? 0.004 : 0.026);
 const PX = 1024; // canvas pixels across the 264-unit orb
 const S = PX / 264;
 
@@ -79,7 +81,7 @@ export class Core {
       const p = new CanvasPlane(size, size, PX / size, { additive: true });
       p.paint(ringCanvas(d.fn, d.glow && !minimal())); // minimal: no glow
       p.mesh.position.z = z;
-      z += 0.004;
+      z += ringGap();
       p.mesh.renderOrder = 20;
       this.inner.add(p.mesh);
       this.rings[id] = { p, op: d.op, a: 0, v: SPIN[id], cur: SPIN[id], on: 0, onAt: null, hitAt: -1e9, from: RING_FROM[id] };

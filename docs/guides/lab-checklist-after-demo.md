@@ -269,3 +269,7 @@ Quick job 155. Use the 4K screen, a Pi touchscreen, a phone, the Quest and the l
 ## X4. Settings, All Pages and the other pages
 
 - **X4.1** Open [part 4 of the UX review](../plan/ux-review.md#4-settings-all-pages-the-command-center-and-the-other-pages-quick-job-156). Check each item on the specified screen. Which items still need work?
+
+## X6. After the demo: depth in the hub and in VR (10 min)
+Quick job 158, a first version. Use the lab desktop on **Full** and the Quest.
+- **X6.1** On the hub, move the mouse slowly from side to side. Open **Monitor**. → Do the panels' lines and the network move a little? Does the hub behind the page look out of focus? (yes / no for each) Open the VR hub on the Quest and move your head from side to side. → Does the core float in front of the panels? Do its rings part? (yes / no for each) What do you want to change? (a sentence)

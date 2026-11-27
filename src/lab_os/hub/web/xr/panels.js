@@ -74,6 +74,12 @@ export class Callout {
     this.hMax = id === "devices" ? 24 : 12; // rem: Devices grows when its list is open
     this.p = new CanvasPlane(W * REM_M, this.hMax * REM_M, R / REM_M);
     this.p.mesh.userData.hit = this;
+    // depth (quick job 158): the fill is a plane of its own 4 cm behind; the line, the tab and the content float
+    // in front of it
+    this.back = new CanvasPlane(W * REM_M, this.hMax * REM_M, R / REM_M / 3);
+    this.back.mesh.position.z = -0.04;
+    this.back.mesh.renderOrder = -1;
+    this.p.mesh.add(this.back.mesh);
     this.h = 9; // rem, the drawn height
     this.data = null;
     this.hover = null; // what the pointer is on
@@ -109,15 +115,15 @@ export class Callout {
     g.restore();
     this.h = HEAD + 0.55 + ch + 1.05;
     // the fill under the line: a touch brighter just under it, a cut corner at the bottom right
-    const top = HEAD + 3 / R, cut = 0.7;
-    g.save();
-    g.globalCompositeOperation = "destination-over";
-    g.beginPath(); g.moveTo(0, top); g.lineTo(W, top); g.lineTo(W, this.h - cut); g.lineTo(W - cut, this.h); g.lineTo(0, this.h); g.closePath();
-    const fill = g.createLinearGradient(0, top, 0, top + 2.5);
-    fill.addColorStop(0, rgba(C.primary, 0.07)); fill.addColorStop(1, rgba(C.primary, 0));
-    g.fillStyle = fill; g.fill();
-    g.fillStyle = rgba(C.surface, 0.8); g.fill();
-    g.restore();
+    const top = HEAD + 3 / R, cut = 0.7, h = this.h;
+    this.back.paint((b, bw) => {
+      b.scale(bw / W, bw / W);
+      b.beginPath(); b.moveTo(0, top); b.lineTo(W, top); b.lineTo(W, h - cut); b.lineTo(W - cut, h); b.lineTo(0, h); b.closePath();
+      b.fillStyle = rgba(C.surface, 0.8); b.fill();
+      const fill = b.createLinearGradient(0, top, 0, top + 2.5);
+      fill.addColorStop(0, rgba(C.primary, 0.1)); fill.addColorStop(1, rgba(C.primary, 0));
+      b.fillStyle = fill; b.fill();
+    }, h.toFixed(2));
     // the line, the end node (facing the core), the lead-in, the ticks
     const lineC = lit ? C.primary : rgba(C.primary, 0.55);
     g.fillStyle = lineC; g.fillRect(0, HEAD - 1 / R, W, 1 / R);

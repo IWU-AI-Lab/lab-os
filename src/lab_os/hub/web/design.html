@@ -586,6 +586,18 @@ body[data-mod="empty"] #mod-empty { display: grid; }
 #module .back { position: absolute; right: 1.2rem; top: 0.8rem; display: flex; align-items: center; justify-content: center; width: max(2.6rem, 44px); height: max(2.6rem, 44px); font-size: 1.3rem; color: var(--text); background: transparent; border: 1px solid var(--line); padding: 0; cursor: pointer; }
 #module .back:hover, #module .back:focus-visible { border-color: var(--c); color: var(--hot); outline: none; }
 body.folded #hub { transform: scale(0.93); opacity: 0.12; filter: blur(2px); }
+/* depth (quick job 158, choice 6: light, not shadow first). The layer behind dims and blurs, like a camera's
+   focus; the core in front grows a little and casts a faint light of its own colour on what is behind it. */
+body:is(.q-full, .q-maximal).folded #hub { filter: blur(3px); }
+body:is(.q-full, .q-maximal) #net { transition: opacity 0.7s; }
+body:is(.q-full, .q-maximal).folded #net { opacity: 0.45; }
+body:is(.q-full, .q-maximal) #orb-dock::before { content: ""; position: absolute; inset: -45%; z-index: -1; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 16%, transparent), color-mix(in srgb, var(--c) 5%, transparent) 60%, transparent); }
+body:is(.q-full, .q-maximal)[data-mod] #orb-dock { scale: 1.08; }
+/* a panel's decoration (its line and tab, a button's brackets) floats a few pixels off the panel and moves a
+   little against the pointer (--lx, --ly: -1 to 1, set by onPointer); its light falls on the panel under it */
+body:is(.q-full, .q-maximal) .side .head { translate: calc(var(--lx, 0) * -2px) calc(var(--ly, 0) * -2px - 3px); filter: drop-shadow(0 3px 5px color-mix(in srgb, var(--c) 30%, transparent)); }
+body:is(.q-full, .q-maximal) .mod::before, body:is(.q-full, .q-maximal) .mod::after { translate: calc(var(--lx, 0) * -3px) calc(var(--ly, 0) * -3px); }
 /* minimal: a plain fill and a short fade, no blur and no scale (quick job 154) */
 body.q-minimal #hub { transition: opacity 0.15s; }
 body.q-minimal.folded #hub { transform: none; filter: none; opacity: 0.08; }
@@ -1362,7 +1374,8 @@ function seedNetwork() {
   const n = Math.max(40, Math.round((W * H) / 1e6 * per));
   dots = Array.from({ length: n }, () => {
     const a = rand(0, TAU), v = rand(4, 14), x = rand(0, W), y = rand(0, H);
-    return { x, y, rx: x, ry: y, bvx: Math.cos(a) * v, bvy: Math.sin(a) * v, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vis: 1 };
+    // z: its depth, 0.3 (far) to 1 (near). Far dots and links are dimmer, softer and move less (quick job 158)
+    return { x, y, rx: x, ry: y, bvx: Math.cos(a) * v, bvy: Math.sin(a) * v, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vis: 1, z: rand(0.3, 1) };
   });
   fires = []; rain = [];
   const edge = Math.max(26, W * 0.03), cols = S.quality === "maximal" ? 5 : 3;
@@ -1412,6 +1425,8 @@ function stepNetwork(dt, now) {
   const morph = S.morph ? clamp((now - S.morph.t0) / 1600, 0, 1) : 1, mo = 1 - Math.pow(1 - morph, 3);
   if (morph < 1) drawStars(dt, now, "wait", 1 - mo); else if (S.morph) { S.morph = null; stars = []; }
   const L = NET.link, L2 = L * L, R = NET.push, R2 = R * R, ox = W / 2, oy = H / 2;
+  // the parallax: the near dots move up to 10 px against the pointer, the far ones less
+  const inView = pointer.x > -1e3, par = { x: inView ? (pointer.x / W - 0.5) * 20 : 0, y: inView ? (pointer.y / H - 0.5) * 20 : 0 };
   // hyperspace arrival: a hard brake (fast at first, settling slowly), so streaks start long and shrink to dots
   // a long ease-out (a rollercoaster coming to a halt); the network starts white-hot and dims as it settles
   const arriving = S.hyper && S.hyper.phase === "arrive" ? clamp((now - S.hyper.t0) / HYPER.brake, 0, 1) : 1;
@@ -1424,7 +1439,7 @@ function stepNetwork(dt, now) {
     d.x += d.vx * dt; d.y += d.vy * dt;
     if (d.x < -20) d.x = W + 20; else if (d.x > W + 20) d.x = -20;
     if (d.y < -20) d.y = H + 20; else if (d.y > H + 20) d.y = -20;
-    d.rx = ox + (d.x - ox) * ease; d.ry = oy + (d.y - oy) * ease;
+    d.rx = ox + (d.x - ox) * ease - par.x * d.z; d.ry = oy + (d.y - oy) * ease - par.y * d.z;
     if (morph < 1) { d.rx = d.fx + (d.rx - d.fx) * mo; d.ry = d.fy + (d.ry - d.fy) * mo; }
     d.vis = clamp((S.reveal - Math.hypot(d.x - ox, d.y - oy)) / 120, 0, 1);
   }
@@ -1448,7 +1463,7 @@ function stepNetwork(dt, now) {
       // while the stars glide into place, links follow where the dots are drawn, so they form as dots meet
       const b = dots[j], dx = morph < 1 ? a.rx - b.rx : a.x - b.x, dy = morph < 1 ? a.ry - b.ry : a.y - b.y, dd = dx * dx + dy * dy;
       if (dd < L2) {
-        const al = (1 - Math.sqrt(dd) / L) * (0.32 + heat * 0.6) * bright * Math.min(a.vis, b.vis) * Math.max(ease, heat) * mo * mo;
+        const al = (1 - Math.sqrt(dd) / L) * (0.32 + heat * 0.6) * bright * Math.min(a.vis, b.vis) * Math.max(ease, heat) * mo * mo * (0.25 + 0.75 * Math.min(a.z, b.z));
         if (al < 0.01) continue;
         cx.strokeStyle = rgba(netRGB, al);
         cx.beginPath(); cx.moveTo(a.rx, a.ry); cx.lineTo(b.rx, b.ry); cx.stroke();
@@ -1457,8 +1472,9 @@ function stepNetwork(dt, now) {
   }
   for (const d of dots) {
     if (!d.vis) continue;
-    cx.fillStyle = rgba(netRGB, (0.55 + heat * 0.45) * d.vis * bright);
-    const ds = 2 + heat * 1.5; cx.fillRect(d.rx - ds / 2, d.ry - ds / 2, ds, ds);
+    // a far dot: fainter and a little larger (out of focus)
+    cx.fillStyle = rgba(netRGB, (0.55 + heat * 0.45) * d.vis * bright * (0.2 + 0.8 * d.z));
+    const ds = 2 + heat * 1.5 + (1 - d.z) * 1.6; cx.fillRect(d.rx - ds / 2, d.ry - ds / 2, ds, ds);
   }
   if (S.quality !== "reduced" && S.booted) {
     const mode = S.state === "thinking" ? "in" : S.state === "speaking" ? "out" : null;
@@ -3392,8 +3408,15 @@ addEventListener("keydown", (e) => {
 addEventListener("keyup", (e) => { if (e.code === "Space" && V?.pressed && !VD) { e.preventDefault(); talkEnd(); } });
 document.addEventListener("visibilitychange", () => syncWake());
 addEventListener("blur", () => { if (V?.pressed && !VD) talkEnd(); });  // the window lost the key's release
+let lightRaf = 0;
 function onPointer(e) {
   pointer.x = e.clientX; pointer.y = e.clientY;
+  // the depth's parallax (quick job 158): where the pointer is, -1 to 1, once a frame
+  if (!lightRaf) lightRaf = requestAnimationFrame(() => {
+    lightRaf = 0;
+    body.style.setProperty("--lx", clamp(pointer.x / innerWidth * 2 - 1, -1, 1).toFixed(3));
+    body.style.setProperty("--ly", clamp(pointer.y / innerHeight * 2 - 1, -1, 1).toFixed(3));
+  });
   S.lastInput = performance.now();
   if (S.sleeping && performance.now() > S.sleepGuard) wake();
 }
