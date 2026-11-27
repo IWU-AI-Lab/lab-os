@@ -15,6 +15,7 @@
 // the pointer); double-click a device to focus it. Keys: arrows orbit, Shift + arrows pan, + and - zoom,
 // F focuses the selected device, V or Home resets the view.
 import * as THREE from "three";
+import { Core } from "./xr/core.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { loadArmModel } from "/static/arm/arm-model.js";
 import { loadRaspbotModel } from "/web/raspbot-model.js";
@@ -33,7 +34,6 @@ const textColor = color("colors.text");
 const textDim = color("colors.text_dim");
 const motion = theme.motion || {};
 const ringTurns = motion.idle?.ring_turn_s || [25, 40, 70];
-const breatheS = theme.assistant?.idle?.breathe_s || 5;
 const fireEvery = theme.network?.fire_every_s || [2, 6];
 const panelMs = motion.panel_ms || 600;
 const staggerMs = motion.stagger_ms || 60;
@@ -77,16 +77,13 @@ const wires = {
   selected: new THREE.LineBasicMaterial({ color: hot }),
 };
 const point = new THREE.MeshBasicMaterial({ color: primary });
-const crystal = new THREE.MeshStandardMaterial({
-  color: primary, emissive: primary, emissiveIntensity: 0.63, roughness: 0.45,
-});
 const links = {
   usb: new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.55 }),
   network: new THREE.LineDashedMaterial({ color: primary, dashSize: 0.16, gapSize: 0.13, transparent: true, opacity: 0.55 }),
 };
 // Decorations, on the full and maximal looks only (DESIGN.md → Quality levels): a polar floor grid with
 // + marks, a line from each device down to the floor, a turning segmented ring under each connected device,
-// a radar ping from the core now and then; maximal adds a satellite ring at the core.
+// a radar ping from the core now and then.
 const faint = (opacity) => new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity, depthWrite: false });
 const dropLine = faint(0.16), footLine = faint(0.32), plusLine = faint(0.22), tickLine = faint(0.45);
 const dropGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, -1, 0)]);
@@ -153,32 +150,8 @@ function arc(radius, start, length, height, material) {
   return new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
 }
 
-function buildCore(texture) {
-  const core = new THREE.Group();
-  const hub = new THREE.Group();
-  hub.position.y = 0.87;
-  core.add(hub);
-
-  const jewel = new THREE.Mesh(new THREE.IcosahedronGeometry(0.31), crystal);
-  const cage = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.57)), wires.on);
-  const glow = halo(texture, primary, 0.75, 2.9);
-  const centre = halo(texture, hot, 0.52, 0.74);
-  hub.add(jewel, cage, glow, centre);
-
+function buildCoreFloor() {
   const quiet = new THREE.LineBasicMaterial({ color: primary, transparent: true, opacity: 0.3 });
-  // Each ring turns in its own frame (spin), inside a tilted frame (the tilt stays put).
-  const ring = (radius, parts, tilt) => {
-    const spin = new THREE.Group();
-    for (const [start, length, material] of parts) spin.add(arc(radius, start, length, 0, material));
-    const frame = new THREE.Group();
-    frame.rotation.set(...tilt);
-    frame.add(spin);
-    hub.add(frame);
-    return spin;
-  };
-  const inner = ring(0.85, [[0.2, 2.15, wires.selected], [3.1, 2.1, quiet]], [0.67, 0, 0.34]);
-  const outer = ring(1.03, [[0.25, 2.7, wires.on], [3.35, 2.45, quiet]], [-0.55, 0, -0.78]);
-
   const floor = new THREE.Group();
   floor.add(arc(1.52, 0, Math.PI * 2, 0.02, quiet), arc(2.0, 0, Math.PI * 2, 0.01, quiet));
   const segments = new THREE.Group();
@@ -193,9 +166,7 @@ function buildCore(texture) {
   }
   const tickRing = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ticks), quiet);
   floor.add(segments, tickRing);
-  core.add(floor);
-  return { core, hub, cage, glow, centre, turning: [[inner, ringTurns[0], 1], [outer, ringTurns[1], -1],
-    [segments, ringTurns[2], 1], [tickRing, ringTurns[2] * 1.6, -1]] };
+  return { floor, segments, tickRing };
 }
 
 // A reticle around the selected device: four corner arcs that close in and turn slowly.
@@ -354,30 +325,25 @@ export function createMap(canvas, labels, onSelect) {
   const graph = new THREE.Group();
   const signals = new THREE.Group();
   const texture = glowTexture();
-  const { core, hub, cage, glow, centre, turning } = buildCore(texture);
+  const { floor: coreFloor, segments, tickRing } = buildCoreFloor();
+  const hub = new THREE.Group();
+  hub.position.y = 1.12;
+  let orb, orbLook, persona = "";
+  fetch("/api/status", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((status) => {
+    persona = status?.persona?.id || "";
+    orb?.gyro.setPersona(persona);
+    render();
+  }).catch(() => {});
   const reticle = buildReticle();
   const pulsePool = Array.from({ length: 16 }, () => halo(texture, hot, 0.95, 0.52));
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  scene.add(graph, core, signals, starField());
-  // The decorations that don't belong to one device (rebuilt floor, the ping, maximal's extras).
-  const stage = new THREE.Group(), floor = new THREE.Group(), extras = new THREE.Group();
+  scene.add(graph, hub, coreFloor, signals, starField());
+  // The decorations that don't belong to one device (the floor and the ping).
+  const stage = new THREE.Group(), floor = new THREE.Group();
   const ping = new THREE.LineLoop(footGeometry, faint(0.5));
   ping.visible = false;
   stage.add(floor, ping);
-  const satellite = new THREE.Group();
-  const satelliteSpin = new THREE.Group();
-  satelliteSpin.add(arc(2.75, 0, 1.4, 0, tickLine), arc(2.75, 2.1, 1.4, 0, tickLine), arc(2.75, 4.2, 1.4, 0, tickLine));
-  for (let i = 0; i < 3; i++) {
-    const bead = new THREE.Mesh(marker, point);
-    bead.scale.setScalar(1.6);
-    bead.position.set(Math.cos(i * 2.1 + 1.4) * 2.75, 0, Math.sin(i * 2.1 + 1.4) * 2.75);
-    satelliteSpin.add(bead);
-  }
-  satellite.add(satelliteSpin);
-  satellite.position.y = 0.87;
-  satellite.rotation.set(1.05, 0, 0.35);
-  extras.add(satellite);
-  scene.add(stage, extras);
+  scene.add(stage);
   let floorY = -3, nextPing = 0;
   scene.fog = new THREE.FogExp2(color("colors.background"), 0.0105);
   const nodes = new Map();
@@ -393,7 +359,7 @@ export function createMap(canvas, labels, onSelect) {
   let edge = 2.2, fitDistance = 0, points = [new THREE.Vector3()];
   let selected = "", frame = 0, lastDraw = 0, lastTick = 0;
   let seen = new Set(), pulses = [], nextFire = 0, flight = null;
-  let spin = 0, lastInput = -Infinity, holding = false, onScreen = true, introduced = false;
+  let spin = 0, lastInput = -Infinity, holding = false, onScreen = true;
   let lookNow = "", lookRead = -Infinity;
   let spots = new Map();               // where each device sits now (id → position)
   const screenPictures = new Map();    // a screen's picture, kept while it shows the same page
@@ -427,7 +393,7 @@ export function createMap(canvas, labels, onSelect) {
     frame = 0;
     const width = canvas.clientWidth, height = canvas.clientHeight;
     if (!width || !height || renderer.getContext().isContextLost()) return;
-    const busy = holding || flight || pulses.length || hub.userData.born || arriving(time) || time - lastInput < 1200;
+    const busy = holding || flight || pulses.length || arriving(time) || time - lastInput < 1200;
     if (!busy && time - lastDraw < IDLE_FRAME_MS) {
       if (alive()) render();
       return;
@@ -437,6 +403,9 @@ export function createMap(canvas, labels, onSelect) {
     lastDraw = time;
     step(time, dt);
     controls.update(dt);
+    // Keep the flat heart visible from any orbit. Minimal shows the whole core flat.
+    if (orbLook === "minimal") orb.group.quaternion.copy(camera.quaternion);
+    else orb.heart.mesh.quaternion.copy(camera.quaternion);
     renderer.render(scene, camera);
     layoutLabels(width, height);
     if (alive() || busy) render();
@@ -447,21 +416,30 @@ export function createMap(canvas, labels, onSelect) {
 
   function step(time, dt) {
     const still = !moving();
-    // The core settles in once, on the first draw (it grows and turns into place).
-    if (hub.userData.born) {
-      const k = arrive(Math.min(1, (time - hub.userData.born) / 1050));
-      hub.rotation.y = (k - 1) * Math.PI * 0.85;
-      hub.scale.setScalar(0.72 + k * 0.28);
-      if (k >= 1) hub.userData.born = 0;
+    const quality = look();
+    if (quality !== orbLook) {
+      if (orb) {
+        hub.remove(orb.group);
+        orb.group.traverse(({ geometry, material }) => {
+          geometry?.dispose();
+          material?.map?.dispose();
+          material?.dispose();
+        });
+      }
+      orbLook = quality;
+      orb = new Core(0.009, quality);
+      orb.gyro.setPersona(persona);
+      orb.setRingsOn(true);
+      hub.add(orb.group);
     }
+    orb.step(still ? 0 : dt, time);
     // Idle spin: eases out on input, eases back in a few seconds after the last one.
     const want = still || holding || flight || time - lastInput < SPIN_AFTER_MS ? 0 : 1;
     spin += (want - spin) * Math.min(1, dt * (want ? 0.9 : 6));
     controls.autoRotate = spin > 0.002;
     controls.autoRotateSpeed = spin * 60 / SPIN_S;
-    const fancy = firing(), most = look() === "maximal";
+    const fancy = firing();
     stage.visible = fancy;
-    extras.visible = most;
     for (const node of nodes.values()) for (const d of node.decor) d.visible = fancy;
     if (fancy) {
       for (const node of nodes.values()) if (node.ticks) node.ticks.rotation.y += dt * 2 * Math.PI / ringTurns[1];
@@ -478,18 +456,10 @@ export function createMap(canvas, labels, onSelect) {
         ping.material.opacity = 0.45 * (1 - t);
       }
     }
-    if (most) {
-      satelliteSpin.rotation.y -= dt * 2 * Math.PI / ringTurns[0];
-    }
-    glow.visible = centre.visible = !still;
     if (!still) {
       const s = time / 1000;
-      for (const [object, period, direction] of turning) object.rotation.y = direction * s * 2 * Math.PI / period;
-      cage.rotation.y = -s * 2 * Math.PI / (ringTurns[2] * 1.3);
-      const breath = 0.5 - 0.5 * Math.cos(s * 2 * Math.PI / breatheS);
-      glow.material.opacity = 0.6 + breath * 0.25;
-      glow.scale.setScalar(2.7 + breath * 0.4);
-      centre.material.opacity = 0.42 + breath * 0.2;
+      segments.rotation.y = s * 2 * Math.PI / ringTurns[2];
+      tickRing.rotation.y = -s * 2 * Math.PI / (ringTurns[2] * 1.6);
       reticle.rotation.y = s * 2 * Math.PI / ringTurns[1];
       for (const node of nodes.values()) {
         if (node.spinner) node.spinner.rotation.y += dt * 2 * Math.PI / MODEL_TURN_S;
@@ -906,11 +876,6 @@ export function createMap(canvas, labels, onSelect) {
       if (node.curve && firing()) pulse(node.curve, node.born + panelMs * 0.4);
     });
     seen = nextSeen;
-    if (!introduced && animate) {
-      hub.userData.born = now;
-      hub.scale.setScalar(0.72);
-    }
-    introduced = true;
     resize();
   }
 

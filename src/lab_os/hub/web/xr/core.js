@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { theme } from "/web/theme.js";
 import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
-import { maximal, minimal } from "./look.js";
+import { look as headsetLook } from "./look.js";
 import { Gyro } from "/web/core-gyro.js";
 
 // the arcs are uneven (the hub's ORB_ARCS): [start, length] in turns
@@ -76,8 +76,9 @@ const DRAW = {
 
 export class Core {
   /** @param {number} unit metres per SVG unit of the hub's orb (0.005 ≈ a 1 m wide core) */
-  constructor(unit = 0.005) {
+  constructor(unit = 0.005, quality = headsetLook.q) {
     this.unit = unit;
+    this.still = quality === "minimal";
     this.group = new THREE.Group(); // placed by the caller; scaled for the startup (arrive big)
     this.inner = new THREE.Group(); // breathing etc. stay inside
     this.group.add(this.inner);
@@ -95,9 +96,9 @@ export class Core {
     let z = 0;
     for (const id of ["bars", "cross", "ticks", "merid", "band", "seg", "sat", "arcs", "tri", "thin"]) {
       const d = DRAW[id];
-      if (d.mx && !maximal()) continue;
+      if (d.mx && quality !== "maximal") continue;
       const p = new CanvasPlane(size, size, PX / size, { additive: true });
-      p.paint(ringCanvas(d.fn, d.glow && !minimal())); // minimal: no glow
+      p.paint(ringCanvas(d.fn, d.glow && !this.still)); // minimal: no glow
       p.mesh.position.z = z;
       z += ringGap();
       p.mesh.renderOrder = 20;
@@ -192,7 +193,7 @@ export class Core {
     const look = theme.assistant?.[this.state] || {};
     // minimal (quick job 157): the rings stay still, and each state has a still look of its own:
     // listening brighter, thinking the dotted ring bright and the arcs dim, speaking the hot colour
-    const still = minimal();
+    const still = this.still;
     const target = new THREE.Color(still && this.state === "speaking" ? C.hot : C[look.color] || C.primary);
     if (!target.equals(this.color)) {
       this.color.lerp(target, Math.min(1, dt * 4));
