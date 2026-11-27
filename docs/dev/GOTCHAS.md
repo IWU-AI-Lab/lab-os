@@ -4,6 +4,10 @@ Every on-the-ground surprise and its fix. Newest first. Entries that a later fix
 
 ---
 
+### 2026-11-27 — The System Map core showed through a screen in front of it
+The VR core draws its rings late. That order put the rings and the center over screen previews in the map.
+The map now sorts the core with the other objects by distance and checks its depth against solid devices.
+
 ### 2026-11-27 — The System Map core disappeared over empty space
 The VR hub core adds color and keeps the existing pixel opacity for AR. The transparent map canvas left bright pixels fully transparent.
 The map now draws an opaque background. To check the fix, view the core against empty space as well as over its base.
