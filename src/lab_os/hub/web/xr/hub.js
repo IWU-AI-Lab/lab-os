@@ -26,6 +26,7 @@ const CALLOUT_GAP = 1.9 * REM_M;
 // The whole hub ~15 % larger (quick job 60): easier to read and to point at. Scaled about your head and
 // moved back toward you so the core stays at its distance: the panels grow and spread a little wider.
 export const HUB_SCALE = 1.15;
+const CORE_AHEAD = 0.3 / HUB_SCALE; // metres in front of the panels, in the hub's own space
 
 /** Put `obj` on the curve at azimuth `az` (degrees, + = right), height y, facing you. */
 export function onCurve(obj, az, y, r = R) {
@@ -331,7 +332,9 @@ export class HubView {
   coreTarget() {
     if (this.mode === "module") return { pos: new THREE.Vector3(0.62, -0.42, -1.3), scale: 0.13 };
     const open = (this.page.mesh.visible && !this.pageClosing) || (this.settings.mesh.visible && !this.setClosing);
-    const t = open ? { pos: new THREE.Vector3(1.18, -0.66, -2.17), scale: 0.26 } : { pos: new THREE.Vector3(0, 0, -this.D), scale: 1 };
+    // on the hub the core floats about 0.3 m in front of the panels, at the same size to the eye (quick job 158)
+    const near = (this.D - CORE_AHEAD) / this.D;
+    const t = open ? { pos: new THREE.Vector3(1.18, -0.66, -2.17), scale: 0.26 } : { pos: new THREE.Vector3(0, 0, -this.D * near), scale: near };
     // in the hub's own space, which is HUB_SCALE larger (quick job 60): the same place on the page
     t.pos.multiplyScalar(HUB_SCALE); t.pos.z += this.D * (HUB_SCALE - 1);
     t.scale *= HUB_SCALE;
@@ -392,6 +395,7 @@ export class HubView {
       const k = arrive((t - delay) / 600);
       c.corner.scale.set(Math.max(0.001, k), Math.max(0.001, k), 1);
       c.p.opacity = clamp((t - delay) / 300, 0, 1) * this._dim;
+      c.back.opacity = c.p.opacity; // its fill, 4 cm behind (quick job 158)
     }
     const early = clamp((t - 300) / 600, 0, 1) * this._dim;
     this.buttons.forEach((b, i) => { // the buttons unfold after the core settles, nearest first

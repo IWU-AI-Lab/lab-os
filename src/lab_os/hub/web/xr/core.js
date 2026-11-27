@@ -11,6 +11,8 @@ import { C, GLOW, CanvasPlane, TAU, arrive, clamp, rand } from "./draw.js";
 
 const Q = theme.quality?.default || "full";
 const MAXIMAL = Q === "maximal";
+// depth (quick job 158): the rings about 3 cm apart, so they part as your head moves; minimal keeps them flat
+const RING_GAP = Q === "minimal" ? 0.004 : 0.026;
 const PX = 1024; // canvas pixels across the 264-unit orb
 const S = PX / 264;
 
@@ -81,7 +83,7 @@ export class Core {
       const p = new CanvasPlane(size, size, PX / size, { additive: true });
       p.paint(ringCanvas(d.fn, d.glow));
       p.mesh.position.z = z;
-      z += 0.004;
+      z += RING_GAP;
       p.mesh.renderOrder = 20;
       this.inner.add(p.mesh);
       this.rings[id] = { p, op: d.op, a: 0, v: SPIN[id], cur: SPIN[id], on: 0, onAt: null, hitAt: -1e9, from: RING_FROM[id] };
