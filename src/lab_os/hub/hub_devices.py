@@ -37,6 +37,7 @@ import json
 import logging
 import re
 import secrets
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -64,7 +65,8 @@ UNNAMED = "Unnamed screen"  # a page with no device name, as people see it (quic
 SETTINGS = {
     "quality": ("", "maximal", "full", "reduced", "minimal"),
     "res": ("", "auto", "1", "0.75", "0.5"),
-    "sound": None,
+    "sound": None,  # false = muted: nothing plays there, answers too (quick job 166)
+    "solo": None,  # true: answers and greetings play only on the soloed devices (quick job 166)
     "full": None,
     "startup_video": None,  # the designed hub's startup as a recording (quick job 34); off
     "voice": ("", "push-to-talk", "dictation", "wake word"),
@@ -104,6 +106,9 @@ class DeviceSettings:
 
     def __init__(self, path: Callable[[], Path] | None = None):
         self._path = path or (lambda: settings_file())  # looked up each time (tests swap it)
+        # one change at a time: each reads the file, changes it and writes it whole, so two at once
+        # (the Command Center's Mute all) lost one of them (quick job 166)
+        self._lock = threading.RLock()
 
     def _raw(self) -> dict:
         p = self._path()
@@ -126,6 +131,14 @@ class DeviceSettings:
             return {}
         return {str(a): str(n) for a, n in known.items() if isinstance(n, str) and NAME.match(n)}
 
+    def all(self) -> dict[str, dict]:
+        """Every device's settings, by device name (one read of the file)."""
+        return self._read()
+
+    def known_names(self) -> list[str]:
+        """Every device name this place has seen: with settings, or remembered by an address."""
+        return sorted(set(self._read()) | set(self._addresses().values()))
+
     def display_names(self) -> dict[str, str]:
         """Each device's display name, by device name (only the ones that have one)."""
         return {n: str(v["display_name"]) for n, v in self._read().items() if v.get("display_name")}
@@ -137,27 +150,29 @@ class DeviceSettings:
     def remember(self, address: str, name: str) -> None:
         """Keep the name this address uses (written only when it changed)."""
         name = clean_name(name)
-        known = self._addresses()
-        if not address or known.get(address) == name:
-            return
-        known[address] = name
-        self._write(self._read(), known)
+        with self._lock:
+            known = self._addresses()
+            if not address or known.get(address) == name:
+                return
+            known[address] = name
+            self._write(self._read(), known)
 
     def rename(self, old: str, new: str) -> dict:
         """Give a device another device name: its settings and its addresses move along (where the
         new name has settings already, those stay). Returns the settings under the new name."""
         old, new = clean_name(old), clean_name(new)
-        devices, known = self._read(), self._addresses()
-        if old != new:
-            moved = devices.pop(old, {})
-            if new in devices:
-                moved.pop("display_name", None)  # the new name's own stays
-            mine = moved | devices.get(new, {})
-            if mine:
-                devices[new] = mine
-            known = {a: (new if n == old else n) for a, n in known.items()}
-            self._write(devices, known)
-        return devices.get(new, {})
+        with self._lock:
+            devices, known = self._read(), self._addresses()
+            if old != new:
+                moved = devices.pop(old, {})
+                if new in devices:
+                    moved.pop("display_name", None)  # the new name's own stays
+                mine = moved | devices.get(new, {})
+                if mine:
+                    devices[new] = mine
+                known = {a: (new if n == old else n) for a, n in known.items()}
+                self._write(devices, known)
+            return devices.get(new, {})
 
     def get(self, name: str) -> dict:
         return self._read().get(clean_name(name), {})
@@ -165,6 +180,10 @@ class DeviceSettings:
     def update(self, name: str, changes: dict) -> dict:
         """Change some of a device's settings ("" or None = back to the default). Returns all of
         them."""
+        with self._lock:
+            return self._update(name, changes)
+
+    def _update(self, name: str, changes: dict) -> dict:
         name = clean_name(name)
         if not isinstance(changes, dict) or not changes:
             raise DeviceError('send {"setting": value, …}')
@@ -335,6 +354,10 @@ class HubDevices:
         device name is listed by its address (`title` says so)."""
         titles = self.modules()
         shown = self._display_names()
+        try:
+            sounds = self.settings.all()
+        except OSError:
+            sounds = {}
         out = []
         for name in sorted({w.key for w in self.windows.values()}):
             labels = self.labels(name)
@@ -349,6 +372,9 @@ class HubDevices:
                     "named": named,
                     "address": wins[0].address,
                     "here": wins[0].here,  # on the brain's own computer
+                    # muted (false) and soloed (quick job 166); a page with no name keeps none
+                    "sound": sounds.get(name, {}).get("sound") if named else None,
+                    "solo": named and sounds.get(name, {}).get("solo") is True,
                     "windows": [
                         {
                             "id": w.id,

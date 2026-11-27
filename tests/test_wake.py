@@ -436,7 +436,8 @@ def test_every_greeting_waits_for_the_jump():
     is held and plays while it's typed after the jump, as after the first start."""
     page = (Path(__file__).resolve().parents[1] / "src/lab_os/hub/web/design.html").read_text()
     assert "startedBefore" not in page
-    assert "if (VS.greeting) { V.playHeld();" in page
+    # quick job 166: also a greeting that another screen asked for and the brain sent here
+    assert "if (V?.playHeld() || VS.greeting) setState" in page
 
 
 def test_the_nearest_microphone_wins_a_tie():

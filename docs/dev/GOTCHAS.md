@@ -6,6 +6,10 @@ Earlier lab reports use the step numbers from the checklist in use that day. See
 
 ---
 
+### 2026-11-27 — Greetings played over each other on every screen
+**What:** one start starts every start screen (quick job 139). Each screen that a person started asked for its own greeting, and the brain allowed one greeting every 10 s for each page, not for all of them. The card swipe on the brain's computer starts each hub window there "as if the card was read there", so two windows of one computer could greet together. The voice connection also opened only on a screen with a microphone, so a screen without one (a Pi, the Newline's Pi) could not play an answer from another screen.
+**Fix:** quick job 166. The brain allows one greeting every 10 s for all the screens, and plays it on one device (⚙ → The Lab → Greeting Plays On). Every hub page opens the voice connection, with or without a microphone. A soloed device gets one page's audio even when it has two monitors, so the words do not play twice.
+
 ### 2026-11-27 — A VR canvas keeps its old picture when its paint key does not change
 `CanvasPlane.paint(fn, key)` skips the drawing when `key` equals the last one. The VR ask line's key held only the question and the answer, so a new error note did not show while the question stayed the same (quick job 166).
 **Fix:** Put every value that the drawing shows in the key.
