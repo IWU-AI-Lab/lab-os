@@ -137,26 +137,36 @@ export class StopButton {
 
 /* ---------- ⏻'s menu: back to the start screen, or Exit (leave VR or AR). Opens from ⏻ in the strip and from
    ⏻ on a module's tab, so it's on every page of the hub in VR (the builder, 2026-11-20) ---------- */
+const PM = { pad: 0.05, title: 0.09, row: 0.11, notch: 0.025 }; // the power menu's sizes (metres)
 export class PowerMenu {
   constructor() {
-    this.items = [["start", "i-power", "Back to the start screen"], ["exit", "i-headset", "Exit"]];
-    this.p = new CanvasPlane(0.56, 0.1 + 0.11 * this.items.length, PX); // 0.82 m before (quick job 157)
+    // the flat hub's drop-down (quick job 154): "POWER" in the title font, an icon on each row, a notch toward ⏻
+    this.items = [["start", "i-screen", "Back to the start screen"], ["exit", "i-headset", "Exit"]];
+    this.p = new CanvasPlane(0.56, PM.pad * 2 + PM.title + PM.row * this.items.length, PX); // 0.82 m before (quick job 157)
     this.p.mesh.userData.hit = this;
     this.p.mesh.renderOrder = 13;
     this.p.mat.depthTest = false; // in front of everything, like the way out
     this.p.mesh.visible = false;
     this.hover = null;
+    this.notch = 0.5; // where ⏻ is, 0..1 across the menu (hub.js → openMenu)
   }
   get mesh() { return this.p.mesh; }
   hit(u, v) {
-    const y = (1 - v) * this.p.h - 0.05, i = Math.floor(y / 0.11);
-    return i >= 0 && i < this.items.length ? { kind: "menu", id: this.items[i][0] } : { kind: "menu-pad" };
+    const y = (1 - v) * this.p.h - PM.pad - PM.title, i = Math.floor(y / PM.row);
+    return y >= 0 && i < this.items.length ? { kind: "menu", id: this.items[i][0] } : { kind: "menu-pad" };
   }
   paint() {
     const over = this.hover?.kind === "menu" ? this.hover.id : "";
     this.p.paint((g, w, h) => {
-      const m = h * 0.05 / this.p.h * 1, rowH = (h * 0.11) / this.p.h, top = (h * 0.05) / this.p.h;
-      cutPathBox(g, w, h);
+      const k = h / this.p.h, m = PM.pad * k, rowH = PM.row * k, top = (PM.pad + PM.title) * k, n = PM.notch * k;
+      // the box starts under the notch
+      const c = h * 0.12, nx = clamp(this.notch * w, c + n * 1.5, w - n * 1.5);
+      g.beginPath(); g.moveTo(c, n); g.lineTo(nx - n, n); g.lineTo(nx, 1.5); g.lineTo(nx + n, n); g.lineTo(w, n);
+      g.lineTo(w, h - c); g.lineTo(w - c, h); g.lineTo(0, h); g.lineTo(0, n + c); g.closePath();
+      g.fillStyle = rgba(C.bg, 0.95); g.fill();
+      g.strokeStyle = rgba(C.primary, 0.7); g.lineWidth = 3; g.stroke();
+      g.font = `700 ${PM.title * k * 0.42}px ${FONT.title}`; spaced(g, 0.14); g.fillStyle = C.hot;
+      g.textAlign = "left"; g.textBaseline = "middle"; g.fillText("POWER", m * 1.6, n + (top - n) / 2 + m * 0.3); spaced(g, 0);
       this.items.forEach(([id, ico, label], i) => {
         const y = top + i * rowH;
         if (id === over) { g.fillStyle = rgba(C.primary, 0.18); g.fillRect(m, y, w - 2 * m, rowH - 4); }
@@ -168,16 +178,9 @@ export class PowerMenu {
         g.fillStyle = id === over ? C.hot : C.text; g.textAlign = "left"; g.textBaseline = "middle";
         g.fillText(label, m + rowH, y + rowH / 2 - 2);
       });
-    }, over);
+    }, `${over}|${this.notch.toFixed(2)}`);
   }
 }
-function cutPathBox(g, w, h) {
-  const c = h * 0.12;
-  g.beginPath(); g.moveTo(c, 0); g.lineTo(w, 0); g.lineTo(w, h - c); g.lineTo(w - c, h); g.lineTo(0, h); g.lineTo(0, c); g.closePath();
-  g.fillStyle = rgba(C.bg, 0.95); g.fill();
-  g.strokeStyle = rgba(C.primary, 0.7); g.lineWidth = 3; g.stroke();
-}
-
 /* ---------- the way out under the core (the hub, a details page, Settings): ⏻, EXIT, and × while a page is
    open (quick job 157) ---------- */
 export class WayOut {
@@ -301,7 +304,7 @@ export class ArmHologram {
       : two ? (s ? `Control: ${who}` : "Connecting to the brain") : `${s?.arm?.name || "Arm"}: ${armWord(s)}${who ? `   Control: ${who}` : ""}`;
     this.status.paint((g, w, h) => {
       g.textAlign = "center"; g.textBaseline = "middle"; g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`;
-      g.fillStyle = !two && s?.frozen ? C.dim : C.dim;
+      g.fillStyle = C.dim;
       g.fillText(line, w / 2, h / 2);
     }, line);
     if (this.log) this._paintLog();
@@ -445,7 +448,7 @@ class HoloArm {
       const x0 = (w - aw - bw) / 2;
       g.textAlign = "left";
       g.font = `600 ${h * 0.36}px ${FONT.ui}`; spaced(g, 0.18); g.fillStyle = C.primary; g.fillText(a, x0, h / 2);
-      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = s?.frozen ? C.dim : C.dim; g.fillText(b, x0 + aw, h / 2);
+      g.font = `${FONT.linesW} ${h * 0.4}px ${FONT.lines}`; spaced(g, 0); g.fillStyle = C.dim; g.fillText(b, x0 + aw, h / 2);
     }, `${name}|${word}`);
   }
 }

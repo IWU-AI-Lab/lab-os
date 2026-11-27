@@ -31,7 +31,7 @@ import { Network } from "./xr/network.js";
 import { WayOut } from "./xr/modules.js";
 import { OffCard } from "./xr/off.js";
 import { Sfx } from "./xr/sfx.js";
-import { HubView } from "./xr/hub.js";
+import { HubView, venueName } from "./xr/hub.js";
 import { Pointer } from "./xr/pointer.js";
 import { FAR, Sky, Stars } from "./xr/stars.js";
 import { loadLook, minimal } from "./xr/look.js";
@@ -215,13 +215,13 @@ class Show {
     // real checks only: each line reads something the brain just reported
     const st = this.facts.status, ai = st?.ai, arm = this.facts.arm;
     const checks = [
-      ["Theme", theme.colors ? "loaded" : "defaults", !!theme.colors],
-      ["Sound", this.sfx.ready ? "unlocked" : "muted", this.sfx.ready],
+      ["Theme", theme.colors ? "Loaded" : "Defaults", !!theme.colors],
+      ["Sound", this.sfx.ready ? "Unlocked" : "Muted", this.sfx.ready],
       ["Display", this.facts.display, true],
-      ["Internet", st?.internet === true ? "online" : st?.internet === false ? "offline" : "checking", st?.internet === true],
-      ["AI", !ai ? "brain not reachable" : ai.paused ? "paused" : ai.connected ? ai.setup : "not connected", !!ai?.connected && !ai.paused],
-      ["Assistant", st?.persona?.display_name || "unknown", !!st],
-      ["Arm", arm?.connected ? arm.name : "disconnected", !!arm?.connected],
+      ["Internet", st?.internet === true ? "Online" : st?.internet === false ? "Offline" : "Checking", st?.internet === true],
+      ["AI", !ai ? "Brain not reachable" : ai.paused ? "Paused" : ai.connected ? ai.setup : "Not connected", !!ai?.connected && !ai.paused],
+      ["Assistant", st?.persona?.display_name || "Unknown", !!st],
+      ["Arm", arm?.connected ? arm.name : "Disconnected", !!arm?.connected],
     ];
     const typing = (async () => {
       for (const [k, v, ok] of checks) {
@@ -383,7 +383,8 @@ async function loadFacts(show) {
   show.facts.status = st; show.facts.arm = arm;
   if (st) show.heard();
   if (st?.time_ms) show.facts.offset = st.time_ms - Date.now();
-  show.ign.place = st?.venue || "";
+  // the start screen's foot: the place's name, and the venue only while it isn't the default one (quick job 154)
+  show.ign.place = [hub?.title, st && !st.venue_default ? venueName(st.venue) : ""].filter(Boolean).join(", ");
 }
 async function pollPanels(show) {
   const [project, spend, commits, devices] = await Promise.all([getJSON("/api/project"), getJSON("/api/spend"), getJSON("/api/commits?days=30"), getJSON("/api/live-devices")]);

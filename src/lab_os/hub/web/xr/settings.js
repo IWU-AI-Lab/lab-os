@@ -6,7 +6,8 @@
 //   a choice      a button for each choice (up to 5), else ‹ and › go through them
 //   a number      − and + (by its step)
 //   text, colours and lists only show their value: change them on a screen (no keyboard in VR).
-// Saved at once, as on the screen; the line at the bottom says "Saved" or why not. Back (or B) closes it.
+// Saved at once, as on the screen: "✓ Saved" beside the setting's name, or why not on the line at the bottom.
+// A changed setting has ↺ at its left: it goes back to its default at once (quick jobs 161, 164). × (or B) closes it.
 // Drawn 200 units across, like the details pages (panels.js), whatever the page's size.
 import { prefs, setPref } from "/web/device.js";
 import { C, CanvasPlane, FONT, icon, rgba, spaced } from "./draw.js";
@@ -24,6 +25,7 @@ export function show(v) {
   return s.split(/[\s-]+/).map((w, i) => (i > 0 && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
 }
 
+const ICON = { device: "i-screen", assistant: "i-chat", lab: "i-pin", robots: "i-hand", limits: "i-warn" }; // settings.js's
 const LANGS = { "": "Any", en: "English" }; // the brain's codes (lab_os/ai/languages.py) → words
 const SENS_WORDS = { 1: "Fewest false wakes", 3: "Quiet room", 5: "The default", 7: "Noisy room", 9: "Hears the most" };
 
@@ -44,6 +46,8 @@ export function deviceFields(status) {
   }
   out.push({ key: "answer_in", label: "Assistant Answers In", kind: "choice", choices: Object.values(LANGS), value: LANGS[p.answer_in || ""] || "Any",
     save: (v) => setPref("answer_in", Object.keys(LANGS).find((k) => LANGS[k] === v) ?? "") });
+  const mine = prefs();
+  for (const f of out) f.changed = mine[f.key] !== undefined && mine[f.key] !== ""; // ↺ goes back to the device's default
   return out;
 }
 
@@ -61,6 +65,8 @@ export function nextValue(f, act) {
   }
   return undefined;
 }
+
+const RST = 6; // the reset column's width (page units)
 
 export class SettingsPage {
   constructor(w = 2.7, h = 1.6) {
@@ -107,6 +113,7 @@ export class SettingsPage {
     if (what.op === "down") { this.top += 1; return; }
     const g = this.groups[this.at], f = g?.fields[what.row];
     if (!f || this.busy) return;
+    if (what.op === "reset") return this._reset(g, f);
     const value = nextValue(f, what);
     if (value === undefined || value === f.value) return;
     this.busy = true;
@@ -122,9 +129,28 @@ export class SettingsPage {
     this.busy = false;
     const now = performance.now();
     if (res?.ok) {
-      this.said = { text: f.applies === "restart" ? `Saved: ${f.label}. It applies when the brain restarts.` : `Saved: ${f.label}.`, bad: false, t: now };
+      this.said = { text: f.applies === "restart" ? `Saved: ${f.label}. It applies when the brain restarts.` : `Saved: ${f.label}.`, bad: false, t: now, key: f.key };
       await this.load();
     } else this.said = { text: res?.message || "Not saved.", bad: true, t: now };
+    this.p.key = null;
+  }
+
+  /** ↺: one setting back to its default (the brain's POST /api/settings/reset; this device's: its pref cleared). */
+  async _reset(g, f) {
+    this.busy = true;
+    let res;
+    try {
+      res = g.brain
+        ? await fetch("/api/settings/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: [f.key] }) })
+          .then((r) => (r.headers.get("Content-Type") || "").includes("json") ? r.json() : { ok: false, message: "Not reset: the brain had a problem. Its terminal has the details." })
+        : await setPref(f.key, "");
+    } catch (e) {
+      res = { ok: false, message: `Not reset: ${e.message}` };
+    }
+    this.busy = false;
+    const now = performance.now();
+    if (res?.ok) { this.said = { text: `Reset: ${f.label}.`, bad: false, t: now, key: f.key }; await this.load(); }
+    else this.said = { text: res?.message || "Not reset.", bad: true, t: now };
     this.p.key = null;
   }
 
@@ -170,7 +196,9 @@ export class SettingsPage {
     this.groups.forEach((gr, i) => {
       const y = top + i * 8.2;
       box(5, y, navW, 7, { op: "group", i }, i === this.at);
-      label(gr.title, 8, y + 3.6, 2.5, gr.risky ? C.accent : i === this.at ? C.hot : C.text, "left", 600);
+      // an icon on each group, in the main colour; the safety group is not red (quick job 156)
+      icon(g, ICON[gr.id] || "i-gear", 8.6, y + 3.5, 3.2, C.primary, 1.5);
+      label(gr.title, 12, y + 3.6, 2.5, i === this.at ? C.hot : C.text, "left", 600);
     });
     // the rows of the group shown
     const gr = this.groups[this.at];
@@ -179,16 +207,29 @@ export class SettingsPage {
     const fits = Math.max(1, Math.floor((bottom - top) / rowH));
     this.top = Math.min(this.top, Math.max(0, gr.fields.length - fits));
     const can = this.writable || !gr.brain;
+    const recent = this.said.text && performance.now() - this.said.t < 6000;
     gr.fields.slice(this.top, this.top + fits).forEach((f, k) => {
       const i = this.top + k, y = top + k * rowH;
       g.fillStyle = C.line; g.fillRect(L, y + rowH - 0.6, R - L, 0.12);
-      const ctlW = 64, cx = R - ctlW;
-      label(f.label, L, y + 3.2, 2.6, C.text);
+      const ctlW = 64, cx = R - ctlW, N = L + RST; // the reset column, then the name (quick job 164)
+      const off = !can || (f.safety && f.locked);
+      if (f.changed && !off) { // ↺ in a circle: back to the default at once
+        const what = { op: "reset", row: i }, over = same(what), rx = L + RST / 2 - 0.6, ry = y + 3.2, r = 2.3;
+        g.beginPath(); g.arc(rx, ry, r, 0, Math.PI * 2);
+        if (over) { g.fillStyle = rgba(C.primary, 0.16); g.fill(); }
+        g.strokeStyle = over ? C.primary : rgba(C.primary, 0.45); g.lineWidth = 0.25; g.stroke();
+        label("↺", rx, ry + 0.1, 2.8, over ? C.hot : C.text, "center", 600);
+        this.regions.push({ x: rx - r - 0.6, y: ry - r - 0.6, w: 2 * r + 1.2, h: 2 * r + 1.2, what });
+      }
+      label(f.label, N, y + 3.2, 2.6, C.text);
+      if (recent && !this.said.bad && this.said.key === f.key) { // "✓ Saved" beside the name (quick job 163)
+        g.font = `600 2.6px ${FONT.ui}`; const nw = g.measureText(f.label).width;
+        label("✓ Saved", N + nw + 2, y + 3.2, 2.1, C.primary, "left", 500); // the main colour, as the flat page
+      }
       if (f.help) {
         g.font = `${FONT.linesW} 1.9px ${FONT.lines}`; g.fillStyle = C.dim; g.textAlign = "left";
-        wrap(g, f.help, cx - L - 3, 3).forEach((l, n) => g.fillText(l, L, y + 6.6 + n * 2.6));
+        wrap(g, f.help, cx - N - 3, 3).forEach((l, n) => g.fillText(l, N, y + 6.6 + n * 2.6));
       }
-      const off = !can || (f.safety && f.locked);
       const cy = y + 1.2, ch = 6;
       if (f.safety && f.locked) {
         label("On", R, cy + 3, 2.6, C.dim, "right");
@@ -218,18 +259,17 @@ export class SettingsPage {
         g.fillText(wrap(g, v, ctlW, 1)[0] || "—", R, cy + 3);
         g.font = `${FONT.linesW} 1.8px ${FONT.lines}`; g.fillStyle = C.dim; g.fillText("Change it on a screen", R, cy + ch + 2.4);
       }
-      if (this.restartKeys?.has(f.key)) { g.font = `${FONT.linesW} 1.8px ${FONT.lines}`; g.fillStyle = C.accent; g.textAlign = "left"; g.fillText("Applies when the brain restarts", L, y + rowH - 2); }
+      if (this.restartKeys?.has(f.key)) { g.font = `${FONT.linesW} 1.8px ${FONT.lines}`; g.fillStyle = C.accent; g.textAlign = "left"; g.fillText("Applies when the brain restarts", N, y + rowH - 2); }
     });
     // more rows than fit: ▲ ▼
     if (gr.fields.length > fits) {
       box(R - 16, bottom + 1, 7, 6, { op: "up" }, false, this.top > 0); label("▲", R - 12.5, bottom + 4, 2.4, C.text, "center");
       box(R - 7, bottom + 1, 7, 6, { op: "down" }, false, this.top + fits < gr.fields.length); label("▼", R - 3.5, bottom + 4, 2.4, C.text, "center");
     }
-    // the line at the bottom: saved, why not, or why nothing can change here
-    const recent = this.said.text && performance.now() - this.said.t < 6000;
-    const line = this.busy ? "Saving…" : recent ? this.said.text : !can ? this.whyNot : "";
+    // a save shows "✓ Saved" in its row; the line says why not, or why nothing can change here
+    const line = this.busy ? "Saving…" : recent && this.said.bad ? this.said.text : !can ? this.whyNot : "";
     if (line) {
-      g.font = `${FONT.linesW} 2.2px ${FONT.lines}`; g.fillStyle = recent && this.said.bad ? C.accent : recent ? C.ok : C.dim; g.textAlign = "left";
+      g.font = `${FONT.linesW} 2.2px ${FONT.lines}`; g.fillStyle = recent && this.said.bad ? C.accent : C.dim; g.textAlign = "left";
       g.fillText(wrap(g, line, R - L - 20, 1)[0], L, bottom + 4);
     }
   }

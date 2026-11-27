@@ -167,9 +167,9 @@ export class Callout {
       const lh = size * 1.25;
       lines.forEach((l, i) => g.fillText(l, 0, size * 0.9 + i * lh));
       let y = lines.length * lh + 0.55;
-      // the step bar: done, now (pulsing, part lit), later
+      // the step bar: done, now (pulsing, part lit), later; one count, as the flat hub (quick job 154)
       g.font = `${FONT.linesW} 0.78px ${FONT.lines}`;
-      const label = `Step ${d?.step} of ${d?.of}`, lw = g.measureText(label).width, bw = w - lw - 0.8, n = d?.steps?.length || 1, gap = 3 / R, sw = (bw - gap * (n - 1)) / n;
+      const label = `${(d?.steps || []).filter((s) => s.done).length} of ${d?.steps?.length || 0} done`, lw = g.measureText(label).width, bw = w - lw - 0.8, n = d?.steps?.length || 1, gap = 3 / R, sw = (bw - gap * (n - 1)) / n;
       const pulse = 0.55 + 0.45 * Math.abs(Math.sin((now / 2400) * Math.PI));
       (d?.steps || []).forEach((s, i) => {
         const x = i * (sw + gap);
@@ -191,7 +191,7 @@ export class Callout {
         g.fillRect(px, py, 0.14, 0.14);
       }
       g.font = `500 0.98px ${FONT.ui}`; g.fillStyle = C.text;
-      g.fillText(wrap(g, d?.next || "all steps done", w - kx - 1.6, 1)[0], kx + 1.6, y);
+      g.fillText(wrap(g, d?.next || "All steps done", w - kx - 1.6, 1)[0], kx + 1.6, y);
       return y + 0.3;
     }
     if (this.id === "spend") {

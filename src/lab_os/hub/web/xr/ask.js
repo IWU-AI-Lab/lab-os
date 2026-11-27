@@ -14,6 +14,8 @@
 import { C, CanvasPlane, FONT, clamp, icon, rgba } from "./draw.js";
 import { wrap } from "./panels.js";
 
+const STILL_WORKS = "The pages, the robots and STOP still work."; // the flat hub's words (quick job 154)
+
 const REPLY_S = 14; // the answer fades after this long, like the screen's
 
 export class Ask {
@@ -119,7 +121,7 @@ export class Ask {
     } else if (this.turn && ev.type === "text") {
       this.turn.answer.text += ev.text;
     } else if (this.turn && (ev.type === "done" || ev.type === "error")) {
-      if (ev.type === "error") { this._note(ev.message, now); this.turn.pacer.free(); }
+      if (ev.type === "error") { this._err(ev, now); this.turn.pacer.free(); }
       this.turn.done = true;
       this.freeTimer = setTimeout(() => this.turn?.pacer.free(), 15_000); // no voice after all: show it anyway
     } else if (ev.type === "playing" && this.turn) {
@@ -128,11 +130,18 @@ export class Ask {
       this.state = "speaking";
     } else if (ev.type === "played" && this.greeting) { this.greeting = false; if (!this.voiced) this.state = null; }
     else if (ev.type === "played" && this.voiced && this.turn?.done && !this.V.pressed) { this.turn.pacer.free(); this.sfx.done(); this._end(); }
-    else if (ev.type === "error" || ev.type === "mic_error") { this._note(ev.message, now); this.sfx.error(); this._end(); }
+    else if (ev.type === "error" || ev.type === "mic_error") { this._err(ev, now); this.sfx.error(); this._end(); }
     else if (ev.type === "voice_error") { this._note(ev.message, now); this.turn?.pacer.free(); }
   }
   _show(q, a, now) { this.q = q; this.a = a; this.shown = a.length; this.replyAt = now; }
-  _note(text, now) { this.note = text || ""; this.noteAt = now; }
+  _note(text, now, title = "") { this.note = text || ""; this.noteTitle = title; this.noteAt = now; }
+  /** A turn that went wrong, as the flat hub's box under the core (quick job 154): a title, then the brain's
+   *  sentence; while the AI is off, also what still works. */
+  _err(ev, now) {
+    const ai = this.status?.ai, off = !!ai && (ai.paused || ai.connected === false);
+    if (off && ev.type === "error") this._note(`${ev.message || ""} ${STILL_WORKS}`.trim(), now, "The AI is off");
+    else this._note(ev.message, now, ev.type === "mic_error" ? "Can't listen" : "No answer");
+  }
   _end() { // the answer stays REPLY_S from now, like the screen's
     this.voiced = false; this.turn = null; this.state = null; this.lastChat = null;
     this.replyAt = this.now?.() ?? performance.now();
@@ -183,8 +192,10 @@ export class Ask {
       this.reply.paint((g, w, h) => {
         g.textAlign = "center"; g.textBaseline = "top";
         if (showNote) {
-          g.font = `500 ${h * 0.14}px ${FONT.ui}`; g.fillStyle = C.accent;
-          wrap(g, this.note, w * 0.95, 3).forEach((l, i) => g.fillText(l, w / 2, h * 0.05 + i * h * 0.19));
+          let y = h * 0.05;
+          if (this.noteTitle) { g.font = `600 ${h * 0.15}px ${FONT.ui}`; g.fillStyle = C.accent; g.fillText(this.noteTitle, w / 2, y); y += h * 0.22; }
+          g.font = `500 ${h * 0.14}px ${FONT.ui}`; g.fillStyle = this.noteTitle ? C.text : C.accent;
+          wrap(g, this.note, w * 0.95, this.noteTitle ? 3 : 4).forEach((l, i) => g.fillText(l, w / 2, y + i * h * 0.19));
           return;
         }
         g.font = `${FONT.linesW} ${h * 0.12}px ${FONT.lines}`; g.fillStyle = C.dim;
@@ -195,7 +206,7 @@ export class Ask {
         const lines = all.slice(-3);
         if (all.length > 3) lines[0] = `… ${lines[0]}`;
         lines.forEach((l, i) => g.fillText(l, w / 2, h * 0.24 + i * h * 0.24));
-      }, `${this.q}|${a.length}|${cursor}`);
+      }, showNote ? `note|${this.noteTitle}|${this.note}` : `${this.q}|${a.length}|${cursor}`);
     }
   }
 }
