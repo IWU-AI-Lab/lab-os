@@ -6,6 +6,10 @@ Earlier lab reports use the step numbers from the checklist in use that day. See
 
 ---
 
+### 2026-11-27 — The greeting played in the other window of the same computer
+**What:** with two hub windows open on the laptop, a start in the second window played the greeting in the first window. The brain picks one page for each device, so that the words do not play twice. It always picked the page that was open longest, also when the page that started was on the same device.
+**Fix:** the page that started (or asked) now plays for its own device. The page open longest still plays when another device asked. The same fix applies to answers on a soloed device.
+
 ### 2026-11-27 — Greetings played over each other on every screen
 **What:** one start starts every start screen (quick job 139). Each screen that a person started asked for its own greeting, and the brain allowed one greeting every 10 s for each page, not for all of them. The card swipe on the brain's computer starts each hub window there "as if the card was read there", so two windows of one computer could greet together. The voice connection also opened only on a screen with a microphone, so a screen without one (a Pi, the Newline's Pi) could not play an answer from another screen.
 **Fix:** quick job 166. The brain allows one greeting every 10 s for all the screens, and plays it on one device (⚙ → The Lab → Greeting Plays On). Every hub page opens the voice connection, with or without a microphone. A soloed device gets one page's audio even when it has two monitors, so the words do not play twice.
