@@ -132,7 +132,7 @@ def test_the_page_keeps_its_rules():
 def test_a_page_opens_at_once_and_follows_other_devices():
     """Quick job 167: a choice in a page list, or a press on a page tile while a screen is
     highlighted, opens the page at once (no Open button); the lists, the tiles and the focus window
-    follow a change that another device makes; All to the Hub keeps the pages that drive a robot;
+    follow a change that another device makes; All to the Start Screen keeps the robot pages;
     M and S are in the inspector and the focus window, which is a grid."""
     js = (SRC / "hub" / "web" / "command-center.js").read_text()
     html = (SRC / "hub" / "web" / "command-center.html").read_text()
@@ -142,9 +142,10 @@ def test_a_page_opens_at_once_and_follows_other_devices():
     assert "syncPageSelects();" in js and "refreshFocus();" in js and "markTiles();" in js
     keep = '["teleop", "webcam", "raspbot", "ai", "training", "command"]'
     assert f"const KEEP_OPEN = new Set({keep});" in js
-    assert 'id="all-hub"' in html and "All to the Hub" in html
+    assert 'id="all-idle"' in html and "All to the Start Screen" in html  # quick job 168
+    assert '"/api/hub-devices/idle"' in js and "NO_NAME_SOUND" in js
     assert 'part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd))' in js
-    assert '${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : ""}' in js
+    assert "${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}`" in js
     assert ".fgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));" in html
     assert 'class="fscreens"' in js and "<h3>Modules</h3>" in js
 

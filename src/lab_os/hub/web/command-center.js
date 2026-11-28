@@ -182,6 +182,8 @@ function soundWords(d) {
   if (h.solo) return "Soloed: every answer and greeting plays here.";
   return soloed().length ? "Quiet: another device is soloed." : "Plays sound.";
 }
+// a hub page with no device name keeps no settings, so it has no M and S: say how to give it a name (quick job 168)
+const NO_NAME_SOUND = "No sound buttons: this device has no device name. On that device, open ⚙ → This Device → Device Name, and press Add.";
 const soundBlock = (d) => `<div class="sndrow" data-dev="${esc(d.key)}">${soundButtons(d)}<span class="hint">${soundWords(d)}</span></div>`;
 // the list's own buttons: mute or unmute every device, show or hide every item
 async function muteAll() {
@@ -740,12 +742,19 @@ async function startScreens(targets = null) {
   say(r.message || "It did not start.", !r.ok);
 }
 $("#start-all").addEventListener("click", () => startScreens());
-// every screen back to the hub (quick job 167), except the pages that drive a robot and the Command Center itself
+// back to the start screen, as ⏻ → Back to the start screen does there (quick job 168)
+async function toStartScreen(targets) {
+  const r = await postJSON("/api/hub-devices/idle", { windows: targets.map((s) => s.w.id) });
+  await refresh();
+  say(r.message || "They did not go back to the start screen.", !r.ok);
+}
+// every screen that is not in use back to the start screen (quick jobs 167, 168): the hub and the pages that only
+// show information go; the pages that drive a robot and the Command Center itself stay
 const KEEP_OPEN = new Set(["teleop", "webcam", "raspbot", "ai", "training", "command"]);
-const toHubAll = (scr) => scr.filter((s) => s.w.showing && !KEEP_OPEN.has(s.w.showing.id));
-$("#all-hub").addEventListener("click", () => {
-  const targets = toHubAll(screens(devices()));
-  if (targets.length) backToHub(targets);
+const toIdleAll = (scr) => scr.filter((s) => s.w.stage !== "start" && !KEEP_OPEN.has(s.w.showing?.id));
+$("#all-idle").addEventListener("click", () => {
+  const targets = toIdleAll(screens(devices()));
+  if (targets.length) toStartScreen(targets);
 });
 async function setDrive(hubs, allowed) {
   const addresses = [...new Set(hubs.filter((d) => !d.here && d.address).map((d) => d.address))];
@@ -774,6 +783,8 @@ function actionsFor(keys, devs, scr) {
     if (busy.length) acts.push({ part: "screen", real: true, icon: "i-back", label: one ? "Back to the hub" : `Hub on ${m}`, title: `Close what ${m} show: back to the hub`, run: () => backToHub(busy) });
     const waiting = targets.filter((t) => t.w.stage === "start"), st = plural(waiting.length, "screen");
     if (waiting.length) acts.push({ part: "screen", real: true, icon: "i-power", label: one ? "Start" : `Start ${st}`, title: `Start the start screen on ${st}`, run: () => startScreens(waiting) });
+    const started = targets.filter((t) => t.w.stage !== "start"), sd = plural(started.length, "screen");
+    if (started.length) acts.push({ part: "screen", real: true, icon: "i-power", label: one ? "Start screen" : `Start screen on ${sd}`, title: `Put ${sd} back on the start screen`, run: () => toStartScreen(started) });
   }
   const hubs = [...new Map(keys.map((k) => hubOf(k, devs, scr)).map((d) => [d?.key, d])).values()];
   if (hubs.length && hubs.every((d) => d && !d.here && d.address)) {
@@ -921,6 +932,7 @@ function renderInspector(force = false) {
   }
   const sd = d || (s && devs.find((x) => x.key === `d:${s.device.name}`));
   if (sd && hasSound(sd)) part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd));
+  else if (sd && sd.kind === "hub" && !sd.named && !sd.gone) part("Sound", `<p class="hint">${NO_NAME_SOUND}</p>`);
   const ab = part("Actions", `<div class="acts"></div>`).querySelector(".acts");
   actButtons(ab, acts.filter((a) => a.part !== "screen"), devs);
   const clear = document.createElement("button");
@@ -1007,7 +1019,7 @@ async function focus(key, keep = false) {
       <div><h3>Modules</h3>${mods.length ? `<div class="mods" id="f-mods"></div>` : `<p class="hint">No module for this device.</p>`}</div>
       <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}${driveLine(d)}</div>
       <div id="f-actions"><h3>Actions</h3><div class="mods"></div>
-        ${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : ""}
+        ${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : d.kind === "hub" && !d.named && !d.gone ? `<h3>Sound</h3><p class="hint">${NO_NAME_SOUND}</p>` : ""}
         ${settings ? `<div id="f-settings"><h3>Settings</h3><p class="hint">Reading…</p></div>` : ""}</div>
     </div></div></div>`;
   veil.addEventListener("pointerdown", (e) => { if (e.target === veil) closeFocus(); });
@@ -1097,7 +1109,7 @@ function render(force = false) {
   $("#start-all").hidden = !scr.some((s) => s.w.stage === "start");
   if (!S.drag && $("#ws").clientWidth) renderWorkspace(devs, scr);
   if (!document.querySelector(".menu")) renderInspector(force);
-  $("#all-hub").hidden = !toHubAll(scr).length;
+  $("#all-idle").hidden = !toIdleAll(scr).length;
   refreshFocus();
   syncPageSelects();  // the ⋯ menu's list, and any list a person was choosing in
   markTiles();

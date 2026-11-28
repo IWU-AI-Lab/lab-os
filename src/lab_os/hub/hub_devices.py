@@ -463,6 +463,20 @@ class HubDevices:
             await self.broadcast()
         return sum(sent)
 
+    async def to_start(self, windows: list[str], sender: str = "the Command Center") -> int:
+        """Put these windows back on their start screen (quick job 168): a window that has
+        started gets `idle`; one on its start screen already does not change. Returns how many."""
+        targets = [w for w in self.windows.values() if w.id in windows and w.stage != "start"]
+        msg = {"type": "idle", "from": sender}
+        sent = await asyncio.gather(*(self._send(w, msg) for w in targets))
+        for w, ok in zip(targets, sent, strict=True):
+            if ok:  # the page reports it too; set here, so the list is right at once
+                w.stage, w.showing, w.sent_from, w.sent_from_window = "start", None, "", ""
+        if targets:
+            log.info("to the start screen: %d screen(s) from %s", sum(sent), sender)
+            await self.broadcast()
+        return sum(sent)
+
     async def swipe(self) -> None:
         """The brain read a card swipe (quick job 113): its own computer's hub pages start as if
         the card was read there (with the greeting), and every other start screen starts too."""
