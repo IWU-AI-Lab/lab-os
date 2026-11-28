@@ -34,8 +34,8 @@ The Command Center is a page, only on the brain for now, to see and manage the l
 - A search, and a way to show or hide items in the workspace.
 - The screen previews keep their smaller sizes; they do not grow to fill the space (the builder, 2026-11-26: large previews looked wrong).
 - No opening animation (the builder, 2026-11-27, quick job 164: it was clunky): the page unfolds from the hub's button as every module does. The last opening (a 1 s radar sweep over a circular grid, quick jobs 160, 161 and 163) is in `docs/archive/command-center-opening-2026-11-27/`.
-- **Select multiple** shows when it is on: the button fills and reads "Selecting multiple: On", and the workspace gets a dashed edge (quick job 160).
-- Devices seen before but off now show as dim cards, with no text on what to do; they light up when they connect.
+- **Select multiple** shows when it is on: the button fills and reads "Selecting multiple" (quick job 169: the same size in both states; before, "Selecting multiple: On"), and the workspace gets a dashed edge (quick job 160).
+- A device that is off is not shown (the builder, 2026-11-27, quick job 169; before, a dim card that lit up when it connected).
 - Below the device list on the left: an activity list, newest first ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed").
 - Use the same names as Open on…. When display names exist (quick job 132), show both.
 
@@ -80,7 +80,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 149, 2026-11-26)
 - **Zoom to fit:** the workspace zooms to fit its items again when an item comes or goes, or the page changes size. A pan or a zoom by hand stops that; **Fit** starts it again.
-- **Devices that are off:** each device of the seen list (quick job 109) that is off now is a dim card with a dashed frame and no text, in the workspace and in the list. Since quick job 156, it sits below the connected devices, and it lights up once when it connects. The inspector shows when it was last seen.
+- **Devices that are off** (quick job 169 removed them: a device that is off is not shown): each device of the seen list (quick job 109) that is off now is a dim card with a dashed frame and no text, in the workspace and in the list. Since quick job 156, it sits below the connected devices, and it lights up once when it connects. The inspector shows when it was last seen.
 - **The activity list:** under the device list, the newest event first, with its time. The brain keeps the last 100 events in memory: a device connected or disconnected, a screen opened the hub, a page, or went back to the hub, and STOP (the arms' pages and the Raspbot page).
 
 ## Built (quick job 140, 2026-11-26)
@@ -104,3 +104,11 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 ## Built (quick job 168, 2026-11-27)
 - **All to the Start Screen:** above the workspace, in place of All to the Hub. Every screen goes back to its start screen (the hub and the pages that only show information too), except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or the Command Center. **Start screen** in a screen's controls does the same for the highlighted screens.
 - **No sound buttons without a name:** the sound settings are kept by device name. A device with no name says how to give it one (⚙ → This Device → Device Name) in place of **M** and **S**.
+
+## Built (quick job 169, 2026-11-27)
+- **Sound for every page:** a page with no device name has **M** and **S** too. The brain keeps them under its address key (`addr-127-0-0-1`), and only them.
+- **The hub says "Muted":** a muted device shows "Muted" in red in its top strip.
+- **The cards:** the display name, with the device name under it in smaller type. With no name: "Unnamed device", with its address key under it. Under each preview: "Screen 1", "Screen 2" and so on, then the resolution (the device's name is on the card's head).
+- **Off devices:** not shown.
+- **The panels:** the search is above the Devices list. Activity is shorter. A line between two panels changes their sizes: the Devices and the Pages columns' widths, Activity's height and the Pages list's height. The page remembers them; a double click puts one back. The centre is at most 72rem wide.
+- **Select multiple:** the same size in both states ("Select multiple", "Selecting multiple").

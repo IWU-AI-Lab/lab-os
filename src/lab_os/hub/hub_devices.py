@@ -58,6 +58,9 @@ NAME_IN_LIST = re.compile(
 WINDOW_ID = re.compile(r"^[A-Za-z0-9_-]{4,40}$")
 STAGES = ("start", "hub")
 FILE_NAME = "hub-devices.yaml"
+ADDRESS_PREFIX = "addr-"  # the key of a page with no name, from its address (`address_key`)
+# a page with no name keeps only its sound, under its address key (quick job 169)
+UNNAMED_SETTINGS = ("sound", "solo")
 UNNAMED = "Unnamed device"  # a page with no device name, as people see it (quick jobs 153, 167)
 
 # "This device" settings: key → allowed values (None = a bool, list = a list of camera names). ""
@@ -137,7 +140,8 @@ class DeviceSettings:
 
     def known_names(self) -> list[str]:
         """Every device name this place has seen: with settings, or remembered by an address."""
-        return sorted(set(self._read()) | set(self._addresses().values()))
+        names = set(self._read()) | set(self._addresses().values())
+        return sorted(n for n in names if not n.startswith(ADDRESS_PREFIX))  # a page with no name
 
     def display_names(self) -> dict[str, str]:
         """Each device's display name, by device name (only the ones that have one)."""
@@ -372,9 +376,10 @@ class HubDevices:
                     "named": named,
                     "address": wins[0].address,
                     "here": wins[0].here,  # on the brain's own computer
-                    # muted (false) and soloed (quick job 166); a page with no name keeps none
-                    "sound": sounds.get(name, {}).get("sound") if named else None,
-                    "solo": named and sounds.get(name, {}).get("solo") is True,
+                    # muted (false) and soloed (quick job 166); a page with no name too, under
+                    # its address key (quick job 169)
+                    "sound": sounds.get(name, {}).get("sound"),
+                    "solo": sounds.get(name, {}).get("solo") is True,
                     "windows": [
                         {
                             "id": w.id,
@@ -638,14 +643,17 @@ class HubDevices:
         if first:
             self._note(w, "opened the hub")
         try:
-            settings = self.settings.get(name) if name else {}
+            settings = self.settings.get(w.key)
         except DeviceError:
             settings = {}
+        if not name:  # only its sound, kept under its address key (quick job 169)
+            settings = {k: v for k, v in settings.items() if k in UNNAMED_SETTINGS}
         await self._send(
             w,
             {
                 "type": "welcome",
                 "device": name,
+                "key": w.key,  # its name, else its address key (its sound, quick job 169)
                 "found": bool(found),  # the name came from the brain, not the address
                 "display_name": self.shown(name) if name else "",
                 "window": wid,
@@ -694,9 +702,9 @@ def address_key(address: str) -> str:
     """A device name for a page with none, from its address: `addr-192-168-8-167` (a device name's
     rules: lower case, digits and dashes, at most 32 characters; a long IPv6 address is hashed)."""
     plain = re.sub(r"[^a-z0-9]+", "-", (address or "unknown").lower()).strip("-")
-    key = f"addr-{plain}"
+    key = f"{ADDRESS_PREFIX}{plain}"
     if len(key) > 32:
-        key = "addr-" + hashlib.sha256(address.encode()).hexdigest()[:12]
+        key = ADDRESS_PREFIX + hashlib.sha256(address.encode()).hexdigest()[:12]
     return key
 
 

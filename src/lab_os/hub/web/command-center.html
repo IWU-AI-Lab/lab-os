@@ -11,11 +11,17 @@
     /* the Command Center (quick job 134, docs/design/command-center.md): devices and their screens left,
        the workspace in the centre, the Pages list and the inspector right (quick job 148). Highlight (a
        press) selects; focus (⤢) opens the modal. */
-    .cc { display: grid; grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr) minmax(15rem, 19rem); gap: 1rem; min-height: 0; }
+    /* quick job 169: a line between two panels (a gutter) changes their sizes: --lw, --rw, --ah, --ph */
+    /* the centre grows to at most 72rem; on a wider screen the panels stay together in the middle */
+    .cc { display: grid; grid-template-columns: var(--lw, 16rem) 1rem minmax(0, 72rem) 1rem var(--rw, 19rem); justify-content: center; min-height: 0; }
+    .gut { position: relative; cursor: col-resize; touch-action: none; outline: none; }
+    .gut.h { cursor: row-resize; }
+    .gut::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: transparent; transition: background 0.15s; }
+    .gut.h::after { left: 0; right: 0; top: 50%; bottom: auto; width: auto; height: 1px; }
+    .gut:hover::after, .gut.on::after, .gut:focus-visible::after { background: var(--c); box-shadow: 0 0 6px var(--c); }
     .side { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
     /* the left: the devices, and the activity list under them (quick job 149) */
-    .left { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 1rem; min-height: 0; }
-    #act-card { max-height: 40vh; }
+    .left { display: grid; grid-template-rows: minmax(0, 1fr) 1rem var(--ah, 18vh); min-height: 0; }
     #act-card > .in { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
     #activity { display: grid; gap: 0.15rem; align-content: start; }
     .ev { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 0.5rem; align-items: baseline; padding: 0.2rem 0.2rem; font: var(--w-lines) 0.78rem/1.35 var(--f-lines); color: var(--text); }
@@ -25,7 +31,8 @@
     .ev.new { animation: evin 0.6s var(--arrive); }
     @keyframes evin { from { opacity: 0; transform: translateX(-0.6rem); } }
     .side > .in { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
-    .side > .in:has(.list-tools) { grid-template-rows: auto auto minmax(0, 1fr); }  /* Devices: its two buttons (quick job 166) */
+    .side > .in:has(.list-tools) { grid-template-rows: auto auto auto minmax(0, 1fr); }  /* Devices: the search (quick job 169) and its two buttons (quick job 166) */
+    .side #search { width: 100%; margin-bottom: 0.4rem; }
     .list { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; margin: 0 -0.3rem 0 0; padding-right: 0.3rem; }
     .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 0.1rem 0.55rem; align-items: center; padding: 0.45rem 0.4rem; cursor: pointer;
       border-left: 2px solid transparent; }
@@ -80,9 +87,9 @@
     /* the centre: tools on top, the workspace under them */
     .mid { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0.6rem; min-height: 0; min-width: 0; }
     .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
-    .tools input[type="search"], #page-search { flex: 1 1 12rem; min-width: 10rem; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
+    #search, #page-search { flex: 1 1 12rem; min-width: 10rem; font: 500 0.9rem/1.2 var(--f-ui); color: var(--text); background: color-mix(in srgb, var(--bg) 70%, transparent);
       border: 1px solid var(--line); padding: 0.45rem 0.6rem; min-height: 2.3rem; }
-    .tools input[type="search"]:focus-visible, #page-search:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
+    #search:focus-visible, #page-search:focus-visible { outline: 1px solid var(--c); border-color: var(--c); }
     .legend { display: inline-flex; gap: 1rem; font: var(--w-lines) 0.78rem/1 var(--f-lines); color: var(--text-dim); }
     .legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
     .legend .v { display: inline-block; width: 1.1rem; height: 0.8rem; border: 1px dashed var(--text-dim); }
@@ -101,7 +108,8 @@
     .node .head { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.3rem 0.35rem 0.8rem; border-bottom: 1px solid color-mix(in srgb, var(--c) 25%, transparent); }
     .node .head .k { color: var(--c); font-size: 1.1rem; }
     .node .head b { font: 500 0.95rem/1.2 var(--f-ui); color: var(--text); white-space: nowrap; }
-    .node .head small { font: var(--w-lines) 0.75rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
+    .node .head .nm { display: grid; gap: 0.15rem; }  /* the display name, the device name under it (quick job 169) */
+    .node .head small { font: var(--w-lines) 0.72rem/1 var(--f-lines); color: var(--text-dim); white-space: nowrap; }
     .node .head .grow { flex: 1; }
     .node .what { padding: 0.5rem 0.8rem 0; max-width: 300px; font: var(--w-lines) 0.78rem/1.35 var(--f-lines); color: var(--text-dim); }
     .node .what.bad { color: var(--accent); }
@@ -112,13 +120,14 @@
     .pv .tick { position: absolute; top: 0.3rem; left: 0.4rem; color: var(--ok); font-size: 0.8rem; }
     .under { display: block; margin: 0.35rem 0 0; }
     .under b { display: block; font: 500 0.88rem/1.2 var(--f-ui); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .under b small { margin-left: 0.4rem; font: var(--w-lines) 0.72rem/1 var(--f-lines); color: var(--text-dim); }
+    .under .dev { color: var(--text); }
     .under span { display: block; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); }
     .under .res { font-size: 0.68rem; opacity: 0.8; }
 
     /* the right side: the Pages list on top (it collapses to its title), the inspector under it */
-    .right { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 1rem; min-height: 0; }
-    #pages-card { max-height: 52vh; }
+    .right { display: grid; grid-template-rows: var(--ph, 46vh) 1rem minmax(0, 1fr); min-height: 0; }
+    .right:has(#pages-card.shut) { grid-template-rows: auto 1rem minmax(0, 1fr); }
+    .right:has(#pages-card.shut) .gut { visibility: hidden; }
     #pages-card > .in { display: grid; grid-template-rows: auto auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
     #pages-card.shut > .in { grid-template-rows: auto; padding-bottom: 0.2rem; }
     #pages-card.shut #page-search, #pages-card.shut #pages { display: none; }
@@ -187,12 +196,14 @@
     #module .top { display: flex; align-items: center; gap: 0.8rem; }
     #module .top b { flex: 1; font: 700 1rem/1 var(--f-title); letter-spacing: 0.16em; text-transform: uppercase; color: var(--hot); }
     #module iframe { width: 100%; height: 100%; border: 1px solid var(--line); background: transparent; }
+    #multi, .side .multi { display: inline-grid; }
+    #multi > span, .side .multi > span { grid-area: 1 / 1; text-align: center; }
+    #multi .sizer, .side .multi .sizer { visibility: hidden; }
     #multi[aria-pressed="true"], .side .multi[aria-pressed="true"] { color: var(--bg); background: var(--hot); border-color: var(--hot); }
     #ws.multi-on { outline: 1px dashed var(--hot); outline-offset: -1px; }
     .cc-tabs, .side .multi { display: none; }
     #pages { padding-bottom: .7rem; }
     #pages.more { mask-image: linear-gradient(to bottom, black calc(100% - .7rem), transparent); }
-    #pages-card > .in { max-height: 52vh; }
     .node.gone { min-width: 0; }
     .node.gone small { display: none; }
     @media (max-width: 1100px) {
@@ -205,7 +216,10 @@
       .cc > section { display: none; }
       .cc[data-panel="Workspace"] .mid, .cc[data-panel="Devices"] .left,
       .cc[data-panel="Inspector"] .right, .cc[data-panel="Pages"] .right { display: grid; }
-      .right { grid-template-rows: minmax(0,1fr); }
+      .right, .right:has(#pages-card.shut) { grid-template-rows: minmax(0,1fr); }
+      .gut { display: none; }
+      .left { grid-template-rows: minmax(0, 1fr) auto; gap: 1rem; }
+      #act-card { max-height: 30vh; }
       .cc[data-panel="Inspector"] #pages-card, .cc[data-panel="Pages"] #insp { display: none; }
       #pages-card, #pages-card > .in { max-height: 100%; }
       .tools { flex-wrap: wrap; }
@@ -233,22 +247,24 @@
   <main class="cc" data-panel="Workspace">
     <section class="left">
       <div class="card side" aria-label="Devices and screens"><div class="in">
-        <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><button type="button" class="btn small multi" aria-pressed="false">Select multiple</button><small id="dev-count" class="hint"></small></h2>
+        <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><button type="button" class="btn small multi" aria-pressed="false"><span class="lbl">Select multiple</span><span class="sizer" aria-hidden="true">Selecting multiple</span></button><small id="dev-count" class="hint"></small></h2>
+        <input id="search" type="search" placeholder="Search devices and screens" aria-label="Search devices and screens">
         <div class="list-tools">
           <button class="btn small virtual" id="eye-all" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-eye-off"/></svg><span>Hide all</span></button>
           <button class="btn small" id="mute-all" type="button" hidden><svg class="ico"><use href="/web/design/icons.svg#i-speaker"/></svg><span>Mute all</span></button>
         </div>
         <div class="list" id="devices"></div>
       </div></div>
+      <div class="gut h" data-size="ah" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Resize Activity" title="Drag to resize. Double-click: back to the default."></div>
       <div class="card" id="act-card" aria-label="Activity"><div class="in">
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-hist"/></svg>Activity</h2>
         <div class="list" id="activity"></div>
       </div></div>
     </section>
+    <div class="gut" data-size="lw" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Resize Devices" title="Drag to resize. Double-click: back to the default."></div>
     <section class="mid">
       <div class="tools">
-        <input id="search" type="search" placeholder="Search devices and screens" aria-label="Search">
-        <button class="btn small virtual" id="multi" aria-pressed="false" type="button">Select multiple</button>
+        <button class="btn small virtual" id="multi" aria-pressed="false" type="button"><span class="lbl">Select multiple</span><span class="sizer" aria-hidden="true">Selecting multiple</span></button>
         <button class="btn small virtual" id="fit" type="button" title="Show every item in the workspace">Fit</button>
         <button class="btn small" id="start-all" type="button" hidden title="Start the start screen on every device that shows it"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Start All</button>
         <button class="btn small" id="all-idle" type="button" hidden title="Every screen goes back to the start screen, except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or this Command Center"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>All to the Start Screen</button>
@@ -259,6 +275,7 @@
       </div>
       <div id="ws" aria-label="Workspace"><div id="stage"></div></div>
     </section>
+    <div class="gut" data-size="rw" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Resize Pages and Inspector" title="Drag to resize. Double-click: back to the default."></div>
     <section class="right">
       <div class="card" id="pages-card" aria-label="Pages"><div class="in">
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-link"/></svg>Pages <span class="grow"></span>
@@ -266,6 +283,7 @@
         <input id="page-search" type="search" placeholder="Search pages" aria-label="Search pages">
         <div class="list" id="pages"></div>
       </div></div>
+      <div class="gut h" data-size="ph" tabindex="0" role="separator" aria-orientation="horizontal" aria-label="Resize Pages" title="Drag to resize. Double-click: back to the default."></div>
       <div class="card" id="insp" aria-label="Inspector"><div class="in"></div></div>
     </section>
   </main>

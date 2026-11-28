@@ -72,6 +72,7 @@ from lab_os.ai.wake import (
     sensitivity_level,
 )
 from lab_os.hub.greeting import HELLOS, time_of_day
+from lab_os.hub.hub_devices import address_key
 from lab_os.personas import Persona
 from lab_os.teleop.server import is_local
 
@@ -430,7 +431,7 @@ class VoiceDesk:
         wake = {"available": wake_why is None, "why": wake_why, "phrase": self.wake_phrase()}
         out = {"available": why is None, "why": why, "why_detail": self.why_not(detail=True)}
         # the soloed devices that are there: the other screens make no sound (quick job 166)
-        solo = sorted({lk.device for lk in self.soloed()})
+        solo = sorted({lk.key for lk in self.soloed()})
         return out | where | {"wake": wake, "solo": solo}
 
     # ---------- where the sound plays: mute and solo, per device (quick job 166) ----------
@@ -443,7 +444,7 @@ class VoiceDesk:
 
     def muted(self, link: "VoiceLink", sounds: dict | None = None) -> bool:
         sounds = self._sounds() if sounds is None else sounds
-        return bool(link.device) and sounds.get(link.device, {}).get("sound") is False
+        return bool(link.key) and sounds.get(link.key, {}).get("sound") is False
 
     @staticmethod
     def one_per_device(links) -> list["VoiceLink"]:
@@ -451,7 +452,7 @@ class VoiceDesk:
         speakers, so two of them would play the same words twice."""
         seen, out = set(), []
         for lk in sorted(links, key=lambda lk: lk.since):
-            key = lk.device or id(lk)
+            key = lk.key or id(lk)
             if key not in seen:
                 seen.add(key)
                 out.append(lk)
@@ -464,8 +465,8 @@ class VoiceDesk:
             lk
             for lk in self.links
             if not lk.own
-            and lk.device
-            and sounds.get(lk.device, {}).get("solo") is True
+            and lk.key
+            and sounds.get(lk.key, {}).get("solo") is True
             and not self.muted(lk, sounds)
         ]
         return self.one_per_device(solo)
@@ -833,6 +834,7 @@ class VoiceLink:
         own: bool = False,
     ):
         self.desk, self.ws, self.device = desk, ws, device
+        self.key = device  # mute and solo: its device name, else its address key (quick job 169)
         self.local = local  # the page runs on the brain's computer (visitor mode's tools)
         self.own = own  # the Quest's page: its own sound, never muted, soloed or sent to
         self.since = time.monotonic()
@@ -1610,6 +1612,7 @@ async def voice_ws(request: web.Request, desk: VoiceDesk) -> web.WebSocketRespon
     device = re.sub(r"[^a-z0-9-]", "", request.query.get("device", "").lower())[:32]
     own = request.query.get("own") == "1"  # the Quest's page: its own sound (quick job 166)
     link = VoiceLink(desk, ws, device, local=is_local(request), own=own)
+    link.key = device or address_key(request.remote or "")  # its sound's key (quick job 169)
     desk.links.add(link)
     try:
         async for msg in ws:

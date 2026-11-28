@@ -74,6 +74,11 @@ export async function renameDevice(to) {
   return { ok: true, message: `Opening the hub as ${want}…` };
 }
 
+// a page with no name keeps its sound on the brain under its address key (quick job 169); the welcome says it
+const UNNAMED_SOUND = ["sound", "solo"];
+let addressKey = "";
+/** This page's key for mute and solo: its device name, else the brain's key for its address ("" before the welcome). */
+export const deviceKey = () => deviceName() || addressKey;
 export const prefsKey = (name = deviceName()) => (name ? `lab-os.device.${name}` : LEGACY_KEY);
 export const isPrefsKey = (k) => k === LEGACY_KEY || !!k?.startsWith("lab-os.device.");
 export function prefs(name) {
@@ -92,6 +97,9 @@ export async function setPref(key, value) {
   if (value === "" || value == null) delete mine[key];
   else mine[key] = value;
   store.set(prefsKey(name), JSON.stringify(mine));
+  if (!name && UNNAMED_SOUND.includes(key) && addressKey) {  // its sound: on the brain too (quick job 169)
+    try { await postJSON(`/api/hub-devices/${addressKey}/settings`, { [key]: value ?? "" }); } catch { /* kept here */ }
+  }
   if (!name) return { ok: true, message: "Kept in this browser (this device has no name)." };
   try {
     const r = await postJSON(`/api/hub-devices/${name}/settings`, { [key]: value ?? "" });
@@ -152,7 +160,12 @@ export function connectDevice(h) {
         if (r.ok) values = r.settings;
       } catch { /* kept for next time */ }
     }
-    if (!name) return;
+    if (!name) {  // only its sound comes from the brain (quick job 169); the brain's word wins
+      const before = JSON.stringify(legacy);
+      for (const k of UNNAMED_SOUND) { if (k in values) legacy[k] = values[k]; else delete legacy[k]; }
+      if (JSON.stringify(legacy) !== before) { store.set(LEGACY_KEY, JSON.stringify(legacy)); h.onSettings?.(); }
+      return;
+    }
     const before = store.get(prefsKey(name));
     store.set(prefsKey(name), JSON.stringify(values));
     if (before !== JSON.stringify(values)) h.onSettings?.();
@@ -167,6 +180,7 @@ export function connectDevice(h) {
       if (m.type === "welcome") {
         backOn();
         wid = m.window;
+        addressKey = m.key || "";
         try { sessionStorage.setItem("lab-os.window", wid); } catch { /* none */ }
         if (m.why_no_name) console.warn(`device: ${m.why_no_name}`);
         if (!name && m.found && m.device) { // the brain knows this device by its address (quick job 132)
