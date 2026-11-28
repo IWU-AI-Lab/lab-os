@@ -84,6 +84,19 @@ def test_the_greeting_plays_on_the_first_device_of_the_order():
     assert d.greeting_outputs(nl) == [pi]  # a soloed device wins
 
 
+def test_the_window_that_starts_plays_its_own_greeting():
+    """Two windows on one computer: the one that started speaks, not the one open longest."""
+    old, new = link("desk", local=True, since=1), link("desk", local=True, since=2)
+    d = desk([old, new], order=("brain",))
+    assert d.greeting_outputs(new) == [new]
+    assert d.greeting_outputs(old) == [old]
+    d = desk([old, new, link("pi03")], {"desk": {"solo": True}})
+    assert d.greeting_outputs(new) == [new] and d.outputs(new) == [new]
+    pi = link("pi03")
+    d = desk([old, new, pi], order=("brain",))
+    assert d.greeting_outputs(pi) == [old]  # another device asked: the oldest window
+
+
 async def connect(client, name):
     return await client.ws_connect(f"/ws/voice?device={name}")
 

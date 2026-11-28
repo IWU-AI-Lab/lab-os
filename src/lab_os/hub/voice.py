@@ -447,19 +447,23 @@ class VoiceDesk:
         return bool(link.key) and sounds.get(link.key, {}).get("sound") is False
 
     @staticmethod
-    def one_per_device(links) -> list["VoiceLink"]:
-        """One page of each device, the one open longest: a device's monitors share its
-        speakers, so two of them would play the same words twice."""
+    def one_per_device(links, prefer: "VoiceLink | None" = None) -> list["VoiceLink"]:
+        """One page of each device: a device's monitors share its speakers, so two of them would
+        play the same words twice. `prefer` (the page that asked) plays for its own device;
+        else the page open longest. Before, the oldest page always played, so another window
+        on the same computer played the greeting that this window started."""
         seen, out = set(), []
-        for lk in sorted(links, key=lambda lk: lk.since):
+        first = [prefer] if prefer is not None and prefer in links else []
+        for lk in first + sorted(links, key=lambda lk: lk.since):
             key = lk.key or id(lk)
             if key not in seen:
                 seen.add(key)
                 out.append(lk)
         return out
 
-    def soloed(self) -> list["VoiceLink"]:
-        """The soloed devices that are there and not muted (one page each)."""
+    def soloed(self, prefer: "VoiceLink | None" = None) -> list["VoiceLink"]:
+        """The soloed devices that are there and not muted (one page each; `prefer` for its own
+        device)."""
         sounds = self._sounds()
         solo = [
             lk
@@ -469,21 +473,21 @@ class VoiceDesk:
             and sounds.get(lk.key, {}).get("solo") is True
             and not self.muted(lk, sounds)
         ]
-        return self.one_per_device(solo)
+        return self.one_per_device(solo, prefer)
 
     def outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
         """Where `link`'s answer plays: the Quest's own page plays its own; else on the soloed
         devices, when one is there; else on the screen that asked, unless it is muted."""
         if link.own:
             return [link]
-        return self.soloed() or ([] if self.muted(link) else [link])
+        return self.soloed(link) or ([] if self.muted(link) else [link])
 
     def greeting_outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
         """Where the greeting that `link` asked for plays: the soloed devices; else the first
         device of `greeting_from` that is there and not muted; else `link`; else any screen."""
         if link.own:
             return [link]
-        if solo := self.soloed():
+        if solo := self.soloed(link):
             return solo
         sounds = self._sounds()
         free = [lk for lk in self.links if not lk.own and not self.muted(lk, sounds)]
@@ -494,7 +498,7 @@ class VoiceDesk:
         for name in order:
             there = [lk for lk in free if (lk.local if name == "brain" else lk.device == name)]
             if there:
-                return self.one_per_device(there)[:1]
+                return self.one_per_device(there, link)[:1]
         if link in free:
             return [link]
         return self.one_per_device(free)[:1]
