@@ -30,8 +30,8 @@ the voice's connections are opened while the person talks. Each turn's timing is
 Where the sound plays (2026-11-27, after quick job 166): each device plays its own answers and
 greetings on its own speakers. A device may be muted (`sound: false`), soloed (`solo: true`) or a
 cover (`cover: true`) in its settings (the Command Center's M, S and C). Muted: nothing plays there,
-and its sound goes only to the cover devices (none: it is not heard). Soloed: while a device is
-soloed, only the soloed devices play their own sounds, and nothing else plays (also not on a cover).
+and its sound plays nowhere. Soloed: while a device is soloed, only the soloed devices play their
+own sounds, and the cover devices play them too (2026-11-28); the other devices are quiet.
 One greeting for every start: the screen where the person started greets. The Quest's own page
 keeps its own sound (`?own=1`): none of this changes it.
 """
@@ -471,17 +471,18 @@ class VoiceDesk:
         return self.one_per_device(solo)
 
     def outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
-        """Where `link`'s answer or greeting plays: on its own device (`link` itself). Nothing while
-        another device is soloed. A muted device's plays on the cover devices (one page each),
-        else nowhere. The Quest's own page always plays its own."""
+        """Where `link`'s answer or greeting plays: on its own device (`link` itself), unless it
+        is muted. While a device is soloed: only a soloed device's plays, on it and on the cover
+        devices (one page each). The Quest's own page always plays its own."""
         if link.own:
             return [link]
         sounds = self._sounds()
-        if self.soloed():
-            solo = bool(link.key) and sounds.get(link.key, {}).get("solo") is True
-            return [link] if solo and not self.muted(link, sounds) else []
-        if not self.muted(link, sounds):
+        if self.muted(link, sounds):
+            return []
+        if not self.soloed():
             return [link]
+        if not (link.key and sounds.get(link.key, {}).get("solo") is True):
+            return []
         cover = [
             lk
             for lk in self.links
@@ -491,7 +492,7 @@ class VoiceDesk:
             and sounds.get(lk.key, {}).get("cover") is True
             and not self.muted(lk, sounds)
         ]
-        return self.one_per_device(cover)
+        return [link, *self.one_per_device(cover)]
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 
@@ -888,7 +889,7 @@ class VoiceLink:
 
     def send_audio_for(self, asker: "VoiceLink", seq: int, text: str, wav: bytes) -> None:
         """A piece of `asker`'s answer or greeting, played here (quick job 166: `asker` may be
-        another page, e.g. a muted phone, when this device is a cover)."""
+        another page, e.g. a soloed phone, when this device is a cover)."""
         if asker is not self:
             if self.playing_for is not asker:
                 self.playing_for = asker

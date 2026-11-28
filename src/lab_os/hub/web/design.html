@@ -2528,8 +2528,8 @@ function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = n
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
 const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
-// after the jump. Only where voice works at the brain; no microphone: no hint. Asked also on a muted screen: the
-// brain plays it on the cover devices then (the Command Center's C), else nowhere.
+// after the jump. Only where voice works at the brain; no microphone: no hint. On a soloed screen, the brain plays
+// it on the cover devices too (the Command Center's C).
 // Every start waits for the jump, also back from the start screen (quick job 84, the builder: at once, it
 // played over the jump; quick job 42 had made it play at once there).
 function spokenGreeting() {
