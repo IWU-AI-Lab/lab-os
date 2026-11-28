@@ -46,7 +46,7 @@
     <span class="place"></span>
     <div class="chips">
       <span class="chip"><b>LeLab</b><span id="state" class="pill off">—</span></span>
-      <span class="chip"><b>LeRobot teleop</b><span id="lr-state" class="pill off">—</span></span>
+      <span class="chip"><b>LeRobot Control</b><span id="lr-state" class="pill off">—</span></span>
     </div>
     <span class="grow"></span>
     <span class="clock"></span>
@@ -66,12 +66,12 @@
     </div></section>
 
     <section class="card"><div class="in">
-      <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>LeRobot teleop with Rerun</h2>
-      <p class="hint">LeRobot's own teleop command: the green leader drives the green follower. Rerun opens in its own window and shows the cameras and the joints over time. Checked first; nothing is opened until every line is fine.</p>
+      <h2><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg>LeRobot Control with Rerun</h2>
+      <p class="hint">LeRobot's own command (<code>lerobot-teleoperate</code>): the green leader drives the green follower. Rerun opens in its own window and shows the cameras and the joints over time. Checked first; nothing is opened until every line is fine.</p>
       <p class="hint"><b>Warning:</b> at Start the follower moves to the leader's pose at once. Put both arms in the same pose first.</p>
       <ul id="lr-lines" class="lines"><li><span></span><span>Checking…</span></li></ul>
       <div class="actions">
-        <button id="lr-start" class="btn primary" type="button" disabled>Start LeRobot teleop</button>
+        <button id="lr-start" class="btn primary" type="button" disabled>Start LeRobot Control</button>
         <button id="lr-stop" class="btn small" type="button" hidden>Stop</button>
         <button id="lr-again" class="btn small" type="button">Check again</button>
       </div>
@@ -152,7 +152,7 @@
   $("#lr-again").onclick = loadLr;
   $("#lr-start").onclick = () => { $("#lr-msg").textContent = "Starting (Rerun first, about 10 s)…"; postLr("/api/lerobot-teleop/start", $("#lr-start")); };
   $("#lr-stop").onclick = () => {
-    if (!confirm("Stop LeRobot's teleop? The green follower goes limp, as with Ctrl+C. Hold it first if it is lifted.")) return;
+    if (!confirm("Stop LeRobot Control? The green follower goes limp, as with Ctrl+C. Hold it first if it is lifted.")) return;
     postLr("/api/lerobot-teleop/stop", $("#lr-stop"));
   };
   loadLr();

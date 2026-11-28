@@ -84,7 +84,7 @@ export class XRScene {
   }
 
   /** The 3D arm's look ("stick" = the light model, else the full one), changed during a session (the hub's
-   * Teleop options, quick job 102): the models load again in the new look. */
+   * Arm Control options, quick job 102): the models load again in the new look. */
   setStyle(style) {
     if ((style || "") === (this.style || "")) return;
     this.style = style;

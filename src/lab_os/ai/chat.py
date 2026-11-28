@@ -7,7 +7,7 @@ git, devices; lab_os.ai.tools) the model may look things up first, up to MAX_TOO
 The hub's chat reads and answers (rule 5), and opens pages on the screen that asked (decision
 2026-11-14): the page sends what it can show (`pages`), the model gets an `open_page` tool for them,
 and the turn yields an `open` event the page acts on. A round that only opens a page is answered
-right away ("Here's Teleop."), without asking the model again.
+right away ("Here's Arm Control."), without asking the model again.
 With `actions` (the hub's visitor mode, lab_os.hub.visitors; the arm, lab_os.hub.arm_desk) the
 model also gets the tools that start and exit visitor mode and wave the arm, and (when Settings
 allows it) move the arm to a pose and hand over the cube, when the question comes from the brain's

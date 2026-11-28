@@ -38,7 +38,7 @@ Every device has a sticker. The Raspberry Pis are numbered 1 to 10. The desktops
 |---|---|---|---|
 | Innomaker U20CAM-1080p | 2 | `so101-green-cam-wrist`, `so101-green-cam-stand` | The green set's. Both have the serial SN0001, so lab-os tells them apart by USB socket. |
 | Arm cameras of the white set | 2 | `so101-white-cam-wrist`, `so101-white-cam-stand` | Today they use the green set's sockets (the hack in `docs/plan/current-focus.md`). The model is not checked. |
-| Logitech C615 webcam (1080p) | 1 | none | For webcam teleop. Its microphone is not used. |
+| Logitech C615 webcam (1080p) | 1 | none | For Webcam Control. Its microphone is not used. |
 | Kinect for Xbox 360 (model 1414) | 1 | none | Needs drivers that need `sudo`. |
 | The Raspbot's camera | 2 | (raspbot1's) | On the pan-and-tilt mount. |
 

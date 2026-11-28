@@ -1,7 +1,7 @@
 // The hub's VR and AR Raspbot (quick job 107): drive raspbot1 with its camera as your eyes.
 //   - The left stick drives forward, back and sideways. The right stick turns the car.
 //     LEGACY switches to the earlier controls: the left stick drives and the right stick looks.
-//     Both modes use /ws/raspbot, with the same STOP and input timeout as the Raspbot page.
+//     Both modes use /ws/raspbot, with the same STOP and input timeout as the Raspbot Control page.
 //   - The window opens in front of you. Point at it and hold a grip to move it.
 //     HEAD turns the camera's head control on or off.
 //   - The direction you look when the module opens is the camera's centre. CENTRE (or a press on the
@@ -348,7 +348,7 @@ export class RaspbotModule {
     else if (!s.connected) { text = s.message || `${s.name} is not connected.`; bad = true; }
     else if (!s.may_drive) { text = `View only: ${s.address || "this headset"} is not in drive_from.`; bad = true; }
     else {
-      // the Raspbot page's words, with capital letters (quick jobs 53, 153): "Free", "You", "Another page"
+      // the Raspbot Control page's words, with capital letters (quick jobs 53, 153): "Free", "You", "Another page"
       const who = { free: "Free", you: "You", other: "Another page" }[s.control] || "Free";
       const pan = Math.round(this.look.pan), tilt = Math.round(this.look.tilt);
       text = `${s.name}: ${raspbotMotion(s)}. Control: ${who}. Camera ${pan}°, ${tilt}°.`;

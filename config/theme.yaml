@@ -142,7 +142,7 @@ arm3d:                   # the 3D arm (desktop panel + headset), on a dark backg
     cup: "#7d8b92"
     board: "#1f5a35"
 
-vr_room:                 # the room around the arm in VR Teleop (teleop/web/xr-scene.js; quick job 153)
+vr_room:                 # the room around the arm in VR Arm Control (teleop/web/xr-scene.js; quick job 153)
   background: "#17191c"  # the sky and the fog
   floor: "#24272b"
   grid: "#33373d"

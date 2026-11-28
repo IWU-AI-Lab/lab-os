@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Teleop</title>
+  <title>Arm Control</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <link rel="stylesheet" href="/static/pages.css">
@@ -13,13 +13,13 @@
   </script>
 </head>
 <!--
-  Teleop, in the hub's design (2026-11-10). Same element ids as before, so the scripts are shared with
+  Arm Control, in the hub's design (2026-11-10). Same element ids as before, so the scripts are shared with
   the plain page that was at /classic/teleop (removed 2026-11-20). Left: what the arm does (3D). Right: how to drive it.
 -->
 <body class="teleop">
 <div class="page">
   <header class="bar">
-    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg><span>Teleop</span></div>
+    <div class="title"><svg class="ico"><use href="/web/design/icons.svg#i-hand"/></svg><span>Arm Control</span></div>
     <span class="place"></span>
     <div class="chips" aria-label="Status">
       <span class="chip"><b>Brain</b><span id="conn" class="pill off">Connecting</span></span>
@@ -45,7 +45,7 @@
           <button id="enter-ar" class="btn primary" type="button" disabled hidden>Enter AR (passthrough)</button>
           <button id="enter" class="btn primary" type="button" disabled hidden>Enter VR</button>
         </div>
-        <p id="xr-none" class="hint" hidden>This device has no VR or AR. Use Desktop control, or open Teleop on the Quest.</p>
+        <p id="xr-none" class="hint" hidden>This device has no VR or AR. Use Desktop control, or open Arm Control on the Quest.</p>
         <p id="xr-msg" class="msg" aria-live="polite"></p>
         <p id="control-why" class="msg" aria-live="polite" hidden></p>
         <dl class="facts">
@@ -53,7 +53,7 @@
           <dt>Speed</dt><dd id="speed">—</dd>
         </dl>
         <details class="how"><summary>How to drive</summary>
-          <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down: the arm holds still. <b>Hands</b> (hub → VR Teleop → Options): hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper.</p>
+          <p class="hint">Quest: hold <b>Grip</b> to move (the clutch), <b>Trigger</b> = gripper, <b>A/X</b> = stop; right <b>thumbstick</b> up/down = speed; left <b>Grip</b> = move the 3D arm, <b>Y</b> = put it back. Controllers down: the arm holds still. <b>Hands</b> (hub → VR Arm Control → Options): hold a <b>left pinch</b> to move, <b>right pinch</b> = gripper.</p>
           <p class="hint" id="two-arms-hint" hidden>Two arms: each controller drives its own arm (<b>Grip</b> = move, <b>Trigger</b> = gripper); <b>A</b> or <b>X</b> stops both. Hold <b>Y</b> and a <b>Grip</b> to move that hand's 3D arm (the arms hold still); tap <b>Y</b> to put both back.</p>
         </details>
       </div></section>

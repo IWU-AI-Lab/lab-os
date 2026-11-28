@@ -288,5 +288,5 @@ def test_a_quest_by_its_teleop_page_and_an_arm_in_use(monkeypatch):
     assert got["quest:192.168.8.99"]["known"] is False
     assert len([d for d in got.values() if d["kind"] == "headset"]) == 2
     got = {d["id"]: d for d in server.live_entries(app, usb, [], [], {})}
-    assert got["quest-a"]["via"] == "teleop page (network)"
+    assert got["quest-a"]["via"] == "Arm Control page (network)"
     assert "power" not in got["so101-white"]

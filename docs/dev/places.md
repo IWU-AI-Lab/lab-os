@@ -19,7 +19,7 @@ Since 2026-11-20. Before, the settings page wrote into the files in `config/` (t
 ```bash
 uv run lab-os new-place ~/my-lab-os                 # writes a starter (never overwrites)
 uv run lab-os serve --config ~/my-lab-os            # the hub, with this place's name and devices
-uv run lab-os-teleop --config ~/my-lab-os serve     # same option for teleop on its own
+uv run lab-os-teleop --config ~/my-lab-os serve     # same option for Arm Control on its own
 ```
 Or set `LAB_OS_CONFIG=~/my-lab-os` in your shell and leave out `--config`.
 
@@ -41,7 +41,7 @@ The starter has:
 - **The lab's protected devices come along to every place:** anything `off_limits: true` in the repo's `config/devices.yaml` is refused at every place, and anything `borrowed: true` (the green arms and their cameras, since step 11) keeps its rules at every place (no motor setup or calibration, driven with a copy of the training calibration, which is only read), even if another folder's `devices.yaml` lists it differently. They're only drivable where a venue lists them in `active_devices`. Switching folders can never weaken them.
 - **Two kinds of protection in `devices.yaml`:** `off_limits: true` = never opened (refused by name, port and USB serial; an entry without a serial blocks that whole USB model). `borrowed: true` = another project's device: lab-os may drive or use it, but `so101_setup` refuses it (also by board serial), it's never a command-line default, and `training_calibration: robots/so_follower/sheep.json` names its training calibration in LeRobot's cache (read only, the source of truth): lab-os drives with its copy in `calibration/<name>/` and refuses if the two differ.
 - **One program per port, everywhere:** before an SO-101 port or a camera is opened, lab-os checks that no other program has it open (`/proc` on Linux, `lsof` elsewhere) and refuses with a sentence naming it.
-- **An arm's table height:** `table_z_cm` (default 0) is where the table is in the arm's own heights, whose 0 is the bottom of its base: negative for an arm standing on a plate (`so101-white`: −1.6). The AI tools, `pick_at`, the floor and teleop then measure every height from the table (quick job 28).
+- **An arm's table height:** `table_z_cm` (default 0) is where the table is in the arm's own heights, whose 0 is the bottom of its base: negative for an arm standing on a plate (`so101-white`: −1.6). The AI tools, `pick_at`, the floor and Arm Control then measure every height from the table (quick job 28).
 - **Cameras by socket:** identical cameras share a serial, so a camera is `kind: camera` with `socket: usb-0:7` (the USB part of its `/dev/v4l/by-path/` name; `ls -l /dev/v4l/by-path/` lists them without opening anything). A camera on the same USB hub as its arm can be `beside: <arm>` with `hub_port: "2"` (its port on that hub, quick job 115): the name then follows the arm to any socket. `uv run lab-os usb` prints both for each camera plugged in. Never `/dev/videoN`.
 
 ## Your own arm

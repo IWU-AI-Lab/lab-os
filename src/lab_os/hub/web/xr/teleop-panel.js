@@ -1,10 +1,10 @@
-// The hub's VR and AR Teleop: its buttons and options beside the status box (quick job 102, the builder:
+// The hub's VR and AR Arm Control: its buttons and options beside the status box (quick job 102, the builder:
 // "where I expect them", like ⚙ in the VR hub). Both hang in the teleop room, so they stay with the arm
 // where you look while you drive it:
 //   TeleopBar      under the status box: STOP and Options, then the way out as on every page of the hub in VR
-//                  (quick job 157): ⏻ (its menu), EXIT (leaves VR or AR) and × (closes Teleop, back to the hub). The way out, in view and pressable with the right controller or the
-//                  right hand (point, then trigger or pinch); B closes Teleop too.
-//   TeleopOptions  over the status box, opened by Options: the Teleop page's options for the headset
+//                  (quick job 157): ⏻ (its menu), EXIT (leaves VR or AR) and × (closes Arm Control, back to the hub). The way out, in view and pressable with the right controller or the
+//                  right hand (point, then trigger or pinch); B closes Arm Control too.
+//   TeleopOptions  over the status box, opened by Options: the Arm Control page's options for the headset
 //                  (xr/teleop-options.js says what each row shows and sends).
 // Drawn 200 units across, like Settings in VR (xr/settings.js).
 import { C, CanvasPlane, FONT, icon, rgba, spaced } from "./draw.js";
@@ -108,7 +108,7 @@ export class TeleopOptions {
     g.strokeStyle = C.line; g.lineWidth = 0.5; g.stroke();
     g.strokeStyle = C.primary; g.lineWidth = 0.9; g.beginPath(); g.moveTo(0.5, 22); g.lineTo(0.5, 7); g.lineTo(7, 0.5); g.lineTo(60, 0.5); g.stroke();
     icon(g, "i-gear", 10, 10, 8, C.primary, 1.5);
-    spaced(g, 0.16); label("TELEOP OPTIONS", 18, 10, 5.4, C.hot, "left", 700, FONT.title); spaced(g, 0);
+    spaced(g, 0.16); label("ARM CONTROL OPTIONS", 18, 10, 5.4, C.hot, "left", 700, FONT.title); spaced(g, 0);
     const L = 8, R = w - 8, ctlW = 96, top = 21, rowH = (h - top - 12) / rows.length;
     rows.forEach((r, i) => {
       const y = top + i * rowH, cy = y + 1, ch = 11, cx = R - ctlW;

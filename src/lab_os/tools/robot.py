@@ -453,8 +453,8 @@ class RobotTools:
         who = self.who_has_control()
         if who == "teleop":
             raise Refused(
-                "teleop has control: a teleop page is driving the arm. Ask the user; the move "
-                "tools work again once that page lets go."
+                "a person has control: an Arm Control page is driving the arm. Ask the user; "
+                "the move tools work again once that page lets go."
             )
         if who == "ai":
             raise Refused("another move is still running; wait for it to finish")

@@ -253,7 +253,7 @@ function scrRow(s, under) {
   r.tabIndex = 0;
   r.dataset.key = s.key;
   const sub = own && !n ? resolution(s.w) || "Screen" : shows(s.w);
-  // under its device: one line, "Screen 2, Teleop" (quick job 161: compact)
+  // under its device: one line, "Screen 2, Arm Control" (quick job 161: compact)
   r.innerHTML = `<span class="k">${ico(VIEW_ICON[s.w.showing?.id] || "i-screen")}</span>`
     + (under ? `<b title="${esc(`${name}, ${sub}`)}">${esc(name)}<span class="sub">, ${esc(sub)}</span></b>` : `<b title="${esc(name)}">${esc(name)}</b>`)
     + eye(s.key)
@@ -753,7 +753,7 @@ async function setDrive(hubs, allowed) {
   const r = await postJSON("/api/command-center/drive", { addresses, allowed });
   if (!r.ok) return say(r.message, true);
   S.drive = new Set(r.drive_from);
-  say(`${plural(hubs.length, "device")} ${allowed ? "may" : "may not"} drive a real arm now. Its Teleop page checks this when it opens.`);
+  say(`${plural(hubs.length, "device")} ${allowed ? "may" : "may not"} drive a real arm now. Its Arm Control page checks this when it opens.`);
   render(true);
 }
 
@@ -782,7 +782,7 @@ function actionsFor(keys, devs, scr) {
   if (hubs.length && hubs.every((d) => d && !d.here && d.address)) {
     const all = hubs.every(mayDrive), n = plural(hubs.length, "device");
     acts.push({ real: true, icon: "i-hand", label: all ? `Stop driving (${n})` : `Allow driving (${n})`,
-      title: all ? "These devices may not drive a real arm any more" : "These devices may drive a real arm (Teleop, Raspbot)", run: () => setDrive(hubs, !all) });
+      title: all ? "These devices may not drive a real arm any more" : "These devices may drive a real arm (Arm Control, Raspbot Control)", run: () => setDrive(hubs, !all) });
   }
   if (keys.every((k) => k.startsWith("s:"))) {
     acts.push({ kind: "group", label: "Group under", run: (target) => { groupUnder(keys, target); saveLayout(); render(true); } });

@@ -196,7 +196,7 @@ def T(offset=0.0):
 
 
 def stream(arm, joint, start, deg_per_s, ticks, t0, dt=0.02):
-    """Teleop-style: a new goal every tick, moving at deg_per_s."""
+    """Arm Control-style: a new goal every tick, moving at deg_per_s."""
     for k in range(ticks):
         arm.move_joints({joint: start + deg_per_s * dt * k}, 1.0)
         arm._tick(t0 + dt * k)

@@ -6,7 +6,7 @@
 //   found                      [{name, score, box: {x, y, w, h}}], the box as fractions of the picture
 //   drawLabels(g, w, h, found, {front, distanceMm, color, bg, font})   on the picture's canvas
 //   frontIndex(found, panDeg)  which object the ultrasonic sensor measures, or -1
-//   labelsSwitch({button, canvas, img, say, send, status})   a page's Labels button (the Raspbot page, Monitor)
+//   labelsSwitch({button, canvas, img, say, send, status})   a page's Labels button (the Raspbot Control page, Monitor)
 //
 // The labels look like a HUD: corner brackets on a thin light outline around each object, the design's UI font (Chakra Petch), the
 // name in capitals, letters spaced out.

@@ -287,10 +287,10 @@ async def refused(rig, tool, match, **args):
 
 async def test_refused_while_teleop_has_control(rig):
     rig.control["ws"] = object()  # a teleop page is driving
-    await refused(rig, "move_joints", "teleop has control", joints={"shoulder_pan": 5})
-    await refused(rig, "move_to", "teleop has control", x_cm=25, y_cm=0, z_cm=5)
-    await refused(rig, "gripper", "teleop has control", open_pct=50)
-    await refused(rig, "go_to_pose", "teleop has control", name="ready")
+    await refused(rig, "move_joints", "a person has control", joints={"shoulder_pan": 5})
+    await refused(rig, "move_to", "a person has control", x_cm=25, y_cm=0, z_cm=5)
+    await refused(rig, "gripper", "a person has control", open_pct=50)
+    await refused(rig, "go_to_pose", "a person has control", name="ready")
     assert (await rig.arm_status())["control"] == "teleop"
 
 
@@ -469,7 +469,7 @@ async def test_mcp_moves_and_refuses_with_a_reason(rig):
         assert json.loads(r.content[0].text)["joints_deg"]["shoulder_pan"] == 12
         rig.control["ws"] = object()
         r = await c.call_tool("move_to", {"x_cm": 25, "y_cm": 0, "z_cm": 5})
-        assert r.is_error and "Refused: teleop has control" in r.content[0].text
+        assert r.is_error and "Refused: a person has control" in r.content[0].text
         r = await c.call_tool("stop", {})
         assert not r.is_error
 

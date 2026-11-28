@@ -192,7 +192,7 @@ async def test_move_the_arm_to_home(desk):
 async def test_refused_while_teleop_drives(desk):
     desk.robot.control["ws"] = object()
     result, _ = await desk.call(MOVE, True, '{"pose": "home"}')
-    assert "teleop has control" in result and desk.task is None
+    assert "a person has control" in result and desk.task is None
 
 
 async def test_hand_me_the_cube_then_let_go(desk):

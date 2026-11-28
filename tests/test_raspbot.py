@@ -1,4 +1,4 @@
-"""Quick job 72: the Raspbot page, the brain's controller and the program on the Raspbot."""
+"""Quick job 72: the Raspbot Control page, the brain's controller and the program on the Raspbot."""
 
 import asyncio
 import base64

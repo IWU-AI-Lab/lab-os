@@ -93,7 +93,7 @@ class Show {
     this.stage.add(this.sky.mesh, this.stars.group, this.net.group, this.ign.group, this.hub.group, this.core.group, this.title.mesh, this.greet.mesh, this.checks.mesh, this.hub.tab.mesh, this.hub.menu.mesh);
     this.pointer = new Pointer(this.scene);
     // the way out (quick job 157): ⏻, EXIT and × (while a page is open) under the core and the ask line, on
-    // the hub, a details page and Settings; an open module has the same buttons on its tab, Teleop on its bar
+    // the hub, a details page and Settings; an open module has the same buttons on its tab, Arm Control on its bar
     this.exit = new WayOut(0.13);
     this.exit.mesh.position.set(0, -1.22, -D + 0.1);
     this.exit.mesh.visible = false;
@@ -176,7 +176,7 @@ class Show {
     if (this.off) return;
     this.off = new OffCard(msg);
     this.off.lost = !!msg.lost;
-    this.hub.closeModule(); // Teleop's room (outside the stage) goes too: only the card
+    this.hub.closeModule(); // Arm Control's room (outside the stage) goes too: only the card
     this.scene.add(this.off.mesh);
     this.stage.visible = false;
     this.pointer.setTargets([this.off.exit.mesh]); // only Exit, under the card
@@ -184,7 +184,7 @@ class Show {
     this.hub.ask.V?.off();
     this.sfx.close?.();
   }
-  /** B or Y: back (closes an open page or module; in Teleop only B, Y is teleop's). */
+  /** B or Y: back (closes an open page or module; in Arm Control only B, Y is teleop's). */
   back(now, key) { if (this.phase === "hub") this.hub.back(now, key); }
 
   startJump(now) {
@@ -322,7 +322,7 @@ class Show {
     this.greet.step(now);
     if (this.checks.step(now)) this.sfx.line();
     this.checks.fade = P === "hub" ? Math.max(0, 1 - (now - this.hubAt) / 800) : 1;
-    // a module has the way out on its tab (Teleop on the bar under its status box, quick job 102)
+    // a module has the way out on its tab (Arm Control on the bar under its status box, quick job 102)
     this.exit.mesh.visible = P === "hub" && !this.hub.module;
     this.exit.close = this.hub.mode === "details" || this.hub.mode === "settings";
     this.exit.hover = this.pointer.all().find((h) => h.obj === this.exit.mesh)?.what || null;
@@ -377,7 +377,7 @@ async function getJSON(url) {
 async function loadFacts(show) {
   const [hub, hello, st, arm] = await Promise.all([getJSON("/api/hub"), getJSON("/api/greeting"), getJSON("/api/status"), getJSON("/api/arm")]);
   if (hub?.title) { show.facts.title = hub.title; show.title.text = hub.title; }
-  // the Raspbot module is in VR and AR only (quick job 107): the screen hub has the Raspbot page in All Pages
+  // the Raspbot Control module is in VR and AR only (quick job 107): the screen hub has the Raspbot Control page in All Pages
   show.hub.setModules([...(hub?.modules || []).map((m) => m.id), "raspbot"]);
   if (hello?.text) show.facts.greeting = hello.text;
   show.facts.status = st; show.facts.arm = arm;
@@ -414,7 +414,7 @@ const backWas = {};
 function xrPointers(show, frame, r, now) {
   const ref = r.xr.getReferenceSpace(), on = show.phase === "hub" || !!show.off; // off: Exit on the card
   const teleop = on && !show.off && show.hub.module?.id === "teleop";
-  // Teleop open (quick job 97, as before 2026-11-21): its own session reads the controllers and drives the
+  // Arm Control open (quick job 97, as before 2026-11-21): its own session reads the controllers and drives the
   // arm; only the right ray can reach the buttons beside the status box (STOP, Options, Back, Exit; quick job
   // 102), its beam drawn only while it is on one, so it isn't in the way (its trigger or pinch only grips while
   // the clutch is held)
@@ -542,7 +542,7 @@ async function start(mode) {
   });
   session.addEventListener("end", () => {
     r.setAnimationLoop(null); clearInterval(timer); clearInterval(timer2);
-    show.hub.closeModule(clockNow()); // Teleop open (Exit, or the headset taken off): the arm freezes
+    show.hub.closeModule(clockNow()); // Arm Control open (Exit, or the headset taken off): the arm freezes
     $("#msg").textContent = `Left ${ar ? "AR" : "VR"}. Press a button to go back in.`;
   });
   r.setAnimationLoop(frame);

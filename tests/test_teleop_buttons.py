@@ -1,7 +1,7 @@
-"""The Teleop page's buttons (quick job 87): a headset is told by its browser, so a desktop with the
-WebXR emulator keeps Desktop control; the order is Desktop control, Enter AR, Enter VR, and the
-control settings are in their own Controls box. Runs the page's module with node; skipped without
-node."""
+"""The Arm Control page's buttons (quick job 87): a headset is told by its browser, so a desktop
+with the WebXR emulator keeps Desktop control; the order is Desktop control, Enter AR, Enter VR,
+and the control settings are in their own Controls box. Runs the page's module with node;
+skipped without node."""
 
 import json
 import shutil

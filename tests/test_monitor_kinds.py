@@ -60,7 +60,7 @@ def test_a_kind_shows_only_its_own_arms():
     assert view(mixed, "right", "so101") == "r-so101" and view(mixed, "left", "so101") is None
     got = run(FEED, f"m.armView({json.dumps(mixed)}, 'right', 'so101').left_arm")
     assert got is None  # the SO-101 page doesn't see the xArm as its left arm
-    # no kind (Teleop, AI Control, the VR Monitor): as before
+    # no kind (Arm Control, AI Control, the VR Monitor): as before
     assert view(mixed, "right", None) == "r-so101" and view(mixed, "left", None) == "l-xarm1s"
 
 

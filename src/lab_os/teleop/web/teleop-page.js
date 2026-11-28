@@ -81,7 +81,7 @@ link.on("status", (s) => {
   const warm = s.servos?.hot ? ` Servos warm (${Math.round(s.servos.max_temp_c)} °C): slowed to relative speed.` : "";
   const both = s.left_arm ? " Both arms use it." : "";
   $("mode-speed").textContent = off
-    ? "1:1 is off in this venue (⚙ Settings → Robots → Teleop 1:1 Top Joint Speed)."
+    ? "1:1 is off in this venue (⚙ Settings → Robots → Arm Control 1:1 Top Joint Speed)."
     : `1:1 follows as fast as ${top}; the Speed slider applies to relative only.${both}${warm}`;
   $("mode-hint").hidden = s.mode !== "one_to_one";
 });

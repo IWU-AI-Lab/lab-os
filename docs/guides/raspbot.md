@@ -1,6 +1,6 @@
-# The Raspbot page
+# The Raspbot Control page
 
-The Raspbot page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold an arrow under **Drive** to move straight, sideways or diagonally. Hold a curved arrow to turn in place. Let go to stop. Hold an arrow under **Pan and Tilt** to turn the camera. The picture is between the controls on every screen. On a phone, hold the screen sideways. Full screen locks the phone in landscape when the browser allows it. The page turns sideways if the browser keeps the phone screen in portrait. Use **Speed** to set the speed from 0 % to 100 % of the top speed. The status strip shows the connection, control, motion and ultrasonic distance. Deploy the current program to move sideways or diagonally and get the distance reading. The factory board has no documented battery reading.
+The Raspbot Control page (`/raspbot`) drives raspbot1, a Yahboom Raspbot v2, through the brain. Hold an arrow under **Drive** to move straight, sideways or diagonally. Hold a curved arrow to turn in place. Let go to stop. Hold an arrow under **Pan and Tilt** to turn the camera. The picture is between the controls on every screen. On a phone, hold the screen sideways. Full screen locks the phone in landscape when the browser allows it. The page turns sideways if the browser keeps the phone screen in portrait. Use **Speed** to set the speed from 0 % to 100 % of the top speed. The status strip shows the connection, control, motion and ultrasonic distance. Deploy the current program to move sideways or diagonally and get the distance reading. The factory board has no documented battery reading.
 
 ## How it works
 - A small program runs on the Raspbot: `robots/raspbot/lab_os_raspbot.py`. It uses Yahboom's own motor and servo library (`Raspbot_Lib`, already on the Raspbot). It only listens. The car moves only when the brain sends a command.
@@ -44,7 +44,7 @@ The service works only at start. When the router's Wi-Fi goes away later, raspbo
 raspbot1 logs in by itself when it starts, so the program starts with it (a systemd user service). On a Raspbot that does not log in by itself, run `sudo loginctl enable-linger pi` once.
 
 ## Take a picture or record
-Use these buttons on the Raspbot page or in the headset.
+Use these buttons on the Raspbot Control page or in the headset.
 
 1. Press **Picture** to save one picture.
 2. Press **Record** to start a recording. The red dot and the time show while it records.
@@ -55,12 +55,12 @@ The status line gives the full file name. The brain saves the files in `recordin
 The brain needs `ffmpeg` to make the `.mp4` (`sudo apt install ffmpeg`). Without it, the recording stays an `.mjpeg`, which only VLC opens.
 
 ## Labels on the picture
-On the Raspbot page or on **Raspbot Monitor**, press **Labels off** under the picture to put a thin outline with corner brackets and a label on each object: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Press **Labels on** to remove them. A page that only watches can show labels too. Each page has its own button.
+On the Raspbot Control page or on **Raspbot Monitor**, press **Labels off** under the picture to put a thin outline with corner brackets and a label on each object: its name and how sure the detector is. The object in front of the car also shows the ultrasonic distance, when the camera looks ahead. Press **Labels on** to remove them. A page that only watches can show labels too. Each page has its own button.
 
 The detector runs on the brain's computer, once for all pages. It looks for the words in `config/labels.yaml`, for example "blue cube" and "LEGO brick". Before the first use, and after you change the words, run `uv run lab-os labels build` on the brain's computer. It needs the internet and takes some minutes. Then start the brain again.
 
 ## Drive it from the Quest
-In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot page. The Quest's address must be in `drive_from`, as for Teleop.
+In the hub in VR or AR, the **Raspbot** button opens the Raspbot with its camera as your eyes. It uses the same brain path, STOP, freeze and Speed as the Raspbot Control page. The Quest's address must be in `drive_from`, as for Arm Control.
 - **Left stick:** push it to drive forward, back, sideways or diagonally.
 - **Right stick:** push it left or right to turn the Raspbot. Release both sticks to stop.
 - **Your head:** turn your head to turn the camera the same way. This control is on when you open **Raspbot**.

@@ -748,7 +748,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     </div></div></div>
     <div id="reply" aria-live="polite"><div class="q"></div><div class="a"></div></div>
     <div id="toast" class="alertable" role="status"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div class="msg-t" id="toast-msg"></div></div></div></div>
-    <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>Can't reach the AI</b><span>OpenAI hasn't answered for 30 s, so chat is paused. Teleop, devices and everything else still work. Trying again in 20 s.</span></div></div></div></div>
+    <div id="errmsg" role="alert"><div class="cut"><div class="in"><svg class="ico"><use href="#i-warn"/></svg><div><b>Can't reach the AI</b><span>OpenAI hasn't answered for 30 s, so chat is paused. Arm Control, devices and everything else still work. Trying again in 20 s.</span></div></div></div></div>
   </section>
 
   <section class="chat panel" aria-label="Chat">
@@ -807,7 +807,7 @@ body.q-minimal *, body.q-minimal *::before, body.q-minimal *::after { animation:
     <canvas id="mod-canvas"></canvas>
     <div id="mod-empty" aria-hidden="true"><svg class="ico"><use href="#i-test"/></svg></div>
     <div id="mod-slot"></div>
-    <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title">Teleop</span></div>
+    <div class="tab"><svg class="ico" id="mod-ico"><use href="#i-hand"/></svg><span id="mod-title">Arm Control</span></div>
     <button class="back" id="mod-back" type="button" aria-label="Back to the hub"><svg class="ico"><use href="#i-back"/></svg></button>
   </div></div>
 </div>
@@ -1813,10 +1813,10 @@ function setAlert(a) {
 
 /* ---------- chat ---------- */
 const ANSWERS = [
-  [/next|step|todo|work on/i, "Step 1 is next: the brain program and hub skeleton. `lab-os serve` serves this full-screen hub, with the status strip and module buttons coming from config, and Teleop working from inside it. After that come personas."],
+  [/next|step|todo|work on/i, "Step 1 is next: the brain program and hub skeleton. `lab-os serve` serves this full-screen hub, with the status strip and module buttons coming from config, and Arm Control working from inside it. After that come personas."],
   [/hold|wait|router|paused/i, "Roll call and robot connections wait for the lab router. Everything that's paused is listed in `docs/plan/ideas.md` under \"On hold\"."],
   [/design|font|color|look/i, "The design lives in `docs/design/DESIGN.md`: dark, cyan line-light, cut corners, cinematic motion. Colors, fonts and timings are all in `config/theme.yaml`, so each one is a single edit."],
-  [/arm|robot|teleop|so101|xarm/i, "so101-white is driven from the Quest through Teleop. xarm1 comes through the core once the router is here. In this concept the arm readouts come from fake-arm."],
+  [/arm|robot|teleop|so101|xarm/i, "so101-white is driven from the Quest through Arm Control. xarm1 comes through the core once the router is here. In this concept the arm readouts come from fake-arm."],
 ];
 const FALLBACK = "This concept page can't reach an AI model. In the real hub I'll answer from the project's docs and git history.";
 const GREETING = () => `${GREET_LINE()} The AI isn't connected in this concept, but ask me about the project and I'll show you how answers look.`;
@@ -1902,7 +1902,7 @@ const modCv = $("#mod-canvas"), mcx = modCv.getContext("2d");
 // every module the hub knows; the venue's list (hub.modules) picks which ones and their order.
 // Chat isn't in the list: it belongs to the core and is always there. "test" ones only try the layout.
 const MODULES = {
-  teleop: ["Teleop", "i-hand", "holo"], monitor: ["Monitor", "i-screen", "holo"], arm: ["Arm", "i-arm", "side"],
+  teleop: ["Arm Control", "i-hand", "holo"], monitor: ["Monitor", "i-screen", "holo"], arm: ["Arm", "i-arm", "side"],
   "test-4": ["Test 4", "i-test", "empty"], "test-5": ["Test 5", "i-test", "empty"], "test-6": ["Test 6", "i-test", "empty"],
 };
 const CHAT = ["Chat", "i-chat", "chat"];
@@ -2004,7 +2004,7 @@ const DETAILS = { project: ["Current Project", "i-next", "detail"], spend: ["AI 
 // docs/plan/current-focus.md, 7 Nov 2026
 const STEPS = [
   ["Settle before coding", "AI service picked (OpenAI first, local models second); the design session is under way"],
-  ["Brain program + hub skeleton", "lab-os serve serves this hub; Teleop works from inside it"],
+  ["Brain program + hub skeleton", "lab-os serve serves this hub; Arm Control works from inside it"],
   ["Personas", "Config files for the assistant's look, lines and sounds"],
   ["The assistant's picture", "The breathing core in every state, all quality levels"],
   ["Startup prototypes", "Short versions to watch and pick from"],

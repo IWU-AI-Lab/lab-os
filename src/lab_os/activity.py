@@ -2,8 +2,8 @@
 
 A short list in the brain's memory (not kept over a restart): a device connected or went, a screen
 opened a page or went back to the hub, STOP was pressed. The places that see the event add one line
-in plain words ("Pi 3 opened Teleop", "so101-white connected", "STOP pressed on desk"). A device's
-name stays as it is, also at the start of a line.
+in plain words ("Pi 3 opened Arm Control", "so101-white connected", "STOP pressed on desk"). A
+device's name stays as it is, also at the start of a line.
 """
 
 import time

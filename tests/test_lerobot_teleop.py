@@ -205,7 +205,7 @@ def test_stop_is_like_ctrl_c(tmp_path):
     said = runner.stop()
     assert "limp" in said and not runner.running()
     assert wait_for(lambda: "disconnected: torque off" in runner.lines)  # it got SIGINT
-    assert runner.stop() == "LeRobot's teleop isn't running."
+    assert runner.stop() == "LeRobot Control isn't running."
 
 
 def test_a_window_that_keeps_the_pipe_open_does_not_hide_the_end(tmp_path):
@@ -224,7 +224,7 @@ def test_a_window_that_keeps_the_pipe_open_does_not_hide_the_end(tmp_path):
     _, plan = lt.check(**world(tmp_path))
     runner.start(plan)
     assert wait_for(lambda: runner.said, s=5.0)
-    assert runner.said == "LeRobot's teleop stopped. Error: gone"
+    assert runner.said == "LeRobot Control stopped. Error: gone"
     assert wait_for(lambda: runner.tmp is None, s=2.0)
     runner._signal(runner.proc, 15)  # the "window" too
 
