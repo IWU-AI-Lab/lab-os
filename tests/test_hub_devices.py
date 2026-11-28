@@ -58,7 +58,7 @@ async def test_the_brain_lists_the_devices_with_the_hub_open(aiohttp_client):
     nameless, _ = await page(client, "")
     got = await (await client.get("/api/hub-devices")).json()
     assert [d["name"] for d in got["devices"]] == ["addr-127-0-0-1", "desk", "newline"]
-    assert got["devices"][0]["title"] == "Unnamed screen"  # quick job 153: the address in its card
+    assert got["devices"][0]["title"] == "Unnamed device"  # quick jobs 153, 167: address in card
     assert not got["devices"][0]["named"] and got["devices"][1]["named"]
     assert got["devices"][1]["windows"][0]["stage"] == "hub"
     await newline.close()
@@ -84,7 +84,7 @@ async def test_open_on_a_page_without_a_name(aiohttp_client):
         },
     )
     out = await r.json()
-    assert out["ok"] and out["message"] == "Monitor is open on the unnamed screen."
+    assert out["ok"] and out["message"] == "Monitor is open on the unnamed device."
     assert (await next_of(pi, "open"))["module"] == "monitor"
     await pi.close()
     await desk.close()

@@ -53,7 +53,7 @@ const SETTINGS = [
 const S = {
   hub: [], live: [], views: [], drive: new Set(), events: [], seenEvent: 0, wasOff: new Set(),
   layout: { places: {}, hidden: [], groups: {} },
-  sel: new Set(), search: "", pageSearch: "", page: "", group: "",
+  sel: new Set(), search: "", pageSearch: "", group: "", settings: {},
   view: { x: 40, y: 40, z: 1 }, autoFit: true, fitKey: "", drag: null, msg: "", msgBad: false, last: "",
 };
 
@@ -83,9 +83,11 @@ function saveLayout() {
 function say(text, bad = false) {
   S.msg = text; S.msgBad = bad;
   renderInspector(true);
+  const f = $(".veil .fsay");  // the focus window hides the inspector: it shows the message too
+  if (f) { f.textContent = text; f.classList.toggle("ok", !bad); }
   // what went well goes after a few seconds; a problem stays until the next action (quick job 165: it stayed)
   clearTimeout(S.msgTimer);
-  if (text && !bad) S.msgTimer = setTimeout(() => { if (S.msg === text) { S.msg = ""; renderInspector(true); } }, 6000);
+  if (text && !bad) S.msgTimer = setTimeout(() => { if (S.msg === text) { S.msg = ""; renderInspector(true); const g = $(".veil .fsay"); if (g) g.textContent = ""; } }, 6000);
 }
 
 // ---------- the items ----------
@@ -173,6 +175,14 @@ function soundButtons(d) {
     + `<button class="snd m${muted ? " on" : quiet ? " quiet" : ""}" type="button" data-snd="m" title="${mTitle}" aria-label="Mute" aria-pressed="${muted}">M</button>`
     + `<button class="snd s${h.solo ? " on" : ""}" type="button" data-snd="s" title="${sTitle}" aria-label="Solo" aria-pressed="${!!h.solo}">S</button></span>`;
 }
+// the inspector and the focus window: M and S, and what they mean now in words (quick job 167)
+function soundWords(d) {
+  const h = d.hub;
+  if (h.sound === false) return "Muted: nothing plays here.";
+  if (h.solo) return "Soloed: every answer and greeting plays here.";
+  return soloed().length ? "Quiet: another device is soloed." : "Plays sound.";
+}
+const soundBlock = (d) => `<div class="sndrow" data-dev="${esc(d.key)}">${soundButtons(d)}<span class="hint">${soundWords(d)}</span></div>`;
 // the list's own buttons: mute or unmute every device, show or hide every item
 async function muteAll() {
   const hubs = devices().filter(hasSound);
@@ -301,18 +311,41 @@ function renderPages() {
     const tiles = document.createElement("div");
     tiles.className = "tiles";
     for (const v of shown) {
-      tiles.insertAdjacentHTML("beforeend", `<div class="tile${v.id === S.page ? " on" : ""}" tabindex="0" role="button" data-view="${esc(v.id)}"`
-        + ` title="${esc(v.title)}: drag it onto a screen or a device to open it there">${ico(VIEW_ICON[v.id] || "i-test")}<span>${esc(v.title)}</span></div>`);
+      tiles.insertAdjacentHTML("beforeend", `<div class="tile" tabindex="0" role="button" data-view="${esc(v.id)}"`
+        + ` title="${esc(v.title)}: press it to open it on the highlighted screens, or drag it onto a screen or a device">${ico(VIEW_ICON[v.id] || "i-test")}<span>${esc(v.title)}</span></div>`);
     }
     box.append(tiles);
   }
   if (!box.children.length) box.innerHTML = `<div class="empty">No page matches the search.</div>`;
+  markTiles();
   pageFade();
 }
+// the screens that the highlight stands for, or null when an item has no screen (quick job 167)
+function selectedScreens(scr) {
+  if (!S.sel.size) return null;
+  const out = new Map();
+  for (const k of S.sel) {
+    const mine = screensOf(k, scr);
+    if (!mine.length) return null;
+    for (const s of mine) out.set(s.key, s);
+  }
+  return [...out.values()];
+}
+const pageOf = (w) => w.showing?.id || "hub";
+function shownPage(targets) {
+  const ids = new Set(targets.map((s) => pageOf(s.w)));
+  return ids.size === 1 ? [...ids][0] : "";
+}
+// the tile of the page the highlighted screens show is marked; it follows a change from another device
+function markTiles() {
+  const targets = selectedScreens(screens(devices())), now = targets ? shownPage(targets) : "";
+  for (const t of document.querySelectorAll("#pages .tile")) t.classList.toggle("on", !!now && t.dataset.view === now);
+}
+// a press on a page opens it at once on the highlighted screens (quick job 167; before, it chose the page for Open)
 function choosePage(id) {
-  S.page = S.page === id ? "" : id;
-  renderPages();
-  renderInspector(true);
+  const targets = selectedScreens(screens(devices()));
+  if (!targets) return say(S.sel.size ? "Only a screen, or a device with screens, can show a page." : "Press a screen first, then the page. Or drag the page onto a screen.", true);
+  openOn(targets, id);
 }
 const SHUT_KEY = "lab-os-command-center-pages-shut";
 function shutPages(shut) {
@@ -707,6 +740,13 @@ async function startScreens(targets = null) {
   say(r.message || "It did not start.", !r.ok);
 }
 $("#start-all").addEventListener("click", () => startScreens());
+// every screen back to the hub (quick job 167), except the pages that drive a robot and the Command Center itself
+const KEEP_OPEN = new Set(["teleop", "webcam", "raspbot", "ai", "training", "command"]);
+const toHubAll = (scr) => scr.filter((s) => s.w.showing && !KEEP_OPEN.has(s.w.showing.id));
+$("#all-hub").addEventListener("click", () => {
+  const targets = toHubAll(screens(devices()));
+  if (targets.length) backToHub(targets);
+});
 async function setDrive(hubs, allowed) {
   const addresses = [...new Set(hubs.filter((d) => !d.here && d.address).map((d) => d.address))];
   const r = await postJSON("/api/command-center/drive", { addresses, allowed });
@@ -728,11 +768,12 @@ function actionsFor(keys, devs, scr) {
   }
   if (allScreens && targets.length) {
     const one = targets.length === 1, n = plural(targets.length, "screen");
-    acts.push({ kind: "page", real: true, label: one ? "Open" : `Open on ${n}`, title: "Open the chosen page there (or drag a page onto it)", run: (view) => openOn(targets, view) });
+    // the page list opens the page at once, with no Open button (quick job 167)
+    acts.push({ kind: "page", part: "screen", real: true, targets, title: one ? "The page this screen shows: choose another to open it there" : `The page ${n} show: choose another to open it on them`, run: (view) => openOn(targets, view) });
     const busy = targets.filter((t) => t.w.showing), m = plural(busy.length, "screen");
-    if (busy.length) acts.push({ real: true, icon: "i-back", label: one ? "Back to the hub" : `Hub on ${m}`, title: `Close what ${m} show: back to the hub`, run: () => backToHub(busy) });
+    if (busy.length) acts.push({ part: "screen", real: true, icon: "i-back", label: one ? "Back to the hub" : `Hub on ${m}`, title: `Close what ${m} show: back to the hub`, run: () => backToHub(busy) });
     const waiting = targets.filter((t) => t.w.stage === "start"), st = plural(waiting.length, "screen");
-    if (waiting.length) acts.push({ real: true, icon: "i-power", label: one ? "Start" : `Start ${st}`, title: `Start the start screen on ${st}`, run: () => startScreens(waiting) });
+    if (waiting.length) acts.push({ part: "screen", real: true, icon: "i-power", label: one ? "Start" : `Start ${st}`, title: `Start the start screen on ${st}`, run: () => startScreens(waiting) });
   }
   const hubs = [...new Map(keys.map((k) => hubOf(k, devs, scr)).map((d) => [d?.key, d])).values()];
   if (hubs.length && hubs.every((d) => d && !d.here && d.address)) {
@@ -747,9 +788,27 @@ function actionsFor(keys, devs, scr) {
   acts.push({ label: keys.length > 1 ? `Hide ${keys.length}` : "Hide", title: "Hide from the workspace (the device does not change)", run: () => hide(keys, true) });
   return acts;
 }
-function pageSelect() {
-  const opts = pages().flatMap(([, vs]) => vs).map((v) => `<option value="${esc(v.id)}"${v.id === S.page ? " selected" : ""}>${esc(v.title)}</option>`);
-  return `<select aria-label="Page"><option value="">Choose a page…</option>${opts.join("")}</select>`;
+// the page list shows what the screens show now, and follows a change from another device (quick job 167)
+function pageOptions(targets) {
+  const now = shownPage(targets), all = pages().flatMap(([, vs]) => vs);
+  const opts = all.map((v) => `<option value="${esc(v.id)}"${v.id === now ? " selected" : ""}>${esc(v.title)}</option>`);
+  if (!now) opts.unshift(`<option value="" selected disabled>Different pages</option>`);
+  else if (!all.some((v) => v.id === now)) {  // a page that cannot open elsewhere (the Command Center itself)
+    const title = targets[0].w.showing?.title || viewTitle(now);
+    opts.unshift(`<option value="${esc(now)}" selected disabled>${esc(title)}</option>`);
+  }
+  return opts.join("");
+}
+function pageSelect(targets) {
+  return `<select aria-label="Page it shows" data-wins="${esc(targets.map((s) => s.w.id).join(" "))}">${pageOptions(targets)}</select>`;
+}
+function syncPageSelects() {
+  const scr = screens(devices());
+  for (const sel of document.querySelectorAll("select[data-wins]")) {
+    if (sel === document.activeElement) continue;  // a person is choosing in it
+    const ids = sel.dataset.wins.split(" "), targets = scr.filter((s) => ids.includes(s.w.id));
+    if (targets.length) sel.innerHTML = pageOptions(targets);
+  }
 }
 function groupSelect(devs) {
   const opts = devs.filter((d) => !isHidden(d.key)).map((d) => `<option value="${esc(d.key)}"${d.key === S.group ? " selected" : ""}>${esc(d.title)}</option>`);
@@ -759,12 +818,19 @@ function actButtons(box, acts, devs, after = () => {}) {
   for (const a of acts) {
     const wrap = document.createElement("span");
     wrap.style.display = "contents";
-    if ((a.kind === "page" && !box.closest("#insp")) || a.kind === "group") {
-      wrap.innerHTML = a.kind === "page" ? pageSelect() : groupSelect(devs);
+    if (a.kind === "page") {  // a list only: a choice opens the page at once (quick job 167)
+      wrap.innerHTML = pageSelect(a.targets);
       const sel = wrap.querySelector("select");
-      sel.addEventListener("change", () => {
-        if (a.kind === "page") { S.page = sel.value; renderPages(); } else S.group = sel.value;
-      });
+      sel.classList.add("pagesel");
+      sel.title = a.title;
+      sel.addEventListener("change", () => { if (sel.value) { a.run(sel.value); after(); } });
+      box.append(wrap);
+      continue;
+    }
+    if (a.kind === "group") {
+      wrap.innerHTML = groupSelect(devs);
+      const sel = wrap.querySelector("select");
+      sel.addEventListener("change", () => { S.group = sel.value; });
     }
     const b = document.createElement("button");
     b.type = "button";
@@ -774,7 +840,7 @@ function actButtons(box, acts, devs, after = () => {}) {
     b.addEventListener("click", () => {
       const sel = wrap.querySelector("select");
       if (a.kind === "group" && !sel.value) return say("Choose a device first.", true);
-      a.run(sel?.value ?? S.page);
+      a.run(sel?.value);
       after();
     });
     wrap.append(b);
@@ -809,6 +875,8 @@ function moduleButtons(box, mods) {
   }
 }
 let inspected = "";
+// the inspector (quick job 167, clearer): the name, then the page its screens show, the sound, the actions, the
+// modules, the settings, and the details last
 function renderInspector(force = false) {
   const box = $("#insp > .in"), devs = devices(), scr = screens(devs);
   const keys = [...S.sel].filter((k) => devs.some((d) => d.key === k) || scr.some((s) => s.key === k));
@@ -819,11 +887,12 @@ function renderInspector(force = false) {
   box.innerHTML = `<h2>${ico("i-test")}Inspector</h2>`;
   const msg = S.msg ? `<p class="msg${S.msgBad ? "" : " ok"}">${esc(S.msg)}</p>` : "";
   if (!keys.length) {
-    box.insertAdjacentHTML("beforeend", `<p class="hint">Press a device or a screen, in the list or the workspace, to see it here. Select multiple, Ctrl or Shift adds more. ⤢ opens one device. Drag a page onto a screen to open it there.</p>${msg}`);
+    box.insertAdjacentHTML("beforeend", `<p class="hint">Press a device or a screen, in the list or the workspace, to see it here. Then press a page in Pages to open it there, or drag a page onto a screen. Select multiple, Ctrl or Shift adds more. ⤢ opens one device.</p>${msg}`);
     return;
   }
   const part = (title, html = "") => {
     const el = document.createElement("div");
+    el.className = "part";
     el.innerHTML = `<h3>${title}</h3>${html}`;
     box.append(el);
     return el;
@@ -835,27 +904,44 @@ function renderInspector(force = false) {
   if (d) {
     box.insertAdjacentHTML("beforeend", `<div class="who">${ico(KIND_ICON[d.kind])}<b title="${esc(d.title)}">${esc(d.title)}</b>`
       + (d.gone ? "" : `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`) + `</div>`
-      + (d.sub ? `<p class="hint">${esc(d.sub)}</p>` : ""));
-    part("Details", factsHTML(deviceFacts(d)) + driveLine(d));
+      + `<p class="hint">${esc([KIND_WORD[d.kind], d.sub].filter(Boolean).join(", "))}</p>`);
   } else if (s) {
     box.insertAdjacentHTML("beforeend", `<div class="who">${ico("i-screen")}<b>${esc(devTitle(s.device))}${s.count > 1 ? `, screen ${s.n}` : ""}</b>`
-      + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button></div>`);
-    part("Details", factsHTML([["Shows", shows(s.w)], ["From", s.w.showing && s.w.from ? s.w.from : ""], ["Resolution", resolution(s.w)], ["Device", s.device.name]]));
+      + `<button class="iconbtn foc" type="button" title="Focus: its device's screens, actions and modules">${ico("i-open")}</button></div>`
+      + `<p class="hint">Screen</p>`);
   } else {
     box.insertAdjacentHTML("beforeend", `<div class="who"><b class="count">${plural(keys.length, "item")}</b></div><p class="hint">Only the actions that apply to every item.</p>`);
   }
+  if (msg) box.insertAdjacentHTML("beforeend", msg);
+  const screenActs = acts.filter((a) => a.part === "screen");
+  if (screenActs.length) {
+    const n = screenActs[0].targets.length;
+    const el = part(n > 1 ? `Page on ${plural(n, "screen")}` : "Page", `<div class="acts"></div>`);
+    actButtons(el.querySelector(".acts"), screenActs, devs);
+  }
+  const sd = d || (s && devs.find((x) => x.key === `d:${s.device.name}`));
+  if (sd && hasSound(sd)) part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd));
   const ab = part("Actions", `<div class="acts"></div>`).querySelector(".acts");
-  actButtons(ab, acts, devs);
+  actButtons(ab, acts.filter((a) => a.part !== "screen"), devs);
   const clear = document.createElement("button");
   clear.type = "button"; clear.className = "btn small virtual"; clear.textContent = "Clear";
   clear.title = "Highlight nothing";
   clear.addEventListener("click", () => { S.sel.clear(); S.msg = ""; render(true); });
   ab.append(clear);
-  if (msg) ab.insertAdjacentHTML("afterend", msg);
   const mods = d ? modulesOf(d) : [];
   if (mods.length) moduleButtons(part("Modules", `<div class="acts"></div>`).querySelector(".acts"), mods);
-  if (d && d.kind === "hub" && d.named) fillSettings(part("Settings", `<p class="hint">Reading…</p>`), d);
+  if (d && d.kind === "hub" && d.named && !d.gone) fillSettings(part("Settings", `<p class="hint">Reading…</p>`), d);
+  if (d) part("Details", factsHTML(deviceFacts(d)) + driveLine(d));
+  else if (s) part("Details", factsHTML([["Shows", shows(s.w)], ["From", s.w.showing && s.w.from ? s.w.from : ""], ["Resolution", resolution(s.w)], ["Device", s.device.name]]));
   box.querySelector(".who .foc")?.addEventListener("click", () => focus(one));
+}
+// M and S in the inspector and the focus window
+for (const where of ["#insp", "body"]) {
+  $(where).addEventListener("click", (e) => {
+    const b = e.target.closest(".sndrow .snd");
+    if (!b || (where === "body" && !b.closest(".veil"))) return;
+    toggleSound(b.closest("[data-dev]").dataset.dev, b.dataset.snd);
+  });
 }
 
 // ---------- the ⋯ menu: one item's settings and actions, without highlighting it ----------
@@ -878,6 +964,8 @@ function openMenu(key, btn) {
 document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".menu, .more")) closeMenu(); });
 
 // ---------- focus: one device in a modal ----------
+// Quick job 167: a grid. The screens on the top row, left to right, each with its controls on its right; under
+// them three equal columns: Modules, Facts, and Actions (with the sound and the settings).
 let focused = "", focusOrigin = null;
 function closeFocus() {
   document.querySelector(".veil")?.remove();
@@ -885,38 +973,49 @@ function closeFocus() {
   if (focusOrigin?.isConnected) focusOrigin.focus();
   focusOrigin = null;
 }
-async function focus(key) {
+const controlsIn = (el) => [...el.querySelectorAll("button:enabled, select:enabled, input:enabled")];
+// drawn again when the brain's lists change (another device opened a page), unless a person is choosing in it
+function refreshFocus() {
+  const veil = $(".veil"), a = document.activeElement;
+  if (!focused || !veil || (veil.contains(a) && a.matches("input, select"))) return;
+  focus(focused, true);
+}
+async function focus(key, keep = false) {
   closeMenu();
   const devs = devices(), scr = screens(devs);
   const d = devs.find((x) => x.key === key);
   if (!d) {
     const s = scr.find((x) => x.key === key);  // a screen on its own: its own device
-    return s ? focus(`d:${s.device.name}`) : undefined;
+    return s ? focus(`d:${s.device.name}`, keep) : undefined;
   }
+  const old = $(".veil");
+  const at = keep && old ? controlsIn(old).indexOf(document.activeElement) : -1;
   if (!focused) focusOrigin = document.activeElement;
   focused = key;
-  document.querySelector(".veil")?.remove();
+  old?.remove();
   const veil = document.createElement("div");
   veil.className = "veil";
   const mine = scr.filter((s) => s.device.name === d.id && d.kind === "hub");
   const mods = modulesOf(d);
+  const settings = d.kind === "hub" && d.named && !d.gone;
   veil.innerHTML = `<div class="card modal" role="dialog" aria-label="${esc(d.title)}"><div class="in">
     <div class="top"><h2>${ico(KIND_ICON[d.kind])}${esc(d.title)}${d.sub ? ` <small class="hint">${esc(d.sub)}</small>` : ""}</h2>
       <button class="btn small" type="button" data-close aria-label="Close focus window">×</button></div>
-    <div class="cols">
-    ${mine.length ? `<div><h3>${plural(mine.length, "screen")}</h3><div class="shots" id="f-shots"></div></div>` : ""}
-      <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}</div>
-      <div id="f-actions"><h3>Actions</h3></div>
-      ${mods.length ? `<div><h3>Modules</h3><div class="mods" id="f-mods"></div></div>` : ""}
-      ${d.kind === "hub" && d.named ? `<div id="f-settings"><h3>Settings</h3><p class="hint">Reading…</p></div>` : ""}
+    <p class="msg fsay${S.msgBad ? "" : " ok"}">${esc(S.msg)}</p>
+    ${mine.length ? `<div class="fscreens" id="f-shots"></div>` : ""}
+    <div class="fgrid">
+      <div><h3>Modules</h3>${mods.length ? `<div class="mods" id="f-mods"></div>` : `<p class="hint">No module for this device.</p>`}</div>
+      <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}${driveLine(d)}</div>
+      <div id="f-actions"><h3>Actions</h3><div class="mods"></div>
+        ${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : ""}
+        ${settings ? `<div id="f-settings"><h3>Settings</h3><p class="hint">Reading…</p></div>` : ""}</div>
     </div></div></div>`;
   veil.addEventListener("pointerdown", (e) => { if (e.target === veil) closeFocus(); });
   veil.querySelector("[data-close]").addEventListener("click", closeFocus);
   document.body.append(veil);
-  veil.querySelector("[data-close]").focus();
   veil.addEventListener("keydown", (e) => {
     if (e.key !== "Tab") return;
-    const controls = [...veil.querySelectorAll("button:enabled, select:enabled, input:enabled")];
+    const controls = controlsIn(veil);
     const first = controls[0], last = controls.at(-1);
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -924,27 +1023,35 @@ async function focus(key) {
   const shots = veil.querySelector("#f-shots");
   for (const s of mine) {
     const el = document.createElement("div");
-    el.className = "shot";
-    el.innerHTML = screenPreview(s.w, 288) + under(s) + `<div class="do"></div>`;
-    const acts = actionsFor([s.key], devs, scr).filter((a) => a.real && a.kind === "page" || a.icon === "i-back");
-    actButtons(el.querySelector(".do"), acts, devs);
+    el.className = "fscr";
+    const name = s.count > 1 ? `Screen ${s.n}` : "Screen";
+    const from = s.w.showing && s.w.from ? `<p class="hint">Opened from ${esc(s.w.from)}.</p>` : "";
+    el.innerHTML = `<div class="shot">${screenPreview(s.w, 288)}${under(s)}</div><div class="fctl"><h3>${name}</h3><div class="do"></div>${from}</div>`;
+    actButtons(el.querySelector(".do"), actionsFor([s.key], devs, scr).filter((a) => a.part === "screen"), devs);
     shots.append(el);
   }
-  const fa = veil.querySelector("#f-actions"), box = document.createElement("div");
-  box.className = "mods";
-  const acts = actionsFor([key], devs, scr).filter((a) => !(mine.length && (a.kind === "page" || a.icon === "i-back")));
-  fa.insertAdjacentHTML("beforeend", driveLine(d));
-  actButtons(box, acts, devs, () => setTimeout(() => focused === key && focus(key), 300));
-  fa.append(box);
+  const acts = actionsFor([key], devs, scr).filter((a) => !(mine.length && a.part === "screen"));
+  actButtons(veil.querySelector("#f-actions .mods"), acts, devs);
   if (mods.length) moduleButtons(veil.querySelector("#f-mods"), mods);
-  if (d.kind === "hub" && d.named) fillSettings(veil.querySelector("#f-settings"), d);
+  if (settings) fillSettings(veil.querySelector("#f-settings"), d);
+  const controls = controlsIn(veil);
+  (at >= 0 && controls[at] ? controls[at] : keep ? null : veil.querySelector("[data-close]"))?.focus();
 }
+// the settings come from the brain; the last ones read show at once, so a redraw does not flash "Reading…"
 async function fillSettings(box, d) {
-  let values = {};
+  if (S.settings[d.id]) drawSettings(box, d, S.settings[d.id]);
+  let values = S.settings[d.id] || {};
   try { values = (await getJSON(`/api/hub-devices/${encodeURIComponent(d.id)}/settings`)).settings || {}; } catch { /* shown as defaults */ }
+  const same = JSON.stringify(values) === JSON.stringify(S.settings[d.id]);
+  S.settings[d.id] = values;
+  if (!box.isConnected || (same && box.querySelector("select"))) return;
+  if (box.contains(document.activeElement) && document.activeElement.matches("input, select")) return;
+  drawSettings(box, d, values);
+}
+function drawSettings(box, d, values) {
   const h = `<h3>Settings</h3><div class="field"><span>Display name</span><input type="text" maxlength="40" data-k="display_name" value="${esc(values.display_name || "")}" placeholder="${esc(d.id)}"></div>`
     + SETTINGS.map((f) => {
-      const now = f.key === "sound" ? (values.sound === true ? "on" : values.sound === false ? "off" : "") : String(values[f.key] ?? "");
+      const now = String(values[f.key] ?? "");
       return `<div class="field"><span>${esc(f.label)}</span><select data-k="${f.key}">${f.choices.map(([v, t]) => `<option value="${esc(v)}"${v === now ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`;
     }).join("")
     + `<p class="msg" id="f-msg"></p>`;
@@ -952,12 +1059,11 @@ async function fillSettings(box, d) {
   const send = async (k, v) => {
     const r = await postJSON(`/api/hub-devices/${encodeURIComponent(d.id)}/settings`, { [k]: v });
     $("#f-msg", box).textContent = r.ok ? "" : r.message;
+    if (r.ok) S.settings[d.id] = { ...S.settings[d.id], [k]: v };
     if (r.ok && k === "display_name") refresh();
   };
   box.querySelector('[data-k="display_name"]').addEventListener("change", (e) => send("display_name", e.target.value.trim()));
-  for (const sel of box.querySelectorAll("select")) {
-    sel.addEventListener("change", () => send(sel.dataset.k, sel.dataset.k === "sound" ? (sel.value === "" ? "" : sel.value === "on") : sel.value));
-  }
+  for (const sel of box.querySelectorAll("select")) sel.addEventListener("change", () => send(sel.dataset.k, sel.value));
   box.querySelector("h3").insertAdjacentHTML("beforeend", ` <svg class="ico" aria-label="Changes the device"><use href="/web/design/icons.svg#i-cast"/></svg>`);
 }
 
@@ -991,6 +1097,10 @@ function render(force = false) {
   $("#start-all").hidden = !scr.some((s) => s.w.stage === "start");
   if (!S.drag && $("#ws").clientWidth) renderWorkspace(devs, scr);
   if (!document.querySelector(".menu")) renderInspector(force);
+  $("#all-hub").hidden = !toHubAll(scr).length;
+  refreshFocus();
+  syncPageSelects();  // the ⋯ menu's list, and any list a person was choosing in
+  markTiles();
   if ($("#stage").children.length) requestAnimationFrame(() => autoFit());
   S.wasOff = new Set(devs.filter((d) => d.gone).map((d) => d.key));
 }
