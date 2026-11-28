@@ -66,7 +66,7 @@ async function pollCalls() {
       $("#add-cmd").textContent = `claude mcp add --transport http lab-os ${d.mcp}`;
     } else setPill("#c-tools", "Off", "off");
     setPill("#c-motion", d.motion_allowed ? "Allowed here" : "Not allowed here", d.motion_allowed ? "on" : "warn");
-    const ctl = { ai: ["The AI, moving", "on"], teleop: ["Teleop", "warn"], free: ["Free", "off"] }[d.control] || [cap(d.control), "off"];
+    const ctl = { ai: ["The AI, moving", "on"], teleop: ["Arm Control", "warn"], free: ["Free", "off"] }[d.control] || [cap(d.control), "off"];
     setPill("#c-control", ...ctl);
     document.body.classList.toggle("moving", d.control === "ai");
   } catch {

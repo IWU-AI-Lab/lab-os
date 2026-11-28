@@ -1,6 +1,6 @@
-# Teleop with the Quest: at home (no headset) and on the real Quest (USB)
+# Arm Control with the Quest: at home (no headset) and on the real Quest (USB)
 
-The teleop program shows a WebXR page and gets the controller data over a WebSocket. `lab-os-teleop` drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). `lab-os serve` drives the SO-101 that is plugged in, else the fake arm (`docs/archive/guides-2026-11-25/hub.md` → "Start it"). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
+The Arm Control program shows a WebXR page and gets the controller data over a WebSocket. `lab-os-teleop` drives the **fake arm** unless you name a real arm (`--arm xarm1`, `--arm so101-white`). `lab-os serve` drives the SO-101 that is plugged in, else the fake arm (`docs/archive/guides-2026-11-25/hub.md` → "Start it"). In a coding session, ask the builder before a real arm moves (`AGENTS.md`).
 
 ```bash
 uv run lab-os-teleop serve                         # the headset page and the fake arm
@@ -9,12 +9,12 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser ne
 ```
 Then open **http://localhost:8080/monitor/so101** to watch the fake arm.
 
-**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the teleop page is at **http://localhost:8080/teleop**. `/ws` and `/monitor/so101` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
+**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the Arm Control page is at **http://localhost:8080/teleop**. `/ws` and `/monitor/so101` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
 
 In VS Code, the Run and Debug panel has a button for each of these commands (`.vscode/launch.json`).
 
 ## What the page shows
-**The 3D view** (on the teleop and monitor pages) shows the joint angles that the arm's driver gets, for each command, without limits. Select the model in its list: SO-101 (the real meshes), SO-101 stick figure, or xArm 1S boxes. Drag to turn the view. Scroll to zoom. The view works offline (three.js and the model are in the repository).
+**The 3D view** (on the Arm Control and monitor pages) shows the joint angles that the arm's driver gets, for each command, without limits. Select the model in its list: SO-101 (the real meshes), SO-101 stick figure, or xArm 1S boxes. Drag to turn the view. Scroll to zoom. The view works offline (three.js and the model are in the repository).
 
 **The joint readout** is next to the 3D view (under it on a narrow screen). It has one row for each joint, always all joints, each row the same height, so the 3D view never changes size. A note on a row (accent color) shows a joint that the driver clamped, or a joint that the driver holds outside the arm's limits. Hover over a short note to see all of it. While the arm is frozen, it is dark red.
 
@@ -30,7 +30,7 @@ With the controllers:
 
 The arm freezes when you release the grip, when tracking stops, when the connection drops, or when the session ends. After a freeze, release the grip and press it again.
 
-**Bare hands:** in the hub's VR or AR Teleop, select **Options** → **Hand → Arm** → **Hands**, then put the controllers down. Hands drive in Relative. If you put the controllers down without Hands, the arm holds still. **Switch to Hands by Itself** (Off by default) brings back the old way: the hands drive while the controllers are down.
+**Bare hands:** in the hub's VR or AR Arm Control, select **Options** → **Hand → Arm** → **Hands**, then put the controllers down. Hands drive in Relative. If you put the controllers down without Hands, the arm holds still. **Switch to Hands by Itself** (Off by default) brings back the old way: the hands drive while the controllers are down.
 - The **right wrist** moves the arm, like the controller.
 - Hold a **left pinch** (thumb on index finger): the clutch.
 - **Right pinch:** the gripper. Fingers apart = open. Fingers together = closed.
@@ -53,7 +53,7 @@ The panel is easy to read over the room in AR. In VR there is a dark room with a
 Run `uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop`. It plays a 7-second recorded session: grab, move, squeeze, release, move back without the arm, grab again. Open the monitor page to watch it. To make it slower, add `--speed 0.5`.
 
 ## 2. At a computer: desktop control
-1. Start teleop: `uv run lab-os-teleop serve` (the fake SO-101). Or use `--arm fake-xarm1` (the fake xArm), or `--arm xarm1 --speed 0.2` (the real xArm).
+1. Start Arm Control: `uv run lab-os-teleop serve` (the fake SO-101). Or use `--arm fake-xarm1` (the fake xArm), or `--arm xarm1 --speed 0.2` (the real xArm).
 2. Open **http://localhost:8080/**.
 3. In the **Controls** box, under "Desktop control", select a **mode**.
 4. Click **Desktop control**. The page takes the pointer.
@@ -98,7 +98,7 @@ uv run lab-os serve                    # the brain, with the fake arm
 The brain runs `adb reverse tcp:8080 tcp:8080` by itself each time the Quest connects by USB (it looks every 3 seconds). `lab-os-teleop serve` does not: with it, run that command yourself, again after each new connection of the cable.
 In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor/so101` must follow.
 
-Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
+Arm Control without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
 
 **The real SO-101:** plug it in, then run `uv run --extra so101 lab-os serve --speed 0.2`, then open the same page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
 
@@ -106,14 +106,14 @@ Teleop without the hub (it can record): run `uv run lab-os-teleop serve --record
 10 cm of hand moves the gripper 10 cm (since 2026-11-16; before, 5 cm). The arm follows at the 1:1 follow speed, scaled by the Speed slider: at the top of the slider (the venue's `max_speed_scale`), it follows at `one_to_one_max_deg_per_s` (180°/s); at half, at half that speed. Before 2026-11-16 it was 45°/s at most, and the arm was far behind the hand (`docs/dev/existing-work-teleop-ai.md`). Where 1:1 is off, the relative mode uses the old, slower speed. Hot servos (60 °C) also slow it down. With `--speed 0.2` in the lab, it is 72°/s: push the right thumbstick up for more.
 
 ### The 1:1 mode: the gripper stays with your hand
-On the teleop page, select **Hand → arm → 1:1**. The brain keeps the choice until it restarts. The relative mode is the default. Then, in the headset:
+On the Arm Control page, select **Hand → arm → 1:1**. The brain keeps the choice until it restarts. The relative mode is the default. Then, in the headset:
 1. **Put the 3D arm on the real arm:** hold the left **Grip**, move and turn the see-through arm until it is on the real arm, then release. **Y** puts it back.
 2. Put your right hand in the **green ball** at the 3D gripper and hold **Grip**. The panel says "Reach the gripper: 14 cm" until you are within 8 cm. Nothing jumps: the small distance between the hand and the gripper stays the same.
 3. Move. The gripper goes where your hand goes, the same distance. If the hand is out of reach or below the table, the arm waits as close as it can and follows again when the hand comes back. Release to pause. Grab again at the gripper.
 
 **Scale (checked 2026-11-16, quick job 13):** nothing in the chain scales the hand. The Quest gives meters, the 3D arm has the real size (the URDF), and the real arm has the same link lengths and gripper point. If 1:1 feels wrong on the real arm, the cause is the arm (sag, the height offset) or the delay. Lab checks 7.2 to 7.4 measure it.
 
-**Speed:** the Speed slider and the venue's top speed do not slow 1:1. Each joint turns as fast as the hand needs, up to the venue's `one_to_one_max_deg_per_s`: **180°/s in the lab and in visitor mode**, off at a new place. To change it, select ⚙ → Robots → **Teleop 1:1 Top Joint Speed** (Off, 90, 120, 180, 240, None), then restart the brain. None means no software limit: the servos' own top speed (about 270 to 310°/s). For comparison, a quick wave (1.5 times a second, 10 cm from side to side) needs about 120°/s at the base. The panel and the page say "Speed 1:1: 180 °/s top".
+**Speed:** the Speed slider and the venue's top speed do not slow 1:1. Each joint turns as fast as the hand needs, up to the venue's `one_to_one_max_deg_per_s`: **180°/s in the lab and in visitor mode**, off at a new place. To change it, select ⚙ → Robots → **Arm Control 1:1 Top Joint Speed** (Off, 90, 120, 180, 240, None), then restart the brain. None means no software limit: the servos' own top speed (about 270 to 310°/s). For comparison, a quick wave (1.5 times a second, 10 cm from side to side) needs about 120°/s at the base. The panel and the page say "Speed 1:1: 180 °/s top".
 
 **The servos' health:** with a real SO-101, the brain reads each servo's temperature, load and voltage every 5 s. It writes them to `logs/servo-health/<date>_<arm>.jsonl`, with the mode, so that you can compare relative and 1:1 sessions. A servo at **60 °C** slows 1:1 down to the relative speed (the panel says "1:1 slowed: servos warm"). The servos switch themselves off at 70 °C. To learn if 1:1 wears the motors more, compare the temperatures of a relative session and a 1:1 session of the same length.
 
@@ -138,7 +138,7 @@ Give the recording to Claude to find where the problem is ("at 0:40 the elbow st
 In the Quest's browser, open the hub's address (`http://localhost:8080` over USB, or `http://<the brain's address>:8080` over Wi-Fi). A Quest gets a start page with three choices: **Enter VR**, **Enter AR**, and **Use the hub in the browser instead**.
 - To open it without typing: save the address as a bookmark, or install the hub as an app (the browser's menu → Install, if it offers it). The app gets its own icon in the app library.
 - Over Wi-Fi, VR and AR need a secure address. In the Quest's browser, open `chrome://flags`, find "Insecure origins treated as secure", add `http://<the brain's address>:8080`, select Enabled, then Relaunch.
-- **Teleop** in the hub in the browser opens the Teleop page. There, select **Hand → arm** (relative or 1:1), the speed and the 3D arm's look, then press **Enter VR** or **Enter AR**. Desktop control is not available in the headset. In the hub in VR or AR, Teleop opens as a module (below).
+- **Arm Control** in the hub in the browser opens the Arm Control page. There, select **Hand → arm** (relative or 1:1), the speed and the 3D arm's look, then press **Enter VR** or **Enter AR**. Desktop control is not available in the headset. In the hub in VR or AR, Arm Control opens as a module (below).
 
 After Enter VR (or Enter AR): The startup plays around you, as on the designed hub. Pull the trigger (or pinch) to start; do it again to skip the startup. Then the hub is around you:
 - Point at a panel with a controller (or your hand) and pull the trigger (or pinch) to open its details. 7d, 14d, 30d, List all and a device's card also work.
@@ -146,10 +146,10 @@ After Enter VR (or Enter AR): The startup plays around you, as on the designed h
 - **⚙** (beside ⏻) opens Settings, with the same groups as ⚙ on the screens. **This Device** is the Quest. Point at a switch, a choice or − / + and pull the trigger: it saves at once, and the line at the bottom says "Saved" or why not. Change names, colours and lists on a screen (VR has no keyboard). The brain's settings change only when the Quest is connected by USB (it then counts as the brain's computer).
 - **Asking:** point at the ask line under the core and hold the trigger (or a pinch) while you talk. The wake word and the microphone permission: `docs/archive/guides-2026-11-25/voice.md` → "In VR".
 - **Monitor** and **AI Control** show the arm as a hologram, with each joint's angle, who has control, and STOP. They only show; they do not drive. AI Control also shows each robot-tool call. To go back, press B or Y, or point at ←.
-- **Teleop** opens around you, without leaving VR or AR, like Monitor and AI Control (since 2026-11-23). The arm follows your controllers or hands, as on the Teleop page: hold the right grip to move, the trigger is the gripper, **A** or **X** stops. The status box beside the arm says what the arm does, and who has control when another page or the AI tools have it. The left grip moves the 3D arm; **Y** puts it back. The arm holds still when you go back, when you leave VR, or when input stops.
+- **Arm Control** opens around you, without leaving VR or AR, like Monitor and AI Control (since 2026-11-23). The arm follows your controllers or hands, as on the Arm Control page: hold the right grip to move, the trigger is the gripper, **A** or **X** stops. The status box beside the arm says what the arm does, and who has control when another page or the AI tools have it. The left grip moves the 3D arm; **Y** puts it back. The arm holds still when you go back, when you leave VR, or when input stops.
   - Under the status box are **STOP** and **OPTIONS**, and under them **⏻**, **EXIT** (leaves VR or AR) and **×** (back to the hub). Point at one with the right controller or the right hand. Then pull the trigger or pinch. The beam shows while it is on a button. **B** also goes back.
-  - **OPTIONS** opens the Teleop page's options above the status box: the speed (− and +), **Hand → Arm** (relative or 1:1), the **3D Arm**'s look (full model or light) and **Put the 3D Arm Back**. They change at once. The Teleop page shows the same choices.
-- **⏻, EXIT and ×** are together, in this order, on every page: under the core on the hub, on the tab of an open module, and under the status box in Teleop. **EXIT** leaves VR or AR and shows the browser page again. **×** closes the open page or module. The "lab-os is off" card has **EXIT** too.
+  - **OPTIONS** opens the Arm Control page's options above the status box: the speed (− and +), **Hand → Arm** (relative or 1:1), the **3D Arm**'s look (full model or light) and **Put the 3D Arm Back**. They change at once. The Arm Control page shows the same choices.
+- **⏻, EXIT and ×** are together, in this order, on every page: under the core on the hub, on the tab of an open module, and under the status box in Arm Control. **EXIT** leaves VR or AR and shows the browser page again. **×** closes the open page or module. The "lab-os is off" card has **EXIT** too.
 
 **Tests without a headset:** the Immersive Web Emulator (section 3) also works for `/xr`: select Enter VR, then move the right controller's gizmo and use its trigger and buttons.
 - For a scripted test, Meta's emulator engine (`npm i iwer`, with `playwright-core` and Chrome) can run the page headless. Install `IWER.XRDevice(IWER.metaQuest3)` with `installRuntime({ forceInstall: true })` before the page loads (GOTCHAS 2026-11-23), click Enter VR, set `controllers.right.quaternion` to aim, call `updateButtonValue("trigger", 1)` to press, and take screenshots. On the Mac, launch Chrome with `--use-angle=swiftshader --enable-unsafe-swiftshader`, or WebGL fails (GOTCHAS 2026-11-20).
@@ -164,7 +164,7 @@ A preview for the demo (`docs/plan/current-focus.md`, item 7). The right control
 uv run lab-os serve --left-arm fake        # two software arms: fake-arm (right hand), fake-left (left hand)
 uv run --extra so101 lab-os serve --arm so101-white --left-arm so101-green --speed 0.3   # the lab's arms
 ```
-Then do `adb reverse` and open the teleop page, as in section 4. `lab-os-teleop serve` also takes `--left-arm`.
+Then do `adb reverse` and open the Arm Control page, as in section 4. `lab-os-teleop serve` also takes `--left-arm`.
 
 The controls (with the controllers):
 - **Right grip** (hold): the clutch of the `--arm` arm. **Left grip** (hold): the clutch of the `--left-arm` arm. Each arm follows its own hand, relative to where it is.
@@ -178,11 +178,11 @@ The controls (with the controllers):
 
 What is different from one arm:
 - The left grip does not move a 3D arm by itself. Hold Y with it.
-- **Hand → arm** on the teleop page sets the mode of both arms. In 1:1, each 3D arm has its own green ball: put that hand in it and hold the grip. Put both 3D arms on their real arms first (Y and the grip).
+- **Hand → arm** on the Arm Control page sets the mode of both arms. In 1:1, each 3D arm has its own green ball: put that hand in it and hold the grip. Put both 3D arms on their real arms first (Y and the grip).
 - Bare hands drive only the right arm (a left pinch is its clutch), as with one arm.
 - Desktop control and the AI tools drive only the right arm. While an AI tool moves the right arm, the left arm holds.
 - The status panel in the headset has two labels: the left arm on the left ("Left following"), the right arm on the right. While you hold Y, it says "Y held: a grip moves its 3D arm".
-- The teleop page and the monitor show "Right arm" and "Left arm", and both arms in the 3D view (the left one 40 cm to the left; these pages do not know where the real arms stand). The monitor shows the joints of each arm.
+- The Arm Control page and the monitor show "Right arm" and "Left arm", and both arms in the 3D view (the left one 40 cm to the left; these pages do not know where the real arms stand). The monitor shows the joints of each arm.
 - If one arm's USB cable is disconnected, the other arm continues.
 - Ctrl+C makes both SO-101s go limp. Hold both arms first.
 

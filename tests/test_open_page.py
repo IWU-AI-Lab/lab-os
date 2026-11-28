@@ -16,7 +16,7 @@ from lab_os.ai.spend import SpendLog
 from lab_os.personas import Persona
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "lab_os"
-PAGES = {"hub": "the hub", "chat": "the conversation", "teleop": "Teleop", "spend": "AI Spend"}
+PAGES = {"hub": "the hub", "chat": "the conversation", "teleop": "Arm Control", "spend": "AI Spend"}
 
 
 def scripted_service(script, seen):
@@ -73,15 +73,15 @@ async def test_opening_a_page_answers_at_once(aiohttp_server, tmp_path, key):  #
         aiohttp_server, tmp_path, [("tool", [("open_page", {"page": "teleop"})])]
     )
     events = [e async for e in conv.ask("Pull up the teleop page", PAGES)]
-    assert {"type": "open", "page": "teleop", "title": "Teleop"} in events
-    assert texts(events) == "Here's Teleop."
+    assert {"type": "open", "page": "teleop", "title": "Arm Control"} in events
+    assert texts(events) == "Here's Arm Control."
     assert len(seen) == 1  # no second round: nothing left to ask the model
     assert events[-1]["type"] == "done"
     tool = next(t for t in seen[0]["tools"] if t["function"]["name"] == "open_page")
     assert tool["function"]["parameters"]["properties"]["page"]["enum"] == list(PAGES)
     system = seen[0]["messages"][0]["content"]
     assert "open pages on this screen" in system and "AI Spend (spend)" in system
-    assert conv.messages[-1] == {"role": "assistant", "content": "Here's Teleop."}
+    assert conv.messages[-1] == {"role": "assistant", "content": "Here's Arm Control."}
     assert conv.spend.month()["chats"] == 1  # the one round is still logged
     await conv.close()
 
@@ -133,8 +133,15 @@ async def test_opening_and_looking_something_up_asks_again(aiohttp_server, tmp_p
 
 
 def test_clean_pages():
-    junk = {"teleop": "Teleop", "Bad Id": "x", "x" * 30: "y", "ok": "", "n": 3, "monitor": "M" * 99}
-    assert clean_pages(junk) == {"teleop": "Teleop", "monitor": "M" * 40}
+    junk = {
+        "teleop": "Arm Control",
+        "Bad Id": "x",
+        "x" * 30: "y",
+        "ok": "",
+        "n": 3,
+        "monitor": "M" * 99,
+    }
+    assert clean_pages(junk) == {"teleop": "Arm Control", "monitor": "M" * 40}
     assert clean_pages(["teleop"]) == {} and clean_pages(None) == {}
     assert opened_line("monitor", "Monitor") == "Here's Monitor."
 
@@ -167,9 +174,9 @@ async def test_spoken_the_page_opens_and_the_answer_is_said(
     await ws.send_bytes(SECOND)
     await ws.send_json({"type": "end"})
     await until(ws, "audio_end", events)
-    assert {"type": "open", "page": "teleop", "title": "Teleop"} in events
+    assert {"type": "open", "page": "teleop", "title": "Arm Control"} in events
     spoken = [e["text"] for e in events if e["type"] == "audio"]
-    assert spoken == ["Here's Teleop."]
+    assert spoken == ["Here's Arm Control."]
     assert "open_page" in [t["function"]["name"] for t in seen[0]["tools"]]
     await ws.close()
 
@@ -233,5 +240,5 @@ async def test_diagnostics_for_one_device(aiohttp_server, tmp_path, key):  # noq
     script = [("tool", [("open_page", {"page": "teleop", "device": "raspbot1"})])]
     conv, _ = await make_conv(aiohttp_server, tmp_path, script)
     events = [e async for e in conv.ask("Pull up teleop", pages)]
-    assert {"type": "open", "page": "teleop", "title": "Teleop"} in events  # only diagnostics
+    assert {"type": "open", "page": "teleop", "title": "Arm Control"} in events  # only diagnostics
     await conv.close()

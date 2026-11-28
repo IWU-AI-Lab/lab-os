@@ -1,4 +1,4 @@
-"""AI tools for the Raspbot, through the same controller and camera as the Raspbot page."""
+"""AI tools for the Raspbot, through the same controller and camera as the Raspbot Control page."""
 
 import asyncio
 import time
@@ -109,6 +109,6 @@ def add_raspbot_tools(
 
     @server.tool(annotations=STOP)
     async def raspbot_stop() -> dict:
-        """Press the Raspbot page's STOP, whoever has control."""
+        """Press the Raspbot Control page's STOP, whoever has control."""
         await desk.stop("AI tool")
         return calls.write("raspbot_stop", {}, "ok", desk.status())["result"]

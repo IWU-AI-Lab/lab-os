@@ -60,7 +60,7 @@ def test_must_connect_first():
 
 
 def test_the_fake_arm_starts_at_the_ready_pose():
-    """Teleop and the fake arm start at `ready`; `home` is the folded pose (quick job 20; the
+    """Arm Control and the fake arm start at `ready`; `home` is the folded pose (quick job 20; the
     builder's own numbers since quick job 30, gripper slightly open)."""
     from lab_os.robots.fake import SO101_READY
     from lab_os.tools.robot import load_poses

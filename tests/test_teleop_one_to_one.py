@@ -1,6 +1,6 @@
-"""Teleop's 1:1 mode (decision 2026-11-10): the gripper goes where the hand is, at scale 1, so hand
-and arm stay together; the relative mode can drift apart (it slips at limits). The SO-101 model,
-a fake arm, hand paths made up in code. No hardware, no headset."""
+"""Arm Control's 1:1 mode (decision 2026-11-10): the gripper goes where the hand is, at scale 1, so
+hand and arm stay together; the relative mode can drift apart (it slips at limits). The SO-101
+model, a fake arm, hand paths made up in code. No hardware, no headset."""
 
 import math
 

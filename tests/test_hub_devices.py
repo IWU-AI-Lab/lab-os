@@ -221,7 +221,7 @@ async def test_one_busy_monitor_asks_before_replacing(aiohttp_client):
     r = await (
         await client.post("/api/hub-devices/open", json={"module": "monitor", "device": "desk"})
     ).json()
-    assert not r["ok"] and r["message"] == "desk is showing Teleop: replace it?"
+    assert not r["ok"] and r["message"] == "desk is showing Arm Control: replace it?"
     assert r["ask"][0]["label"] == "desk"
     await desk.close()
 

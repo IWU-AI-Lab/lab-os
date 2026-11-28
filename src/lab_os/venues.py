@@ -63,8 +63,8 @@ class Venue:
 
     @property
     def one_to_one_cap(self) -> float:
-        """Teleop 1:1's top joint speed: the venue's, or none (inf) with the cap off. 1:1 that's
-        switched off (`off`, 0) stays off: that's a mode, not a limit."""
+        """Arm Control 1:1's top joint speed: the venue's, or none (inf) with the cap off. 1:1
+        that's switched off (`off`, 0) stays off: that's a mode, not a limit."""
         if self.speed_cap or self.one_to_one_deg_per_s == 0:
             return self.one_to_one_deg_per_s
         return math.inf

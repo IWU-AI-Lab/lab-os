@@ -10,7 +10,7 @@ Two mappings, chosen by whether the arm has kinematics (lab_os.kinematics):
 - Grip held = clutch engaged = the arm follows the controller. Released = the arm freezes.
 - Relative (`mode: relative`, the default): on engage, remember the controller pose and the arm's
   *current* joints; afterwards the arm moves by how far the controller has moved since then,
-  scaled (1.0 since 2026-11-16, like LeRobot's Isaac Teleop and telegrip:
+  scaled (1.0 since 2026-11-16, like LeRobot's Isaac Arm Control and telegrip:
   docs/dev/existing-work-teleop-ai.md). No snapping, ever.
 - **1:1** (`mode: one_to_one`, IK only, decision 2026-11-10): the gripper point goes where the hand
   is, at scale 1, so hand and arm stay together (the relative mode drifts apart: scale ½, slips at

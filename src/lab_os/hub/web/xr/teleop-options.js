@@ -1,4 +1,4 @@
-// What the Teleop options panel in the hub's VR and AR Teleop shows and sends (quick job 102): the Teleop
+// What the Arm Control options panel in the hub's VR and AR Arm Control shows and sends (quick job 102): the Arm Control
 // page's options for the headset (/teleop → Controls), from the brain's status. No imports, so the tests
 // run it with node; xr/teleop-panel.js draws it.
 //   speed    − and +, 5 % a step, up to the venue's cap (the page's slider)        → set_speed
@@ -26,7 +26,7 @@ export function optionRows(s, style = "", input = { hands: false, auto: false })
   const modeHelp = hands
     ? "Hands: hold a left pinch to move, a right pinch = gripper. Controllers do nothing."
     : !oneToOne
-    ? "1:1 is off in this venue (Settings → Robots → Teleop 1:1 Top Joint Speed)."
+    ? "1:1 is off in this venue (Settings → Robots → Arm Control 1:1 Top Joint Speed)."
     : s?.mode === "one_to_one"
       ? `1:1 follows as fast as ${top}. Line the 3D arm up on the real one first.`
       : "Relative: half scale. Grab again to recenter.";

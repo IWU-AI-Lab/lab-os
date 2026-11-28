@@ -1,11 +1,11 @@
 // The hub's modules in VR (decision 2026-11-12, the builder):
 //   - ModuleButton: the designed hub's module button (cut-corner box, the icon in a turning dotted ring,
 //     the name in caps, corner brackets that open when pointed at), left and right of the core.
-//   - TeleopModule: Teleop without leaving VR or AR (quick job 97; from 2026-11-21 to 11-23 it opened the
+//   - TeleopModule: Arm Control without leaving VR or AR (quick job 97; from 2026-11-21 to 11-23 it opened the
 //     teleop page instead): the teleop page's own session (TeleopSession, /static/xr.js: the arm on its
 //     table, its status box, controllers or hands, the same messages to the brain) inside the hub's
 //     session. STOP is A/X; the brain freezes the arm when input stops, and one page drives at a time.
-//     Under its status box: STOP, Options (the Teleop page's options), then ⏻, EXIT and × (xr/teleop-panel.js,
+//     Under its status box: STOP, Options (the Arm Control page's options), then ⏻, EXIT and × (xr/teleop-panel.js,
 //     quick job 102), in place of the tab.
 //   - ArmHologram: Monitor and AI Control, watch-only: the arm as a line-drawn hologram over a round floor
 //     grid with scan rings, turning slowly, its joints as hexagons with callouts (name and angle, from the
@@ -33,7 +33,7 @@ import { TeleopBar, TeleopOptions } from "./teleop-panel.js";
 import { handChoiceAfter, optionMessage } from "./teleop-options.js";
 
 // Monitor: every arm; monitor-so101 / monitor-xarm: one kind's arms, as their pages (quick job 147)
-export const VR_MODULES = { teleop: ["Teleop", "i-hand"], monitor: ["Monitor", "i-screen"], "monitor-so101": ["SO-101 Monitor", "i-screen"], "monitor-xarm": ["xArm Monitor", "i-screen"], ai: ["AI Control", "i-chip"], cameras: ["Cameras", "i-cam"], raspbot: ["Raspbot", "i-cam"] };
+export const VR_MODULES = { teleop: ["Arm Control", "i-hand"], monitor: ["Monitor", "i-screen"], "monitor-so101": ["SO-101 Monitor", "i-screen"], "monitor-xarm": ["xArm Monitor", "i-screen"], ai: ["AI Control", "i-chip"], cameras: ["Cameras", "i-cam"], raspbot: ["Raspbot Control", "i-cam"] };
 const PX = 900; // canvas pixels per metre
 
 /* ---------- the module button ---------- */
@@ -83,8 +83,8 @@ export class ModuleButton {
 }
 
 /* ---------- the way out: ⏻ (its menu), EXIT (leave VR or AR) and × (close what is open), in this order and
-   this look on every page (quick job 157: they were in different places on the hub and in Teleop):
-   under the core on the hub, a details page and Settings; on the tab of an open module; on Teleop's bar.
+   this look on every page (quick job 157: they were in different places on the hub and in Arm Control):
+   under the core on the hub, a details page and Settings; on the tab of an open module; on Arm Control's bar.
    × in place of ← (choice 2). Cut corners, like every box of the hub. ---------- */
 /* ---------- the open module's title tab, with the way out at its right ---------- */
 const TAB_H = 0.14, TAB_W = 0.62 + wayWidth(TAB_H * 0.86);
@@ -470,7 +470,7 @@ function floorGrid() {
   return g;
 }
 
-/* ---------- Teleop, inside the hub's session ---------- */
+/* ---------- Arm Control, inside the hub's session ---------- */
 export class TeleopModule {
   constructor({ ar, refType }) {
     this.ar = ar; this.refType = refType;
@@ -478,7 +478,7 @@ export class TeleopModule {
   }
   async open() {
     const { TeleopSession, armStyle, STYLE_KEY } = await import("/static/xr.js");
-    this.styleKey = STYLE_KEY; // the same as the Teleop page's "3D arm in the headset"
+    this.styleKey = STYLE_KEY; // the same as the Arm Control page's "3D arm in the headset"
     const link = getLink("input");
     // its device name, so the other pages say who has control (quick job 76); again after a reconnect
     const hello = () => link.send({ type: "hello", agent: navigator.userAgent, device: deviceName() });

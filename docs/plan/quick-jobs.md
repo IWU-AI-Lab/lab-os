@@ -16,10 +16,10 @@ Three coding sessions may run at the same time, one for each lane (the builder, 
 ### Backlog: do not start until the builder says
 The builder chooses when these start (2026-11-25). A session never takes a job from here by itself.
 - **A black hole background** (the builder, 2026-11-26; a first version to iterate on; moved from Lane 3, where it was numbered 160, on 2026-11-26). Part 6 of `docs/plan/ux-review.md`. Lab: add a step to the after-demo list.
-- **The camera pictures flicker on the Teleop page on slower devices.**
+- **The camera pictures flicker on the Arm Control page on slower devices.**
 - **Animations stutter the first few times on every device.**
 - **The arm cameras' pictures are low in resolution** on the Cameras page (all 4), and Quest view too (lab check T.4).
-- **The mini core in VR Teleop stays at one awkward place** (lab check T.2). Make it follow the view, or else keep it on the Teleop info card.
+- **The mini core in VR Arm Control stays at one awkward place** (lab check T.2). Make it follow the view, or else keep it on the Arm Control info card.
 - **The wave in visitor mode needs work** (lab check A.2).
 - **The ambient sound plays while the "lab-os is off" page is open.**
 - **The nearest microphone answers** did not tell the desktops apart (lab check M.2). The microphones were within 1 m of each other.

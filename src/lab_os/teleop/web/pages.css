@@ -1,4 +1,4 @@
-/* Teleop and monitor in the hub's design: the layout, the 3D panel (arm/arm-panel.js writes its
+/* Arm Control and monitor in the hub's design: the layout, the 3D panel (arm/arm-panel.js writes its
    markup) and the joint gauges (monitor.js). The pieces (cards, chips, buttons): /web/design/kit.css. */
 
 /* the arm big on the left, the controls in a column on the right (it scrolls by itself, so the bar

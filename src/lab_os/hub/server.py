@@ -173,7 +173,7 @@ HUB_PAGE = "design.html"  # the hub at / (the plain hub is archived: quick job 1
 # Every module the hub knows: id → (button title, page). The theme's hub.modules picks which ones
 # get a button and in what order; ids without a page here get no button (only claim what's real).
 MODULES = {
-    "teleop": ("Teleop", "/teleop"),
+    "teleop": ("Arm Control", "/teleop"),
     "monitor": ("Monitor", "/monitor"),  # the list of the Monitor pages (quick job 147)
     **{f"monitor-{kind}": (title, f"/monitor/{kind}") for kind, title in MONITOR_KINDS.items()},
     "monitor-raspbot": ("Raspbot Monitor", "/monitor/raspbot"),
@@ -189,7 +189,7 @@ MODULES = {
 # quick job 133); "Open on…" moves it to a window of its own.
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
-    ("/teleop", "Teleop", "Drive the arm with the Quest or the keyboard."),
+    ("/teleop", "Arm Control", "Drive the arm with the Quest or the keyboard."),
     (
         "/monitor",
         "Monitor",
@@ -203,14 +203,18 @@ PAGES = (
     ("/monitor/xarm", "xArm Monitor", "The xArm's joints and 3D view, with STOP; drives nothing."),
     ("/monitor/raspbot", "Raspbot Monitor", "The Raspbot’s camera, 3D view and status, with STOP."),
     ("/ai", "AI Control", "What an AI tool does with the arm, live."),
-    ("/training", "Training", "Start the green arms' LeLab, or LeRobot's teleop with Rerun."),
-    ("/webcam", "Webcam Teleop", "Your bare hand in front of the webcam drives the arm (preview)."),
+    ("/training", "Training", "Start the green arms' LeLab, or LeRobot Control with Rerun."),
+    (
+        "/webcam",
+        "Webcam Control",
+        "Your bare hand in front of the webcam drives the arm (preview).",
+    ),
     (
         "/cameras",
         "Cameras",
         "Every camera's live picture, with a switch for each (kept per device).",
     ),
-    ("/raspbot", "Raspbot", "Drive raspbot1: forward, back, turn, STOP, and its camera."),
+    ("/raspbot", "Raspbot Control", "Drive raspbot1: forward, back, turn, STOP, and its camera."),
     (
         "/wake-word",
         "Wake Word",
@@ -242,7 +246,7 @@ PAGES = (
 # view of the designed hub itself: a details page, the system diagram, the conversation)
 DEVICE_VIEWS = {
     **{mid: (title, page) for mid, (title, page) in MODULES.items()},
-    "webcam": ("Webcam Teleop", "/webcam"),
+    "webcam": ("Webcam Control", "/webcam"),
     "settings": ("Settings", "/settings"),
     "pages": ("All Pages", "/pages"),
     "project": ("Current Project", ""),
@@ -251,7 +255,7 @@ DEVICE_VIEWS = {
     "devices": ("Devices", ""),
     "system": ("System Diagram", ""),
     "chat": ("The Conversation", ""),
-    "raspbot": ("Raspbot", "/raspbot"),  # quick job 72
+    "raspbot": ("Raspbot Control", "/raspbot"),  # quick job 72
     # quick job 133: every page in All Pages opens as a module of the hub
     "wake-word": ("Wake Word", "/wake-word"),
     "remote": ("Phone Remote", "/remote"),
@@ -397,7 +401,7 @@ async def web_manifest(request: web.Request) -> web.Response:
     body = {
         "name": "Lab hub",
         "short_name": "Lab hub",
-        "description": "The lab's hub: VR, AR, teleop and the assistant.",
+        "description": "The lab's hub: VR, AR, arm control and the assistant.",
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
@@ -564,14 +568,14 @@ async def api_lerobot_teleop(request: web.Request) -> web.Response:
 
 
 async def api_lerobot_teleop_start(request: web.Request) -> web.Response:
-    """Check again, then start LeRobot's teleop (the leader drives the follower) with Rerun."""
+    """Check again, then start LeRobot Control (the leader drives the follower) with Rerun."""
     if not is_local(request):
-        raise web.HTTPForbidden(text="LeRobot's teleop starts only on the brain's computer.")
+        raise web.HTTPForbidden(text="LeRobot Control starts only on the brain's computer.")
     return web.json_response(await lerobot_start(request.app))
 
 
 async def lerobot_start(app: web.Application) -> dict:
-    """The Training page's LeRobot teleop Start (and its MCP tool, quick job 80)."""
+    """The Training page's LeRobot Control Start (and its MCP tool, quick job 80)."""
     runner = lerobot_teleop.RUNNER
     if runner.running():
         return await lerobot_state(app)
@@ -586,7 +590,7 @@ async def lerobot_start(app: web.Application) -> dict:
 async def api_lerobot_teleop_stop(request: web.Request) -> web.Response:
     if not is_local(request):
         raise web.HTTPForbidden(
-            text="LeRobot's teleop can be stopped only from the brain's computer."
+            text="LeRobot Control can be stopped only from the brain's computer."
         )
     return web.json_response(await lerobot_stop(request.app))
 
@@ -914,7 +918,7 @@ def _facts(app: web.Application, venue: Venue) -> dict:
 
 
 WAVE_REFUSED = {
-    "teleop": "someone is driving the arm with teleop.",
+    "teleop": "someone is driving the arm with Arm Control.",
     "ai": "the arm is already moving.",
 }
 
@@ -1136,7 +1140,7 @@ def lab_status(app: web.Application) -> dict:
         hottest = max(h["temp_c"] for h in loop.health.values())
         arm["hottest_servo_c"] = hottest
         if loop.servos_hot:
-            warnings.append(f"servos warm ({hottest:.0f} °C): 1:1 teleop is slowed")
+            warnings.append(f"servos warm ({hottest:.0f} °C): 1:1 Arm Control is slowed")
     voice = brain.voice.status()
     ai = brain.chat.status()
     out = {
@@ -1498,7 +1502,7 @@ def _quest_of_link(registry: Registry, link: dict) -> dict | None:
     )
     if dev is not None and dev.off_limits:
         return None
-    entry = {"kind": "headset", "via": "teleop page (network)"}
+    entry = {"kind": "headset", "via": "Arm Control page (network)"}
     if dev is not None:
         what = " ".join(dev.notes.split())[:140] or "Quest"
         return entry | {"id": dev.name, "name": dev.name, "known": True, "what": what}
@@ -1507,7 +1511,7 @@ def _quest_of_link(registry: Registry, link: dict) -> dict | None:
         "id": f"quest:{remote or 'unknown'}",
         "name": "Unnamed Quest",  # the address only in its card (quick job 153)
         "known": False,
-        "what": f"A Quest with the teleop page open at {where} "
+        "what": f"A Quest with the Arm Control page open at {where} "
         "(no device name, not in devices.yaml).",
     }
 
@@ -2011,7 +2015,7 @@ def create_brain_app(
     local/hub-devices.yaml). `find_arm`: started on the fake arm with no --arm, take an SO-101
     plugged in later (`lab_os.teleop.cli.arm_finder`, quick job 73). `adb_reverse`: run `adb
     reverse` for each Quest connected by USB, also after the cable is plugged in again. `raspbot`:
-    the Raspbot page's car (default: the fake one; `lab-os serve` gives devices.yaml's).
+    the Raspbot Control page's car (default: the fake one; `lab-os serve` gives devices.yaml's).
     `live_scan`: what the computer sees, for the live device list (default: `scan_system`);
     `seen_devices`: where its seen devices are kept (default: the place's
     local/seen-devices.yaml)."""

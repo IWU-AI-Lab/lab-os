@@ -142,7 +142,7 @@ def check(
         c.add(
             False,
             f"lab-os itself has {', '.join(mine)} open: start lab-os with another arm, or close "
-            "the Teleop page (a camera closes about 5 s later)",
+            "the Arm Control page (a camera closes about 5 s later)",
         )
     for label, path in [
         (n, p) for n, p in ((GREEN[0], plan.follower_port), (GREEN[1], plan.leader_port))
@@ -242,7 +242,7 @@ class Runner:
     def start(self, plan: Plan) -> str:
         with self.lock:
             if self.running():
-                return "LeRobot's teleop is already running."
+                return "LeRobot Control is already running."
             self.lines.clear()
             self.said = ""
             self.tmp = copy_calibration(plan)
@@ -262,7 +262,7 @@ class Runner:
             reader = threading.Thread(target=self._read, args=(self.proc,), daemon=True)
             reader.start()
             threading.Thread(target=self._wait, args=(self.proc, reader), daemon=True).start()
-            return "Starting LeRobot's teleop: the follower follows the leader."
+            return "Starting LeRobot Control: the follower follows the leader."
 
     def _read(self, proc) -> None:
         """LeRobot's lines (and its Rerun window's: the window keeps this pipe open after
@@ -284,7 +284,7 @@ class Runner:
         reader.join(timeout=1.0)  # its last lines
         if not self.said:
             last = next((x for x in reversed(self.lines) if "Error" in x), "")
-            self.said = "LeRobot's teleop stopped." + (f" {last}" if code and last else "")
+            self.said = "LeRobot Control stopped." + (f" {last}" if code and last else "")
         self._clean_up()
 
     @staticmethod
@@ -303,7 +303,7 @@ class Runner:
         proc = self.proc
         if proc is None or proc.poll() is not None:
             self._clean_up()
-            return "LeRobot's teleop isn't running."
+            return "LeRobot Control isn't running."
         self._signal(proc, signal.SIGINT)
         try:
             proc.wait(timeout=wait_s)
@@ -314,7 +314,7 @@ class Runner:
             except subprocess.TimeoutExpired:
                 self._signal(proc, signal.SIGKILL)
         self._clean_up()
-        self.said = "LeRobot's teleop stopped. The green follower is limp."
+        self.said = "LeRobot Control stopped. The green follower is limp."
         return self.said
 
 

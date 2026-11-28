@@ -7,7 +7,7 @@
 //     own arm, grip = clutch, trigger = gripper, A or X stops both. Hold Y: each grip moves its own
 //     3D arm instead, and the real arms hold (arm-moves.js); a short tap of Y puts both back. Each
 //     hand's position is sent from its own 3D arm's base. Bare hands drive only the right arm.
-//   - Hands (Hands chosen in the hub's Teleop options; hand-choice.js): right wrist = the controller,
+//   - Hands (Hands chosen in the hub's Arm Control options; hand-choice.js): right wrist = the controller,
 //     left pinch = clutch, right pinch = gripper. Sent as a "right controller" with grip/trigger from
 //     the pinches (source "hands"). Controllers put down: the arm holds still, unless "Switch to
 //     Hands by Itself" is on (quick job 114).
@@ -164,7 +164,7 @@ export async function initXR(link, ui) {
   offer(vr, hasVR, "immersive-vr");
   if (none) {
     none.hidden = hasVR || hasAR;
-    none.title = hasXR ? "" : "On the Quest, open the hub and choose Teleop. On a desktop, the Immersive Web Emulator extension adds VR.";
+    none.title = hasXR ? "" : "On the Quest, open the hub and choose Arm Control. On a desktop, the Immersive Web Emulator extension adds VR.";
   }
 }
 
@@ -213,7 +213,7 @@ async function start(mode, link, ui) {
 /**
  * One teleop session's work per XR frame: read the controllers (or hands), move the 3D arm with the
  * left grip, speed with the right thumbstick, send `xr_input` to the brain, update the scene. Used by
- * this page and by the hub in VR (its Teleop button), which renders `scene` inside its own session.
+ * this page and by the hub in VR (its Arm Control button), which renders `scene` inside its own session.
  */
 export class TeleopSession {
   /** @param {{ar: boolean, style?: string, refType: string}} opts */
@@ -234,7 +234,7 @@ export class TeleopSession {
     this.flick = 0;
     this.handChoice = loadHandChoice(); // controllers or hands (quick job 114)
   }
-  /** Controllers or hands, and the switch to hands by itself: the hub's Teleop options. */
+  /** Controllers or hands, and the switch to hands by itself: the hub's Arm Control options. */
   setHandChoice(c) {
     this.handChoice = { hands: !!c.hands, auto: !!c.auto };
     saveHandChoice(this.handChoice);
@@ -258,7 +258,7 @@ export class TeleopSession {
     this.drag[slot] = null;
     savePlace(slot === "left" ? this.placeLeft : this.place, slot === "left" ? LEFT_PLACE_KEY : PLACE_KEY);
   }
-  /** Put the 3D arm back at its first place (both 3D arms with two arms): the hub's Teleop options. */
+  /** Put the 3D arm back at its first place (both 3D arms with two arms): the hub's Arm Control options. */
   putBack() {
     this._putBack(!!this.leftFeed.status);
   }
@@ -274,7 +274,7 @@ export class TeleopSession {
   get scene() {
     return this.xrScene.scene;
   }
-  /** The session is over (or the hub's Teleop closed): the arm freezes and control is free again. */
+  /** The session is over (or the hub's Arm Control closed): the arm freezes and control is free again. */
   end() {
     this.link.send({ type: "session_end" });
   }

@@ -4,7 +4,7 @@ The brain (`lab-os serve`) gives AI tools two sets of tools over MCP (the standa
 - the **robot tools:** read the arm, move it a little at a time, stop it;
 - the **project tools:** read the docs, git and the device list.
 
-Every move goes through the same safety path as teleop, and the brain writes every call to a log. Claude Code does not ask before each move (section 3), so watch the arm and keep STOP near you. Use the **fake arm** first. Then use the real `so101-white` with the builder at the arm (`SAFETY.md`, section 5).
+Every move goes through the same safety path as Arm Control, and the brain writes every call to a log. Claude Code does not ask before each move (section 3), so watch the arm and keep STOP near you. Use the **fake arm** first. Then use the real `so101-white` with the builder at the arm (`SAFETY.md`, section 5).
 
 ## 1. Start the brain
 In a terminal, in the `lab-os` folder, run:
@@ -55,7 +55,7 @@ An arm on a plate has its table height in `config/devices.yaml` (`table_z_cm`; `
 | Tool | Tier | What it does |
 |---|---|---|
 | `arm_status` | read | The joints, the gripper's opening (%), the gripper's position (cm) and tool angle, the limits, who has control (`free`, `teleop`, `ai`), if it holds still, if the venue allows motion, the limits for each call |
-| `list_poses` | read | The named poses (`config/poses.yaml`). `ready`: the working pose, where teleop starts. `home`: the folded pose where the arm stays |
+| `list_poses` | read | The named poses (`config/poses.yaml`). `ready`: the working pose, where Arm Control starts. `home`: the folded pose where the arm stays |
 | `pose_view` | read | A **picture** of the arm's 3D model in its pose now (side and top, a cm grid, the table, the gripper point, the last `move_to` target), with optional `marks` where the AI thinks things are. No camera ("Seeing the pose" below) |
 | `camera_snapshot` | read | One real picture from a camera. A camera with a table map gets the table's **cm grid** ("Table map" below). With `board: true`, the tic-tac-toe board too (`docs/archive/guides-2026-11-25/tic-tac-toe.md`) |
 | `table_point` | read | One pixel of such a picture → x and y on the table, in cm |
@@ -86,7 +86,7 @@ Each move gives back where the arm **really** stopped (joints, gripper %, positi
 - `raspbot_camera` reads one picture from the Raspbot camera.
 - `raspbot_drive` moves forward, back, left or right for up to one second.
 - `raspbot_approach` drives straight ahead to the 20 cm sensor threshold.
-- `raspbot_stop` presses the Raspbot page's **STOP**.
+- `raspbot_stop` presses the Raspbot Control page's **STOP**.
 
 See [Drive with an AI tool](raspbot.md#drive-with-an-ai-tool) for the setup and the first drive.
 
@@ -104,20 +104,20 @@ Each action that a button on a hub page does is also a tool, for Claude Code, Co
 | `visitor_mode` | act | ⚙ → Visitor Mode |
 | `quest_view` | act | The strip's Quest view button |
 | `say_aloud` | act | Says a sentence with the assistant's voice on a screen with the hub open |
-| `teleop_speed`, `teleop_mode` | act | The Teleop page's speed and its hand → arm mode (relative or 1:1) |
+| `teleop_speed`, `teleop_mode` | act | The Arm Control page's speed and its hand → arm mode (relative or 1:1) |
 | `wave_arm` | move | Visitor mode's "Ask me to wave" |
-| `training_lelab`, `training_lerobot_teleop` | act | The Training page's LeLab and LeRobot teleop, with their own checks |
+| `training_lelab`, `training_lerobot_teleop` | act | The Training page's LeLab and LeRobot Control, with their own checks |
 | `restart_lab_os`, `shut_down_lab_os` | act | ⚙ → Restart Now and Shut Down (an SO-101 goes limp) |
 
 Not tools: what only a page can do for itself (its full screen, Desktop control, Enter VR and Enter AR, Back to the start screen).
 
 ## Limits
 The brain limits and refuses. It never trusts the numbers that it gets. This section is the reference for these limits; `SAFETY.md` has the rules for people.
-- **The same path as teleop:** moves go through the teleop loop: the arm's soft limits (3° inside the real limits), the venue's `max_speed_scale`, and a limited speed (all joints arrive together). A move to a named pose (`go_to_pose`, and "move the arm to ready" in the chat) speeds up for 0.5 s at the start and slows down for 0.5 s at the end. Its top speed is the same limit (quick job 118).
+- **The same path as Arm Control:** moves go through the Arm Control loop: the arm's soft limits (3° inside the real limits), the venue's `max_speed_scale`, and a limited speed (all joints arrive together). A move to a named pose (`go_to_pose`, and "move the arm to ready" in the chat) speeds up for 0.5 s at the start and slows down for 0.5 s at the end. Its top speed is the same limit (quick job 118).
 - **Small steps for each call** (`ai_tools` in `config/venues/<venue>.yaml`): at most **30° for each joint** (`move_joints`, `go_to_pose`; not the gripper; the hub's chat moves to a named pose in one move, `SAFETY.md`) or **10 cm** (`move_to`). A larger request goes part of the way and says so. The AI then calls again.
-- **The floor:** nothing goes below `min_z_cm`, in cm above the table. It is **0.8 cm** in both venues (since 2026-11-24; it was 1.1 cm from 2026-11-18, when heights started at the table). The jaw tips reach 0.6 cm below the gripper point, so at the floor they are 0.2 cm above the table. The brain checks the whole path. Teleop uses the same number. An arm that is already lower (moved by hand) can move up, but never further down. If the real arm still touches the table (it bends down under its own weight when stretched out), make the number higher. If one arm stops higher than the other, measure it: `uv run --extra so101 lab-os measure-arm <arm>` (with the brain stopped).
-- **Refused, nothing moves:** the venue has `motion_allowed: false`; **teleop has control** (a teleop page or the Quest drives); another AI move still runs; **lab-os is shutting down** (from "Shut down lab-os" or "Restart Now" until the brain stops; a move that runs then ends with "stopped"); an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that is not a number.
-- **One controller at a time:** while an AI move runs, teleop input is refused ("the AI tools have control"), and the pages show the AI tools as the controller. The hub does not go back to its start screen during a move.
+- **The floor:** nothing goes below `min_z_cm`, in cm above the table. It is **0.8 cm** in both venues (since 2026-11-24; it was 1.1 cm from 2026-11-18, when heights started at the table). The jaw tips reach 0.6 cm below the gripper point, so at the floor they are 0.2 cm above the table. The brain checks the whole path. Arm Control uses the same number. An arm that is already lower (moved by hand) can move up, but never further down. If the real arm still touches the table (it bends down under its own weight when stretched out), make the number higher. If one arm stops higher than the other, measure it: `uv run --extra so101 lab-os measure-arm <arm>` (with the brain stopped).
+- **Refused, nothing moves:** the venue has `motion_allowed: false`; **Arm Control has control** (an Arm Control page or the Quest drives); another AI move still runs; **lab-os is shutting down** (from "Shut down lab-os" or "Restart Now" until the brain stops; a move that runs then ends with "stopped"); an unknown arm, joint or pose; a point out of reach or a path where the arm would flip; anything that is not a number.
+- **One controller at a time:** while an AI move runs, Arm Control input is refused ("the AI tools have control"), and the pages show the AI tools as the controller. The hub does not go back to its start screen during a move.
 - **Switching limits off:** the limit for each call, the speed cap and the floor are on by default. You can set each one to `off` under `limits:` in the venue file, or in Settings → Safety Limits and Shut Down. Then restart the brain. `arm_status` then shows `"off"` for that number. A public venue or a venue with `limits_locked: true` cannot switch them off (the lab has neither). The soft joint limits, one controller at a time and STOP always stay.
 - **Stopping:** `stop`, STOP on any page, or a tool call that is cancelled during a move all freeze the arm.
 - **Unplugged:** if an SO-101's USB cable is removed, the move ends with `"result": "disconnected"`. `arm_status` says `"connected": false`, with the reason. Every move is refused until the arm is back. The brain connects again by itself when the cable is back (quick job 27).
@@ -148,7 +148,7 @@ ls -l /dev/serial/by-id/      # so101-white is …5B41532410-if00; the green fol
 
    Then the full task, with your real measurements:
    > There's a cube 15 cm in front of the base and 5 cm to the left. Pick it up and put it down 10 cm to the left of where it was. Go slowly, one move at a time, and tell me before each move what you'll do.
-5. **Stop:** STOP on any page (or Esc on the teleop page) stops it immediately. Ctrl+C in the brain's terminal stops the brain. The SO-101 then goes limp, so hold it if it is lifted.
+5. **Stop:** STOP on any page (or Esc on the Arm Control page) stops it immediately. Ctrl+C in the brain's terminal stops the brain. The SO-101 then goes limp, so hold it if it is lifted.
 6. After: `logs/ai-tools/` has every call of this run. Write in `docs/plan/current-focus.md` (step 2) what worked and what did not.
 
 ### The green arm (`so101-green`)
@@ -162,10 +162,10 @@ uv run --extra so101 lab-os serve --arm so101-green --speed 0.3
 - It is active in the `lab` and `visit-day` venues.
 - When the brain connects with motion on, it writes LeRobot's usual settings (PID gains, acceleration, the gripper's current limit) to the motors, as LeLab does. Never IDs, baud rate, firmware or calibration.
 
-**Poses:** `ready` is the working pose (reaching forward, about 5 cm up; teleop and the fake arm start there). `handover` holds an object out to a person, about 28 cm out and 20 cm up, and leaves the gripper as it is (the hub's assistant uses it, `docs/archive/guides-2026-11-25/hub.md`; computed on the 3D model). `home` is the folded pose where the builder leaves the arm, with the gripper a little open, just above where it rests (quick job 30). Two joints of `home` (`shoulder_lift`, `elbow_flex`) are past their soft limits by 6.3° and 3.6°, so the move stops at the limits and says so (`clipped`). `wrist_flex` is 55 instead of the real 75.9: with 75.9 the 3D model puts the gripper about 1 cm below the table, and the floor refuses the move. When the brain lets go of the arm, it settles into the real rest. The white arm passed the home check on 2026-11-19. See [the lab result](../plan/current-focus.md#until-the-demo-in-order).
+**Poses:** `ready` is the working pose (reaching forward, about 5 cm up; Arm Control and the fake arm start there). `handover` holds an object out to a person, about 28 cm out and 20 cm up, and leaves the gripper as it is (the hub's assistant uses it, `docs/archive/guides-2026-11-25/hub.md`; computed on the 3D model). `home` is the folded pose where the builder leaves the arm, with the gripper a little open, just above where it rests (quick job 30). Two joints of `home` (`shoulder_lift`, `elbow_flex`) are past their soft limits by 6.3° and 3.6°, so the move stops at the limits and says so (`clipped`). `wrist_flex` is 55 instead of the real 75.9: with 75.9 the 3D model puts the gripper about 1 cm below the table, and the floor refuses the move. When the brain lets go of the arm, it settles into the real rest. The white arm passed the home check on 2026-11-19. See [the lab result](../plan/current-focus.md#until-the-demo-in-order).
 
 ## Looking through a camera (`camera_snapshot`)
-`camera_snapshot(camera, width_px=640)` takes one real picture from a camera in `devices.yaml` and gives it back as a JPEG. The hub's chat does not get it (it takes text only). If another program has the camera open, the brain refuses. A page of the brain that shows the camera (the Cameras page, the Teleop page) does not stop it: the picture and the page share the one open camera, also under the other set's name for the same socket. These cameras start black and then flash white, so the brain waits (up to about 6 s) until the brightness is stable.
+`camera_snapshot(camera, width_px=640)` takes one real picture from a camera in `devices.yaml` and gives it back as a JPEG. The hub's chat does not get it (it takes text only). If another program has the camera open, the brain refuses. A page of the brain that shows the camera (the Cameras page, the Arm Control page) does not stop it: the picture and the page share the one open camera, also under the other set's name for the same socket. These cameras start black and then flash white, so the brain waits (up to about 6 s) until the brightness is stable.
 
 The cameras:
 - `so101-white-cam-stand`: the white arm's stand camera, about 60 cm up behind the arm, looking forward and down.
@@ -180,7 +180,7 @@ A printed sheet tells lab-os where the stand camera's pixels are on the table. T
 **Do this one time, and again when the camera or the arm moves:**
 1. Print `models/charuco/calibration-sheet-letter.pdf` at **100 %** ("Actual size", not "Fit to page"). Measure one square: is it 35 mm? If not, add `--square-mm <your measurement>` in step 4.
 2. Put the sheet flat in front of the arm, with the long edge pointing straight away from the arm, approximately in the center.
-3. Find the sheet's **"Board origin" corner** (printed on it, top left, seen from the arm) in the arm's cm. Move the jaw tips onto it (teleop) and read the gripper's x and y (`/ai`, or `arm_status`). Use the arm's numbers, not a ruler: the arm's x 0 is 3.9 cm behind the base's turning axis.
+3. Find the sheet's **"Board origin" corner** (printed on it, top left, seen from the arm) in the arm's cm. Move the jaw tips onto it (Arm Control) and read the gripper's x and y (`/ai`, or `arm_status`). Use the arm's numbers, not a ruler: the arm's x 0 is 3.9 cm behind the base's turning axis.
 4. Move the arm off the sheet. Then run (the brain can keep running; the camera opens only for a moment):
    ```bash
    uv run --extra so101 lab-os table-map so101-white-cam-stand --origin <x cm> <y cm>

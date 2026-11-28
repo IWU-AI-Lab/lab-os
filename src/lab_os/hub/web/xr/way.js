@@ -1,6 +1,6 @@
 // The way out in VR and AR: ⏻ (its menu), EXIT (leave VR or AR) and × (close what is open), drawn the same
 // and in this order on every page (quick job 157): under the core (xr/modules.js → WayOut), on a module's
-// tab (ModuleTab) and on Teleop's bar (xr/teleop-panel.js). Sizes in the caller's units (pixels or metres).
+// tab (ModuleTab) and on Arm Control's bar (xr/teleop-panel.js). Sizes in the caller's units (pixels or metres).
 import { C, FONT, icon, rgba, spaced } from "./draw.js";
 
 const WAY = { gap: 0.16, exit: 2.4 }; // of the buttons' height: the gap, and EXIT's width

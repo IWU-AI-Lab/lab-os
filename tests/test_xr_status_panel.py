@@ -64,7 +64,7 @@ def panel(
         ({"no_controller": True, "source": "hands"}, "No right hand", "warning"),
         ({"status": None}, "Connecting…", "offline"),
         ({"status": STATUS | {"arm": {"connected": False}}}, "Arm disconnected", "offline"),
-        # one page drives at a time (quick job 97: the hub's Teleop in VR says who has control)
+        # one page drives at a time (quick job 97: the hub's Arm Control in VR says who has control)
         ({"status": STATUS | {"may_drive": False}}, "View only", "warning"),
         (
             {"status": STATUS | {"control": "other", "driver": "desk"}},

@@ -51,7 +51,7 @@ def _https(args) -> tuple[int, object] | None:
 def _banner(port: int, host: str, mcp_port: int, https_port: int = 0) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
-        f"Teleop:   http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
+        f"Arm Control: http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Webcam:   http://localhost:{port}/webcam   (preview; "
         "docs/archive/guides-2026-11-25/webcam-teleop.md)",
@@ -139,7 +139,7 @@ def _table_map(args) -> None:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="lab-os", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    s = sub.add_parser("serve", help="serve the hub + teleop pages and drive the arm")
+    s = sub.add_parser("serve", help="serve the hub + the Arm Control pages and drive the arm")
     s.add_argument("--port", type=int, default=8080)
     s.add_argument(
         "--host",
@@ -190,7 +190,7 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument(
         "--status-line",
         action="store_true",
-        help="print teleop's live status line (input, clutch, joints) under the log; off by "
+        help="print Arm Control's live status line (input, clutch, joints) under the log; off by "
         "default: the hub shows the state",
     )
     g = sub.add_parser(
@@ -404,10 +404,12 @@ def main(argv: list[str] | None = None) -> None:
         # no --arm and none plugged in: take an SO-101 plugged in later (quick job 73)
         find_arm=arm_finder() if getattr(args, "auto_arm", False) and args.arm == "fake" else None,
         adb_reverse=AdbReverse(args.port),  # the Quest's browser reaches it by USB (quick job 73)
-        raspbot=raspbot_from_registry(load_registry()),  # the Raspbot page's car (quick job 72)
+        raspbot=raspbot_from_registry(
+            load_registry()
+        ),  # the Raspbot Control page's car (quick job 72)
     )
     if args.record:
-        print(f"recording teleop input to {args.record}")
+        print(f"recording the Arm Control input to {args.record}")
     if args.mcp_port and not loop.arm.name.startswith("fake"):
         print(f"AI tools can move the REAL {loop.arm.name}: STOP on any page.")
     if loop.left:

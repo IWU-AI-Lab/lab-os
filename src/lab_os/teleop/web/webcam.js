@@ -70,7 +70,7 @@ const CONTROL = {
 };
 link.on("open", () => {
   setPill($("conn"), "Connected", "on");
-  link.send({ type: "hello", agent: `webcam teleop; ${navigator.userAgent}`, device: deviceName() });
+  link.send({ type: "hello", agent: `Webcam Control; ${navigator.userAgent}`, device: deviceName() });
 });
 link.on("close", () => setPill($("conn"), "Disconnected", "off"));
 link.on("error", (m) => say(m.message));

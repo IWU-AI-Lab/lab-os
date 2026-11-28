@@ -156,8 +156,8 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
 
     @server.tool(annotations=ACT)
     def teleop_speed(speed_scale: float) -> dict:
-        """Teleop's speed control, like the slider on the Teleop page: 0.05 up to the venue's
-        top speed (both arms)."""
+        """Arm Control's speed, like the slider on the Arm Control page: 0.05 up to the
+        venue's top speed (both arms)."""
         try:
             handle_message(app, {"type": "set_speed", "speed_scale": float(speed_scale)})
         except ValueError as e:
@@ -166,9 +166,9 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
 
     @server.tool(annotations=ACT)
     def teleop_mode(mode: str) -> dict:
-        """Teleop's hand → arm mode, like the Teleop page's choice: "relative" (the hand's moves
-        move the arm) or "one_to_one" (1:1: the arm follows the hand, where the venue allows it).
-        A change drops the clutch: the person grips again to move."""
+        """Arm Control's hand → arm mode, like the Arm Control page's choice: "relative" (the
+        hand's moves move the arm) or "one_to_one" (1:1: the arm follows the hand, where the venue
+        allows it). A change drops the clutch: the person grips again to move."""
         try:
             handle_message(app, {"type": "set_mode", "mode": str(mode)})
         except ValueError as e:
@@ -197,6 +197,6 @@ def add_system_tools(server: MCPServer, app: web.Application) -> None:
 
     @server.tool(annotations=ACT)
     async def training_lerobot_teleop(on: bool) -> dict:
-        """The Training page's LeRobot teleop (the green leader drives the green follower, with
+        """The Training page's LeRobot Control (the green leader drives the green follower, with
         the Rerun view): start after its checks, or stop."""
         return await (hub.lerobot_start(app) if on else hub.lerobot_stop(app))

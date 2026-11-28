@@ -8,7 +8,7 @@ This guide tells you what to plug in where on the lab desktop (the brain), and w
 - **The USB microphone** is in the front port.
 - **The Quest** is in the front USB-C port, for adb. Usually it uses the Wi-Fi.
 - **The mouse and the keyboard** are in the other free sockets.
-- **The card reader and the webcam** go on another computer of the room (a Windows desktop or a laptop). Open the hub on that computer. The card reader types into that computer's hub, and its swipe starts that hub. Open `/webcam` on that computer for webcam teleop: it uses the webcam of the computer that opens the page.
+- **The card reader and the webcam** go on another computer of the room (a Windows desktop or a laptop). Open the hub on that computer. The card reader types into that computer's hub, and its swipe starts that hub. Open `/webcam` on that computer for Webcam Control: it uses the webcam of the computer that opens the page.
 - **The card reader on the brain** (quick job 113): with the card reader in a socket of the lab desktop, a swipe starts the hub on the desktop also when another window has the focus. The brain reads the reader. On another computer, the hub page must have the focus.
 - **The xArm** goes in a free back socket only when you use it.
 

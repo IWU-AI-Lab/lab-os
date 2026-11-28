@@ -194,7 +194,7 @@ async def test_screens_opening_pages_are_noted(aiohttp_client, monkeypatch):
     await ws.send_json({"type": "state", "showing": "teleop", "from": "desk"})
     await settle(client)
     await asyncio.sleep(0.1)
-    assert texts()[0] == "pi7 opened Teleop (from desk)" and len(texts()) == 2
+    assert texts()[0] == "pi7 opened Arm Control (from desk)" and len(texts()) == 2
     await ws.send_json({"type": "state", "showing": None})
     await settle(client)
     await asyncio.sleep(0.1)

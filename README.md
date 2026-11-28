@@ -3,7 +3,7 @@
 **lab-os** for the IWU AI lab. It is one portable "brain" that connects the lab's robots. AI tools and people use it to see and control the robots.
 
 What works today:
-- **Teleop:** a robot arm follows your Quest 3 controller or your bare hand.
+- **Arm Control:** a robot arm follows your Quest 3 controller or your bare hand.
 - **The hub:** a full-screen start page with an AI assistant that knows the project. You can type to it or talk to it.
 - **AI control:** AI tools such as Claude Code drive the SO-101 arms through the brain and look through their cameras.
 
@@ -24,13 +24,13 @@ The script installs [uv](https://docs.astral.sh/uv/) if it is missing. It makes 
 ```bash
 uv run pytest                                            # the tests (no hardware needed)
 uv run pytest -n auto                                    # the same, in parallel (faster)
-uv run lab-os serve                                      # the brain: the hub, the teleop pages and the arm plugged in (else the fake arm)
-uv run lab-os-teleop serve                               # teleop only: the headset page and the fake arm
+uv run lab-os serve                                      # the brain: the hub, the Arm Control pages and the arm plugged in (else the fake arm)
+uv run lab-os-teleop serve                               # Arm Control only: the headset page and the fake arm
 uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay a recording (no browser, no headset)
 ```
 - After `lab-os serve`, open http://localhost:8080/ for the hub. The options are in `docs/archive/guides-2026-11-25/hub.md` → "Start it".
 - After `lab-os-teleop serve`, open http://localhost:8080/monitor/so101 to watch the fake arm (`/monitor` lists the Monitor pages).
-- To test teleop at home, or to connect the real Quest over USB, read `docs/guides/quest-setup.md`.
+- To test Arm Control at home, or to connect the real Quest over USB, read `docs/guides/quest-setup.md`.
 
 ## Repository map
 | Path | What |
@@ -48,7 +48,7 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl --loop   # replay
 The docs are in folders by who reads them:
 - **Top level:** `FEATURES.md` (what works today), `CHANGELOG.md` (what changed, by date), `SAFETY.md`, `AGENTS.md` (the rules for AI coding agents), `CLAUDE.md` (points Claude Code to `AGENTS.md`).
 - **`docs/plan/`, what we build and why:** `current-focus.md` (the work until the demo on 2026-12-03), `quick-jobs.md` (small decided jobs), `ideas.md` (the only list of ideas, with "On hold"), `vision.md` (the long-term direction), `log.md` (goals, decisions, devices, facts about the lab), `use-cases.md` (real workflows behind the features).
-- **`docs/guides/`, how to use it:** `ai-control.md` (an AI tool drives an arm through the brain), `lab-inventory.md` (every device in the lab), `quest-setup.md` (teleop at home and on the real Quest), `raspbot.md` (the Raspbot), `lab-checklist.md` (what to test in the lab before the demo) and `lab-checklist-after-demo.md` (the rest). The other guides are paused until a stable version: they are in `docs/archive/guides-2026-11-25/` (`hub.md`, `voice.md`, `quest-view.md`, `tic-tac-toe.md`, `green-launcher.md`, `webcam-teleop.md`, `network-setup-checklist.md`).
+- **`docs/guides/`, how to use it:** `ai-control.md` (an AI tool drives an arm through the brain), `lab-inventory.md` (every device in the lab), `quest-setup.md` (Arm Control at home and on the real Quest), `raspbot.md` (the Raspbot), `lab-checklist.md` (what to test in the lab before the demo) and `lab-checklist-after-demo.md` (the rest). The other guides are paused until a stable version: they are in `docs/archive/guides-2026-11-25/` (`hub.md`, `voice.md`, `quest-view.md`, `tic-tac-toe.md`, `green-launcher.md`, `webcam-teleop.md`, `network-setup-checklist.md`).
 - **`docs/dev/`, how to work on it:** `dev-setup.md` (branches and folders), `project-scaffold.md` (what the repository contains), `protocol.md` (messages, MCP tools and HTTP endpoints), `places.md` (config folders, devices, other places), `personas.md`, `chat.md` (AI setups, keys, spend), `GOTCHAS.md` (surprises and their fixes).
 - **`docs/design/`:** the approved hub design (`DESIGN.md`, `hub-concept.html`). **`docs/device_manuals/`:** manuals (the Newline). **`docs/archive/`:** closed focuses and other history, by date.
 

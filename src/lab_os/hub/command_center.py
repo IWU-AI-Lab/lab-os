@@ -10,7 +10,8 @@ hub, each device's settings). Two things are its own:
   real device. Kept in the place's `local/command-center.yaml` (not in git).
 - **The teleop permission**: which devices may drive a real arm (`drive_from` in `place.yaml`, read
   at start before this job). A change applies at once (the brain's set of addresses) and is kept in
-  the place's `local/place.yaml`. A device's Teleop or Raspbot page checks it when it connects.
+  the place's `local/place.yaml`. A device's Arm Control or Raspbot Control page checks it when it
+  connects.
 
 Both endpoints answer only to the brain's own computer: another screen can't give itself the right
 to drive an arm.

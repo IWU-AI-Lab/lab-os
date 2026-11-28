@@ -453,5 +453,5 @@ def deploy(host: str = "raspbot1") -> int:
         if subprocess.run(cmd).returncode != 0:
             print(f"Failed: {' '.join(cmd[:2])} … (docs/guides/raspbot.md)")
             return 1
-    print(f"lab-os's program runs on {host}. Open the Raspbot page: /raspbot")
+    print(f"lab-os's program runs on {host}. Open the Raspbot Control page: /raspbot")
     return 0

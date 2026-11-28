@@ -1,9 +1,9 @@
-// Controllers or bare hands in VR and AR Teleop (quick job 114, the builder 2026-11-24: "HUGE issue").
+// Controllers or bare hands in VR and AR Arm Control (quick job 114, the builder 2026-11-24: "HUGE issue").
 // Before, putting the controllers down switched to the hands by itself. Now only the choice drives:
 //   hands: false  the controllers drive; put down, the arm holds still (the Quest's hands do nothing)
-//   hands: true   the bare hands drive (Hands in the Teleop options); controllers do nothing
+//   hands: true   the bare hands drive (Hands in the Arm Control options); controllers do nothing
 //   auto:  true   the old way: the controllers win, the hands drive while the controllers are down
-// Kept in this browser, set in the hub's Teleop options. No imports, so the tests run it with node.
+// Kept in this browser, set in the hub's Arm Control options. No imports, so the tests run it with node.
 
 export const HANDS_KEY = "lab-os.xr-hands"; // "1": Hands chosen
 export const AUTO_HANDS_KEY = "lab-os.xr-auto-hands"; // "1": switch to Hands by itself

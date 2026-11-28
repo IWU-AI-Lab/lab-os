@@ -40,7 +40,7 @@ $("arm-panel").innerHTML = `
   <p id="arm-source" class="hint">Connecting…</p>
   <p id="arm-error" class="hint warn-text"></p>`;
 
-const KIND = pageKind(location.pathname); // null: every arm (Teleop, AI Control)
+const KIND = pageKind(location.pathname); // null: every arm (Arm Control, AI Control)
 const view = createArmView($("arm-view"), { fromFront: KIND === "so101" });
 const select = $("arm-model");
 const link = getLink($("arm-panel").dataset.role || "monitor");

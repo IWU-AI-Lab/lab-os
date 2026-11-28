@@ -105,7 +105,7 @@ async def test_the_wave_plays_its_poses_and_ends_at_ready(rig):
 
 async def test_the_wave_keeps_the_safety_rules(rig):
     rig.control["ws"] = object()  # teleop has the arm
-    with pytest.raises(Refused, match="teleop has control"):
+    with pytest.raises(Refused, match="a person has control"):
         rig.gesture_path("wave")
     rig.control["ws"] = None
     deep = {"from": "ready", "steps": [{"shoulder_lift": 60, "elbow_flex": -60, "wrist_flex": 60}]}
@@ -274,7 +274,7 @@ async def test_the_ai_waves_only_in_visitor_mode(hub):
     app[CONTROL]["ws"] = object()  # teleop has the arm
     script.extend([("tool", WAVE), ("words", "Someone is driving the arm.")])
     await ask(client, "wave")
-    assert "teleop" in tool_result(seen[-1])
+    assert "Arm Control" in tool_result(seen[-1])
 
 
 async def test_only_from_the_brains_own_screen(hub, monkeypatch):

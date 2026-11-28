@@ -95,10 +95,10 @@ async def test_the_vr_callouts_read_the_same_facts_as_the_screen(aiohttp_client)
 
 
 async def test_the_vr_modules(aiohttp_client):
-    """Teleop runs the teleop page's own XR session code inside the hub's session (one copy of the
-    controller handling): it opens as a module, like Monitor and AI Control (quick job 97; from
-    2026-11-21 to 11-23 it left VR for the teleop page). Monitor and AI Control are watch-only
-    holograms with STOP; Training (LeLab on the desktop) has no VR version, so no button
+    """Arm Control runs the Arm Control page's own XR session code inside the hub's session (one
+    copy of the controller handling): it opens as a module, like Monitor and AI Control (quick job
+    97; from 2026-11-21 to 11-23 it left VR for the teleop page). Monitor and AI Control are
+    watch-only holograms with STOP; Training (LeLab on the desktop) has no VR version, so no button
     (decision 2026-11-12, the builder)."""
     client = await aiohttp_client(make_app())
     teleop = await (await client.get("/static/xr.js")).text()
@@ -257,9 +257,9 @@ async def test_the_hub_installs_as_an_app(aiohttp_client):
 
 
 def test_the_teleop_page_has_the_headset_options():
-    """The builder, 2026-11-21: Teleop opens the teleop page on every hub version; there you choose
-    relative or 1:1 and the rest, then Enter VR or Enter AR, each doing what it says. Desktop
-    control can't be chosen in a headset."""
+    """The builder, 2026-11-21: Arm Control opens the Arm Control page on every hub version; there
+    you choose relative or 1:1 and the rest, then Enter VR or Enter AR, each doing what it says.
+    Desktop control can't be chosen in a headset."""
     from test_hub_server import SRC
 
     web = SRC / "teleop" / "web"
@@ -297,9 +297,9 @@ STATUS = {"speed_scale": 0.5, "max_speed_scale": 0.8, "mode": "relative",
 
 
 def test_the_vr_teleop_options_are_the_teleop_pages():
-    """Quick job 102: the hub's VR and AR Teleop has the Teleop page's options for the headset:
-    the speed (5 % a step, up to the venue's cap), relative or 1:1 (only where the brain offers
-    it), the 3D arm's look, and putting the 3D arm back."""
+    """Quick job 102: the hub's VR and AR Arm Control has the Arm Control page's options for the
+    headset: the speed (5 % a step, up to the venue's cap), relative or 1:1 (only where the brain
+    offers it), the 3D arm's look, and putting the 3D arm back."""
     rows = _options(f"m.optionRows({json.dumps(STATUS)}, 'stick')")
     assert [r["key"] for r in rows] == ["speed", "mode", "auto", "style", "place"]
     speed, mode, _, style, _ = rows
@@ -389,10 +389,10 @@ def test_hand_control_only_when_you_choose_it():
 
 
 async def test_the_way_out_of_vr_teleop_is_beside_its_status_box(aiohttp_client):
-    """Quick job 102 (the builder did not find a way out): in the VR and AR Teleop, STOP, Options,
-    Back and Exit sit under the status box, in the teleop room, where you look while you drive. The
-    right controller or right hand points at them (its beam shows while it is on one); the floating
-    tab and the Exit at the floor are not shown there. B still closes Teleop."""
+    """Quick job 102 (the builder did not find a way out): in the VR and AR Arm Control, STOP,
+    Options, Back and Exit sit under the status box, in the teleop room, where you look while you
+    drive. The right controller or right hand points at them (its beam shows while it is on one);
+    the floating tab and the Exit at the floor are not shown there. B still closes Arm Control."""
     client = await aiohttp_client(make_app())
     graph = await _module_graph(client, "/hub/xr-hub.js")
     assert "/hub/xr/teleop-panel.js" in graph and "/hub/xr/teleop-options.js" in graph

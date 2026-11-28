@@ -112,7 +112,7 @@ Real robots (calibration, real motion, delays), the Quest with the real arm, the
 - Keep the repository on **GitHub (private)**. Push from home, pull on the lab desktop (and the reverse).
 - **Secrets never go in git** — each machine has its own local secrets file.
 - Write code that runs on both your laptop and the lab desktop (Python works on Windows/macOS/Linux; on Windows, WSL gives you a Linux environment).
-- **Optional:** if the professor allows, borrowing a small arm (the xArm) and a Quest lets you test real teleop at home.
+- **Optional:** if the professor allows, borrowing a small arm (the xArm) and a Quest lets you test real Arm Control at home.
 
 ### Rhythm
 Build at home against fakes → test in the lab on real hardware → note surprises in the gotchas list → repeat.

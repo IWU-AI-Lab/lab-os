@@ -36,7 +36,7 @@ export class Pointer {
   /**
    * One pointer's ray this frame (world space). Returns what it's on: {obj, what, point} or null.
    * key: "left" / "right" / "mouse". show: draw the beam (not for the mouse); "on-hit": only while it is on
-   * something (Teleop: the beam would be in the way of the arm).
+   * something (Arm Control: the beam would be in the way of the arm).
    */
   update(key, origin, dir, show = true) {
     const v = this._visuals(key);

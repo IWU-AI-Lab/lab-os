@@ -1,4 +1,4 @@
-"""The Raspbot page (quick job 72): drive the Raspbot from a browser, through the brain.
+"""The Raspbot Control page (quick job 72): drive the Raspbot from a browser, through the brain.
 
 GET /raspbot                 the touch controller: Drive, camera, Pan and Tilt, STOP, diagnostics
 GET /monitor/raspbot         read-only view of the camera, model and status, with STOP

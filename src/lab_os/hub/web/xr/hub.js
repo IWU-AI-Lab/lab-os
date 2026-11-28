@@ -5,7 +5,7 @@
 // bottom left; the screen frame (cut corners, tabs, notches) around it all; thin traces from the core
 // up to the strip and down to the log. Module buttons (xr/modules.js) between the core and the
 // callouts, alternating left and right in the theme's order (hub.modules), traces running to them:
-// Teleop opens the arm scene without leaving VR or AR (quick job 97); Monitor and AI Control their
+// Arm Control opens the arm scene without leaving VR or AR (quick job 97); Monitor and AI Control their
 // holograms; Back (or B) closes them and the hub comes back.
 // Pointing and pressing (xr/pointer.js): a callout opens its details page (it unfolds from the callout,
 // the core docks in its corner, Back closes it); its own controls work (7d / 14d / 30d, List all, a
@@ -166,7 +166,7 @@ export class HubView {
     for (const c of Object.values(this.callouts)) out[c.id] = c.title;
     return out;
   }
-  /** The assistant opened a page ("pull up teleop", "go back to the hub"): like pointing at it. */
+  /** The assistant opened a page ("pull up arm control", "go back to the hub"): like pointing at it. */
   showPage(id, now) {
     const shown = this.mode === "module" ? this.module?.id : this.mode === "details" ? this.page.id : this.mode;
     if (shown === id) return;
@@ -181,7 +181,7 @@ export class HubView {
     if (this.menu.mesh.visible) return [this.menu.mesh]; // ⏻'s menu: choose, or press beside it
     if (this.mode === "details") return [this.page.mesh, this.power.mesh];
     if (this.mode === "settings") return [this.settings.mesh, this.power.mesh];
-    // Teleop has its own Back and Exit beside its status box (quick job 102), so no tab
+    // Arm Control has its own Back and Exit beside its status box (quick job 102), so no tab
     if (this.mode === "module") return [...(this.module?.id === "teleop" ? [] : [this.tab.mesh]), ...(this.module?.view.targets?.() || [])];
     return [...Object.values(this.callouts).map((c) => c.mesh), ...this.buttons.map((b) => b.mesh), this.power.mesh, this.gear.mesh, this.card.mesh, this.ask.mesh];
   }
@@ -251,7 +251,7 @@ export class HubView {
     if (w.kind === "back") { if (this.mode === "module") this.closeModule(now); else if (this.mode === "settings") this.closeSettings(now); else this.closeDetails(now); return null; }
     if (w.kind === "module") { this.openModule(w.id, now); return null; }
     if (w.kind === "next-page") { this.page.nextPage(); this.sfx.blip(); return null; }
-    if (w.kind === "tele" || w.kind === "rasp") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Teleop's options, the Raspbot's bar
+    if (w.kind === "tele" || w.kind === "rasp") { this.sfx.blip(); this.module?.view.press?.(w); return null; } // Arm Control's options, the Raspbot's bar
     if (w.kind === "stop") { this.module?.view.link?.send({ type: "stop" }); this.sfx.error(); return null; }
     if (w.kind === "tab" || w.kind === "ask") return null; // the ask line is held, not pressed
     if (w.kind === "page" || w.kind === "card") return null;
