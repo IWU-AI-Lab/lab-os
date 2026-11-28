@@ -14,9 +14,6 @@ drive_from:           # other devices that may drive a real arm, by name or addr
                       # starts, the same as `lab-os serve --drive-from` (quick job 95). The rest only watch.
                       # The Command Center changes it (quick job 134: kept in local/place.yaml).
   - 192.168.8.180     # the Quest on the router's Wi-Fi (its address is reserved in the router)
-greeting_from: [newline, brain]   # one greeting for all the screens that start: the first of these
-                      # devices that is on and not muted speaks it (brain = the brain's own computer), else
-                      # the screen that started. A soloed device always wins (quick job 166; ⚙ → The Lab).
 calendar:             # dates the hub's greeting mentions in the two weeks before (docs/dev/personas.md)
   - {date: 2026-12-15, what: "The semester ends"}
 domain: hub.indwesailab.com   # not used yet: the secure address is deferred (docs/archive/guides-2026-11-25/voice.md → "Secure pages");

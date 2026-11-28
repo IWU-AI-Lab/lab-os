@@ -116,28 +116,6 @@ def _module_titles() -> dict[str, str]:
     return {mid: title for mid, (title, _page) in MODULES.items()}
 
 
-def _sound_devices() -> list[str]:
-    """The devices the greeting may play on (quick job 166): the brain's own computer, the
-    Newline, and every device that has had the hub open under a name."""
-    from lab_os.hub.hub_devices import DeviceSettings
-
-    try:
-        known = DeviceSettings().known_names()
-    except OSError:
-        known = []
-    return list(dict.fromkeys([*config.GREETING_FROM, *known]))
-
-
-def _sound_titles() -> dict[str, str]:
-    from lab_os.hub.hub_devices import DeviceSettings
-
-    try:
-        names = DeviceSettings().display_names()
-    except OSError:
-        names = {}
-    return names | {"brain": "The brain's computer"}
-
-
 # Grouped by what a setting affects, most-used first (quick job 38): the assistant, the lab (its hub
 # and its name), the robots, then the risky ones apart (`risky`: switching a safety limit off; the
 # page adds "Shut down" there). "This device" is the page's own (settings.js). Labels in Title Case;
@@ -218,18 +196,6 @@ SECTIONS: list[Section] = [
         "The Lab",
         (
             Field("place", "name", "Name", "text", "The hub's title and the startup's."),
-            Field(
-                "place",
-                "greeting_from",
-                "Greeting Plays On",
-                "list",
-                "One greeting for all the screens that start: the first device in this list that "
-                "is on and not muted. Else the screen that started. A soloed device always wins.",
-                _sound_devices,
-                applies="next",
-                default=list(config.GREETING_FROM),
-                titles=_sound_titles,
-            ),
             Field(
                 "theme",
                 "quality.default",

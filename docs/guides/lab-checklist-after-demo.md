@@ -288,14 +288,17 @@ Quick jobs 159, 160 and 161. Use the lab desktop on **Full**, then the Quest.
 - **X7.1** Look at the core on the hub. Hold the mic and talk, then let go. Open ⚙ → **Assistant** and choose the other persona. → Do the rings turn like an armillary sphere and cross through the middle? Do they line up flat while you talk? Do they turn faster while it thinks? Does the other persona's core look different? (yes / no for each) Open the VR hub. → Do the rings tilt there too? (yes / no) What do you want to change? (a sentence)
 - **X7.2** Quick job 161. Look at the core on the hub. Open a page, then close it. → Do the bright arcs and the dashes move smoothly (not in steps)? Does the light behind the core go before the core flies home? (yes / no for each)
 
-## SR. Mute, solo and one greeting (15 min)
-Quick job 166. Open the hub on the lab desktop, the Newline and a Pi touchscreen. Put each on its start screen. Open the Command Center on the lab desktop. Keep your phone near, with **Phone Remote** open.
-- **SR.1** Tap the Pi's start screen. → did all three start? (yes / no) How many greetings did you hear? (1 / 2 / 3) Where did it play? (Newline / desktop / Pi)
-- **SR.2** In the Command Center, press **M** on the Newline's card. Put the three screens on the start screen again. Wait 15 s. Tap the Pi. → where did the greeting play? (desktop / Pi / Newline / nowhere)
-- **SR.3** Press **M** on the Newline again. Press **S** on the Newline's card. → did the **S** turn amber, and the **M** on the other cards dim red? (yes / no) On the phone, hold **TALK** and ask "what time is it". → did the answer play on the Newline, not on the phone? (yes / no)
-- **SR.4** Keep the Newline soloed. Tap a panel on the desktop's hub. → did the desktop make no sound? (yes / no) Press **S** on the Newline again. Tap the panel again. → did the sound come back? (yes / no)
-- **SR.6** Press **Mute all** above the Devices list. → did every **M** turn red, and the button say **Unmute all**? (yes / no) Press it again. → did every **M** go back? (yes / no)
-- **SR.5** In the Quest, open the hub and say (wake word) "hello". → did the Quest say the answer itself, with the Newline soloed? (yes / no)
+## SR. Mute, solo and cover (15 min)
+Quick job 166, changed 2026-11-27. Open the hub on the lab desktop, the Newline and a Pi touchscreen. Put each on its start screen. Open the Command Center on the lab desktop. Keep your phone near, with **Phone Remote** open.
+- **SR.1** Tap the Pi's start screen. → did all three start? (yes / no) How many greetings did you hear? (1 / 2 / 3) Where did it play? (Pi / Newline / desktop)
+- **SR.2** In the Command Center, press **M** on the Pi's card. Put the three screens on the start screen again. Wait 15 s. Tap the Pi. → did the greeting play nowhere? (yes / no)
+- **SR.3** Keep the Pi muted. Press **C** on the Newline's card. → did the **C** turn green? (yes / no) Put the three screens on the start screen again. Wait 15 s. Tap the Pi. → did the greeting play on the Newline? (yes / no)
+- **SR.4** Press **M** on the phone's card. On the phone, hold **TALK** and ask "what time is it". → did the answer play on the Newline, not on the phone? (yes / no) Press **M** on the phone and the Pi again, and press **C** on the Newline again.
+- **SR.5** Press **S** on the Newline's card. → did the **S** turn amber, and the **M** on the other cards dim red? (yes / no) On the phone, hold **TALK** and ask "what time is it". → did no answer play, on the phone or on the Newline? (yes / no) Tap a panel on the desktop's hub. → did the desktop make no sound? (yes / no)
+- **SR.6** Press **S** on the desktop's card too. Hold the mic on the desktop and ask "what time is it". → did the answer play on the desktop only? (yes / no) Press both **S** again. Tap the panel again. → did the sound come back? (yes / no)
+- **SR.7** Press **Mute all** above the Devices list. → did every **M** turn red, and the button say **Unmute all**? (yes / no) Press it again. → did every **M** go back? (yes / no)
+- **SR.8** Open two hub windows on the laptop. Leave one on the hub. Start the other from its start screen. → did the greeting play in the window that you started? (yes / no)
+- **SR.9** Press **S** on the Newline's card. In the Quest, open the hub and say (wake word) "hello". → did the Quest say the answer itself? (yes / no) Press **S** again.
 
 ## DR. Moved from the demo run (2026-11-27)
 These steps were in `docs/guides/lab-checklist.md`. The builder cut the demo run to the main checks (2026-11-27). Each keeps its tag and the setup of its part.

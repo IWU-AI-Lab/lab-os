@@ -1,5 +1,5 @@
-"""Where the sound plays (quick job 166): mute and solo per device, one greeting for every start
-on the first device of `greeting_from`, and the Quest's page with its own sound."""
+"""Where the sound plays (quick job 166, changed 2026-11-27): each device plays its own sounds;
+mute, solo and cover per device; one greeting for every start; the Quest keeps its own sound."""
 
 import asyncio
 from dataclasses import dataclass
@@ -27,13 +27,12 @@ def link(device="", local=False, own=False, since=0.0, address=""):
     return Page(device, local, own, since, address)
 
 
-def desk(links, sounds=None, order=("newline", "brain")):
+def desk(links, sounds=None):
     d = VoiceDesk(
         chat=None,
         assistant=None,
         persona=lambda: None,
         sound_settings=lambda: sounds or {},
-        greeting_from=lambda: list(order),
     )
     d.links = set(links)
     return d
@@ -47,54 +46,53 @@ def test_an_answer_plays_where_it_was_asked_unless_muted():
     assert d.outputs(phone) == []
 
 
-def test_solo_takes_every_answer_one_page_per_device():
+def test_solo_silences_the_other_devices():
+    phone, nl, desk1 = link("phone"), link("newline"), link("desk")
+    d = desk([phone, nl, desk1], {"newline": {"solo": True}})
+    assert d.outputs(nl) == [nl]  # its own sound
+    assert d.outputs(phone) == [] and d.outputs(desk1) == []  # not sent to the soloed device
+    d = desk([phone, nl, desk1], {"newline": {"solo": True}, "desk": {"solo": True}})
+    assert d.outputs(nl) == [nl] and d.outputs(desk1) == [desk1] and d.outputs(phone) == []
+    d = desk([phone, nl, desk1], {"newline": {"solo": True, "sound": False}})
+    assert d.outputs(phone) == [phone]  # muted wins over solo: nothing is soloed
+    d = desk([phone, nl], {"newline": {"solo": True}, "phone": {"sound": False, "cover": True}})
+    assert d.outputs(phone) == []  # a cover that is not soloed is quiet too
+
+
+def test_a_muted_devices_sound_plays_only_on_the_covers():
     phone, nl1, nl2, desk1 = (
         link("phone"),
         link("newline", since=1),
         link("newline", since=2),
         link("desk"),
     )
-    d = desk([phone, nl1, nl2, desk1], {"newline": {"solo": True}})
+    d = desk([phone, nl1, nl2, desk1], {"phone": {"sound": False}})
+    assert d.outputs(phone) == []  # no cover: nobody hears it
+    d = desk([phone, nl1, nl2, desk1], {"phone": {"sound": False}, "newline": {"cover": True}})
     assert d.outputs(phone) == [nl1]  # its oldest page only: one set of speakers
-    assert d.outputs(desk1) == [nl1]
-    d = desk([phone, nl1, desk1], {"newline": {"solo": True, "sound": False}})
-    assert d.outputs(phone) == [phone]  # muted wins over solo
-    d = desk([phone, nl1, desk1], {"newline": {"solo": True}, "desk": {"solo": True}})
-    assert set(d.outputs(phone)) == {nl1, desk1}  # a few soloed devices
+    assert d.outputs(desk1) == [desk1]  # a device that is not muted plays its own
+    sounds = {"phone": {"sound": False}, "newline": {"cover": True}, "desk": {"cover": True}}
+    d = desk([phone, nl1, desk1], sounds)
+    assert set(d.outputs(phone)) == {nl1, desk1}  # a few covers
+    sounds = {"phone": {"sound": False}, "newline": {"cover": True, "sound": False}}
+    d = desk([phone, nl1], sounds)
+    assert d.outputs(phone) == []  # a muted cover plays nothing
 
 
 def test_the_quest_keeps_its_own_sound():
     quest, nl = link("quest", own=True), link("newline")
     d = desk([quest, nl], {"newline": {"solo": True}, "quest": {"sound": False, "solo": True}})
-    assert d.outputs(quest) == [quest] and d.greeting_outputs(quest) == [quest]
+    assert d.outputs(quest) == [quest]
     assert d.soloed() == [nl]  # its solo doesn't count for the others
+    d = desk([quest, nl], {"newline": {"sound": False}, "quest": {"cover": True}})
+    assert d.outputs(nl) == []  # and it is never a cover
 
 
-def test_the_greeting_plays_on_the_first_device_of_the_order():
-    pi, nl, brain = link("pi03"), link("newline"), link("desk", local=True)
-    d = desk([pi, nl, brain])
-    assert d.greeting_outputs(pi) == [nl]
-    d = desk([pi, nl, brain], {"newline": {"sound": False}})
-    assert d.greeting_outputs(pi) == [brain]  # then the brain's computer
-    d = desk([pi, nl, brain], {"newline": {"sound": False}, "desk": {"sound": False}})
-    assert d.greeting_outputs(pi) == [pi]  # then the screen that started
-    d = desk([pi, nl], {"pi03": {"sound": False}, "newline": {"sound": False}})
-    assert d.greeting_outputs(pi) == []  # every screen muted
-    d = desk([pi, nl, brain], {"pi03": {"solo": True}})
-    assert d.greeting_outputs(nl) == [pi]  # a soloed device wins
-
-
-def test_the_window_that_starts_plays_its_own_greeting():
+def test_each_window_plays_its_own_sound():
     """Two windows on one computer: the one that started speaks, not the one open longest."""
-    old, new = link("desk", local=True, since=1), link("desk", local=True, since=2)
-    d = desk([old, new], order=("brain",))
-    assert d.greeting_outputs(new) == [new]
-    assert d.greeting_outputs(old) == [old]
-    d = desk([old, new, link("pi03")], {"desk": {"solo": True}})
-    assert d.greeting_outputs(new) == [new] and d.outputs(new) == [new]
-    pi = link("pi03")
-    d = desk([old, new, pi], order=("brain",))
-    assert d.greeting_outputs(pi) == [old]  # another device asked: the oldest window
+    old, new, pi = link("desk", local=True, since=1), link("desk", local=True, since=2), link("pi")
+    d = desk([old, new, pi])
+    assert d.outputs(new) == [new] and d.outputs(old) == [old] and d.outputs(pi) == [pi]
 
 
 async def connect(client, name):
@@ -107,14 +105,13 @@ async def settings(client, name, body):
 
 
 @pytest.mark.usefixtures("key")
-async def test_a_phones_answer_plays_on_the_soloed_device(aiohttp_client, aiohttp_server, tmp_path):
+async def test_a_muted_phones_answer_plays_on_the_cover(aiohttp_client, aiohttp_server, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
-    await settings(client, "newline", {"solo": True})
+    await settings(client, "newline", {"cover": True})
+    await settings(client, "phone", {"sound": False})
     newline = await connect(client, "newline")
     phone = await connect(client, "phone")
-    st = await (await client.get("/api/status")).json()
-    assert st["voice"]["solo"] == ["newline"]  # the other screens make no sound
     await phone.send_json({"type": "listen", "mode": "ask"})
     await until(phone, "listening", [])
     await phone.send_bytes(SECOND)
@@ -151,27 +148,25 @@ async def test_a_muted_screen_gets_no_spoken_answer(aiohttp_client, aiohttp_serv
 
 
 @pytest.mark.usefixtures("key")
-async def test_one_greeting_for_the_screens_that_start(aiohttp_client, aiohttp_server, tmp_path):
+async def test_one_greeting_on_the_screen_that_started(aiohttp_client, aiohttp_server, tmp_path):
     app, conv, _ = await voice_app(aiohttp_server, tmp_path)
     conv.clear(opening="Good evening.")
     client = await aiohttp_client(app)
     newline = await connect(client, "newline")
-    pi = await connect(client, "pi03")  # the card reader's Pi: no speakers
+    pi = await connect(client, "pi03")
     await pi.send_json({"type": "greet", "way": "none"})
-    asked = []
-    end = await until(pi, "audio_end", asked)
-    assert end["greeting"] and end["count"] == 0 and not [e for e in asked if e["type"] == "audio"]
     played = []
-    await until(newline, "audio_end", played)
+    end = await until(pi, "audio_end", played)
+    assert end["greeting"] and end["count"] == 1
     assert [e["text"] for e in played if e["type"] == "audio"] == ["Good evening."]
     # another screen of the same start asks too: no second greeting
-    desk = await connect(client, "desk")
-    await desk.send_json({"type": "greet", "way": "none"})
+    await newline.send_json({"type": "greet", "way": "none"})
     events = []
-    end = await until(desk, "audio_end", events)
+    end = await until(newline, "audio_end", events)
     assert end["count"] == 0 and not [e for e in events if e["type"] == "audio"]
+    await pi.send_json({"type": "played", "done": True})
     await asyncio.sleep(0.1)
-    for ws in (newline, pi, desk):
+    for ws in (newline, pi):
         await ws.close()
 
 
@@ -179,7 +174,7 @@ async def test_one_greeting_for_the_screens_that_start(aiohttp_client, aiohttp_s
 async def test_the_command_center_sees_mute_and_solo(aiohttp_client, aiohttp_server, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
-    await settings(client, "newline", {"sound": False, "solo": True})
+    await settings(client, "newline", {"sound": False, "solo": True, "cover": True})
     r = await client.post("/api/hub-devices/newline/settings", json={"solo": "yes"})
     assert r.status == 400  # true or false
     quest = await client.ws_connect("/ws/voice?device=quest&own=1")
@@ -190,6 +185,7 @@ async def test_the_command_center_sees_mute_and_solo(aiohttp_client, aiohttp_ser
     listing = (await (await client.get("/api/hub-devices")).json())["devices"]
     by = {d["name"]: d for d in listing}
     assert by["newline"]["sound"] is False and by["newline"]["solo"] is True
+    assert by["newline"]["cover"] is True
     assert not by["newline"]["own_sound"] and by["quest"]["own_sound"]
     for ws in (quest, hub, qhub):
         await ws.close()
@@ -201,6 +197,8 @@ def test_a_page_with_no_name_is_muted_and_soloed_by_its_address():
     d = desk([laptop, nl], {"addr-127-0-0-1": {"sound": False}})
     assert d.outputs(laptop) == []
     d = desk([laptop, nl], {"addr-127-0-0-1": {"solo": True}})
+    assert d.outputs(nl) == [] and d.outputs(laptop) == [laptop]
+    d = desk([laptop, nl], {"newline": {"sound": False}, "addr-127-0-0-1": {"cover": True}})
     assert d.outputs(nl) == [laptop]
 
 
@@ -221,20 +219,8 @@ async def test_a_page_with_no_name_keeps_only_its_sound(aiohttp_client, aiohttp_
     assert listing[0]["name"] == name and listing[0]["sound"] is False
     again = await client.ws_connect("/ws/hub-device")
     assert (await again.receive_json())["settings"] == {"sound": False}
-    from lab_os.hub.hub_devices import DeviceSettings
-
-    assert name not in DeviceSettings().known_names()  # not in Greeting Plays On
     for ws in (hub, again):
         await ws.close()
-
-
-def test_the_greeting_order_is_a_setting():
-    from lab_os import settings as st
-
-    f = st.find("place:greeting_from")
-    assert f.kind == "list" and f.default == ["newline", "brain"]
-    assert f.options()[:2] == ["newline", "brain"]
-    assert st.check(f, ["brain", "newline"]) == ["brain", "newline"]
 
 
 def test_changes_at_the_same_time_are_all_kept(tmp_path):

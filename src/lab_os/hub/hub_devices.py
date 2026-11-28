@@ -60,7 +60,7 @@ STAGES = ("start", "hub")
 FILE_NAME = "hub-devices.yaml"
 ADDRESS_PREFIX = "addr-"  # the key of a page with no name, from its address (`address_key`)
 # a page with no name keeps only its sound, under its address key (quick job 169)
-UNNAMED_SETTINGS = ("sound", "solo")
+UNNAMED_SETTINGS = ("sound", "solo", "cover")
 UNNAMED = "Unnamed device"  # a page with no device name, as people see it (quick jobs 153, 167)
 
 # "This device" settings: key → allowed values (None = a bool, list = a list of camera names). ""
@@ -69,7 +69,8 @@ SETTINGS = {
     "quality": ("", "maximal", "full", "reduced", "minimal"),
     "res": ("", "auto", "1", "0.75", "0.5"),
     "sound": None,  # false = muted: nothing plays there, answers too (quick job 166)
-    "solo": None,  # true: answers and greetings play only on the soloed devices (quick job 166)
+    "solo": None,  # true: only the soloed devices play their sounds (quick job 166)
+    "cover": None,  # true: the muted devices' answers and greetings play here
     "full": None,
     "startup_video": None,  # the designed hub's startup as a recording (quick job 34); off
     "voice": ("", "push-to-talk", "dictation", "wake word"),
@@ -137,11 +138,6 @@ class DeviceSettings:
     def all(self) -> dict[str, dict]:
         """Every device's settings, by device name (one read of the file)."""
         return self._read()
-
-    def known_names(self) -> list[str]:
-        """Every device name this place has seen: with settings, or remembered by an address."""
-        names = set(self._read()) | set(self._addresses().values())
-        return sorted(n for n in names if not n.startswith(ADDRESS_PREFIX))  # a page with no name
 
     def display_names(self) -> dict[str, str]:
         """Each device's display name, by device name (only the ones that have one)."""
@@ -380,6 +376,7 @@ class HubDevices:
                     # its address key (quick job 169)
                     "sound": sounds.get(name, {}).get("sound"),
                     "solo": sounds.get(name, {}).get("solo") is True,
+                    "cover": sounds.get(name, {}).get("cover") is True,
                     "windows": [
                         {
                             "id": w.id,

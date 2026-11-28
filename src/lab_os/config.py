@@ -231,7 +231,6 @@ PLACE_FIELDS = {
     "assistant_full_access",
     "wake_words",
     "drive_from",
-    "greeting_from",
 }
 
 
@@ -246,18 +245,6 @@ def assistant_full_access() -> bool:
     """place.yaml's `assistant_full_access` as it is now (⚙ → Assistant → Full Access, quick job
     80): the hub's assistant gets every tool of the brain. Off when left out."""
     return load_yaml("place.yaml").get("assistant_full_access") is True
-
-
-GREETING_FROM = ("newline", "brain")
-
-
-def greeting_from() -> list[str]:
-    """place.yaml's `greeting_from` as it is now (⚙ → The Lab → Greeting Plays On, quick job
-    166): the devices that may speak the greeting, in order; `brain` = the brain's own computer."""
-    names = load_yaml("place.yaml").get("greeting_from")
-    if not isinstance(names, list):
-        return list(GREETING_FROM)
-    return [str(n) for n in names if isinstance(n, str) and n]
 
 
 def assistant_moves_arm() -> bool:

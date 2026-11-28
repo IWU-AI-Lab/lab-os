@@ -2081,9 +2081,8 @@ def create_brain_app(
         recordings=lambda: config.recordings_dir() / "greetings",
         venue_wake=lambda: app[BRAIN].venue.wake_word_on,
         say=chat.take_say,
-        # mute, solo and the greeting's device (quick job 166)
+        # mute, solo and cover (quick job 166)
         sound_settings=lambda: app[HUB_DEVICES].settings.all(),
-        greeting_from=config.greeting_from,
     )
     app[BRAIN] = Brain(
         place,
