@@ -190,11 +190,7 @@ MODULES = {
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
     ("/teleop", "Arm Control", "Drive the arm with the Quest or the keyboard."),
-    (
-        "/monitor",
-        "Monitor",
-        "A card for each kind of robot: a small live picture; a tap opens its page.",
-    ),
+    ("/monitor", "Monitor", "A card for each kind of robot; a tap opens its page."),
     (
         "/monitor/so101",
         "SO-101 Monitor",

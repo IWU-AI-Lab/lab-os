@@ -107,4 +107,4 @@ async def test_an_unknown_kind_has_no_page(aiohttp_client):
     listing = await (await client.get("/monitor")).text()
     assert 'id="kinds"' in listing and "/static/monitor-list.js" in listing
     js = await (await client.get("/static/monitor-list.js")).text()
-    assert "lab-os-open-view" in js and "EVERY_MS = 200" in js  # the hub's module; light on a Pi
+    assert "lab-os-open-view" in js and "btn tile" in js  # the hub's module; All Pages' cards
