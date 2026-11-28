@@ -74,7 +74,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 148, 2026-11-26)
 - **The left list:** each device, with the screens grouped under it (as in the workspace). A line joins the device's icon to each of its screens, and a screen under its device has one compact line ("Screen 2, Teleop"; quick job 161: before, a screen looked like one more device, indented). A screen on its own has its own row.
-- **The Pages list:** a tile for each page that can open on another screen, in three groups (Robots, Cameras, The hub; a new page goes in "Other"). "The Hub" closes what a screen shows. A press chooses the page for the inspector's **Open**; a drag onto a screen or a device opens it there. ⌃ folds the list; the page remembers it.
+- **The Pages list:** a tile for each page that can open on another screen, in three groups (Robots, Cameras, The hub; a new page goes in "Other"). "The Hub" closes what a screen shows. A press chooses the page for the inspector's **Open** (quick job 167: a press opens the page at once on the highlighted screens); a drag onto a screen or a device opens it there. ⌃ folds the list; the page remembers it.
 - **The drag:** one carrier with four steps (start, move, drop, cancel) at screen coordinates. The mouse and touch use it through pointer events. A webcam hand can call the same steps later.
 - **The inspector:** in place of the actions under the workspace. One device: its details, actions, modules and settings. One screen: what it shows, its resolution and its actions. Several items: only the actions for all of them.
 
@@ -93,3 +93,10 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 ## Built (quick job 166, 2026-11-27)
 - **Mute and solo:** each card and each row of the left list for a named computer or screen has a speaker icon (a label, not a button) with **M** and **S**, as on a mixing desk. **M** (red when on): nothing plays there (the answers, the greeting and the hub's own sounds). **S** (amber when on): the answers and greetings from every microphone, a phone's too, play only on the soloed devices; a few devices can be soloed. While a device is soloed, the **M** of the others is dim red ("Quiet"). Mute wins over solo. Kept in each device's settings (`sound`, `solo`). The Quest's own page keeps its own sound: no buttons.
 - **The left list, more compact:** one line for each device (its device name after a display name, dimmer); no ⤢ in the list (it stays on the card). Above the list: **Hide all** / **Show all** (only the workspace; it replaces **Show all** above the workspace) and **Mute all** / **Unmute all**.
+
+## Built (quick job 167, 2026-11-27)
+- **A page opens at once:** a choice in a page list (the inspector, the focus window, the ⋯ menu) opens the page; there is no **Open** button. A press on a page tile opens it on the highlighted screens. The lists and the marked tile show what the screens show now, also after another device changed it.
+- **All to the Hub:** above the workspace. Every screen goes back to the hub, except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or the Command Center.
+- **The inspector, in order:** the name, the page, the sound (**M** and **S**, with what they mean now), the actions, the modules, the settings, the details.
+- **The focus window, a grid:** the screens on the top row, left to right, each with its page list and buttons on its right. Under them, three equal columns: Modules, Facts, and Actions (with the sound and the settings).
+- A device with no name shows as "Unnamed device" (before: "Unnamed screen").

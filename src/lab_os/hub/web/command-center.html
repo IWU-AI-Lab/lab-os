@@ -136,7 +136,14 @@
     .tile .ico { font-size: 1.1rem; color: var(--c); }
     .tile span { max-width: 100%; font: 500 0.72rem/1.15 var(--f-ui); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile.ghost { position: fixed; z-index: 50; width: 5.5rem; pointer-events: none; opacity: 0.9; background: var(--surface); }
-    #insp > .in { display: grid; align-content: start; gap: 0.8rem; }
+    #insp > .in { display: grid; align-content: start; gap: 0.8rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+    /* quick job 167: each part of the inspector under a thin line, the page list the full width */
+    #insp .part { padding-top: 0.6rem; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    #insp .who + .hint { margin: -0.6rem 0 0; }
+    .pagesel { flex: 1 1 100%; width: 100%; }
+    .sndrow { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .sndrow .snd { width: 1.9rem; height: 1.7rem; font-size: 0.78rem; }
+    .sndrow .hint { margin: 0; }
     #insp h3 { margin: 0 0 0.4rem; font: 500 0.82rem/1.2 var(--f-ui); color: var(--c); }
     #insp .who { display: flex; align-items: center; gap: 0.5rem; }
     #insp .who b { flex: 1; font: 500 1rem/1.2 var(--f-ui); color: var(--hot); overflow: hidden; text-overflow: ellipsis; }
@@ -156,13 +163,22 @@
     .menu select { width: 100%; }
     .veil { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 78%, transparent); }
     .modal { width: min(70rem, 94vw); max-height: 90vh; }
-    .modal > .in { display: grid; gap: 1rem; max-height: 90vh; }
+    .modal > .in { display: grid; gap: 1rem; max-height: 90vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+    /* the focus window (quick job 167): the screens on the top row, left to right, each with its controls on its
+       right; under them three equal columns: Modules, Facts, Actions */
+    .modal .fsay:empty { display: none; }
+    .modal .fsay { margin: 0; }
+    .fscreens { display: flex; flex-wrap: wrap; gap: 1rem 1.6rem; align-items: flex-start; }
+    .fscr { display: grid; grid-template-columns: auto minmax(11rem, 15rem); gap: 0.9rem; align-items: start; }
+    .fscr .shot { cursor: default; }
+    .fctl .do { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .fctl .hint { margin: 0.5rem 0 0; }
+    .fgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.6rem; padding-top: 0.8rem; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    .fgrid h3 + .sndrow { margin-bottom: 0.8rem; }
+    .fgrid .mods + h3, #f-settings { margin-top: 0.9rem; }
+    @media (max-width: 900px) { .fgrid { grid-template-columns: minmax(0, 1fr); } .fscr { grid-template-columns: minmax(0, 1fr); } }
     .modal .top { display: flex; align-items: center; gap: 0.8rem; }
     .modal .top h2 { flex: 1; margin: 0; font-size: 1.15rem; }
-    .modal .shots { padding: 0; flex-wrap: wrap; }
-    .modal .shot { cursor: default; }
-    .modal .shot .do { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
-    .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem 1.6rem; }
     .modal h3 { margin: 0 0 0.5rem; font: 500 0.85rem/1.2 var(--f-ui); color: var(--c); }
     .field { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; font: var(--w-lines) 0.85rem/1.3 var(--f-lines); color: var(--text-dim); }
     .field input[type="text"], .field select { width: 100%; }
@@ -235,6 +251,7 @@
         <button class="btn small virtual" id="multi" aria-pressed="false" type="button">Select multiple</button>
         <button class="btn small virtual" id="fit" type="button" title="Show every item in the workspace">Fit</button>
         <button class="btn small" id="start-all" type="button" hidden title="Start the start screen on every device that shows it"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Start All</button>
+        <button class="btn small" id="all-hub" type="button" hidden title="Every screen goes back to the hub, except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or this Command Center"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>All to the Hub</button>
         <span class="legend">
           <span><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Changes the device</span>
           <span><i class="v"></i>Only this workspace</span>

@@ -126,7 +126,7 @@ Also bundled: Oxanium, Rajdhani, DSEG14, Doto (dot matrix), Share Tech Mono.
 - **Clock:** 24-hour or 12-hour with AM/PM (`clock` in the theme); AM/PM is set small in the interface font.
 - Labels are small CAPS in `text_dim`; content is normal case in `text`.
 - **Capital letters** (quick job 53, 2026-11-26): a sentence and a status word start with a capital letter ("Connected", "Held still", "Not safe"), on every page. Names of commands, files, poses and settings stay as they are (`lab-os`, `so101-white`, `home`). `tests/test_content_case.py` checks the words in the pages and the words the scripts show.
-- **One name for one thing** (quick job 153): a page's title is its name in All Pages (`PAGES` in `hub/server.py`), on every page, tile and button. A device shows its name as stored, or its display name; never a name made from it ("Rv Laptop"). A device with no name is an "Unnamed screen"; its address is only in its own card.
+- **One name for one thing** (quick job 153): a page's title is its name in All Pages (`PAGES` in `hub/server.py`), on every page, tile and button. A device shows its name as stored, or its display name; never a name made from it ("Rv Laptop"). A device with no name is an "Unnamed device"; its address is only in its own card.
 - **Joint names** show as words ("Shoulder Pan", from `/web/words.js`); the code name (`shoulder_pan`) is in the tooltip.
 
 ## Motion: cinematic

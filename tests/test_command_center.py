@@ -2,6 +2,7 @@
 layout (only the picture) and the teleop permission (which devices may drive a real arm)."""
 
 import asyncio
+import re
 
 import yaml
 from test_hub_devices import page, settle  # same folder (pytest puts it on the path)
@@ -117,7 +118,7 @@ async def test_screens_carry_their_size(aiohttp_client):
 def test_the_page_keeps_its_rules():
     """Highlight never opens the focus modal; real and workspace-only actions look different."""
     js = (SRC / "hub" / "web" / "command-center.js").read_text()
-    assert "function pick(key, add)" in js and "function focus(key)" in js
+    assert "function pick(key, add)" in js and "function focus(key, keep = false)" in js
     assert 'classList.contains("foc")) focus(node)' in js  # focus only from its own mark
     assert 'b.className = `btn small${a.real ? "" : " virtual"}`' in js
     assert "/api/hub-devices/open" in js and "/api/hub-devices/close" in js
@@ -126,6 +127,26 @@ def test_the_page_keeps_its_rules():
     # quick job 148: one drag carrier for every kind of pointer; a drop opens the page there
     assert "const carry = {" in js and "start(view, x, y)" in js and "drop(x, y)" in js
     assert "function openPageOn(view, key)" in js and "function renderInspector(" in js
+
+
+def test_a_page_opens_at_once_and_follows_other_devices():
+    """Quick job 167: a choice in a page list, or a press on a page tile while a screen is
+    highlighted, opens the page at once (no Open button); the lists, the tiles and the focus window
+    follow a change that another device makes; All to the Hub keeps the pages that drive a robot;
+    M and S are in the inspector and the focus window, which is a grid."""
+    js = (SRC / "hub" / "web" / "command-center.js").read_text()
+    html = (SRC / "hub" / "web" / "command-center.html").read_text()
+    assert "if (sel.value) { a.run(sel.value); after(); }" in js
+    assert 'label: one ? "Open"' not in js and not re.search(r"S\.page\b", js)
+    assert "function choosePage(id) {\n  const targets = selectedScreens(" in js
+    assert "syncPageSelects();" in js and "refreshFocus();" in js and "markTiles();" in js
+    keep = '["teleop", "webcam", "raspbot", "ai", "training", "command"]'
+    assert f"const KEEP_OPEN = new Set({keep});" in js
+    assert 'id="all-hub"' in html and "All to the Hub" in html
+    assert 'part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd))' in js
+    assert '${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : ""}' in js
+    assert ".fgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));" in html
+    assert 'class="fscreens"' in js and "<h3>Modules</h3>" in js
 
 
 # ---------- quick job 149: the activity list, the devices that are off ----------

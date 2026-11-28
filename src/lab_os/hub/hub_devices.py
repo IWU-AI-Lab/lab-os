@@ -11,8 +11,8 @@ after it closes: when the brain restarts, the pages reconnect and the list fills
   module opened there); Back on that screen closes it. Only windows with the hub
   open are offered, so a device used for something else is never taken over.
 - **No name** (quick job 101): a hub page opened without `?device=` is listed too, by its address
-  (`addr-192-168-8-167`, shown as "Unnamed screen"; quick job 153: the address only in its card), so
-  "Open on…" can reach it.
+  (`addr-192-168-8-167`, shown as "Unnamed device"; quick jobs 153, 167: the address only in its
+  card), so "Open on…" can reach it.
   It keeps no settings: those need a name.
 - **Monitors**: a device with the hub open on two monitors has two windows. "Open on desk" picks
   the free one (no module open); when two are free, or none, the sender is asked which.
@@ -58,7 +58,7 @@ NAME_IN_LIST = re.compile(
 WINDOW_ID = re.compile(r"^[A-Za-z0-9_-]{4,40}$")
 STAGES = ("start", "hub")
 FILE_NAME = "hub-devices.yaml"
-UNNAMED = "Unnamed screen"  # a page with no device name, as people see it (quick job 153)
+UNNAMED = "Unnamed device"  # a page with no device name, as people see it (quick jobs 153, 167)
 
 # "This device" settings: key → allowed values (None = a bool, list = a list of camera names). ""
 # means "not set" (the default).
