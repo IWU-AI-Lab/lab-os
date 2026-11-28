@@ -3,8 +3,8 @@
 This page has the setup, the run and the points to say. Many steps are not yet tried in the lab. When a step fails, do the step in **If it fails**, or skip it. The reasons for the choices are in `docs/plan/demo-plan-reasons.md`.
 
 **The room** (north is at the top of the plan; the entrance door is in the south wall):
-- **The back:** the north strip, behind the central wall. It has the two Ubuntu desktops, the SO-101 table, the xArm and the routers. The east Ubuntu desktop is the brain (the lab desktop). The west Ubuntu desktop is "the other Ubuntu desktop": its screen is the one nearest to it. The screens on the east wall have no computers; they are not in the plan.
-- **The front:** the room south of the central wall. It has the projector on the central wall, the Newline, the four Windows desktops, the four ThinkStations and the seats. A cart next to the Newline holds the Newline's Pi and four more ThinkStations; these ThinkStations are not in the plan.
+- **The back:** the north strip, behind the central wall. It has the two Ubuntu desktops, the SO-101 table, the xArm and the routers. The east Ubuntu desktop is the brain (the lab desktop). The west Ubuntu desktop is "the other Ubuntu desktop": its screen is the one nearest to it. The brain's monitor 3 is the screen on the SO-101 table. The three 32" screens on the east wall get three ThinkStations from the cart (`ts-5` to `ts-7`).
+- **The front:** the room south of the central wall. It has the projector on the central wall, the Newline, the four Windows desktops, the four ThinkStations and the seats. A cart next to the Newline holds the Newline's Pi and four more ThinkStations (`ts-5` to `ts-8`). Two extra 24" screens come out for the demo: one with `ts-8`, one with a Pi (`pi-24`). You choose where they stand.
 
 The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphone on a computer that is not the brain, use `https://192.168.8.130:8443/?device=<name>`.
 
@@ -13,12 +13,14 @@ The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphon
 |---|---|---|
 | The lab desktop (the brain, east): monitor 1 | Back | Command Center |
 | The lab desktop: monitor 2 (`desk`) | Back | The hub |
-| The lab desktop: monitor 3 | Back | Claude Code, then the Quest's view |
+| The lab desktop: monitor 3 (on the SO-101 table) | Back | Claude Code, then the Quest's view |
 | The other Ubuntu desktop (`ubuntu-2`, west) | Back | Cameras |
 | The laptop on the projector (`projector`) | Front | The hub (you control it) |
 | The Newline, through its Pi (`newline`) | Front | The hub |
 | The Windows desktops (`win-1` to `win-4`) | Front | The hub |
 | The ThinkStations (`ts-1` to `ts-4`) | Front | Commits, Current Project, AI Spend, Devices |
+| The east-wall 32" screens, with cart ThinkStations (`ts-5` to `ts-7`) | Back | SO-101 Monitor, AI Control, System Map |
+| The 24" screens (`ts-8`, `pi-24`) | Your choice | Diagnostics, Raspbot Monitor |
 | The Pi touchscreen (`pi-touch`) | Beside raspbot1 | Raspbot Control |
 | The Quest (`quest`) | Back | The VR hub |
 | Your phone | With you | SO-101 Monitor (for its STOP) |
@@ -37,6 +39,11 @@ The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphon
      ts-2: project
      ts-3: spend
      ts-4: devices
+     ts-5: monitor-so101
+     ts-6: ai
+     ts-7: system-map
+     ts-8: diagnostics
+     pi-24: monitor-raspbot
      pi-touch: raspbot
    ```
 2. Find a browser on the laptop that opens the hub with the microphone: the VS Code browser first, then Chrome.
@@ -54,13 +61,15 @@ Do not open pages now. Each screen shows only its start screen until the show st
 4. Turn on the laptop. Connect it to the projector's HDMI. Turn on the projector.
 5. Turn on the Newline and its Pi.
 6. Turn on the four Windows desktops and their screens.
-7. Turn on the four ThinkStations and their screens.
-8. Turn on the Pi touchscreen. Put it beside the place where raspbot1 drives.
-9. Turn on raspbot1.
-10. Turn on the Quest. Connect it to the router's Wi-Fi.
-11. Turn on the glove xArm station.
-12. Plug in the arms, the cameras and the microphone (`docs/guides/plug-in.md`). Turn on the arms' power supplies.
-13. Plug the card reader into `win-1`. Put the reader in the centre of the room.
+7. Turn on the four ThinkStations at the front and their screens.
+8. Connect three cart ThinkStations to the east-wall 32" screens. Turn them on.
+9. Set up the two 24" screens: one with the last cart ThinkStation, one with a Pi. Turn them on.
+10. Turn on the Pi touchscreen. Put it beside the place where raspbot1 drives.
+11. Turn on raspbot1.
+12. Turn on the Quest. Connect it to the router's Wi-Fi.
+13. Turn on the glove xArm station.
+14. Plug in the arms, the cameras and the microphone (`docs/guides/plug-in.md`). Turn on the arms' power supplies.
+15. Plug the card reader into `win-1`. Put the reader in the centre of the room.
 
 **Start the brain** (the lab desktop):
 1. Run `git switch --detach demo-2026-12-03` in `~/lab-os`.
@@ -74,11 +83,12 @@ Do not open pages now. Each screen shows only its start screen until the show st
 3. Open `?device=projector` on the laptop (on port 8443, for the microphone).
 4. Open `?device=newline` on the Newline's Pi.
 5. Open `?device=win-1` to `win-4` on the Windows desktops.
-6. Open `?device=ts-1` to `ts-4` on the ThinkStations.
-7. Open `?device=pi-touch` on the Pi touchscreen.
-8. Open `?device=quest` in the Quest's browser.
-9. Open `/monitor/so101` on your phone.
-10. Click once on the hub's page on `win-1`, so that the card reader types into it. Do not touch `win-1` after that.
+6. Open `?device=ts-1` to `ts-8` on the ThinkStations.
+7. Open `?device=pi-24` on the Pi of the 24" screen.
+8. Open `?device=pi-touch` on the Pi touchscreen.
+9. Open `?device=quest` in the Quest's browser.
+10. Open `/monitor/so101` on your phone.
+11. Click once on the hub's page on `win-1`, so that the card reader types into it. Do not touch `win-1` after that.
 
 **Set the sound** (on monitor 1, in the Command Center; each device's card has **M**, **S** and **C**):
 1. Press **S** and **C** on the `projector` card. The laptop plays its own sounds, and it plays the sounds of the other soloed devices (the ceiling speakers).
@@ -190,13 +200,14 @@ Do not open pages now. Each screen shows only its start screen until the show st
 
 ### Part 6: the brain (back, 5 min)
 1. Walk to the back with the audience.
-2. Point at the Command Center on monitor 1: each device, each screen, a preview of each page.
-3. Drag **Cameras** onto monitor 2. Drag **The Hub** back.
-4. Select two screens. Open **System Map** on both.
-5. Point at **M**, **S** and **C** on a card.
-6. Unplug the white arm's USB cable. Point at Devices: "No". Plug it in again.
+2. Point at the east-wall screens: SO-101 Monitor, AI Control, System Map.
+3. Point at the Command Center on monitor 1: each device, each screen, a preview of each page.
+4. Drag **Cameras** onto monitor 2. Drag **The Hub** back.
+5. Select two screens. Open **System Map** on both.
+6. Point at **M**, **S** and **C** on a card.
+7. Unplug the white arm's USB cable. Point at Devices: "No". Plug it in again.
    - If it fails: skip it.
-7. Say:
+8. Say:
    - The Command Center opens only on the brain's computer.
    - The brain sees each device plugged in, within seconds.
    - An unplugged arm freezes. It connects again by itself.
