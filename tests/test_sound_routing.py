@@ -54,7 +54,7 @@ def test_solo_silences_the_other_devices():
     d = desk([phone, nl, desk1], {"newline": {"solo": True}, "desk": {"solo": True}})
     assert d.outputs(nl) == [nl] and d.outputs(desk1) == [desk1] and d.outputs(phone) == []
     d = desk([phone, nl, desk1], {"newline": {"solo": True, "sound": False}})
-    assert d.outputs(phone) == [phone]  # muted wins over solo: nothing is soloed
+    assert d.outputs(nl) == [] and d.outputs(phone) == []  # M + S, no cover: quiet everywhere
 
 
 def test_a_cover_plays_the_soloed_devices_sounds():
@@ -79,6 +79,20 @@ def test_a_cover_plays_the_soloed_devices_sounds():
     sounds = {"phone": {"solo": True}, "newline": {"cover": True, "sound": False}}
     d = desk([phone, nl1], sounds)
     assert d.outputs(phone) == [phone]  # a muted cover plays nothing
+
+
+def test_mute_and_solo_play_only_on_the_covers():
+    """M + S: the device's sounds play on the covers, not on the device itself."""
+    pi, phone, nl, desk1 = link("pi03"), link("phone"), link("newline"), link("desk")
+    sounds = {
+        "pi03": {"sound": False, "solo": True},
+        "phone": {"sound": False, "solo": True},
+        "newline": {"cover": True},
+    }
+    d = desk([pi, phone, nl, desk1], sounds)
+    assert d.outputs(pi) == [nl] and d.outputs(phone) == [nl]
+    assert d.outputs(desk1) == [] and d.outputs(nl) == []  # the others are quiet
+    assert {lk.key for lk in d.soloed()} == {"pi03", "phone"}
 
 
 def test_mute_is_a_full_mute():

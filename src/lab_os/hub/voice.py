@@ -31,7 +31,8 @@ Where the sound plays (2026-11-27, after quick job 166): each device plays its o
 greetings on its own speakers. A device may be muted (`sound: false`), soloed (`solo: true`) or a
 cover (`cover: true`) in its settings (the Command Center's M, S and C). Muted: nothing plays there,
 and its sound plays nowhere. Soloed: while a device is soloed, only the soloed devices play their
-own sounds, and the cover devices play them too (2026-11-28); the other devices are quiet.
+own sounds, and the cover devices play them too (2026-11-28); the other devices are quiet. Muted
+and soloed (M + S): its sounds play only on the cover devices.
 One greeting for every start: the screen where the person started greets. The Quest's own page
 keeps its own sound (`?own=1`): none of this changes it.
 """
@@ -458,31 +459,27 @@ class VoiceDesk:
         return out
 
     def soloed(self) -> list["VoiceLink"]:
-        """The soloed devices that are there and not muted (one page each)."""
+        """The soloed devices that are there (one page each), also the muted ones (M + S: their
+        sounds play only on the covers)."""
         sounds = self._sounds()
         solo = [
             lk
             for lk in self.links
-            if not lk.own
-            and lk.key
-            and sounds.get(lk.key, {}).get("solo") is True
-            and not self.muted(lk, sounds)
+            if not lk.own and lk.key and sounds.get(lk.key, {}).get("solo") is True
         ]
         return self.one_per_device(solo)
 
     def outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
         """Where `link`'s answer or greeting plays: on its own device (`link` itself), unless it
-        is muted. While a device is soloed: only a soloed device's plays, on it and on the cover
-        devices (one page each). The Quest's own page always plays its own."""
+        is muted. While a device is soloed: only a soloed device's plays, on it (unless it is
+        muted: M + S) and on the cover devices (one page each). The Quest's own page always
+        plays its own."""
         if link.own:
             return [link]
         sounds = self._sounds()
-        if self.muted(link, sounds):
-            return []
-        if not self.soloed():
-            return [link]
+        muted = self.muted(link, sounds)
         if not (link.key and sounds.get(link.key, {}).get("solo") is True):
-            return []
+            return [] if muted or self.soloed() else [link]
         cover = [
             lk
             for lk in self.links
@@ -492,7 +489,7 @@ class VoiceDesk:
             and sounds.get(lk.key, {}).get("cover") is True
             and not self.muted(lk, sounds)
         ]
-        return [link, *self.one_per_device(cover)]
+        return ([] if muted else [link]) + self.one_per_device(cover)
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 

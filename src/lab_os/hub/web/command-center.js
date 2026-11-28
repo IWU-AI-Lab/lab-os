@@ -156,10 +156,10 @@ const mayDrive = (d) => d.here || (d.address && S.drive.has(d.address));
 // A speaker icon (only a label) with M, S and C, on each card and each row of the list. Each device plays its own
 // answers and greetings. M (red): nothing plays on that device, and its sounds play nowhere. S (amber): only the
 // soloed devices play their own sounds, and the others make no sound. C (green): the soloed devices' answers and
-// greetings play here too. Kept in each device's settings. The Quest keeps its own sound: no buttons.
+// greetings play here too. M + S: the device's sounds play only on the covers. Kept in each device's settings. The Quest keeps its own sound: no buttons.
 // a page with no name too, under its address key (quick job 169)
 const hasSound = (d) => d.kind === "hub" && !d.gone && !d.hub?.own_sound;
-const soloed = () => S.hub.filter((h) => h.solo && h.sound !== false && !h.own_sound).map((h) => h.name);
+const soloed = () => S.hub.filter((h) => h.solo && !h.own_sound).map((h) => h.name);  // M + S counts: its sounds go to the covers
 function soundButtons(d) {
   if (!hasSound(d)) return "";
   const h = d.hub, solo = soloed(), muted = h.sound === false, quiet = !muted && solo.length && !h.solo && !h.cover;
@@ -174,7 +174,7 @@ function soundButtons(d) {
 // the inspector and the focus window: M, S and C, and what they mean now in words (quick job 167)
 function soundWords(d) {
   const h = d.hub;
-  if (h.sound === false) return "Muted: nothing plays here.";
+  if (h.sound === false) return h.solo ? "Muted and soloed: its sounds play only on the cover devices." : "Muted: nothing plays here.";
   if (h.solo) return "Soloed: only the soloed devices play their sounds.";
   if (h.cover) return soloed().length ? "Cover: plays the soloed devices' sounds." : "Cover: plays the soloed devices' sounds when a device is soloed.";
   return soloed().length ? "Quiet: another device is soloed." : "Plays its own sounds.";
