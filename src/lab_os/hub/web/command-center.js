@@ -154,19 +154,18 @@ const mayDrive = (d) => d.here || (d.address && S.drive.has(d.address));
 
 // ---------- mute, solo and cover (quick job 166), as on a mixing desk ----------
 // A speaker icon (only a label) with M, S and C, on each card and each row of the list. Each device plays its own
-// answers and greetings. M (red): nothing plays on that device; its sounds play on the cover devices. S (amber): only
-// the soloed devices play their own sounds, and the others make no sound. C (green): the muted devices' answers and
+// answers and greetings. M (red): nothing plays on that device, and its sounds play nowhere. S (amber): only the
+// soloed devices play their own sounds, and the others make no sound. C (green): the soloed devices' answers and
 // greetings play here too. Kept in each device's settings. The Quest keeps its own sound: no buttons.
 // a page with no name too, under its address key (quick job 169)
 const hasSound = (d) => d.kind === "hub" && !d.gone && !d.hub?.own_sound;
 const soloed = () => S.hub.filter((h) => h.solo && h.sound !== false && !h.own_sound).map((h) => h.name);
-const covers = () => S.hub.filter((h) => h.cover && h.sound !== false && !h.own_sound).map((h) => h.name);
 function soundButtons(d) {
   if (!hasSound(d)) return "";
-  const h = d.hub, solo = soloed(), muted = h.sound === false, quiet = !muted && solo.length && !h.solo;
-  const mTitle = muted ? "Muted: nothing plays here. Press to unmute." : quiet ? "Quiet: another device is soloed. Press to mute." : "Mute: nothing plays here. Its sounds play on the cover devices.";
+  const h = d.hub, solo = soloed(), muted = h.sound === false, quiet = !muted && solo.length && !h.solo && !h.cover;
+  const mTitle = muted ? "Muted: nothing plays here. Press to unmute." : quiet ? "Quiet: another device is soloed. Press to mute." : "Mute: nothing plays here";
   const sTitle = h.solo ? "Soloed: only the soloed devices play their sounds. Press to let go." : "Solo: only this device (and the other soloed devices) plays its sounds";
-  const cTitle = h.cover ? "Cover: the muted devices' answers and greetings play here. Press to stop." : "Cover: the muted devices' answers and greetings play here";
+  const cTitle = h.cover ? "Cover: the soloed devices' answers and greetings play here too. Press to stop." : "Cover: the soloed devices' answers and greetings play here too";
   return `<span class="sndg"><svg class="ico spk${muted || quiet ? " off" : ""}" aria-hidden="true"><use href="/web/design/icons.svg#i-speaker"/></svg>`
     + `<button class="snd m${muted ? " on" : quiet ? " quiet" : ""}" type="button" data-snd="m" title="${mTitle}" aria-label="Mute" aria-pressed="${muted}">M</button>`
     + `<button class="snd s${h.solo ? " on" : ""}" type="button" data-snd="s" title="${sTitle}" aria-label="Solo" aria-pressed="${!!h.solo}">S</button>`
@@ -175,10 +174,10 @@ function soundButtons(d) {
 // the inspector and the focus window: M, S and C, and what they mean now in words (quick job 167)
 function soundWords(d) {
   const h = d.hub;
-  if (h.sound === false) return covers().length ? "Muted: its sounds play on the cover devices." : "Muted: nothing plays here.";
+  if (h.sound === false) return "Muted: nothing plays here.";
   if (h.solo) return "Soloed: only the soloed devices play their sounds.";
-  if (soloed().length) return "Quiet: another device is soloed.";
-  return h.cover ? "Plays its own sounds and the muted devices' sounds." : "Plays its own sounds.";
+  if (h.cover) return soloed().length ? "Cover: plays the soloed devices' sounds." : "Cover: plays the soloed devices' sounds when a device is soloed.";
+  return soloed().length ? "Quiet: another device is soloed." : "Plays its own sounds.";
 }
 const soundBlock = (d) => `<div class="sndrow" data-dev="${esc(d.key)}">${soundButtons(d)}<span class="hint">${soundWords(d)}</span></div>`;
 // the list's own buttons: mute or unmute every device, show or hide every item
@@ -220,7 +219,7 @@ async function toggleSound(key, which) {
   const name = d.title;
   say(which === "m" ? (h.sound === false ? `${name} is muted.` : `${name} is not muted.`)
     : which === "s" ? (h.solo ? `${name} is soloed: only the soloed devices play their sounds.` : `${name} is not soloed.`)
-    : h.cover ? `${name} is a cover: the muted devices' answers and greetings play there.` : `${name} is not a cover.`);
+    : h.cover ? `${name} is a cover: the soloed devices' answers and greetings play there too.` : `${name} is not a cover.`);
   render(true);
 }
 

@@ -55,28 +55,36 @@ def test_solo_silences_the_other_devices():
     assert d.outputs(nl) == [nl] and d.outputs(desk1) == [desk1] and d.outputs(phone) == []
     d = desk([phone, nl, desk1], {"newline": {"solo": True, "sound": False}})
     assert d.outputs(phone) == [phone]  # muted wins over solo: nothing is soloed
-    d = desk([phone, nl], {"newline": {"solo": True}, "phone": {"sound": False, "cover": True}})
-    assert d.outputs(phone) == []  # a cover that is not soloed is quiet too
 
 
-def test_a_muted_devices_sound_plays_only_on_the_covers():
+def test_a_cover_plays_the_soloed_devices_sounds():
     phone, nl1, nl2, desk1 = (
         link("phone"),
         link("newline", since=1),
         link("newline", since=2),
         link("desk"),
     )
-    d = desk([phone, nl1, nl2, desk1], {"phone": {"sound": False}})
-    assert d.outputs(phone) == []  # no cover: nobody hears it
-    d = desk([phone, nl1, nl2, desk1], {"phone": {"sound": False}, "newline": {"cover": True}})
-    assert d.outputs(phone) == [nl1]  # its oldest page only: one set of speakers
-    assert d.outputs(desk1) == [desk1]  # a device that is not muted plays its own
-    sounds = {"phone": {"sound": False}, "newline": {"cover": True}, "desk": {"cover": True}}
+    d = desk([phone, nl1, nl2, desk1], {"newline": {"cover": True}})
+    assert d.outputs(phone) == [phone] and d.outputs(desk1) == [desk1]  # no solo: own sound
+    assert d.outputs(nl1) == [nl1]
+    d = desk([phone, nl1, nl2, desk1], {"phone": {"solo": True}, "newline": {"cover": True}})
+    assert d.outputs(phone) == [phone, nl1]  # the cover's oldest page only: one set of speakers
+    assert d.outputs(nl1) == [] and d.outputs(desk1) == []  # its own sound is quiet
+    sounds = {"phone": {"solo": True}, "newline": {"cover": True}, "desk": {"cover": True}}
     d = desk([phone, nl1, desk1], sounds)
-    assert set(d.outputs(phone)) == {nl1, desk1}  # a few covers
-    sounds = {"phone": {"sound": False}, "newline": {"cover": True, "sound": False}}
+    assert set(d.outputs(phone)) == {phone, nl1, desk1}  # a few covers
+    sounds = {"phone": {"solo": True}, "newline": {"cover": True, "solo": True}}
     d = desk([phone, nl1], sounds)
-    assert d.outputs(phone) == []  # a muted cover plays nothing
+    assert d.outputs(nl1) == [nl1] and d.outputs(phone) == [phone, nl1]  # soloed and a cover
+    sounds = {"phone": {"solo": True}, "newline": {"cover": True, "sound": False}}
+    d = desk([phone, nl1], sounds)
+    assert d.outputs(phone) == [phone]  # a muted cover plays nothing
+
+
+def test_mute_is_a_full_mute():
+    phone, nl = link("phone"), link("newline")
+    d = desk([phone, nl], {"phone": {"sound": False}, "newline": {"cover": True}})
+    assert d.outputs(phone) == []
 
 
 def test_the_quest_keeps_its_own_sound():
@@ -84,8 +92,8 @@ def test_the_quest_keeps_its_own_sound():
     d = desk([quest, nl], {"newline": {"solo": True}, "quest": {"sound": False, "solo": True}})
     assert d.outputs(quest) == [quest]
     assert d.soloed() == [nl]  # its solo doesn't count for the others
-    d = desk([quest, nl], {"newline": {"sound": False}, "quest": {"cover": True}})
-    assert d.outputs(nl) == []  # and it is never a cover
+    d = desk([quest, nl], {"newline": {"solo": True}, "quest": {"cover": True}})
+    assert d.outputs(nl) == [nl]  # and it is never a cover
 
 
 def test_each_window_plays_its_own_sound():
@@ -105,11 +113,11 @@ async def settings(client, name, body):
 
 
 @pytest.mark.usefixtures("key")
-async def test_a_muted_phones_answer_plays_on_the_cover(aiohttp_client, aiohttp_server, tmp_path):
+async def test_a_soloed_phones_answer_plays_on_the_cover(aiohttp_client, aiohttp_server, tmp_path):
     app, _, _ = await voice_app(aiohttp_server, tmp_path)
     client = await aiohttp_client(app)
     await settings(client, "newline", {"cover": True})
-    await settings(client, "phone", {"sound": False})
+    await settings(client, "phone", {"solo": True})
     newline = await connect(client, "newline")
     phone = await connect(client, "phone")
     await phone.send_json({"type": "listen", "mode": "ask"})
@@ -118,13 +126,13 @@ async def test_a_muted_phones_answer_plays_on_the_cover(aiohttp_client, aiohttp_
     await phone.send_json({"type": "end"})
     asked = []
     end = await until(phone, "audio_end", asked)
-    assert end["count"] == 0 and not [e for e in asked if e["type"] == "audio"]
-    assert any(e["type"] == "text" for e in asked)  # the words still show on the phone
+    assert end["count"] == 2 and len([e for e in asked if e["type"] == "audio"]) == 2
     played = []
     end = await until(newline, "audio_end", played)
     kinds = [e["type"] for e in played]
     assert kinds[0] == "audio_begin" and kinds.count("audio") == 2 and end["count"] == 2
     await newline.send_json({"type": "played", "done": True})
+    await phone.send_json({"type": "played", "done": True})
     await phone.close()
     await newline.close()
 
@@ -198,8 +206,8 @@ def test_a_page_with_no_name_is_muted_and_soloed_by_its_address():
     assert d.outputs(laptop) == []
     d = desk([laptop, nl], {"addr-127-0-0-1": {"solo": True}})
     assert d.outputs(nl) == [] and d.outputs(laptop) == [laptop]
-    d = desk([laptop, nl], {"newline": {"sound": False}, "addr-127-0-0-1": {"cover": True}})
-    assert d.outputs(nl) == [laptop]
+    d = desk([laptop, nl], {"newline": {"solo": True}, "addr-127-0-0-1": {"cover": True}})
+    assert d.outputs(nl) == [nl, laptop]
 
 
 async def test_a_page_with_no_name_keeps_only_its_sound(aiohttp_client, aiohttp_server, tmp_path):

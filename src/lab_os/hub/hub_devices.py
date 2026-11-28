@@ -70,7 +70,7 @@ SETTINGS = {
     "res": ("", "auto", "1", "0.75", "0.5"),
     "sound": None,  # false = muted: nothing plays there, answers too (quick job 166)
     "solo": None,  # true: only the soloed devices play their sounds (quick job 166)
-    "cover": None,  # true: the muted devices' answers and greetings play here
+    "cover": None,  # true: the soloed devices' answers and greetings play here too
     "full": None,
     "startup_video": None,  # the designed hub's startup as a recording (quick job 34); off
     "voice": ("", "push-to-talk", "dictation", "wake word"),
