@@ -8,7 +8,7 @@ Earlier lab reports use the step numbers from the checklist in use that day. See
 
 ### 2026-11-27 — A muted or quiet device's sound played on another device
 **What:** a muted phone's answer and a Pi's greeting played on another device: on the soloed device, or on the first device of Greeting Plays On. The builder wants each device to play its own sounds, and a muted device to stay quiet.
-**Fix:** each device plays its own answers and greeting. Solo makes only the soloed devices play their own. A muted device's sound plays only on a cover device (the Command Center's **C**). Greeting Plays On is gone. This replaces the routing of the entry below and of quick job 166. 2026-11-28: **C** plays the soloed devices' sounds instead, so **M** is a full mute (the builder: a cover made a muted device play somewhere).
+**Fix:** each device plays its own answers and greeting. Solo makes only the soloed devices play their own. A muted device's sound plays only on a cover device (the Command Center's **C**). Greeting Plays On is gone. This replaces the routing of the entry below and of quick job 166. 2026-11-28: **C** plays the soloed devices' sounds instead, so **M** is a full mute (the builder: a cover made a muted device play somewhere). M + S on a device sends its sounds only to the covers.
 
 ### 2026-11-27 — The greeting played in the other window of the same computer
 **What:** with two hub windows open on the laptop, a start in the second window played the greeting in the first window. The brain picks one page for each device, so that the words do not play twice. It always picked the page that was open longest, also when the page that started was on the same device.
