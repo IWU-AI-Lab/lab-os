@@ -3,19 +3,18 @@
 This page has the setup, the run and the points to say. Many steps are not yet tried in the lab. When a step fails, do the step in **If it fails**, or skip it. The reasons for the choices are in `docs/plan/demo-plan-reasons.md`.
 
 **The room** (north is at the top of the plan; the entrance door is in the south wall):
-- **The back:** the north strip, behind the central wall. It has the two Ubuntu desktops, the SO-101 table, the xArm, the routers and the screens on the east wall.
-- **The front:** the room south of the central wall. It has the projector on the central wall, the Newline, the four Windows desktops, the four ThinkStations and the seats.
+- **The back:** the north strip, behind the central wall. It has the two Ubuntu desktops, the SO-101 table, the xArm and the routers. The east Ubuntu desktop is the brain (the lab desktop). The west Ubuntu desktop is "the other Ubuntu desktop": its screen is the one nearest to it. The screens on the east wall have no computers; they are not in the plan.
+- **The front:** the room south of the central wall. It has the projector on the central wall, the Newline, the four Windows desktops, the four ThinkStations and the seats. A cart next to the Newline holds the Newline's Pi and four more ThinkStations; these ThinkStations are not in the plan.
 
 The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphone on a computer that is not the brain, use `https://192.168.8.130:8443/?device=<name>`.
 
 ## Names and pages
 | Device (`?device=`) | Where | Page after "set up the room" |
 |---|---|---|
-| The lab desktop (the brain): monitor 1 | Back | Command Center |
+| The lab desktop (the brain, east): monitor 1 | Back | Command Center |
 | The lab desktop: monitor 2 (`desk`) | Back | The hub |
 | The lab desktop: monitor 3 | Back | Claude Code, then the Quest's view |
-| The other Ubuntu desktop (`ubuntu-2`) | Back | Cameras |
-| The screens on the east wall (`east-1` to `east-3`), if they have computers | Back | System Map, Diagnostics, Raspbot Monitor |
+| The other Ubuntu desktop (`ubuntu-2`, west) | Back | Cameras |
 | The laptop on the projector (`projector`) | Front | The hub (you control it) |
 | The Newline, through its Pi (`newline`) | Front | The hub |
 | The Windows desktops (`win-1` to `win-4`) | Front | The hub |
@@ -29,9 +28,6 @@ The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphon
    ```yaml
    layout:
      ubuntu-2: cameras
-     east-1: system-map
-     east-2: diagnostics
-     east-3: monitor-raspbot
      newline: core
      win-1: core
      win-2: core
@@ -55,17 +51,16 @@ Do not open pages now. Each screen shows only its start screen until the show st
 1. Turn on the GL.iNet router.
 2. Turn on the lab desktop and its monitors 1, 2 and 3.
 3. Turn on the other Ubuntu desktop and its screen.
-4. Turn on the computers of the east-wall screens, and the screens.
-5. Turn on the laptop. Connect it to the projector's HDMI. Turn on the projector.
-6. Turn on the Newline and its Pi.
-7. Turn on the four Windows desktops and their screens.
-8. Turn on the four ThinkStations and their screens.
-9. Turn on the Pi touchscreen. Put it beside the place where raspbot1 drives.
-10. Turn on raspbot1.
-11. Turn on the Quest. Connect it to the router's Wi-Fi.
-12. Turn on the glove xArm station.
-13. Plug in the arms, the cameras and the microphone (`docs/guides/plug-in.md`). Turn on the arms' power supplies.
-14. Plug the card reader into `win-1` (the room's centre).
+4. Turn on the laptop. Connect it to the projector's HDMI. Turn on the projector.
+5. Turn on the Newline and its Pi.
+6. Turn on the four Windows desktops and their screens.
+7. Turn on the four ThinkStations and their screens.
+8. Turn on the Pi touchscreen. Put it beside the place where raspbot1 drives.
+9. Turn on raspbot1.
+10. Turn on the Quest. Connect it to the router's Wi-Fi.
+11. Turn on the glove xArm station.
+12. Plug in the arms, the cameras and the microphone (`docs/guides/plug-in.md`). Turn on the arms' power supplies.
+13. Plug the card reader into `win-1`. Put the reader in the centre of the room.
 
 **Start the brain** (the lab desktop):
 1. Run `git switch --detach demo-2026-12-03` in `~/lab-os`.
@@ -76,21 +71,28 @@ Do not open pages now. Each screen shows only its start screen until the show st
 **Open the start screen on each screen** (enter the address, then full screen):
 1. Open `?device=desk` on monitor 2. Open `/command-center` on monitor 1.
 2. Open `?device=ubuntu-2` on the other Ubuntu desktop.
-3. Open `?device=east-1`, `east-2` and `east-3` on the east-wall screens.
-4. Open `?device=projector` on the laptop (on port 8443, for the microphone).
-5. Open `?device=newline` on the Newline's Pi.
-6. Open `?device=win-1` to `win-4` on the Windows desktops.
-7. Open `?device=ts-1` to `ts-4` on the ThinkStations.
-8. Open `?device=pi-touch` on the Pi touchscreen.
-9. Open `?device=quest` in the Quest's browser.
-10. Open `/monitor/so101` on your phone.
+3. Open `?device=projector` on the laptop (on port 8443, for the microphone).
+4. Open `?device=newline` on the Newline's Pi.
+5. Open `?device=win-1` to `win-4` on the Windows desktops.
+6. Open `?device=ts-1` to `ts-4` on the ThinkStations.
+7. Open `?device=pi-touch` on the Pi touchscreen.
+8. Open `?device=quest` in the Quest's browser.
+9. Open `/monitor/so101` on your phone.
+10. Click once on the hub's page on `win-1`, so that the card reader types into it. Do not touch `win-1` after that.
+
+**Set the sound** (on monitor 1, in the Command Center; each device's card has **M**, **S** and **C**):
+1. Press **S** and **C** on the `projector` card. The laptop plays its own sounds, and it plays the sounds of the other soloed devices (the ceiling speakers).
+2. Press **M** and **S** on the cards of `desk`, `newline` and `win-1` to `win-4`. Their answers and greetings then play only on the laptop.
+3. Press nothing on the other cards. They make no sound, because other devices are soloed.
+4. Check: type a question on `win-2`. The answer plays on the ceiling speakers, and on no other screen.
+5. Check on Tuesday that the startup sound plays once, not once for each screen.
+6. Press **Back to the start screen** in the Command Center. Monitor 1 then waits at the start screen too. The sound choices stay.
 
 **Set the settings:**
-1. On monitor 1, in the Command Center, press **S** on the `projector` card. Only the laptop plays sound (the ceiling speakers).
-2. On the brain, select ⚙ → Assistant → Persona → J.A.R.V.I.S.
-3. On the brain, select ⚙ → Robots → The Assistant May Move the Arm.
-4. On the brain, select ⚙ → Assistant → Full Access.
-5. On the brain, check that AI Spend is well under the budget.
+1. On the brain, select ⚙ → Assistant → Persona → J.A.R.V.I.S.
+2. On the brain, select ⚙ → Robots → The Assistant May Move the Arm.
+3. On the brain, select ⚙ → Assistant → Full Access.
+4. On the brain, check that AI Spend is well under the budget.
 
 **Prepare the props:**
 1. Put the blue cube on the SO-101 table.
@@ -104,13 +106,13 @@ Do not open pages now. Each screen shows only its start screen until the show st
 **How to ask:** 🎤 = say "hey Jarvis" and the question. ⌨ = type it in the ask line. 🔘 = hold Space on the laptop (push-to-talk). Ask most questions by typing. That is faster, and it does not need a quiet room.
 
 ### Part 1: the start (front, 2 min)
-1. Press a key on the laptop. Every screen starts. The greeting plays on the ceiling speakers.
-   - If it fails: tap each screen that did not start.
+1. Swipe your student ID on the card reader. Every screen starts. The greeting plays on the ceiling speakers.
+   - If it fails: press a key on the laptop. Then tap each screen that did not start.
 2. Say:
    - My name, the AI club, the lab.
    - lab-os: one brain that connects the lab's robots and computers.
    - J.A.R.V.I.S. is its assistant.
-   - Every screen in this room started from one key.
+   - Every screen in this room started from one card swipe. The card number is not kept.
 
 ### Part 2: why (front, 3 min)
 1. Open **System Map** on the projector. Drag to turn it.
@@ -155,12 +157,10 @@ Do not open pages now. Each screen shows only its start screen until the show st
 2. Point at the ThinkStations: Commits, Current Project, AI Spend, Devices.
 3. ⌨ Ask "show the diagnostics for the Raspbot" on the projector.
 4. ⌨ Ask a question on `win-2`. The laptop plays the answer.
-5. Open ⏻ → Back to the start screen on the projector. Swipe your student ID on the reader at `win-1`.
-   - If it fails: press a key.
-6. On the projector, select ⚙ → This Device → Level of Detail → **Minimal**. Then select **Maximal**.
-7. Open a module on the projector. The hub behind it blurs.
-8. Open ⚙ Settings on the projector. Type "speed" in the search. Point at the preview and ↺.
-9. Say:
+5. On the projector, select ⚙ → This Device → Level of Detail → **Minimal**. Then select **Maximal**.
+6. Open a module on the projector. The hub behind it blurs.
+7. Open ⚙ Settings on the projector. Type "speed" in the search. Point at the preview and ↺.
+8. Say:
    - Any screen is a window into the brain: a browser, no install.
    - Each screen has a name. The brain keeps its settings.
    - Each page can open on any screen: Open on…, the Command Center, or by voice.
@@ -317,6 +317,10 @@ Do not open pages now. Each screen shows only its start screen until the show st
       - Make the features and the pages better.
       - Projects and workspaces.
       - The development workflow in lab-os: the AI opens a browser, and more.
+    - **The lab's equipment:**
+      - I used as much of the lab's equipment as I could.
+      - Not used yet: the Kinect, the Google Glass, the TonyBot, the Jetsons (no specific purpose yet) and the Mac minis.
+      - I have plans for each of them.
     - **A successor:**
       - I graduate in May 2027.
       - The lab needs a student to keep lab-os.
