@@ -10,7 +10,7 @@ import { color } from "/web/theme.js";
 const DEG = Math.PI / 180;
 export const LEFT_OFFSET_M = 0.4;
 
-export function createArmView(container) {
+export function createArmView(container, { fromFront = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(drawRes()); // this screen's drawing resolution (Settings → This device, ?res=)
   container.appendChild(renderer.domElement);
@@ -36,8 +36,8 @@ export function createArmView(container) {
   setGrid(false);
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
-  // Operator view: behind and above the arm (robots face +x), so screen left/right = hand left/right.
-  camera.position.set(-0.46, 0.44, 0.32);
+  // The arm faces +x. Show the gripper from the front on the SO-101 Monitor.
+  camera.position.set(fromFront ? 0.56 : -0.46, 0.44, fromFront ? 0.46 : 0.32);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0.1, 0.13, 0);
   controls.enableDamping = true;

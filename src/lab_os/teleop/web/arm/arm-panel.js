@@ -40,10 +40,10 @@ $("arm-panel").innerHTML = `
   <p id="arm-source" class="hint">Connecting…</p>
   <p id="arm-error" class="hint warn-text"></p>`;
 
-const view = createArmView($("arm-view"));
+const KIND = pageKind(location.pathname); // null: every arm (Teleop, AI Control)
+const view = createArmView($("arm-view"), { fromFront: KIND === "so101" });
 const select = $("arm-model");
 const link = getLink($("arm-panel").dataset.role || "monitor");
-const KIND = pageKind(location.pathname); // null: every arm (Teleop, AI Control)
 const CHOICES = MODEL_CHOICES.filter((c) => !KIND || kindOf(c.kind) === KIND);
 // each arm: its feed, its model, and its readout's rows (every joint seen, in the arm's order)
 const arms = ["right", "left"].map((side) => ({ side, feed: getArmFeed(link, side, KIND), model: null, loading: null, shown: new Map() }));
