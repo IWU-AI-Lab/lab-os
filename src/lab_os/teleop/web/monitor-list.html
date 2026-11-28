@@ -7,32 +7,19 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/web/design/kit.css">
   <style>
-    /* the cards use the page's width and height, with large previews (quick job 155: a short row at the top) */
-    #kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); grid-auto-rows: minmax(15rem, 1fr);
-      gap: 1rem; align-content: start; overflow-y: auto; min-height: 0; scrollbar-width: thin; }
-    .kind { display: block; width: 100%; height: 100%; text-align: left; cursor: pointer; border: 0; color: inherit; font: inherit; }
-    .kind > .in { display: flex; flex-direction: column; }
-    .kind:hover, .kind:focus-visible { --c: var(--hot); outline: none; }
-    .kind h2 { justify-content: space-between; }
-    .kind h2 small { font: var(--w-lines) 0.8rem var(--f-lines); color: var(--text-dim); }
-    .arms { flex: 1 1 auto; display: flex; gap: 0.8rem; min-height: 9rem; }
-    .arm { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-    .arm svg { width: 100%; flex: 1 1 auto; min-height: 8rem; display: block; }
-    .arm .seg { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; fill: none; }
-    .arm .dot { fill: var(--hot); }
-    .raspbot-preview .camera-direction { stroke: var(--primary); stroke-width: 3; stroke-linecap: round; }
-    .raspbot-preview .chassis { fill: none; stroke: var(--text-dim); stroke-width: 2; }
-    .arm .floor { stroke: var(--line); stroke-width: 1.5; }
-    .arm.frozen .seg { stroke: var(--text-dim); }
-    .arm .who { font: var(--w-lines) 0.9rem/1.3 var(--f-lines); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-    .none { margin: auto; font: var(--w-lines) 0.95rem/1.45 var(--f-lines); color: var(--text-dim); text-align: center; }
+    /* All Pages' tiles (hub/web/pages.html), a little larger: there are fewer of them (quick job 170) */
+    #kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr)); gap: .8rem;
+      align-content: start; overflow-y: auto; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+    .tile { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .4rem .85rem; align-content: start; text-align: left; padding: .95rem; font-size: 1.15rem; }
+    .tile > .ico { grid-row: span 2; align-self: start; font-size: 1.7rem; color: var(--c); }
+    .tile small { font: var(--w-lines) 1rem/1.35 var(--f-lines); color: var(--text-dim); white-space: normal; text-transform: none; letter-spacing: normal; }
   </style>
 </head>
 <!--
   The Monitor list (quick job 147): one card for each kind of robot with a Monitor page of its own
-  (/monitor/so101, /monitor/xarm; KINDS in /static/arm/kinds.js). Each card shows a small side view of
-  each arm of that kind and its state, or says that none is connected. A tap opens that kind's page.
-  The hub also lists the Raspbot. Light for a Pi’s touchscreen: a few lines of SVG at 5 Hz.
+  (/monitor/so101, /monitor/xarm; KINDS in /static/arm/kinds.js), and in the hub also the Raspbot. The
+  cards look like All Pages' tiles (quick job 170) and say how many robots of that kind are connected.
+  A tap opens that kind's page.
 -->
 <body class="monitor-list">
 <div class="page">
