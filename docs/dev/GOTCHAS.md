@@ -2,7 +2,13 @@
 
 Every on-the-ground surprise and its fix. Newest first. Entries that a later fix made out of date: `docs/archive/gotchas-out-of-date-2026-11-25.md`. (Network/device-setup gotchas also live at the bottom of `docs/archive/guides-2026-11-25/network-setup-checklist.md`.)
 
+Earlier lab reports use the step numbers from the checklist in use that day. See the [November 16 checks](https://github.com/IWU-AI-Lab/lab-os/blob/2ffa7421a148b11805d2cb96bffed42d0875b4de/docs/guides/lab-checklist.md), [November 19 arm checks](https://github.com/IWU-AI-Lab/lab-os/blob/47b2ac9b4455e102402b371bb932a6fb01d1b9d9/docs/guides/lab-checklist.md), [laptop checks](https://github.com/IWU-AI-Lab/lab-os/blob/dfd870a8dced2421ce48cbe439ca5b7d52143a27/docs/guides/lab-checklist.md), [router and voice checks](https://github.com/IWU-AI-Lab/lab-os/blob/2d80940b8c4a38affb4aa811b71378bf0f09a8be/docs/guides/lab-checklist.md) and [November 24 demo run](https://github.com/IWU-AI-Lab/lab-os/blob/efbc5b1567b8dc37b69861ca10077dcb5c846068/docs/guides/lab-checklist.md).
+
 ---
+
+### 2026-11-27 — Greetings played over each other on every screen
+**What:** one start starts every start screen (quick job 139). Each screen that a person started asked for its own greeting, and the brain allowed one greeting every 10 s for each page, not for all of them. The card swipe on the brain's computer starts each hub window there "as if the card was read there", so two windows of one computer could greet together. The voice connection also opened only on a screen with a microphone, so a screen without one (a Pi, the Newline's Pi) could not play an answer from another screen.
+**Fix:** quick job 166. The brain allows one greeting every 10 s for all the screens, and plays it on one device (⚙ → The Lab → Greeting Plays On). Every hub page opens the voice connection, with or without a microphone. A soloed device gets one page's audio even when it has two monitors, so the words do not play twice.
 
 ### 2026-11-27 — A VR canvas keeps its old picture when its paint key does not change
 `CanvasPlane.paint(fn, key)` skips the drawing when `key` equals the last one. The VR ask line's key held only the question and the answer, so a new error note did not show while the question stayed the same (quick job 166).
@@ -221,6 +227,8 @@ Replaced (quick job 116, 2026-11-25): `frame()` finds the camera by its socket u
 **What:** in `Raspbot_Lib` 0.0.2 on raspbot1, `Ctrl_Servo(id, angle)` makes the I2C data `[id, angle]` first, and only then limits `angle` (0 to 180, servo 2 to 110). The limited value is never sent. Yahboom's notebooks centre the camera at servo 1 = 90 and servo 2 = 25. Which way each servo turns is not checked yet.
 **Fix:** `lab_os_raspbot.py` limits both angles itself (`PAN_RANGE`, `TILT_RANGE`) before it calls `Ctrl_Servo`. `PAN_SIGN` and `TILT_SIGN` turn a servo the other way (lab check R.2, `docs/guides/lab-checklist.md`).
 
+For the current direction check, see [R.16 under “From R”](../guides/lab-checklist-after-demo.md#from-r-the-raspbot-10-min).
+
 ### 2026-11-24 — raspbot1 checked: the software is as expected; the camera picture is dark
 **What:** on raspbot1: Debian 12, Python 3.11, `Raspbot_Lib` 0.0.2 in `/usr/local/lib/python3.11/dist-packages`, OpenCV 4.10, user `pi` in the `i2c` group, the USB camera at `/dev/video0` (auto exposure on). Yahboom's `raspbot.pyc` ran and held port 6001. `Raspbot_Lib` only prints its I2C errors. Under systemd, Python holds printed lines back, so the log did not show them. The camera's pictures came (9 a second) but were black: the lens probably saw only the box. raspbot1 logs in by itself, so user services run without `loginctl enable-linger`. At start, NetworkManager turns on the "Raspbot" hotspot (priority 2) before it tries GL-B7-5G (priority 0). A hotspot is always "available", so it never changes to the router by itself.
 **Fix:** the service runs `python3 -u`. No linger step. For the Wi-Fi, lab-os has a service that joins the router at start, and starts the hotspot only when the router is not found (`docs/guides/raspbot.md` → "The Raspbot's Wi-Fi at start"). Installing it needs sudo on raspbot1 once. raspbot1 stops at times: the screen goes black, the keyboard and mouse go off, and it must be switched off and on (the builder, 2026-11-24). It runs on wall power. Its log stops with no shutdown and no warning (05:55:38, with no driving, and 06:09:54, 10 s after a drive test). The supply looks good: 5.2 V, a 5 A USB-C supply, no USB over-current, `throttled=0x0`, 48 °C. The cause is not known. The Wi-Fi driver logged channel errors at 06:11, and the disk is 94 % full. Fix, 2026-11-24: lab-os-wifi installed ("joined GL-B7-5G" 15 s after the start). A health log on raspbot1 (`lab-os/health.log`, a line every 10 s, forced to disk) keeps the last minute before the next stop (`docs/guides/raspbot.md`).
@@ -258,6 +266,8 @@ The older program gives the brain a distance about once per second. The current 
 ### 2026-11-23 — An arm with USB but no motor power stops the brain with a traceback (lab check N.17)
 **What:** `uv run lab-os serve --host 0.0.0.0` stopped twice. The white arm's USB board was connected, so the brain chose so101-white. In the first try no motor answered (`FeetechMotorsBus motor check failed … Missing motor IDs: 1–6`, found `{}`): the board gets its power from USB, the motors only from the 12 V plug. In the second try motor 2 did not answer (`ConnectionError: Failed to write 'Torque_Enable' on id_=2 … There is no status packet!`): the power was coming on, or a cable between motors was loose. A few minutes later the same command started. `_open_arm` (`teleop/cli.py`) falls back to the fake arm only for `PortNotAllowed` and `LookupError`, so LeRobot's `RuntimeError` and `ConnectionError` stopped the brain.
 **Fix:** for now, connect the arm's motor power before you start the brain, or disconnect its USB cable. A clear sentence and the fake arm: quick job 94 in `docs/plan/quick-jobs.md`.
+
+See [job 94 in the November 27 archive](../archive/quick-jobs-done-2026-11-27.md).
 **Later (2026-11-23, quick job 94):** the driver says "so101-white: the motors do not answer. Is the arm's power on?" and closes the port (LeRobot leaves it open after a failed motor check). Found plugged in: the fake arm. Named with `--arm`: it stops with that sentence. LeRobot's own words are in the brain's log.
 
 ### 2026-11-22 — Full Access: pictures can't go in a tool's answer, and in-process MCP calls raise (quick job 80)
@@ -280,6 +290,8 @@ The older program gives the brain a distance about once per second. The current 
 ### 2026-11-22 — A transcriber can return its own hint for silence (quick job 83)
 **What:** lab check L.11: a push-to-talk press of 0.5 s with nothing said came back from `gpt-4o-mini-transcribe` as the `prompt` we sent ("The speaker talks English to a lab assistant called Jarvis."), and the AI answered it. Whisper-style transcribers are known to do this when the audio has no speech. The other finds of part L had plain causes in the code: the page stopped sending its microphone for the wake word while an answer played; "That's all" sent a final `heard` but no answer, so the page waited on the thinking core; the page ended a wake-word question after 1 s of quiet.
 **Fix:** the brain sends no recording without speech (`speech.has_speech`: the loudest 0.1 s must be loud and 3 times the quietest), drops a transcript that repeats the hint, and the hint names the active persona. The rest: quick job 83 in `docs/plan/quick-jobs.md`.
+
+See [job 83 in the November 23 archive](../archive/quick-jobs-done-to-2026-11-23.md).
 
 ### 2026-11-22 — The WebXR emulator gives the page a Quest's browser name (quick job 87)
 **What:** lab check L.5: with Meta's Immersive Web Emulator in the desktop's Chrome, Teleop's **Desktop control** was grey. The page already told a headset by its browser (`OculusBrowser` in `navigator.userAgent`), not by WebXR support. But the emulator also changes `navigator.userAgent` to a Quest's, so the page took the desktop for a headset. The brain's own check (`hub/server.py`, the HTTP `User-Agent`) and the VR hub's (`xr-hub.js`) use the same name.
@@ -307,6 +319,8 @@ The older program gives the brain a distance about once per second. The current 
 
 ### 2026-11-20 — The mic button didn't come back after the USB microphone was plugged in again
 **What:** quick job 48 (lab day 2026-11-19). The button hides on "devicechange" when the microphone goes, but it stayed hidden after the microphone came back. The page counted the microphones once per "devicechange". On Linux, the browser can send that event when the USB device appears, before the sound system (PipeWire or PulseAudio) lists its microphone; then the one count finds none, and no second event comes. Likely, not proven on the lab desktop: in headless Chrome, a faked microphone listed 1 s after the event gave exactly this.
+
+[Job 73 replaced job 48](../archive/quick-jobs-done-to-2026-11-23.md).
 **Fix:** quick job 73: `web/voice.js` counts again 0.5, 2 and 5 s after each change, and every 5 s while it sees none.
 
 ### 2026-11-20 — The hub in VR could miss "lab-os is off" and start anyway

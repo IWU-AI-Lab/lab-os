@@ -1,7 +1,9 @@
 // Voice on the hub (focus step 7, docs/archive/guides-2026-11-25/voice.md). The page records and plays; the brain hears, thinks
 // and speaks over /ws/voice (docs/dev/protocol.md → "Voice"), so API keys never leave the brain.
 //
-//   const v = createVoice({ onEvent, onChange, onLoud, onLevel, pages });
+//   const v = createVoice({ onEvent, onChange, onLoud, onLevel, pages, own });
+//                               own: this page keeps its own sound (the Quest): never muted, soloed or
+//                               sent another screen's answer (quick job 166)
 //                               pages(): what this screen can show ({id: title}), sent with each question
 //                               so the assistant can open one here ("open" events, decision 2026-11-14)
 //   v.setStatus(status.voice)   the brain's word on voice (/api/status → voice)
@@ -10,7 +12,10 @@
 //   v.press("ask" | "dictate")  start listening (push-to-talk / dictation); v.release() to stop
 //   v.cancel()                  stop listening, ask nothing
 //   v.greet(way)                the spoken greeting: asked for at the start press, held until
-//   v.playHeld()                ... the page plays it (after the jump); talking first drops it
+//   v.playHeld()                ... the page plays it (after the jump); talking first drops it. True when
+//                               something was held
+//   v.hold()                    a startup sent from another screen: keep the sound the brain sends (the
+//                               greeting may play here, quick job 166) until v.playHeld(), at most 15 s
 //   v.say()                     speak the brain's waiting line: a typed visitors' welcome (quick job 35)
 //   v.stopSpeaking()            cut the answer short
 //   v.wake(on)                  stream the microphone for the wake word (the brain listens for it, at
@@ -111,7 +116,9 @@ const MIC_STALL_MS = 1500; // the wake word is on but no audio came this long: w
 
 const QUEUE_MAX = 400; // audio pieces kept while the connection opens (20 s)
 
-export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {}, pages = () => null } = {}) {
+const HOLD_MAX_MS = 15_000; // v.hold(): the sound plays after this long, even with no v.playHeld()
+
+export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = () => {}, onLevel = () => {}, pages = () => null, own = false } = {}) {
   const st = {
     secure: window.isSecureContext,
     api: !!navigator.mediaDevices?.getUserMedia,
@@ -183,15 +190,21 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
   function setStatus(voice) {
     const before = JSON.stringify(can());
     st.brain = voice || null;
-    if (can().ok) connect();
+    // connected also without a microphone (quick job 166): another screen's answer or the greeting may
+    // play here, and the brain counts this screen's mute and solo
+    if (st.brain) connect();
     if (JSON.stringify(can()) !== before) onChange();
   }
 
   // ---------- the connection ----------
   function connect() {
     if (st.ws) return;
-    const name = deviceName(); // for the brain's log ("voice timing (quest, …)")
-    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/voice${name ? `?device=${name}` : ""}`);
+    const name = deviceName(); // for the brain's log ("voice timing (quest, …)") and its mute and solo
+    const q = new URLSearchParams();
+    if (name) q.set("device", name);
+    if (own) q.set("own", "1");
+    const qs = q.toString();
+    const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/voice${qs ? `?${qs}` : ""}`);
     st.ws = ws;
     ws.binaryType = "arraybuffer";
     ws.onopen = () => {
@@ -206,6 +219,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
         return;
       }
       if (ev.type === "audio") play(ev);
+      else if (ev.type === "audio_begin") st.awaitingEnd = true; // another screen's answer plays here
       else if (ev.type === "wake_on") st.wakeOn = true;
       else if (ev.type === "wake_off") st.wakeOn = false;
       else if (ev.type === "converse") { // conversation mode on or off (quick job 68)
@@ -236,7 +250,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
         st.pressed = st.sending = false;
         if (!st.off) onEvent({ type: "error", message: "Lost the connection to the brain." });
       }
-      if (!st.off) setTimeout(() => can().ok && connect(), 2000);
+      if (!st.off) setTimeout(() => st.brain && connect(), 2000);
     };
   }
   function send(msg) {
@@ -547,10 +561,20 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     return true;
   }
   function playHeld() {
-    if (!st.holding) return;
+    clearTimeout(st.holdTimer);
+    if (!st.holding) return false;
     st.holding = false;
+    const any = st.held.length > 0;
     for (const ev of st.held.splice(0)) play(ev);
     st.decoding.then(checkPlayed);
+    return any;
+  }
+  function hold() {
+    if (st.holding) return;
+    st.holding = true;
+    st.held = [];
+    clearTimeout(st.holdTimer);
+    st.holdTimer = setTimeout(playHeld, HOLD_MAX_MS);
   }
 
   // lab-os was shut down (quick job 6): the microphone closes now and stays closed (the page reloads when
@@ -575,6 +599,7 @@ export function createVoice({ onEvent = () => {}, onChange = () => {}, onLoud = 
     greet,
     say,
     playHeld,
+    hold,
     stopSpeaking,
     speaking,
     wake,

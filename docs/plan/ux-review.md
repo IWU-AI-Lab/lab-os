@@ -2,7 +2,7 @@
 
 Three reviewers checked every page on the maximal and minimal looks: Claude Opus (O), Codex/GPT (C) and Gemini (G, from the code and the others' screenshots). Their reports and screenshots are in `docs/archive/ux-review-2026-11-26/`. This list merges them. The planning session checked the claims against the code (`main` at `c945940` and later) and left out the wrong ones (at the end). **(B)** = the builder asked for it. Reduced and full are not reviewed: the fixes for minimal and maximal must also look right on them.
 
-The fix jobs are quick jobs 153 to 160 (`docs/plan/quick-jobs.md`). Each line names its job. After the fixes, the builder ticks each line in the real lab.
+The archive lists [completed jobs 153 to 159](../archive/quick-jobs-done-2026-11-27.md). The [backlog](quick-jobs.md#backlog-do-not-start-until-the-builder-says) lists the black hole background, formerly job 160. Each line names its job. After the fixes, the builder ticks each line in the real lab.
 
 How bad: **H** = text is lost, a control is too small to use, or a page misleads. **M** = it looks wrong or is unclear. **L** = polish.
 
@@ -108,10 +108,10 @@ How bad: **H** = text is lost, a control is too small to use, or a page misleads
 - [ ] L · O · VR: the Current Project title is cut off.
 - [ ] L · G · `/xr` on a computer: "No VR here" stays on top, and Preview on This Screen is below. Make Preview the main button there.
 
-## 6. The builder's design changes (quick jobs 158 to 160; first versions to iterate on)
+## 6. The builder's design changes (quick jobs 158 and 159 and the backlog item; first versions to iterate on)
 - [ ] (B) · O C G · **Depth** (quick job 158): the hub, the modules and VR look flat. Put the core clearly in front when a module opens (scale it up a little, a dark halo under it); lift the panels' decoration a few pixels off its panel, with a slight parallax when the pointer moves; blur and dim the far network more. In VR: the core about 0.3 m in front of the panels, the decoration 3–5 cm in front of its panel, the rings 2–4 cm apart. Light, not shadow first (choice 6).
 - [ ] (B) · O C G · **A 3D core** (quick job 159): more intentional and original. Start from `hub/web/xr/core.js` (three.js, the same rings): each ring tilted on its own axis like a gyroscope, lining up flat when it listens; each persona its own ring set. Its shape shows listening, thinking and speaking. Minimal keeps a flat core.
-- [ ] (B) · O C G · **A black hole background** (quick job 160): `hub.background: network | black-hole`, on full and maximal only. A dark disc with a thin bright ring behind the core, the network's dots bent around it, dim, with the text still readable.
+- [ ] (B) · O C G · **A black hole background** (backlog): `hub.background: network | black-hole`, on full and maximal only. A dark disc with a thin bright ring behind the core, the network's dots bent around it, dim, with the text still readable.
 
 ## The builder's choices (2026-11-26)
 1. **Settings on wide screens:** not two columns. The right side shows a live preview of what the pointed-at or changed setting does (a small hub for Level of Detail, the core and the voice for the persona, the colours for the theme) and its longer help. A setting with no good preview shows only its help. (Quick job 156.) Since quick job 162, the preview shows on every screen wider than 900 px, the groups and the preview are the same width (the list in the middle of the screen), and the help shows only in the preview there.

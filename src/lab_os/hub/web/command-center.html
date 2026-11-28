@@ -25,6 +25,7 @@
     .ev.new { animation: evin 0.6s var(--arrive); }
     @keyframes evin { from { opacity: 0; transform: translateX(-0.6rem); } }
     .side > .in { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 0.8rem 0.6rem 0.6rem 0.9rem; }
+    .side > .in:has(.list-tools) { grid-template-rows: auto auto minmax(0, 1fr); }  /* Devices: its two buttons (quick job 166) */
     .list { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; margin: 0 -0.3rem 0 0; padding-right: 0.3rem; }
     .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 0.1rem 0.55rem; align-items: center; padding: 0.45rem 0.4rem; cursor: pointer;
       border-left: 2px solid transparent; }
@@ -41,8 +42,9 @@
     .row small { grid-column: 2; font: var(--w-lines) 0.75rem/1.3 var(--f-lines); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .row .k { grid-column: 1; grid-row: 1; }
     .row b { grid-column: 2; grid-row: 1; }
-    .row .eye { grid-column: 3; grid-row: 1 / span 2; }
-    .row .foc { grid-column: 4; grid-row: 1 / span 2; }
+    .row .sndg { grid-column: 3; grid-row: 1 / span 2; }
+    .row .eye { grid-column: 4; grid-row: 1 / span 2; }
+    .row .sub { font-weight: 400; color: var(--text-dim); }
     .row small { grid-row: 2; }
     /* a device and its screens (quick job 161): compact rows, and a line from the device's icon to each screen's,
        so a screen reads as part of the device above it (before, it looked like one more device, indented) */
@@ -61,6 +63,18 @@
     .iconbtn { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
     .iconbtn:hover, .iconbtn:focus-visible { color: var(--hot); outline: none; }
     .iconbtn.on { color: var(--c); }
+    /* mute and solo (quick job 166), as on a mixing desk: a speaker icon (a label, not a button), then M and S.
+       M red when muted (dim red: quiet, another device is soloed), S amber when soloed */
+    .sndg { display: inline-flex; align-items: center; gap: 3px; padding: 0 2px; }
+    .sndg .spk { width: 0.95rem; height: 0.95rem; margin-right: 1px; color: var(--text-dim); pointer-events: none; }
+    .sndg .spk.off { opacity: 0.45; }
+    .snd { display: inline-grid; place-items: center; width: 1.4rem; height: 1.3rem; padding: 0; cursor: pointer; background: none; color: var(--text-dim);
+      border: 1px solid color-mix(in srgb, var(--text-dim) 45%, transparent); border-radius: 3px; font: 700 0.68rem/1 var(--f-ui); }
+    .snd:hover, .snd:focus-visible { color: var(--hot); border-color: var(--hot); outline: none; }
+    .snd.m.on { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .snd.m.quiet { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); opacity: 0.75; }
+    .snd.s.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .list-tools { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: start; padding: 0.1rem 0 0.4rem; }
     .empty { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); padding: 0.4rem; }
 
     /* the centre: tools on top, the workspace under them */
@@ -204,6 +218,10 @@
     <section class="left">
       <div class="card side" aria-label="Devices and screens"><div class="in">
         <h2><svg class="ico"><use href="/web/design/icons.svg#i-net"/></svg>Devices <span class="grow"></span><button type="button" class="btn small multi" aria-pressed="false">Select multiple</button><small id="dev-count" class="hint"></small></h2>
+        <div class="list-tools">
+          <button class="btn small virtual" id="eye-all" type="button"><svg class="ico"><use href="/web/design/icons.svg#i-eye-off"/></svg><span>Hide all</span></button>
+          <button class="btn small" id="mute-all" type="button" hidden><svg class="ico"><use href="/web/design/icons.svg#i-speaker"/></svg><span>Mute all</span></button>
+        </div>
         <div class="list" id="devices"></div>
       </div></div>
       <div class="card" id="act-card" aria-label="Activity"><div class="in">
@@ -216,7 +234,6 @@
         <input id="search" type="search" placeholder="Search devices and screens" aria-label="Search">
         <button class="btn small virtual" id="multi" aria-pressed="false" type="button">Select multiple</button>
         <button class="btn small virtual" id="fit" type="button" title="Show every item in the workspace">Fit</button>
-        <button class="btn small virtual" id="show-all" type="button" hidden>Show all</button>
         <button class="btn small" id="start-all" type="button" hidden title="Start the start screen on every device that shows it"><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Start All</button>
         <span class="legend">
           <span><svg class="ico"><use href="/web/design/icons.svg#i-cast"/></svg>Changes the device</span>

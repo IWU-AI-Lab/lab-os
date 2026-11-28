@@ -70,7 +70,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 - **Grouping:** drag a screen onto another device to group it there, or onto empty space to put it on its own. "Ungroup" puts it back under its own device.
 - **Modules in the focus modal:** an arm: its kind's Monitor (SO-101 or xArm), Teleop, AI Control; raspbot1: Raspbot; a camera: Cameras; the Quest: Teleop. Each opens in the Command Center, with "Own window".
 - **Start (quick job 139):** **Start All** above the workspace starts every screen that shows the start screen; **Start** starts the highlighted ones. Each shows only while a screen waits on its start screen.
-- **Settings in the focus modal:** the display name, the level of detail, the way in to voice and the sound. The other "This device" settings stay in ⚙ on that device.
+- **Settings in the focus modal:** the display name, the level of detail and the way in to voice (the sound until quick job 166: **M** replaces it). The other "This device" settings stay in ⚙ on that device.
 
 ## Built (quick job 148, 2026-11-26)
 - **The left list:** each device, with the screens grouped under it (as in the workspace). A line joins the device's icon to each of its screens, and a screen under its device has one compact line ("Screen 2, Teleop"; quick job 161: before, a screen looked like one more device, indented). A screen on its own has its own row.
@@ -89,3 +89,7 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 135, 2026-11-26)
 - **Diagnostics in the modules:** every device's modules (the focus window and the inspector) have **Diagnostics**: the Diagnostics page for that device only. The Pages list has Diagnostics too (all devices).
+
+## Built (quick job 166, 2026-11-27)
+- **Mute and solo:** each card and each row of the left list for a named computer or screen has a speaker icon (a label, not a button) with **M** and **S**, as on a mixing desk. **M** (red when on): nothing plays there (the answers, the greeting and the hub's own sounds). **S** (amber when on): the answers and greetings from every microphone, a phone's too, play only on the soloed devices; a few devices can be soloed. While a device is soloed, the **M** of the others is dim red ("Quiet"). Mute wins over solo. Kept in each device's settings (`sound`, `solo`). The Quest's own page keeps its own sound: no buttons.
+- **The left list, more compact:** one line for each device (its device name after a display name, dimmer); no ⤢ in the list (it stays on the card). Above the list: **Hide all** / **Show all** (only the workspace; it replaces **Show all** above the workspace) and **Mute all** / **Unmute all**.

@@ -2525,11 +2525,12 @@ function freeText() { clearTimeout(VS.freeTimer); VS.shown?.free(); VS.shown = n
 let VD = null;  // dictation running: {line, base, started, spoke, quietSince, floor, send, ph}
 const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
-// after the jump. Only where voice works at the brain and this screen's sound is on; no microphone: no hint.
+// after the jump. Only where voice works at the brain; no microphone: no hint. Asked also on a muted screen: the
+// brain plays it on one device, the first of ⚙ → The Lab → Greeting Plays On that is on (quick job 166).
 // Every start waits for the jump, also back from the start screen (quick job 84, the builder: at once, it
 // played over the jump; quick job 42 had made it play at once there).
 function spokenGreeting() {
-  if (!V || !S.sound || !S.greet) return;
+  if (!V || !S.greet || params.get("sound") === "0") return;
   const way = WAY() === "wake_word" && !S.status?.voice?.wake?.available ? "push_to_talk" : WAY();
   VS.greeting = V.greet(V.can().ok ? way : "none");
 }
@@ -2709,7 +2710,9 @@ function onVoiceEvent(ev) {
     VS.shown.pace(ev.text.length, ev.duration * 1000);
     if (S.state !== "speaking") setState("speaking");
   }
+  else if (ev.type === "playing" && !VS.voiced && !S.asking && S.state === "idle") setState("speaking");  // another screen's (solo)
   else if (ev.type === "played" && VS.greeting) { VS.greeting = false; if (S.state === "speaking" && !S.asking) setState("idle"); }
+  else if (ev.type === "played" && !VS.voiced && !S.asking && S.state === "speaking") setState("idle");
   else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) { freeText(); endVoice(); }
 }
 import("/web/voice.js").then((m) => {
@@ -3190,7 +3193,7 @@ async function bootMinimal() {
   ringsOn(true); S.igniteAt = performance.now();
   await Promise.race([S.greetP, wait(400)]);
   $("#boot-greet").textContent = GREET_LINE();
-  if (VS.greeting) { V.playHeld(); setState("speaking"); }
+  if (V?.playHeld() || VS.greeting) setState("speaking");
   await pause(700);
   finishBoot();
 }
@@ -3297,7 +3300,7 @@ async function boot() {
   const gr = $("#boot-greet");
   await Promise.race([S.greetP, wait(1500)]);
   gr.classList.add("typing");
-  if (VS.greeting) { V.playHeld(); setState("speaking"); }  // the greeting is spoken while it's typed
+  if (V?.playHeld() || VS.greeting) setState("speaking");  // the greeting is spoken while it's typed
   await typeInto(gr, GREET_LINE(), 16);
   gr.classList.remove("typing");
   await typeChecks;
@@ -3445,6 +3448,7 @@ function ignite(how = "tap", from = null, tell = true) {
   else if (from) { ig.classList.add("from"); $("#ign-what").textContent = `Started from ${from}`; }
   startVideo();
   if (remote) {  // the conversation the other screen started (its greeting is in it by then)
+    V?.hold();  // its greeting may play here (quick job 166): at the jump, as on the screen that started
     S.greet = null;
     S.greetP = wait(800).then(loadChat).then(() => null);
   } else {
@@ -3542,12 +3546,21 @@ function wake() { S.sleeping = false; body.classList.remove("sleep"); relockTarg
 // this screen's own choices (Settings → This device): level of detail, sound, full screen on start
 // (Settings → This device: kept by the brain under the device's name, ?device= in the address; a copy in this
 // browser under the same key /web/device.js uses, so the first frame already has them)
-function prefsKey() {
+function prefsName() {
   const clean = (s) => String(s || "").trim().toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/^-+|-+$/g, "").slice(0, 32);
   let name = params.get("device");
   if (name === null) { try { name = localStorage.getItem("lab-os.device"); } catch { name = ""; } }
-  name = clean(name);
+  return clean(name);
+}
+function prefsKey() {
+  const name = prefsName();
   return name ? `lab-os.device.${name}` : "lab-os.screen";
+}
+// this screen makes sound: not ?sound=0, not muted (This device, the Command Center's M), and no other device is
+// soloed (the Command Center's S; the brain's status names the soloed ones; quick job 166)
+function soundOn() {
+  const solo = S.status?.voice?.solo || [];
+  return params.get("sound") !== "0" && screenPrefs().sound !== false && (!solo.length || solo.includes(prefsName()));
 }
 function screenPrefs() {
   try { return JSON.parse(localStorage.getItem(prefsKey())) || {}; } catch { return {}; }
@@ -3595,7 +3608,7 @@ function applyTheme(t) {
   if (hub.devices_graph_max) GRAPH_MAX = hub.devices_graph_max;
   S.typeToChat = hub.type_to_chat !== false;  // Settings: Typing Anywhere Goes to the Ask Line
   const mine = screenPrefs();
-  S.sound = params.get("sound") !== "0" && mine.sound !== false;
+  S.sound = soundOn();
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
   if (S.dpr && drawRes() !== S.dpr) resize();  // "This device" changed the drawing resolution
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });
@@ -3724,6 +3737,7 @@ async function pollStatus() {
   setFact("#f-ai", aiText(st.ai), st.ai.connected !== true || !!st.ai.paused);
   if (performance.now() > S.noteUntil) showNote(st.ai.paused, st.ai.paused_detail);
   V?.setStatus(st.voice);
+  S.sound = soundOn();  // another device was soloed or let go (quick job 166)
   syncWake();
   if (!S.asking && S.state !== "listening" && performance.now() > S.errorUntil) {
     // the brain's error is a standing one (e.g. a refused key), not an unanswered question

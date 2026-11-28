@@ -38,6 +38,7 @@ export class Ask {
         onLoud: (l) => (this.loud = l),
         onLevel: (l) => { this.level = l; this.watch?.level(l); },
         pages: () => this.pages?.() || null, // what the hub can show (the assistant opens them)
+        own: true, // the Quest keeps its own sound: no mute, solo or greeting order (quick job 166)
       });
       if (this.status) this.V.setStatus(this.status.voice);
     }).catch((e) => console.warn(`xr hub: no voice (${e.message})`));

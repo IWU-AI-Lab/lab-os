@@ -2,6 +2,8 @@
 
 A living record of decisions, facts and open questions for the AI lab's lab-os project (named "Lab JARVIS" until 2026-11-22: JARVIS is now one persona of several, quick job 92). Newest entries go at the top of each section. Ideas live only in **docs/plan/ideas.md** (the backlog). Companion docs: `docs/plan/current-focus.md` (what to work on now), `docs/plan/quick-jobs.md`, `docs/dev/project-scaffold.md` (what the repo should contain), `docs/dev/dev-setup.md`, `docs/archive/guides-2026-11-25/network-setup-checklist.md`. Early notes (the grill session, the teleop module's origin): `docs/archive/log-2026-10-early-notes.md`. Decision rows and discussion notes before 2026-11-16: `docs/archive/log-decisions-to-2026-11-15.md`.
 
+Earlier lab reports use the step numbers from the checklist in use that day. See the [November 16 checks](https://github.com/IWU-AI-Lab/lab-os/blob/2ffa7421a148b11805d2cb96bffed42d0875b4de/docs/guides/lab-checklist.md), [November 19 arm checks](https://github.com/IWU-AI-Lab/lab-os/blob/47b2ac9b4455e102402b371bb932a6fb01d1b9d9/docs/guides/lab-checklist.md), [laptop checks](https://github.com/IWU-AI-Lab/lab-os/blob/dfd870a8dced2421ce48cbe439ca5b7d52143a27/docs/guides/lab-checklist.md), [router and voice checks](https://github.com/IWU-AI-Lab/lab-os/blob/2d80940b8c4a38affb4aa811b71378bf0f09a8be/docs/guides/lab-checklist.md) and [November 24 demo run](https://github.com/IWU-AI-Lab/lab-os/blob/efbc5b1567b8dc37b69861ca10077dcb5c846068/docs/guides/lab-checklist.md).
+
 **Current focus:** see **docs/plan/current-focus.md**.
 
 ---

@@ -8,7 +8,7 @@ Every device has a sticker. The Raspberry Pis are numbered 1 to 10. The desktops
 | Device | How many | lab-os name | Notes |
 |---|---|---|---|
 | Desktop, RTX 5070, Ubuntu | 2 | the brain: `ai-comp-lab-ubuntu-76358` (192.168.8.130); the other Ubuntu desktop | The brain runs lab-os and has the arms on its USB. The other one can drive the Newline or be a backup brain. |
-| Desktop, RTX 5070, Windows 11 | 4 | `win-1`, `win-2` (names from lab check M.1; may change) | One runs the Raspbot program; one belongs to someone else. The GPU memory (12 GB) is not checked. |
+| Desktop, RTX 5070, Windows 11 | 4 | `win-1`, `win-2` (names from [the earlier lab check M.1](https://github.com/IWU-AI-Lab/lab-os/blob/efbc5b1567b8dc37b69861ca10077dcb5c846068/docs/guides/lab-checklist.md); may change) | One runs the Raspbot program; one belongs to someone else. The GPU memory (12 GB) is not checked. |
 | Jetson Orin Nano | 5 | `jetson1` to `jetson5` | On the big switch. The video port is DisplayPort. |
 | Raspberry Pi 5 | about 10 | `pi01` …, `pi-1` … | One drives the Newline (HDMI and the touch cable). Some are on the big switch. |
 | ThinkCentre | 7 | none | No Wi-Fi. 4 at the front, 3 at the back. Not used. |
