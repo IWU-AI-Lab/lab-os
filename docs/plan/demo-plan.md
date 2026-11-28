@@ -26,6 +26,8 @@ The hub's address is `http://192.168.8.130:8080/?device=<name>`. For a microphon
 | Your phone | With you | SO-101 Monitor (for its STOP) |
 
 ## Tuesday 2026-12-01: prepare
+The order of the day (parts 0 and P, then this run, then a few steps) is in `docs/guides/lab-checklist.md` → "Order on Tuesday".
+
 1. Write the layout above into `config/local/room.yaml` on the lab desktop:
    ```yaml
    layout:
