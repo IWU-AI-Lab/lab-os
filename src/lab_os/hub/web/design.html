@@ -2529,7 +2529,7 @@ let VD = null;  // dictation running: {line, base, started, spoke, quietSince, f
 const WAY = () => VM?.wayIn() || "push_to_talk";  // this screen's way in (Settings → This device)
 // the spoken greeting (after the start press): the greeting's text and how to talk, asked for now and played
 // after the jump. Only where voice works at the brain; no microphone: no hint. Asked also on a muted screen: the
-// brain plays it on one device, the first of ⚙ → The Lab → Greeting Plays On that is on (quick job 166).
+// brain plays it on the cover devices then (the Command Center's C), else nowhere.
 // Every start waits for the jump, also back from the start screen (quick job 84, the builder: at once, it
 // played over the jump; quick job 42 had made it play at once there).
 function spokenGreeting() {
@@ -2713,7 +2713,7 @@ function onVoiceEvent(ev) {
     VS.shown.pace(ev.text.length, ev.duration * 1000);
     if (S.state !== "speaking") setState("speaking");
   }
-  else if (ev.type === "playing" && !VS.voiced && !S.asking && S.state === "idle") setState("speaking");  // another screen's (solo)
+  else if (ev.type === "playing" && !VS.voiced && !S.asking && S.state === "idle") setState("speaking");  // another screen's (a cover)
   else if (ev.type === "played" && VS.greeting) { VS.greeting = false; if (S.state === "speaking" && !S.asking) setState("idle"); }
   else if (ev.type === "played" && !VS.voiced && !S.asking && S.state === "speaking") setState("idle");
   else if (ev.type === "played" && VS.voiced && !VS.turn && !V.pressed) { freeText(); endVoice(); }
@@ -3451,7 +3451,7 @@ function ignite(how = "tap", from = null, tell = true) {
   else if (from) { ig.classList.add("from"); $("#ign-what").textContent = `Started from ${from}`; }
   startVideo();
   if (remote) {  // the conversation the other screen started (its greeting is in it by then)
-    V?.hold();  // its greeting may play here (quick job 166): at the jump, as on the screen that started
+    V?.hold();  // its greeting may play here (a cover, the Command Center's C): at the jump, as on the screen that started
     S.greet = null;
     S.greetP = wait(800).then(loadChat).then(() => null);
   } else {

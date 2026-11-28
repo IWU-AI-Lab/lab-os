@@ -70,8 +70,8 @@
     .iconbtn { display: inline-grid; place-items: center; min-width: 2rem; min-height: 2rem; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; }
     .iconbtn:hover, .iconbtn:focus-visible { color: var(--hot); outline: none; }
     .iconbtn.on { color: var(--c); }
-    /* mute and solo (quick job 166), as on a mixing desk: a speaker icon (a label, not a button), then M and S.
-       M red when muted (dim red: quiet, another device is soloed), S amber when soloed */
+    /* mute, solo and cover (quick job 166), as on a mixing desk: a speaker icon (a label, not a button), then M, S and C.
+       M red when muted (dim red: quiet, another device is soloed), S amber when soloed, C green when a cover */
     .sndg { display: inline-flex; align-items: center; gap: 3px; padding: 0 2px; }
     .sndg .spk { width: 0.95rem; height: 0.95rem; margin-right: 1px; color: var(--text-dim); pointer-events: none; }
     .sndg .spk.off { opacity: 0.45; }
@@ -81,6 +81,7 @@
     .snd.m.on { background: var(--danger); border-color: var(--danger); color: #fff; }
     .snd.m.quiet { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, transparent); opacity: 0.75; }
     .snd.s.on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .snd.c.on { background: var(--ok); border-color: var(--ok); color: var(--bg); }
     .list-tools { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: start; padding: 0.1rem 0 0.4rem; }
     .empty { font: var(--w-lines) 0.85rem/1.4 var(--f-lines); color: var(--text-dim); padding: 0.4rem; }
 

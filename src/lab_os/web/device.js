@@ -75,7 +75,7 @@ export async function renameDevice(to) {
 }
 
 // a page with no name keeps its sound on the brain under its address key (quick job 169); the welcome says it
-const UNNAMED_SOUND = ["sound", "solo"];
+const UNNAMED_SOUND = ["sound", "solo", "cover"];
 let addressKey = "";
 /** This page's key for mute and solo: its device name, else the brain's key for its address ("" before the welcome). */
 export const deviceKey = () => deviceName() || addressKey;

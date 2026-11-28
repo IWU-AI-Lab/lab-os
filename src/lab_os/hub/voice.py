@@ -27,12 +27,13 @@ a finished sentence (quick job 110, lab_os.ai.turn), or after the page's silence
 the voice's connections are opened while the person talks. Each turn's timing is logged
 ("voice timing …") and kept for `GET /api/voice/timings`.
 
-Where the sound plays (quick job 166): each device may be muted (`sound: false`) or soloed
-(`solo: true`) in its settings (the Command Center's M and S). With a soloed device there, every
-answer and greeting plays on the soloed devices, from any microphone (a phone's too); else an
-answer plays on the screen that asked, unless that screen is muted. One greeting for every start:
-the first device of `greeting_from` (⚙ → The Lab) that is there and not muted speaks it, else the
-screen that started. The Quest's own page keeps its own sound (`?own=1`): none of this changes it.
+Where the sound plays (2026-11-27, after quick job 166): each device plays its own answers and
+greetings on its own speakers. A device may be muted (`sound: false`), soloed (`solo: true`) or a
+cover (`cover: true`) in its settings (the Command Center's M, S and C). Muted: nothing plays there,
+and its sound goes only to the cover devices (none: it is not heard). Soloed: while a device is
+soloed, only the soloed devices play their own sounds, and nothing else plays (also not on a cover).
+One greeting for every start: the screen where the person started greets. The Quest's own page
+keeps its own sound (`?own=1`): none of this changes it.
 """
 
 import asyncio
@@ -335,8 +336,6 @@ class VoiceDesk:
     say: Callable[[], str | None] = lambda: None
     # each device's settings by device name (`sound: false` = muted, `solo: true`; quick job 166)
     sound_settings: Callable[[], dict] = lambda: {}
-    # the devices that may speak the greeting, in order (`brain` = the brain's own computer)
-    greeting_from: Callable[[], list[str]] = lambda: ["newline", "brain"]
     last_greet: float = 0.0
     wake_models: WakeModels = field(default_factory=WakeModels)
     turn_model: TurnModel = field(default_factory=TurnModel)  # a finished question? (quick job 110)
@@ -447,23 +446,19 @@ class VoiceDesk:
         return bool(link.key) and sounds.get(link.key, {}).get("sound") is False
 
     @staticmethod
-    def one_per_device(links, prefer: "VoiceLink | None" = None) -> list["VoiceLink"]:
-        """One page of each device: a device's monitors share its speakers, so two of them would
-        play the same words twice. `prefer` (the page that asked) plays for its own device;
-        else the page open longest. Before, the oldest page always played, so another window
-        on the same computer played the greeting that this window started."""
+    def one_per_device(links) -> list["VoiceLink"]:
+        """One page of each device, the one open longest: a device's monitors share its
+        speakers, so two of them would play the same words twice."""
         seen, out = set(), []
-        first = [prefer] if prefer is not None and prefer in links else []
-        for lk in first + sorted(links, key=lambda lk: lk.since):
+        for lk in sorted(links, key=lambda lk: lk.since):
             key = lk.key or id(lk)
             if key not in seen:
                 seen.add(key)
                 out.append(lk)
         return out
 
-    def soloed(self, prefer: "VoiceLink | None" = None) -> list["VoiceLink"]:
-        """The soloed devices that are there and not muted (one page each; `prefer` for its own
-        device)."""
+    def soloed(self) -> list["VoiceLink"]:
+        """The soloed devices that are there and not muted (one page each)."""
         sounds = self._sounds()
         solo = [
             lk
@@ -473,35 +468,30 @@ class VoiceDesk:
             and sounds.get(lk.key, {}).get("solo") is True
             and not self.muted(lk, sounds)
         ]
-        return self.one_per_device(solo, prefer)
+        return self.one_per_device(solo)
 
     def outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
-        """Where `link`'s answer plays: the Quest's own page plays its own; else on the soloed
-        devices, when one is there; else on the screen that asked, unless it is muted."""
+        """Where `link`'s answer or greeting plays: on its own device (`link` itself). Nothing while
+        another device is soloed. A muted device's plays on the cover devices (one page each),
+        else nowhere. The Quest's own page always plays its own."""
         if link.own:
             return [link]
-        return self.soloed(link) or ([] if self.muted(link) else [link])
-
-    def greeting_outputs(self, link: "VoiceLink") -> list["VoiceLink"]:
-        """Where the greeting that `link` asked for plays: the soloed devices; else the first
-        device of `greeting_from` that is there and not muted; else `link`; else any screen."""
-        if link.own:
-            return [link]
-        if solo := self.soloed(link):
-            return solo
         sounds = self._sounds()
-        free = [lk for lk in self.links if not lk.own and not self.muted(lk, sounds)]
-        try:
-            order = list(self.greeting_from())
-        except OSError:
-            order = []
-        for name in order:
-            there = [lk for lk in free if (lk.local if name == "brain" else lk.device == name)]
-            if there:
-                return self.one_per_device(there, link)[:1]
-        if link in free:
+        if self.soloed():
+            solo = bool(link.key) and sounds.get(link.key, {}).get("solo") is True
+            return [link] if solo and not self.muted(link, sounds) else []
+        if not self.muted(link, sounds):
             return [link]
-        return self.one_per_device(free)[:1]
+        cover = [
+            lk
+            for lk in self.links
+            if not lk.own
+            and lk.key
+            and lk.key != link.key
+            and sounds.get(lk.key, {}).get("cover") is True
+            and not self.muted(lk, sounds)
+        ]
+        return self.one_per_device(cover)
 
     # ---------- the wake word: several screens may hear it, one answers ----------
 
@@ -699,10 +689,10 @@ class VoiceDesk:
         link = sorted(links, key=lambda lk: (not lk.local, lk.device))[0]
         if link.task is not None and not link.task.done():
             return f"Error: {link.device or 'that screen'} is talking or listening now."
-        # a named device: there, unless it is muted; else where answers play (solo, mute)
-        outs = ([] if self.muted(link) else [link]) if device else self.outputs(link)
+        outs = self.outputs(link)  # as its own answers: mute, solo and cover
         if not outs:
-            return f"Error: {link.device or 'that screen'} is muted, so nobody would hear it."
+            name = link.device or "that screen"
+            return f"Error: {name} is muted or another device is soloed, so nobody would hear it."
         link.task = asyncio.get_running_loop().create_task(link._say(self.setup(), text, outs))
         where = ", ".join(lk.device or "a screen" for lk in outs)
         log.info("voice: saying a sentence on %s (asked by a tool)", where)
@@ -898,7 +888,7 @@ class VoiceLink:
 
     def send_audio_for(self, asker: "VoiceLink", seq: int, text: str, wav: bytes) -> None:
         """A piece of `asker`'s answer or greeting, played here (quick job 166: `asker` may be
-        another page, e.g. a phone, when this device is soloed or speaks the greeting)."""
+        another page, e.g. a muted phone, when this device is a cover)."""
         if asker is not self:
             if self.playing_for is not asker:
                 self.playing_for = asker
@@ -1493,8 +1483,8 @@ class VoiceLink:
     def greet(self, way: str) -> None:
         """The spoken greeting after the jump: the time of day and a hint how to talk, from its
         recording when this voice has said it before (no request, works offline), else spoken
-        now and saved. One greeting for all the screens that start together, on one device
-        (quick job 166: `greeting_outputs`); the Quest's page keeps its own."""
+        now and saved. It plays where this page's answers play (`outputs`), once for all the
+        screens that start together; the Quest's page keeps its own."""
         if self.task and not self.task.done():
             return  # a turn runs: it ends with its own audio_end
         desk, now = self.desk, time.monotonic()
@@ -1506,9 +1496,9 @@ class VoiceLink:
         except NoVoice:
             self._greeted(0)
             return
-        outs = desk.greeting_outputs(self)
+        outs = desk.outputs(self)
         if not outs:
-            log.info("voice: no greeting: every screen is muted")
+            log.info("voice: no greeting: this screen is muted or another device is soloed")
             self._greeted(0)
             return
         hint = HINTS.get(way, HINTS["push_to_talk"]).format(phrase=desk.wake_phrase())

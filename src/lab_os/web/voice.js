@@ -15,7 +15,7 @@
 //   v.playHeld()                ... the page plays it (after the jump); talking first drops it. True when
 //                               something was held
 //   v.hold()                    a startup sent from another screen: keep the sound the brain sends (the
-//                               greeting may play here, quick job 166) until v.playHeld(), at most 15 s
+//                               greeting may play here on a cover, quick job 166) until v.playHeld(), at most 15 s
 //   v.say()                     speak the brain's waiting line: a typed visitors' welcome (quick job 35)
 //   v.stopSpeaking()            cut the answer short
 //   v.wake(on)                  stream the microphone for the wake word (the brain listens for it, at
