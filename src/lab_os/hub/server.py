@@ -59,6 +59,7 @@ GET /api/hub-devices     the devices with the hub open now, their windows, what 
 POST /api/hub-devices/open   {"module", "device", "window"?}: open a module on another device
 POST /api/hub-devices/close  {"device", "window"}: close the module on that screen
 POST /api/hub-devices/start  {"windows"?}: start every start screen, or those (quick job 139)
+POST /api/hub-devices/idle   {"windows"}: those back on their start screen (quick job 168)
 POST /api/room/setup     open each page of the room's layout on its device (room.yaml, quick job 71)
 GET/POST /api/hub-devices/{name}/settings   a device's own settings ("This device")
 POST /api/hub-devices/{name}/rename         another device name for a device (quick job 132)
@@ -1784,6 +1785,21 @@ async def api_hub_devices_start(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "started": n, "message": message})
 
 
+async def api_hub_devices_idle(request: web.Request) -> web.Response:
+    """Put the windows given back on their start screen (the Command Center, quick job 168)."""
+    b = await _body(request)
+    windows = b.get("windows")
+    if not isinstance(windows, list) or not windows:
+        return web.json_response({"ok": False, "message": "Name the screens."}, status=400)
+    n = await request.app[HUB_DEVICES].to_start([str(w) for w in windows])
+    message = (
+        f"{n} screen{'' if n == 1 else 's'} on the start screen."
+        if n
+        else "Those screens already show the start screen."
+    )
+    return web.json_response({"ok": True, "idle": n, "message": message})
+
+
 async def api_hub_devices_close(request: web.Request) -> web.Response:
     b = await _body(request)
     try:
@@ -2160,6 +2176,7 @@ def create_brain_app(
     app.router.add_post("/api/hub-devices/open", api_hub_devices_open)
     app.router.add_post("/api/hub-devices/close", api_hub_devices_close)
     app.router.add_post("/api/hub-devices/start", api_hub_devices_start)
+    app.router.add_post("/api/hub-devices/idle", api_hub_devices_idle)
     app.router.add_post("/api/room/setup", api_room_setup)
     app.router.add_get("/api/hub-devices/{name}/settings", api_hub_device_settings_get)
     app.router.add_post("/api/hub-devices/{name}/settings", api_hub_device_settings_post)

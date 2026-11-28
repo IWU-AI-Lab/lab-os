@@ -96,7 +96,11 @@ The first version, at `/command-center` (All Pages; it opens only on the brain's
 
 ## Built (quick job 167, 2026-11-27)
 - **A page opens at once:** a choice in a page list (the inspector, the focus window, the ⋯ menu) opens the page; there is no **Open** button. A press on a page tile opens it on the highlighted screens. The lists and the marked tile show what the screens show now, also after another device changed it.
-- **All to the Hub:** above the workspace. Every screen goes back to the hub, except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or the Command Center.
+- **All to the Hub:** above the workspace (quick job 168 replaced it with **All to the Start Screen**). Every screen goes back to the hub, except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or the Command Center.
 - **The inspector, in order:** the name, the page, the sound (**M** and **S**, with what they mean now), the actions, the modules, the settings, the details.
 - **The focus window, a grid:** the screens on the top row, left to right, each with its page list and buttons on its right. Under them, three equal columns: Modules, Facts, and Actions (with the sound and the settings).
 - A device with no name shows as "Unnamed device" (before: "Unnamed screen").
+
+## Built (quick job 168, 2026-11-27)
+- **All to the Start Screen:** above the workspace, in place of All to the Hub. Every screen goes back to its start screen (the hub and the pages that only show information too), except the screens that show Teleop, Webcam Teleop, Raspbot, AI Control, Training or the Command Center. **Start screen** in a screen's controls does the same for the highlighted screens.
+- **No sound buttons without a name:** the sound settings are kept by device name. A device with no name says how to give it one (⚙ → This Device → Device Name) in place of **M** and **S**.

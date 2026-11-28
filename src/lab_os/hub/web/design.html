@@ -4099,6 +4099,7 @@ import("/web/device.js").then((m) => {
     onLive: (list) => setLive(list),
     onCard: () => { if ($("#ignite")) ignite("card", null, false); },  // the brain read the swipe (quick job 113)
     onStart: (how, from) => { if ($("#ignite")) ignite(how, from); },  // started on another device (quick job 139)
+    onIdle: (from) => { if (!$("#ignite")) toStart(from || "the Command Center"); },  // quick job 168
     onDevices: () => { if (DM.shouldRefill($("#open-on .in")) && S.moduleId) fillMenu(); if (S.showing === "system") drawSystem(); },
     onSettings: () => reapply(),
     onOff: () => V?.off(),

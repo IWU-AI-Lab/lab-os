@@ -126,6 +126,7 @@ async function screenInfo() {
  * h.onSettings(): this device's settings changed (re-read prefs()); h.onLink(up): connected or not;
  * h.onCard(): the brain read a card swipe on its own computer's card reader (quick job 113);
  * h.onStart(how, from): another device started (how: "tap" | "card"; from: its name): start here too (quick job 139);
+ * h.onIdle(from): back to the start screen, asked from the Command Center (quick job 168);
  * h.onOff(): lab-os was shut down (the page is covered; close the microphone).
  */
 export function connectDevice(h) {
@@ -188,6 +189,7 @@ export function connectDevice(h) {
       else if (m.type === "close") h.onClose?.();
       else if (m.type === "card") h.onCard?.();
       else if (m.type === "start") h.onStart?.(m.how === "card" ? "card" : "tap", m.from || "");
+      else if (m.type === "idle") h.onIdle?.(m.from || "");
       else if (m.type === "renamed" && m.device) reopenAs(m.device); // its other monitors too
       else if (m.type === "brain_off") {
         showOff(m);

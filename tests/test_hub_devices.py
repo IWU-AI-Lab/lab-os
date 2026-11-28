@@ -723,6 +723,24 @@ async def test_the_command_center_starts_all_or_the_ones_selected(aiohttp_client
     await newline.close()
 
 
+async def test_the_command_center_puts_screens_back_on_the_start_screen(aiohttp_client):
+    """Quick job 168: `idle` goes to the given windows that have started; the list shows it."""
+    client = await aiohttp_client(make_app())
+    desk, dw = await page(client, "desk", stage="hub")
+    newline, nw = await page(client, "newline", stage="start")
+    ids = [dw["window"], nw["window"]]
+    r = await (await client.post("/api/hub-devices/idle", json={"windows": ids})).json()
+    assert r == {"ok": True, "idle": 1, "message": "1 screen on the start screen."}
+    assert (await next_of(desk, "idle"))["from"] == "the Command Center"
+    got = (await (await client.get("/api/hub-devices")).json())["devices"]
+    assert all(w["stage"] == "start" for d in got for w in d["windows"])
+    r = await (await client.post("/api/hub-devices/idle", json={"windows": ids})).json()
+    assert r["idle"] == 0
+    assert (await client.post("/api/hub-devices/idle", json={})).status == 400
+    await desk.close()
+    await newline.close()
+
+
 async def test_a_swipe_on_the_brain_starts_the_other_devices_too():
     from lab_os.hub.hub_devices import HubDevices, Window
 
