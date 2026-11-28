@@ -8,7 +8,12 @@ Every step has a tag (for example **H.2**). The line after **→** says what to 
 
 **Only the main checks** (the builder, 2026-11-27): each feature of the demo once. The other steps moved to `docs/guides/lab-checklist-after-demo.md` → "DR. Moved from the demo run".
 
-**Order.** Tuesday 2026-12-01: 0, then the parts below, then a practice run of the whole demo. The steps that passed on 2026-11-24 are removed (`docs/plan/log.md`, 2026-11-25). The quick jobs since then add their steps here.
+**Order on Tuesday 2026-12-01** (the builder, 2026-11-28). You do not need to keep track of the steps during the run.
+1. Do part 0, part P and step T.3 (the green arm's height) first.
+2. Do the practice run: "Thursday: set up" and "The run" in `docs/plan/demo-plan.md`. When a moment fails, write its part and step (for example "Part 5, step 4") and one line. The run covers every step of this checklist that is not in item 3.
+3. After the run, if time allows, do only these steps: H.3, T.4, T.5, T.6, R.14, S.4, S.6, L.2, M.9, C.7, C.8.
+
+The steps that passed on 2026-11-24 are removed (`docs/plan/log.md`, 2026-11-25). The quick jobs since then add their steps here.
 
 Rules:
 - A real arm moves without asking. Keep one hand at **STOP** (on any lab-os page) while an arm has power.
