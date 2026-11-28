@@ -1,5 +1,5 @@
 // What the Arm Control options panel in the hub's VR and AR Arm Control shows and sends (quick job 102): the Arm Control
-// page's options for the headset (/teleop → Controls), from the brain's status. No imports, so the tests
+// page's options for the headset (/arm-control → Controls), from the brain's status. No imports, so the tests
 // run it with node; xr/teleop-panel.js draws it.
 //   speed    − and +, 5 % a step, up to the venue's cap (the page's slider)        → set_speed
 //   mode     Relative, 1:1 (only where the brain offers it) or Hands              → set_mode

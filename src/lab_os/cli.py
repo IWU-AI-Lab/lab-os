@@ -51,7 +51,7 @@ def _https(args) -> tuple[int, object] | None:
 def _banner(port: int, host: str, mcp_port: int, https_port: int = 0) -> str:
     lines = [
         f"Hub:      http://localhost:{port}/",
-        f"Arm Control: http://localhost:{port}/teleop   (Quest: docs/guides/quest-setup.md)",
+        f"Arm Control: http://localhost:{port}/arm-control   (Quest: docs/guides/quest-setup.md)",
         f"Monitor:  http://localhost:{port}/monitor",
         f"Webcam:   http://localhost:{port}/webcam   (preview; "
         "docs/archive/guides-2026-11-25/webcam-teleop.md)",
