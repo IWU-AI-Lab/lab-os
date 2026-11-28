@@ -28,7 +28,7 @@ async def test_pages_answer(aiohttp_client):
     client = await aiohttp_client(make_app())
     for path in (
         "/",
-        "/teleop",
+        "/arm-control",
         "/monitor",
         "/system-map",
         "/web/theme.js",
@@ -37,7 +37,18 @@ async def test_pages_answer(aiohttp_client):
         resp = await client.get(path)
         assert resp.status == 200, path
     assert 'id="ignite"' in await (await client.get("/")).text()
-    assert 'id="enter"' in await (await client.get("/teleop")).text()  # the designed teleop page
+    assert (
+        'id="enter"' in await (await client.get("/arm-control")).text()
+    )  # the designed teleop page
+
+
+async def test_the_old_teleop_address_opens_arm_control(aiohttp_client):
+    """/teleop was the Arm Control page's address until 2026-11-27: old bookmarks still work."""
+    client = await aiohttp_client(make_app())
+    resp = await client.get("/teleop?xrarm=stick", allow_redirects=False)
+    assert resp.status == 302 and resp.headers["Location"] == "/arm-control?xrarm=stick"
+    resp = await client.get("/teleop", allow_redirects=False)
+    assert resp.headers["Location"] == "/arm-control"
 
 
 async def test_status(aiohttp_client):
@@ -101,7 +112,7 @@ async def test_hub_config(aiohttp_client):
         "system-map",
     ]
     assert h["modules"][-1]["page"] == "/system-map"
-    assert h["modules"][0]["page"] == "/teleop"
+    assert h["modules"][0]["page"] == "/arm-control"
     assert h["reset_after_s"] == 1800
 
 

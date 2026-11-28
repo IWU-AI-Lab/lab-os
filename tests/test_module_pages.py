@@ -30,7 +30,7 @@ def home(tmp_path):
 async def test_the_pages(aiohttp_client):
     client = await aiohttp_client(make_app())
     pages = {
-        "/teleop": ['id="enter"', 'id="desk-mode"', "/web/design/kit.css"],
+        "/arm-control": ['id="enter"', 'id="desk-mode"', "/web/design/kit.css"],
         "/monitor": ['id="kinds"', "/static/monitor-list.js", "/web/design/kit.css"],
         "/monitor/so101": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
         "/monitor/xarm": ['id="joints"', 'data-role="monitor"', "/web/design/kit.css"],
@@ -57,7 +57,7 @@ async def test_every_page_has_the_full_screen_button(aiohttp_client):
     # kit.js no longer hides the button when the browser says no: the helper explains instead
     assert "if (!embedded && document.fullscreenEnabled)" not in kit
     pages = {  # page → what brings the button
-        "/teleop": "/web/design/kit.js",
+        "/arm-control": "/web/design/kit.js",
         "/monitor": "/web/design/kit.js",
         "/monitor/so101": "/web/design/kit.js",
         "/ai": "/web/design/kit.js",
@@ -374,6 +374,7 @@ async def test_every_page_is_listed(aiohttp_client):
             continue
         served.add(path)
     served.discard("/design")  # it goes to / (quick job 131)
+    served.discard("/teleop")  # it goes to /arm-control (its old address)
     listed = {p for p, _, _ in PAGES}
     assert served <= listed, f"pages missing from PAGES: {served - listed}"
     got = await (await client.get("/api/hub")).json()

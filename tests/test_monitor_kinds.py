@@ -72,7 +72,7 @@ def test_the_kinds_and_the_addresses():
         "xarm",
         None,
     ]
-    paths = ["/monitor/so101", "/monitor/xarm/", "/monitor", "/monitor/nothing", "/teleop"]
+    paths = ["/monitor/so101", "/monitor/xarm/", "/monitor", "/monitor/nothing", "/arm-control"]
     assert run(KINDS, f"{json.dumps(paths)}.map(m.pageKind)") == ["so101", "xarm", None, None, None]
     titles = run(KINDS, "Object.values(m.KINDS).map(k => k.title)")
     assert titles == list(MONITOR_KINDS.values())

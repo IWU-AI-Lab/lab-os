@@ -91,6 +91,16 @@ async def index(_request: web.Request) -> web.FileResponse:
     return await _page("index.html")
 
 
+ARM_CONTROL_PAGE = "/arm-control"  # the Arm Control page's address
+
+
+async def old_arm_control_address(request: web.Request) -> web.Response:
+    """/teleop, the Arm Control page's address until 2026-11-27: old bookmarks and Quest links
+    land on /arm-control, with the same query (?xrarm=stick)."""
+    query = f"?{request.query_string}" if request.query_string else ""
+    raise web.HTTPFound(ARM_CONTROL_PAGE + query)
+
+
 async def webcam(_request: web.Request) -> web.FileResponse:
     return await _page("webcam.html")
 
@@ -349,7 +359,8 @@ def create_app(
     app[DRIVE_FROM] = set(drive_from)
     if root_page:
         app.router.add_get("/", index)
-    app.router.add_get("/teleop", index)
+    app.router.add_get(ARM_CONTROL_PAGE, index)
+    app.router.add_get("/teleop", old_arm_control_address)
     app.router.add_get("/monitor", monitor_list)
     app.router.add_get("/monitor/{kind}", monitor)
     app.router.add_get("/webcam", webcam)

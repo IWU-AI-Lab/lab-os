@@ -72,7 +72,8 @@ GET /api/live-devices    the live device list: every device seen here, connected
 POST /api/live-devices/remove  {"id"}: take a device off that list
 GET /api/camera-feed/{name}   that camera's newest picture (JPEG); opened while asked for, closed
                          5 s after (lab_os/camera_feed.py); ?board=1: the tic-tac-toe board on it
-Everything else is the teleop server's: /teleop, /monitor, /ws, /static, /web, /models, /theme.json.
+Everything else is the teleop server's: /arm-control (and /teleop, its old address), /monitor, /ws,
+/static, /web, /models, /theme.json.
 The robot tools for AI tools run as an MCP server on their own port (lab_os.tools.mcp_server).
 """
 
@@ -173,7 +174,7 @@ HUB_PAGE = "design.html"  # the hub at / (the plain hub is archived: quick job 1
 # Every module the hub knows: id → (button title, page). The theme's hub.modules picks which ones
 # get a button and in what order; ids without a page here get no button (only claim what's real).
 MODULES = {
-    "teleop": ("Arm Control", "/teleop"),
+    "teleop": ("Arm Control", "/arm-control"),
     "monitor": ("Monitor", "/monitor"),  # the list of the Monitor pages (quick job 147)
     **{f"monitor-{kind}": (title, f"/monitor/{kind}") for kind, title in MONITOR_KINDS.items()},
     "monitor-raspbot": ("Raspbot Monitor", "/monitor/raspbot"),
@@ -189,7 +190,7 @@ MODULES = {
 # quick job 133); "Open on…" moves it to a window of its own.
 PAGES = (
     ("/", "The Hub", "The main address: the start screen, the assistant and the modules."),
-    ("/teleop", "Arm Control", "Drive the arm with the Quest or the keyboard."),
+    ("/arm-control", "Arm Control", "Drive the arm with the Quest or the keyboard."),
     ("/monitor", "Monitor", "A card for each kind of robot; a tap opens its page."),
     (
         "/monitor/so101",

@@ -295,7 +295,7 @@ A connected arm also has `model`: its kind in `devices.yaml` (`so101`, `so101-le
 ### `/api/hub`
 ```json
 {"title": "AI Comp Lab",
- "modules": [{"id": "teleop", "title": "Arm Control", "page": "/teleop"},
+ "modules": [{"id": "teleop", "title": "Arm Control", "page": "/arm-control"},
              {"id": "monitor", "title": "Monitor", "page": "/monitor"}],
  "reset_after_s": 1800,
  "here": true}

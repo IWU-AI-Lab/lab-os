@@ -9,7 +9,7 @@ uv run lab-os-teleop replay tests/fixtures/sample_clutch.jsonl   # no browser ne
 ```
 Then open **http://localhost:8080/monitor/so101** to watch the fake arm.
 
-**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the Arm Control page is at **http://localhost:8080/teleop**. `/ws` and `/monitor/so101` are the same. Where this guide says `http://localhost:8080/`, use `/teleop` with the brain.
+**With the brain** (`uv run lab-os serve`, `docs/archive/guides-2026-11-25/hub.md`), the Arm Control page is at **http://localhost:8080/arm-control**. `/ws` and `/monitor/so101` are the same. Where this guide says `http://localhost:8080/`, use `/arm-control` with the brain. The old address, `/teleop`, opens the same page.
 
 In VS Code, the Run and Debug panel has a button for each of these commands (`.vscode/launch.json`).
 
@@ -96,9 +96,9 @@ Do this in each session:
 uv run lab-os serve                    # the brain, with the fake arm
 ```
 The brain runs `adb reverse tcp:8080 tcp:8080` by itself each time the Quest connects by USB (it looks every 3 seconds). `lab-os-teleop serve` does not: with it, run that command yourself, again after each new connection of the cable.
-In the headset, open **Quest Browser** → `http://localhost:8080/teleop` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor/so101` must follow.
+In the headset, open **Quest Browser** → `http://localhost:8080/arm-control` → **Enter AR (passthrough)**. Hold the grip and move the controller. On the desktop, `http://localhost:8080/monitor/so101` must follow.
 
-Arm Control without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/teleop`).
+Arm Control without the hub (it can record): run `uv run lab-os-teleop serve --record recordings/quest-$(date +%F).jsonl`. Then the page is `http://localhost:8080` (no `/arm-control`).
 
 **The real SO-101:** plug it in, then run `uv run --extra so101 lab-os serve --speed 0.2`, then open the same page. Without `--speed`, it uses the venue's top speed (`max_speed_scale`: 0.5 in the lab and in visitor mode). The brain drives the SO-101 with IK: hand forward, left or up moves the gripper forward, left or up; the controller's tilt and roll turn the wrist. Close all desktop-control tabs first (one page has control at a time). Ctrl+C switches the torque off and the arm goes limp: hold it, or put it down low first.
 
