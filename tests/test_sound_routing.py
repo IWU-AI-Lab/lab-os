@@ -16,10 +16,15 @@ class Page:  # a page's voice connection, as far as the routing looks at it
     local: bool = False
     own: bool = False
     since: float = 0.0
+    address_key: str = ""  # a page with no name: its address key (quick job 169)
+
+    @property
+    def key(self) -> str:  # noqa: F811 (as VoiceLink.key: its name, else its address key)
+        return self.device or self.address_key
 
 
-def link(device="", local=False, own=False, since=0.0):
-    return Page(device, local, own, since)
+def link(device="", local=False, own=False, since=0.0, address=""):
+    return Page(device, local, own, since, address)
 
 
 def desk(links, sounds=None, order=("newline", "brain")):
@@ -174,6 +179,39 @@ async def test_the_command_center_sees_mute_and_solo(aiohttp_client, aiohttp_ser
     assert by["newline"]["sound"] is False and by["newline"]["solo"] is True
     assert not by["newline"]["own_sound"] and by["quest"]["own_sound"]
     for ws in (quest, hub, qhub):
+        await ws.close()
+
+
+def test_a_page_with_no_name_is_muted_and_soloed_by_its_address():
+    """Quick job 169: the key of a page with no name is its address key."""
+    laptop, nl = link(address="addr-127-0-0-1"), link("newline")
+    d = desk([laptop, nl], {"addr-127-0-0-1": {"sound": False}})
+    assert d.outputs(laptop) == []
+    d = desk([laptop, nl], {"addr-127-0-0-1": {"solo": True}})
+    assert d.outputs(nl) == [laptop]
+
+
+async def test_a_page_with_no_name_keeps_only_its_sound(aiohttp_client, aiohttp_server, tmp_path):
+    app, _, _ = await voice_app(aiohttp_server, tmp_path)
+    client = await aiohttp_client(app)
+    hub = await client.ws_connect("/ws/hub-device")
+    welcome = await hub.receive_json()
+    name = welcome["key"]
+    assert name.startswith("addr-") and welcome["device"] == ""
+    r = await client.post(f"/api/hub-devices/{name}/settings", json={"quality": "minimal"})
+    assert r.status == 400  # only its sound
+    await settings(client, name, {"sound": False})
+    while (m := await hub.receive_json())["type"] != "settings":
+        pass
+    assert m["settings"]["sound"] is False  # the page mutes its own sounds too
+    listing = (await (await client.get("/api/hub-devices")).json())["devices"]
+    assert listing[0]["name"] == name and listing[0]["sound"] is False
+    again = await client.ws_connect("/ws/hub-device")
+    assert (await again.receive_json())["settings"] == {"sound": False}
+    from lab_os.hub.hub_devices import DeviceSettings
+
+    assert name not in DeviceSettings().known_names()  # not in Greeting Plays On
+    for ws in (hub, again):
         await ws.close()
 
 

@@ -121,6 +121,7 @@ body[data-layout="panels"] #hub {
 .fact { display: flex; align-items: center; gap: 0.45rem; font: var(--w-lines) max(11px, 0.85rem)/1 var(--f-lines); color: var(--text); }
 .fact .ico { color: var(--c); font-size: 0.9rem; }
 .fact.off, .fact.off .ico { color: var(--offline); }
+.fact.muted, .fact.muted .ico { color: var(--danger); }  /* quick job 169 */
 .fact[hidden] { display: none; }  /* the venue, while it is the place's default one (quick job 154) */
 .facts { display: contents; }     /* a group of its own only on a phone (a second row there) */
 /* listening for the wake word: a small dot, separate from the core's own `listening` */
@@ -966,6 +967,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
   <defs>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
     <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.2-3.6 3.8-5.4 7-5.4s5.8 1.8 7 5.4"/></symbol>
+    <symbol id="i-speaker-off" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></symbol>
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5M12 3.5C9.4 5.9 8.2 8.7 8.2 12s1.2 6.1 3.8 8.5"/></symbol>
     <symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10"/><path d="M10 7V4M14 7V4M10 20v-3M14 20v-3M7 10H4M7 14H4M20 10h-3M20 14h-3"/><circle cx="12" cy="12" r="1.2"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.2 22 20.5H2z"/><path d="M12 9.5v5.2M12 17.4v.4"/></symbol>
@@ -1025,6 +1027,7 @@ body[data-mod="page"] #module .send, body[data-mod="detail"] #module .send, body
       <div class="fact" id="f-persona" title="Assistant (persona)"><svg class="ico"><use href="#i-user"/></svg><span></span></div>
       <div class="fact" id="f-net" title="Internet"><svg class="ico"><use href="#i-globe"/></svg><span>Checking</span></div>
       <div class="fact off" id="f-ai" title="AI"><svg class="ico"><use href="#i-chip"/></svg><span>AI: checking</span></div>
+      <div class="fact muted" id="f-muted" hidden title="This device is muted: nothing plays here. The Command Center's M, or ⚙ → This Device, turns it on again."><svg class="ico"><use href="#i-speaker-off"/></svg><span>Muted</span></div>
       <div class="fact" id="f-wake" hidden title="Listening for the wake word"><i class="wdot" aria-hidden="true"></i><span class="sr">Listening for the wake word</span></div>
     </div>
     <div class="fact" id="f-clock"><span class="clock" id="clock"></span><span class="ampm" id="ampm"></span></div>
@@ -3560,7 +3563,7 @@ function prefsKey() {
 // soloed (the Command Center's S; the brain's status names the soloed ones; quick job 166)
 function soundOn() {
   const solo = S.status?.voice?.solo || [];
-  return params.get("sound") !== "0" && screenPrefs().sound !== false && (!solo.length || solo.includes(prefsName()));
+  return params.get("sound") !== "0" && screenPrefs().sound !== false && (!solo.length || solo.includes(prefsName() || DM?.deviceKey?.()));
 }
 function screenPrefs() {
   try { return JSON.parse(localStorage.getItem(prefsKey())) || {}; } catch { return {}; }
@@ -3609,6 +3612,7 @@ function applyTheme(t) {
   S.typeToChat = hub.type_to_chat !== false;  // Settings: Typing Anywhere Goes to the Ask Line
   const mine = screenPrefs();
   S.sound = soundOn();
+  $("#f-muted").hidden = mine.sound !== false;  // the Command Center's M, or This Device (quick job 169)
   setQuality(params.get("quality") || mine.quality || (reducedOS ? "minimal" : t.quality?.default) || S.quality);
   if (S.dpr && drawRes() !== S.dpr) resize();  // "This device" changed the drawing resolution
   requestAnimationFrame(() => { readColors(); PAD = padChar(); setMoney(); });

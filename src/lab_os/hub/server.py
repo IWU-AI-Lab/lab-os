@@ -105,6 +105,8 @@ from lab_os.hub.arm_desk import load as load_handover
 from lab_os.hub.commits import commits_per_day, recent_commits
 from lab_os.hub.greeting import greeting
 from lab_os.hub.hub_devices import (
+    ADDRESS_PREFIX,
+    UNNAMED_SETTINGS,
     DeviceError,
     DeviceSettings,
     HubDevices,
@@ -1834,6 +1836,9 @@ async def device_settings(app: web.Application, name: str, changes: dict) -> tup
     devices = app[HUB_DEVICES]
     try:
         name = devices.resolve(name)  # the assistant may give a display name (quick job 132)
+        # a page with no name keeps only its sound (quick job 169)
+        if name.startswith(ADDRESS_PREFIX) and set(changes or {}) - set(UNNAMED_SETTINGS):
+            raise DeviceError("a device with no name keeps only its sound: give it a name")
         values = await asyncio.to_thread(devices.settings.update, name, changes)
     except DeviceError as e:
         return 400, {"ok": False, "message": str(e)}

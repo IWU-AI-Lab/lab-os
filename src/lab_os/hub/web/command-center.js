@@ -95,8 +95,9 @@ function devices() {
   const out = [];
   for (const d of S.hub) {
     out.push({
+      // the display name, with the device name under it; with no name, "Unnamed device" over its address key (quick job 169)
       key: `d:${d.name}`, kind: "hub", id: d.name, title: d.named ? (d.display_name || d.name) : d.title,
-      sub: d.named && d.display_name && d.display_name !== d.name ? d.name : "", named: d.named, address: d.address, here: d.here,
+      sub: !d.named ? d.name : d.display_name && d.display_name !== d.name ? d.name : "", named: d.named, address: d.address, here: d.here,
       what: d.here ? "The brain's own computer." : `At ${d.address || "an unknown address"}.`, hub: d,
     });
   }
@@ -105,16 +106,7 @@ function devices() {
     const kind = d.leader ? "leader" : KIND_ICON[d.kind] ? d.kind : "usb";
     out.push({ key: `l:${d.id}`, kind, id: d.id, title: d.name || d.id, sub: "", what: d.problem || d.what || "", bad: !!d.problem, live: d });
   }
-  // seen before, off now (quick job 149): a dim card under the same key, so it lights up in its place
-  const have = new Set(out.map((d) => d.key));
-  for (const d of S.live) {
-    if (d.connected) continue;
-    const screen = d.kind === "screen";
-    const key = screen ? `d:${String(d.id).slice("screen:".length)}` : `l:${d.id}`;
-    if (have.has(key)) continue;
-    const kind = screen ? "hub" : d.leader ? "leader" : KIND_ICON[d.kind] ? d.kind : "usb";
-    out.push({ key, kind, id: screen ? key.slice(2) : d.id, title: d.name || d.id, sub: "", what: "", gone: true, lastSeen: d.last_seen || "", live: d });
-  }
+  // a device that is off is not shown (quick job 169; quick job 149 showed it as a dim card)
   return out;
 }
 function screens(devs) {
@@ -164,8 +156,9 @@ const mayDrive = (d) => d.here || (d.address && S.drive.has(d.address));
 // A speaker icon (only a label) with M and S, on each card and each row of the list. M (red): nothing plays on that
 // device. S (amber): answers and greetings from every microphone play only on the soloed devices, and the other
 // screens make no sound. Kept in each device's settings. The Quest keeps its own sound: no buttons.
-const hasSound = (d) => d.kind === "hub" && d.named && !d.gone && !d.hub?.own_sound;
-const soloed = () => S.hub.filter((h) => h.named && h.solo && h.sound !== false && !h.own_sound).map((h) => h.name);
+// a page with no name too, under its address key (quick job 169)
+const hasSound = (d) => d.kind === "hub" && !d.gone && !d.hub?.own_sound;
+const soloed = () => S.hub.filter((h) => h.solo && h.sound !== false && !h.own_sound).map((h) => h.name);
 function soundButtons(d) {
   if (!hasSound(d)) return "";
   const h = d.hub, solo = soloed(), muted = h.sound === false, quiet = !muted && solo.length && !h.solo;
@@ -182,8 +175,6 @@ function soundWords(d) {
   if (h.solo) return "Soloed: every answer and greeting plays here.";
   return soloed().length ? "Quiet: another device is soloed." : "Plays sound.";
 }
-// a hub page with no device name keeps no settings, so it has no M and S: say how to give it a name (quick job 168)
-const NO_NAME_SOUND = "No sound buttons: this device has no device name. On that device, open ⚙ → This Device → Device Name, and press Add.";
 const soundBlock = (d) => `<div class="sndrow" data-dev="${esc(d.key)}">${soundButtons(d)}<span class="hint">${soundWords(d)}</span></div>`;
 // the list's own buttons: mute or unmute every device, show or hide every item
 async function muteAll() {
@@ -227,11 +218,12 @@ async function toggleSound(key, which) {
 }
 
 // ---------- drawing: the preview of a screen ----------
-function under(s) {
-  const d = s.device, title = devTitle(d), sub = d.named && d.display_name && d.display_name !== d.name ? d.name : "";
-  const name = s.count > 1 ? `<span>Screen ${s.n}</span>` : "";
-  const res = resolution(s.w);
-  return `<div class="under"><b>${esc(title)}${sub ? `<small>${esc(sub)}</small>` : ""}</b>${name}${res ? `<span class="res num">${res}</span>` : ""}</div>`;
+// quick job 169: "Screen 1", "Screen 2", …, then the resolution; the device's name is on the card's head. A screen
+// on its own card has no head: its device's name goes first.
+function under(s, withDevice = false) {
+  const d = s.device, res = resolution(s.w);
+  const dev = withDevice ? `<span class="dev">${esc(devTitle(d))}</span>` : "";
+  return `<div class="under">${dev}<b>Screen ${s.n}</b>${res ? `<span class="res num">${res}</span>` : ""}</div>`;
 }
 
 // ---------- the list on the left: each device, with the screens grouped under it ----------
@@ -491,7 +483,7 @@ function renderWorkspace(devs, scr) {
     el.dataset.key = d.key;
     const mine = scr.filter((s) => s.group === d.key && !isHidden(s.key));
     const drive = d.kind === "hub" && !d.gone && mayDrive(d) ? `<span class="k" title="May drive a real arm">${ico("i-hand")}</span>` : "";
-    el.innerHTML = `<div class="head"><span class="k">${ico(KIND_ICON[d.kind])}</span><b>${esc(d.title)}</b>${d.sub ? `<small>${esc(d.sub)}</small>` : ""}${drive}<span class="grow"></span>`
+    el.innerHTML = `<div class="head"><span class="k">${ico(KIND_ICON[d.kind])}</span><span class="nm"><b>${esc(d.title)}</b>${d.sub ? `<small>${esc(d.sub)}</small>` : ""}</span>${drive}<span class="grow"></span>`
       + soundButtons(d)
       + (d.gone ? "" : `<button class="iconbtn more" type="button" title="Settings and actions">⋯</button>`
         + `<button class="iconbtn foc" type="button" title="Focus: its screens, actions and modules">${ico("i-open")}</button>`) + `</div>`
@@ -512,7 +504,7 @@ function shotEl(s) {
   el.className = `shot${S.sel.has(s.key) ? " sel" : ""}${matches(scrText(s)) ? "" : " dim"}`;
   el.tabIndex = 0;
   el.dataset.key = s.key;
-  el.innerHTML = screenPreview(s.w, SHOT_W) + under(s);
+  el.innerHTML = screenPreview(s.w, SHOT_W) + under(s, s.group === s.key);
   return el;
 }
 function applyView() {
@@ -549,7 +541,7 @@ for (const control of document.querySelectorAll("#multi, .multi")) control.oncli
   multi = !multi;
   for (const b of document.querySelectorAll("#multi, .multi")) {
     b.setAttribute("aria-pressed", String(multi));
-    b.textContent = multi ? "Selecting multiple: On" : "Select multiple";
+    b.querySelector(".lbl").textContent = multi ? "Selecting multiple" : "Select multiple";  // one size (quick job 169)
   }
   $("#ws").classList.toggle("multi-on", multi);
 };
@@ -932,7 +924,6 @@ function renderInspector(force = false) {
   }
   const sd = d || (s && devs.find((x) => x.key === `d:${s.device.name}`));
   if (sd && hasSound(sd)) part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd));
-  else if (sd && sd.kind === "hub" && !sd.named && !sd.gone) part("Sound", `<p class="hint">${NO_NAME_SOUND}</p>`);
   const ab = part("Actions", `<div class="acts"></div>`).querySelector(".acts");
   actButtons(ab, acts.filter((a) => a.part !== "screen"), devs);
   const clear = document.createElement("button");
@@ -1019,7 +1010,7 @@ async function focus(key, keep = false) {
       <div><h3>Modules</h3>${mods.length ? `<div class="mods" id="f-mods"></div>` : `<p class="hint">No module for this device.</p>`}</div>
       <div><h3>Facts</h3>${factsHTML(deviceFacts(d))}${driveLine(d)}</div>
       <div id="f-actions"><h3>Actions</h3><div class="mods"></div>
-        ${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : d.kind === "hub" && !d.named && !d.gone ? `<h3>Sound</h3><p class="hint">${NO_NAME_SOUND}</p>` : ""}
+        ${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}` : ""}
         ${settings ? `<div id="f-settings"><h3>Settings</h3><p class="hint">Reading…</p></div>` : ""}</div>
     </div></div></div>`;
   veil.addEventListener("pointerdown", (e) => { if (e.target === veil) closeFocus(); });
@@ -1036,9 +1027,8 @@ async function focus(key, keep = false) {
   for (const s of mine) {
     const el = document.createElement("div");
     el.className = "fscr";
-    const name = s.count > 1 ? `Screen ${s.n}` : "Screen";
     const from = s.w.showing && s.w.from ? `<p class="hint">Opened from ${esc(s.w.from)}.</p>` : "";
-    el.innerHTML = `<div class="shot">${screenPreview(s.w, 288)}${under(s)}</div><div class="fctl"><h3>${name}</h3><div class="do"></div>${from}</div>`;
+    el.innerHTML = `<div class="shot">${screenPreview(s.w, 288)}${under(s)}</div><div class="fctl"><h3>Shows</h3><div class="do"></div>${from}</div>`;
     actButtons(el.querySelector(".do"), actionsFor([s.key], devs, scr).filter((a) => a.part === "screen"), devs);
     shots.append(el);
   }
@@ -1097,6 +1087,50 @@ addEventListener("keydown", (e) => {
   else if (document.querySelector(".veil")) closeFocus();
   else if (S.sel.size) { S.sel.clear(); render(true); }
 });
+
+// ---------- the panels' sizes (quick job 169): drag a line between two panels; a double click puts it back ----------
+// --lw / --rw: the left and right columns' widths; --ah: Activity's height; --ph: the Pages list's height
+const SIZES_KEY = "lab-os-command-center-sizes";
+const SIZE_LIMITS = { lw: [180, 520], rw: [200, 560], ah: [70, 600], ph: [90, 760] };
+function setSize(k, px) {
+  const [lo, hi] = SIZE_LIMITS[k];
+  $(".cc").style.setProperty(`--${k}`, `${Math.round(Math.max(lo, Math.min(hi, px)))}px`);
+}
+try { for (const [k, v] of Object.entries(JSON.parse(localStorage.getItem(SIZES_KEY)) || {})) if (SIZE_LIMITS[k]) setSize(k, v); } catch { /* not kept */ }
+function keepSizes() {
+  const out = {}, st = $(".cc").style;
+  for (const k of Object.keys(SIZE_LIMITS)) { const v = parseFloat(st.getPropertyValue(`--${k}`)); if (v) out[k] = v; }
+  try { localStorage.setItem(SIZES_KEY, JSON.stringify(out)); } catch { /* private mode: not kept */ }
+}
+for (const g of document.querySelectorAll(".gut")) {
+  const k = g.dataset.size;
+  g.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    g.setPointerCapture(e.pointerId);
+    g.classList.add("on");
+    const move = (ev) => {
+      const cc = $(".cc").getBoundingClientRect(), left = $(".left").getBoundingClientRect(), right = $(".right").getBoundingClientRect();
+      if (k === "lw") setSize(k, ev.clientX - cc.left);
+      else if (k === "rw") setSize(k, cc.right - ev.clientX);
+      else if (k === "ah") setSize(k, left.bottom - ev.clientY);
+      else if (k === "ph") setSize(k, ev.clientY - right.top);
+    };
+    const up = () => { g.classList.remove("on"); g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); keepSizes(); };
+    g.addEventListener("pointermove", move);
+    g.addEventListener("pointerup", up);
+  });
+  g.addEventListener("dblclick", () => { $(".cc").style.removeProperty(`--${k}`); keepSizes(); });
+  g.addEventListener("keydown", (e) => {  // the arrow keys move it too
+    const step = { ArrowLeft: -16, ArrowRight: 16, ArrowUp: -16, ArrowDown: 16 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const box = (k === "lw" ? $(".left") : k === "rw" ? $(".right") : k === "ah" ? $("#act-card") : $("#pages-card")).getBoundingClientRect();
+    const now = k === "lw" || k === "rw" ? box.width : box.height;
+    setSize(k, now + (k === "rw" || k === "ah" ? -step : step));
+    keepSizes();
+  });
+}
 
 // ---------- the loop ----------
 function render(force = false) {

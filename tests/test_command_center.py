@@ -143,7 +143,7 @@ def test_a_page_opens_at_once_and_follows_other_devices():
     keep = '["teleop", "webcam", "raspbot", "ai", "training", "command"]'
     assert f"const KEEP_OPEN = new Set({keep});" in js
     assert 'id="all-idle"' in html and "All to the Start Screen" in html  # quick job 168
-    assert '"/api/hub-devices/idle"' in js and "NO_NAME_SOUND" in js
+    assert '"/api/hub-devices/idle"' in js
     assert 'part(s ? `Sound (${esc(sd.title)})` : "Sound", soundBlock(sd))' in js
     assert "${hasSound(d) ? `<h3>Sound</h3>${soundBlock(d)}`" in js
     assert ".fgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));" in html
@@ -243,3 +243,18 @@ async def test_there_is_no_opening(aiohttp_client):
     assert "playIntro" not in js and "#intro" not in html and 'class="page wait"' not in html
     hub = (SRC / "hub" / "web" / "design.html").read_text()
     assert "lab-os-sfx" not in hub  # its sounds came through the hub
+
+
+def test_the_cards_and_the_panels():
+    """Quick job 169: the names on a card, "Screen 1" under a preview, no off devices, the search
+    above the devices, the lines that resize the panels, and one size for Select multiple."""
+    js = (SRC / "hub" / "web" / "command-center.js").read_text()
+    html = (SRC / "hub" / "web" / "command-center.html").read_text()
+    assert "<b>Screen ${s.n}</b>" in js and 'class="nm"' in js
+    assert "gone: true" not in js  # a device that is off is not shown
+    assert html.index('id="search"') < html.index('id="devices"') < html.index('id="ws"')
+    assert all(f'data-size="{k}"' in html for k in ("lw", "rw", "ah", "ph"))
+    assert "minmax(0, 72rem)" in html
+    assert html.count('<span class="sizer" aria-hidden="true">Selecting multiple</span>') == 2
+    hub = (SRC / "hub" / "web" / "design.html").read_text()
+    assert 'id="f-muted"' in hub and '$("#f-muted").hidden = mine.sound !== false;' in hub
